@@ -25,26 +25,43 @@ export default function Search() {
 
     // Simulate AI processing and search against Real-Time Database
     const timer = setTimeout(() => {
-      const lowerQuery = query.toLowerCase()
-      const filtered = products.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lowerQuery) ||
-          p.category.toLowerCase().includes(lowerQuery) ||
-          p.brand.toLowerCase().includes(lowerQuery) ||
-          p.description.toLowerCase().includes(lowerQuery),
-      )
+      const lowerQuery = query.toLowerCase().trim()
 
-      setResults(filtered.length ? filtered : products.slice(0, 3)) // Fallback to recommendations
+      const isBroadQuery =
+        ['produtos', 'equipamentos', 'catálogo', 'catalogo', 'marcas', 'fabricantes'].includes(
+          lowerQuery,
+        ) ||
+        lowerQuery.includes('quais produtos') ||
+        lowerQuery.includes('o que vocês vendem') ||
+        lowerQuery.includes('o que vendem') ||
+        lowerQuery.includes('quais equipamentos')
 
-      if (filtered.length > 0) {
-        const p = filtered[0]
+      if (isBroadQuery) {
+        setResults(products.slice(0, 4))
         setAiMessage(
-          `Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formatUSD(p.priceMiami)} (Retirada em Miami)** ou **${formatUSD(p.priceBrazil)} (Entrega no Brasil)**. Temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : 'indisponível no momento'}. As modalidades de entrega são: **${p.deliveryModes}**.`,
+          'Vendemos uma linha vasta de produtos para o Audiovisual Profissional, de diversos fabricantes renomados desta indústria, tais como **Sony**, **Blackmagic**... <br/><br/>**O que você precisa agora?**',
         )
       } else {
-        setAiMessage(
-          `Não encontrei correspondências exatas no inventário atual para "${query}". No entanto, as opções abaixo são excelentes alternativas com disponibilidade imediata e entrega expressa.`,
+        const filtered = products.filter(
+          (p) =>
+            p.name.toLowerCase().includes(lowerQuery) ||
+            p.category.toLowerCase().includes(lowerQuery) ||
+            p.brand.toLowerCase().includes(lowerQuery) ||
+            p.description.toLowerCase().includes(lowerQuery),
         )
+
+        setResults(filtered.length ? filtered : products.slice(0, 3)) // Fallback to recommendations
+
+        if (filtered.length > 0) {
+          const p = filtered[0]
+          setAiMessage(
+            `Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formatUSD(p.priceMiami)} (Retirada em Miami)** ou **${formatUSD(p.priceBrazil)} (Entrega no Brasil)**. Temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : 'indisponível no momento'}. As modalidades de entrega são: **${p.deliveryModes}**.`,
+          )
+        } else {
+          setAiMessage(
+            `Não encontrei correspondências exatas no inventário atual para "${query}". No entanto, as opções abaixo são excelentes alternativas com disponibilidade imediata e entrega expressa.`,
+          )
+        }
       }
 
       setLoading(false)

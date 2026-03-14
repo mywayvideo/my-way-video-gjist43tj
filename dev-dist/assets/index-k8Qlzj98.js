@@ -28140,154 +28140,166 @@ function Search() {
 		setLoading(true);
 		setAiMessage("");
 		const timer = setTimeout(() => {
-			const lowerQuery = query.toLowerCase();
-			const filtered = products.filter((p) => p.name.toLowerCase().includes(lowerQuery) || p.category.toLowerCase().includes(lowerQuery) || p.brand.toLowerCase().includes(lowerQuery) || p.description.toLowerCase().includes(lowerQuery));
-			setResults(filtered.length ? filtered : products.slice(0, 3));
-			if (filtered.length > 0) {
-				const p = filtered[0];
-				setAiMessage(`Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formatUSD(p.priceMiami)} (Retirada em Miami)** ou **${formatUSD(p.priceBrazil)} (Entrega no Brasil)**. Temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : "indisponível no momento"}. As modalidades de entrega são: **${p.deliveryModes}**.`);
-			} else setAiMessage(`Não encontrei correspondências exatas no inventário atual para "${query}". No entanto, as opções abaixo são excelentes alternativas com disponibilidade imediata e entrega expressa.`);
+			const lowerQuery = query.toLowerCase().trim();
+			if ([
+				"produtos",
+				"equipamentos",
+				"catálogo",
+				"catalogo",
+				"marcas",
+				"fabricantes"
+			].includes(lowerQuery) || lowerQuery.includes("quais produtos") || lowerQuery.includes("o que vocês vendem") || lowerQuery.includes("o que vendem") || lowerQuery.includes("quais equipamentos")) {
+				setResults(products.slice(0, 4));
+				setAiMessage("Vendemos uma linha vasta de produtos para o Audiovisual Profissional, de diversos fabricantes renomados desta indústria, tais como **Sony**, **Blackmagic**... <br/><br/>**O que você precisa agora?**");
+			} else {
+				const filtered = products.filter((p) => p.name.toLowerCase().includes(lowerQuery) || p.category.toLowerCase().includes(lowerQuery) || p.brand.toLowerCase().includes(lowerQuery) || p.description.toLowerCase().includes(lowerQuery));
+				setResults(filtered.length ? filtered : products.slice(0, 3));
+				if (filtered.length > 0) {
+					const p = filtered[0];
+					setAiMessage(`Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formatUSD(p.priceMiami)} (Retirada em Miami)** ou **${formatUSD(p.priceBrazil)} (Entrega no Brasil)**. Temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : "indisponível no momento"}. As modalidades de entrega são: **${p.deliveryModes}**.`);
+				} else setAiMessage(`Não encontrei correspondências exatas no inventário atual para "${query}". No entanto, as opções abaixo são excelentes alternativas com disponibilidade imediata e entrega expressa.`);
+			}
 			setLoading(false);
 		}, 1500);
 		return () => clearTimeout(timer);
 	}, [query, products]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Search.tsx:57:5",
+		"data-uid": "src/pages/Search.tsx:74:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 flex flex-col gap-8 min-h-[80vh]",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			"data-uid": "src/pages/Search.tsx:59:7",
+			"data-uid": "src/pages/Search.tsx:76:7",
 			"data-prohibitions": "[]",
 			className: "bg-muted/20 border border-white/5 rounded-2xl p-6 md:p-8",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AIPrompt, {
-				"data-uid": "src/pages/Search.tsx:60:9",
+				"data-uid": "src/pages/Search.tsx:77:9",
 				"data-prohibitions": "[editContent]",
 				initialValue: query
 			})
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/pages/Search.tsx:63:7",
+			"data-uid": "src/pages/Search.tsx:80:7",
 			"data-prohibitions": "[editContent]",
 			className: "grid grid-cols-1 lg:grid-cols-12 gap-8 items-start",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:65:9",
+				"data-uid": "src/pages/Search.tsx:82:9",
 				"data-prohibitions": "[editContent]",
 				className: "lg:col-span-4 sticky top-28 bg-card/40 border border-accent/20 rounded-xl p-6 shadow-elevation backdrop-blur-sm",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:66:11",
+					"data-uid": "src/pages/Search.tsx:83:11",
 					"data-prohibitions": "[]",
 					className: "flex items-center gap-3 mb-4 text-accent",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-						"data-uid": "src/pages/Search.tsx:67:13",
+						"data-uid": "src/pages/Search.tsx:84:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-6 h-6"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/pages/Search.tsx:68:13",
+						"data-uid": "src/pages/Search.tsx:85:13",
 						"data-prohibitions": "[]",
 						className: "font-semibold text-lg",
 						children: "MyWay AI Agent"
 					})]
 				}), loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:72:13",
+					"data-uid": "src/pages/Search.tsx:89:13",
 					"data-prohibitions": "[]",
 					className: "space-y-3 animate-pulse",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-							"data-uid": "src/pages/Search.tsx:73:15",
+							"data-uid": "src/pages/Search.tsx:90:15",
 							"data-prohibitions": "[editContent]",
 							className: "h-4 w-full bg-accent/10"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-							"data-uid": "src/pages/Search.tsx:74:15",
+							"data-uid": "src/pages/Search.tsx:91:15",
 							"data-prohibitions": "[editContent]",
 							className: "h-4 w-[90%] bg-accent/10"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-							"data-uid": "src/pages/Search.tsx:75:15",
+							"data-uid": "src/pages/Search.tsx:92:15",
 							"data-prohibitions": "[editContent]",
 							className: "h-4 w-[80%] bg-accent/10"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Search.tsx:76:15",
+							"data-uid": "src/pages/Search.tsx:93:15",
 							"data-prohibitions": "[]",
 							className: "flex items-center gap-2 pt-4 text-xs text-muted-foreground",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-								"data-uid": "src/pages/Search.tsx:77:17",
+								"data-uid": "src/pages/Search.tsx:94:17",
 								"data-prohibitions": "[editContent]",
 								className: "w-3 h-3 animate-spin"
 							}), " Processando catálogo real-time..."]
 						})
 					]
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:81:13",
+					"data-uid": "src/pages/Search.tsx:98:13",
 					"data-prohibitions": "[]",
 					className: "animate-fade-in text-foreground/90 leading-relaxed space-y-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Search.tsx:82:15",
+						"data-uid": "src/pages/Search.tsx:99:15",
 						"data-prohibitions": "[]",
 						dangerouslySetInnerHTML: { __html: aiMessage.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Search.tsx:87:15",
+						"data-uid": "src/pages/Search.tsx:104:15",
 						"data-prohibitions": "[]",
 						className: "pt-4 border-t border-white/10 text-xs text-muted-foreground",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/pages/Search.tsx:88:17",
+							"data-uid": "src/pages/Search.tsx:105:17",
 							"data-prohibitions": "[]",
 							children: "💡 Dica: Os dados refletem o inventário exato no banco de dados administrativo."
 						})
 					})]
 				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:97:9",
+				"data-uid": "src/pages/Search.tsx:114:9",
 				"data-prohibitions": "[editContent]",
 				className: "lg:col-span-8 space-y-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:98:11",
+					"data-uid": "src/pages/Search.tsx:115:11",
 					"data-prohibitions": "[editContent]",
 					className: "flex justify-between items-center",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						"data-uid": "src/pages/Search.tsx:99:13",
+						"data-uid": "src/pages/Search.tsx:116:13",
 						"data-prohibitions": "[]",
 						className: "text-xl font-bold tracking-tight",
 						children: "Equipamentos Recomendados"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						"data-uid": "src/pages/Search.tsx:100:13",
+						"data-uid": "src/pages/Search.tsx:117:13",
 						"data-prohibitions": "[editContent]",
 						className: "text-sm text-muted-foreground",
 						children: [results.length, " resultados"]
 					})]
 				}), loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:104:13",
+					"data-uid": "src/pages/Search.tsx:121:13",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 gap-6",
 					children: [1, 2].map((i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Search.tsx:106:17",
+						"data-uid": "src/pages/Search.tsx:123:17",
 						"data-prohibitions": "[]",
 						className: "flex flex-col space-y-3",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-							"data-uid": "src/pages/Search.tsx:107:19",
+							"data-uid": "src/pages/Search.tsx:124:19",
 							"data-prohibitions": "[editContent]",
 							className: "h-[250px] w-full rounded-xl bg-white/5"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Search.tsx:108:19",
+							"data-uid": "src/pages/Search.tsx:125:19",
 							"data-prohibitions": "[]",
 							className: "space-y-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-								"data-uid": "src/pages/Search.tsx:109:21",
+								"data-uid": "src/pages/Search.tsx:126:21",
 								"data-prohibitions": "[editContent]",
 								className: "h-4 w-[250px] bg-white/5"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-								"data-uid": "src/pages/Search.tsx:110:21",
+								"data-uid": "src/pages/Search.tsx:127:21",
 								"data-prohibitions": "[editContent]",
 								className: "h-4 w-[200px] bg-white/5"
 							})]
 						})]
 					}, i))
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:116:13",
+					"data-uid": "src/pages/Search.tsx:133:13",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-in-up",
 					children: results.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-						"data-uid": "src/pages/Search.tsx:118:17",
+						"data-uid": "src/pages/Search.tsx:135:17",
 						"data-prohibitions": "[editContent]",
 						product
 					}, product.id))
@@ -30390,4 +30402,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-AZN1xytw.js.map
+//# sourceMappingURL=index-k8Qlzj98.js.map
