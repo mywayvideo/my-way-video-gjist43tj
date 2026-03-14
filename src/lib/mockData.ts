@@ -1,0 +1,108 @@
+export type Product = {
+  id: string
+  name: string
+  brand: string
+  category: string
+  price: number
+  image: string
+  inStock: boolean
+  description: string
+  specs: Record<string, string>
+}
+
+export const CATEGORIES = [
+  {
+    id: 'cam',
+    name: 'Câmeras',
+    image: 'https://img.usecurling.com/p/400/300?q=cinema%20camera&color=black',
+  },
+  {
+    id: 'lens',
+    name: 'Lentes',
+    image: 'https://img.usecurling.com/p/400/300?q=camera%20lens&color=black',
+  },
+  {
+    id: 'light',
+    name: 'Iluminação',
+    image: 'https://img.usecurling.com/p/400/300?q=studio%20lighting',
+  },
+  {
+    id: 'audio',
+    name: 'Áudio',
+    image: 'https://img.usecurling.com/p/400/300?q=professional%20microphone',
+  },
+]
+
+export const MOCK_PRODUCTS: Product[] = [
+  {
+    id: 'p1',
+    name: 'Sony FX3 Cinema Line',
+    brand: 'Sony',
+    category: 'Câmeras',
+    price: 25999.0,
+    image: 'https://img.usecurling.com/p/600/600?q=sony%20camera',
+    inStock: true,
+    description:
+      'Câmera de cinema compacta com sensor Full Frame, ideal para produções ágeis e gimbals.',
+    specs: {
+      Sensor: 'Full-Frame CMOS',
+      Resolução: '4K 120p',
+      Montagem: 'E-Mount',
+      ISO: '80-102400',
+    },
+  },
+  {
+    id: 'p2',
+    name: 'ARRI Alexa Mini LF',
+    brand: 'ARRI',
+    category: 'Câmeras',
+    price: 345000.0,
+    image: 'https://img.usecurling.com/p/600/600?q=arri%20alexa',
+    inStock: false,
+    description:
+      'A escolha padrão de Hollywood. Sensor Large Format para um look cinematográfico imersivo.',
+    specs: {
+      Sensor: 'Large Format ARRI ALEV III',
+      Resolução: '4.5K',
+      Montagem: 'LPL',
+      Peso: '2.6 kg',
+    },
+  },
+  {
+    id: 'p3',
+    name: 'Zeiss CP.3 35mm T2.1',
+    brand: 'Zeiss',
+    category: 'Lentes',
+    price: 32000.0,
+    image: 'https://img.usecurling.com/p/600/600?q=zeiss%20lens',
+    inStock: true,
+    description: 'Lente prime compacta com excelente nitidez e reprodução de cores.',
+    specs: { Distância: '35mm', Abertura: 'T2.1', Montagem: 'PL', Diâmetro: '95mm' },
+  },
+  {
+    id: 'p4',
+    name: 'Aputure LS 600d Pro',
+    brand: 'Aputure',
+    category: 'Iluminação',
+    price: 14500.0,
+    image: 'https://img.usecurling.com/p/600/600?q=studio%20light',
+    inStock: true,
+    description: 'Iluminador LED Daylight de alta potência, resistente a intempéries.',
+    specs: { Potência: '600W', Temperatura: '5600K', CRI: '96+', Montagem: 'Bowens' },
+  },
+  {
+    id: 'p5',
+    name: 'Sennheiser MKH 416',
+    brand: 'Sennheiser',
+    category: 'Áudio',
+    price: 8900.0,
+    image: 'https://img.usecurling.com/p/600/600?q=shotgun%20microphone',
+    inStock: true,
+    description: 'Microfone shotgun padrão da indústria para captação direcional em set.',
+    specs: {
+      Tipo: 'Shotgun Condensador',
+      Padrão: 'Supercardióide/Lobular',
+      Resposta: '40 Hz - 20 kHz',
+    },
+  },
+]
