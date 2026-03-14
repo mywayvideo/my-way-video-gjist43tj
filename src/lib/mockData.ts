@@ -6,6 +6,8 @@ export type Product = {
   price: number
   image: string
   inStock: boolean
+  stockQuantity: number
+  deliveryModes: string
   description: string
   specs: Record<string, string>
 }
@@ -42,6 +44,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 25999.0,
     image: 'https://img.usecurling.com/p/600/600?q=sony%20camera',
     inStock: true,
+    stockQuantity: 15,
+    deliveryModes: 'Expressa 1 dia, Normal 3 dias, Retirada SP',
     description:
       'Câmera de cinema compacta com sensor Full Frame, ideal para produções ágeis e gimbals.',
     specs: {
@@ -59,6 +63,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 345000.0,
     image: 'https://img.usecurling.com/p/600/600?q=arri%20alexa',
     inStock: false,
+    stockQuantity: 0,
+    deliveryModes: 'Sob Encomenda (30-60 dias)',
     description:
       'A escolha padrão de Hollywood. Sensor Large Format para um look cinematográfico imersivo.',
     specs: {
@@ -76,6 +82,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 32000.0,
     image: 'https://img.usecurling.com/p/600/600?q=zeiss%20lens',
     inStock: true,
+    stockQuantity: 8,
+    deliveryModes: 'Expressa 2 dias, Normal 5 dias',
     description: 'Lente prime compacta com excelente nitidez e reprodução de cores.',
     specs: { Distância: '35mm', Abertura: 'T2.1', Montagem: 'PL', Diâmetro: '95mm' },
   },
@@ -87,6 +95,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 14500.0,
     image: 'https://img.usecurling.com/p/600/600?q=studio%20light',
     inStock: true,
+    stockQuantity: 22,
+    deliveryModes: 'Expressa 1 dia, Transportadora 4 dias',
     description: 'Iluminador LED Daylight de alta potência, resistente a intempéries.',
     specs: { Potência: '600W', Temperatura: '5600K', CRI: '96+', Montagem: 'Bowens' },
   },
@@ -98,6 +108,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 8900.0,
     image: 'https://img.usecurling.com/p/600/600?q=shotgun%20microphone',
     inStock: true,
+    stockQuantity: 40,
+    deliveryModes: 'Correios Sedex, Loggi, Retirada',
     description: 'Microfone shotgun padrão da indústria para captação direcional em set.',
     specs: {
       Tipo: 'Shotgun Condensador',

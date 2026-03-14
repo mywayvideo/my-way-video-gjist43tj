@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AIPrompt } from '@/components/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
-import { MOCK_PRODUCTS, Product } from '@/lib/mockData'
+import { Product } from '@/lib/mockData'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Bot, Sparkles } from 'lucide-react'
+import { useProductStore } from '@/stores/useProductStore'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
+  const { products } = useProductStore()
 
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState<Product[]>([])
@@ -20,27 +22,39 @@ export default function Search() {
     setLoading(true)
     setAiMessage('')
 
-    // Simulate AI processing and search
+    // Simulate AI processing and search against Real-Time Database
     const timer = setTimeout(() => {
       const lowerQuery = query.toLowerCase()
-      const filtered = MOCK_PRODUCTS.filter(
+      const filtered = products.filter(
         (p) =>
           p.name.toLowerCase().includes(lowerQuery) ||
           p.category.toLowerCase().includes(lowerQuery) ||
-          p.brand.toLowerCase().includes(lowerQuery),
+          p.brand.toLowerCase().includes(lowerQuery) ||
+          p.description.toLowerCase().includes(lowerQuery),
       )
 
-      setResults(filtered.length ? filtered : MOCK_PRODUCTS.slice(0, 3)) // Fallback to recommendations
+      setResults(filtered.length ? filtered : products.slice(0, 3)) // Fallback to recommendations
 
-      setAiMessage(
-        `Analisando sua solicitação para "${query}"... Recomendo as opções abaixo pelo excelente custo-benefício e compatibilidade profissional. A ${filtered.length ? filtered[0].name : 'linha Sony'} atende perfeitamente à sua necessidade com entrega expressa disponível.`,
-      )
+      if (filtered.length > 0) {
+        const p = filtered[0]
+        const formattedPrice = new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }).format(p.price)
+        setAiMessage(
+          `Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formattedPrice}** e temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : 'indisponível no momento'}. As modalidades de entrega são: **${p.deliveryModes}**.`,
+        )
+      } else {
+        setAiMessage(
+          `Não encontrei correspondências exatas no inventário atual para "${query}". No entanto, as opções abaixo são excelentes alternativas com disponibilidade imediata e entrega expressa.`,
+        )
+      }
 
       setLoading(false)
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query, products])
 
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col gap-8 min-h-[80vh]">
@@ -63,16 +77,19 @@ export default function Search() {
               <Skeleton className="h-4 w-[90%] bg-accent/10" />
               <Skeleton className="h-4 w-[80%] bg-accent/10" />
               <div className="flex items-center gap-2 pt-4 text-xs text-muted-foreground">
-                <Sparkles className="w-3 h-3 animate-spin" /> Processando catálogo...
+                <Sparkles className="w-3 h-3 animate-spin" /> Processando catálogo real-time...
               </div>
             </div>
           ) : (
             <div className="animate-fade-in text-foreground/90 leading-relaxed space-y-4">
-              <p>{aiMessage}</p>
+              <p
+                dangerouslySetInnerHTML={{
+                  __html: aiMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
+                }}
+              ></p>
               <div className="pt-4 border-t border-white/10 text-xs text-muted-foreground">
                 <p>
-                  💡 Dica: Você pode me perguntar sobre compatibilidade de lentes ou solicitar
-                  orçamentos em massa.
+                  💡 Dica: Os dados refletem o inventário exato no banco de dados administrativo.
                 </p>
               </div>
             </div>

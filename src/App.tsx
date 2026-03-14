@@ -6,23 +6,28 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import Search from './pages/Search'
 import Product from './pages/Product'
+import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
+import { ProductProvider } from '@/stores/useProductStore'
 
 const App = () => (
-  <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/product/:id" element={<Product />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
-  </BrowserRouter>
+  <ProductProvider>
+    <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/product/:id" element={<Product />} />
+            <Route path="/admin" element={<Admin />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TooltipProvider>
+    </BrowserRouter>
+  </ProductProvider>
 )
 
 export default App

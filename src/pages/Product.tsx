@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { MOCK_PRODUCTS, Product as ProductType } from '@/lib/mockData'
+import { Product as ProductType } from '@/lib/mockData'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCartStore } from '@/stores/useCartStore'
+import { useProductStore } from '@/stores/useProductStore'
 import { toast } from '@/hooks/use-toast'
 import { ShoppingCart, Check, Truck, ShieldAlert, Bot } from 'lucide-react'
 
 export default function Product() {
   const { id } = useParams()
   const { addItem } = useCartStore()
+  const { products } = useProductStore()
   const [product, setProduct] = useState<ProductType | null>(null)
   const [cep, setCep] = useState('')
   const [frete, setFrete] = useState<string | null>(null)
 
   useEffect(() => {
-    const p = MOCK_PRODUCTS.find((p) => p.id === id)
-    setProduct(p || MOCK_PRODUCTS[0]) // Fallback for mock
-  }, [id])
+    const p = products.find((p) => p.id === id)
+    setProduct(p || products[0]) // Fallback for mock
+  }, [id, products])
 
   const handleAskAI = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -27,14 +29,14 @@ export default function Product() {
 
     toast({
       title: 'IA Analisando...',
-      description: `Buscando resposta técnica para: "${input.value}"`,
+      description: `Buscando resposta técnica para: "${input.value}" no DB em tempo real.`,
     })
     input.value = ''
   }
 
   const calcularFrete = () => {
     if (cep.length < 8) return
-    setFrete('Sedex Especial: 2 dias úteis - R$ 145,00')
+    setFrete(`Disponível para ${cep}: ${product?.deliveryModes || 'Padrão'}`)
   }
 
   if (!product) return null
@@ -93,7 +95,8 @@ export default function Product() {
             <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
               {product.inStock ? (
                 <>
-                  <Check className="w-4 h-4 text-green-500" /> Em estoque - Envio Imediato
+                  <Check className="w-4 h-4 text-green-500" /> Em estoque ({product.stockQuantity}{' '}
+                  un.) - Envio Imediato
                 </>
               ) : (
                 <>
@@ -119,7 +122,7 @@ export default function Product() {
           <div className="mt-12 grid grid-cols-1 xl:grid-cols-2 gap-6 border-t border-white/10 pt-8">
             <div className="bg-card/50 border border-white/5 rounded-xl p-6">
               <h3 className="font-semibold flex items-center gap-2 mb-4">
-                <Truck className="w-5 h-5" /> Estimativa de Entrega
+                <Truck className="w-5 h-5" /> Modalidades de Entrega
               </h3>
               <div className="flex gap-2">
                 <Input
@@ -129,7 +132,7 @@ export default function Product() {
                   className="bg-background/50 border-white/10"
                 />
                 <Button variant="secondary" onClick={calcularFrete}>
-                  Calcular
+                  Consultar
                 </Button>
               </div>
               {frete && <p className="text-sm text-accent mt-4 font-medium">{frete}</p>}

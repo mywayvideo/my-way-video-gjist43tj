@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
 import { AIPrompt } from '@/components/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
-import { MOCK_PRODUCTS, CATEGORIES } from '@/lib/mockData'
+import { CATEGORIES } from '@/lib/mockData'
 import { ShieldCheck, Truck, HeadphonesIcon } from 'lucide-react'
+import { useProductStore } from '@/stores/useProductStore'
 
 export default function Index() {
+  const { products } = useProductStore()
+
   return (
     <div className="flex flex-col gap-24 pb-24">
       {/* Hero / Command Center */}
@@ -116,7 +119,7 @@ export default function Index() {
           </span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {MOCK_PRODUCTS.slice(0, 4).map((product) => (
+          {products.slice(0, 4).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
