@@ -3,7 +3,8 @@ export type Product = {
   name: string
   brand: string
   category: string
-  price: number
+  priceMiami: number
+  priceBrazil: number
   image: string
   inStock: boolean
   stockQuantity: number
@@ -41,7 +42,8 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'Sony FX3 Cinema Line',
     brand: 'Sony',
     category: 'Câmeras',
-    price: 25999.0,
+    priceMiami: 3898.0,
+    priceBrazil: 4500.0,
     image: 'https://img.usecurling.com/p/600/600?q=sony%20camera',
     inStock: true,
     stockQuantity: 15,
@@ -60,7 +62,8 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'ARRI Alexa Mini LF',
     brand: 'ARRI',
     category: 'Câmeras',
-    price: 345000.0,
+    priceMiami: 65000.0,
+    priceBrazil: 75000.0,
     image: 'https://img.usecurling.com/p/600/600?q=arri%20alexa',
     inStock: false,
     stockQuantity: 0,
@@ -79,7 +82,8 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'Zeiss CP.3 35mm T2.1',
     brand: 'Zeiss',
     category: 'Lentes',
-    price: 32000.0,
+    priceMiami: 4390.0,
+    priceBrazil: 5100.0,
     image: 'https://img.usecurling.com/p/600/600?q=zeiss%20lens',
     inStock: true,
     stockQuantity: 8,
@@ -92,7 +96,8 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'Aputure LS 600d Pro',
     brand: 'Aputure',
     category: 'Iluminação',
-    price: 14500.0,
+    priceMiami: 1890.0,
+    priceBrazil: 2300.0,
     image: 'https://img.usecurling.com/p/600/600?q=studio%20light',
     inStock: true,
     stockQuantity: 22,
@@ -105,7 +110,8 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'Sennheiser MKH 416',
     brand: 'Sennheiser',
     category: 'Áudio',
-    price: 8900.0,
+    priceMiami: 999.0,
+    priceBrazil: 1200.0,
     image: 'https://img.usecurling.com/p/600/600?q=shotgun%20microphone',
     inStock: true,
     stockQuantity: 40,

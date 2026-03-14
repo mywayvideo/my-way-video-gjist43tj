@@ -2,23 +2,25 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { CartProvider } from '@/stores/useCartStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { Settings } from 'lucide-react'
 
 export default function Layout() {
   const location = useLocation()
-  const isAdmin = location.pathname.startsWith('/admin')
+  const { user } = useAuthStore()
+  const isAdminRoute = location.pathname.startsWith('/admin')
 
   return (
     <CartProvider>
       <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-accent/30 font-sans relative">
-        {!isAdmin && <Header />}
+        {!isAdminRoute && <Header />}
         <main className="flex-1 flex flex-col w-full animate-fade-in">
           <Outlet />
         </main>
-        {!isAdmin && <Footer />}
+        {!isAdminRoute && <Footer />}
 
         {/* Floating Admin Button */}
-        {!isAdmin && (
+        {!isAdminRoute && user?.role === 'admin' && (
           <Link
             to="/admin"
             className="fixed bottom-6 right-6 p-4 bg-accent text-accent-foreground rounded-full shadow-elevation hover:scale-105 transition-all z-50 flex items-center justify-center group"

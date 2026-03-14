@@ -6,6 +6,7 @@ import { Product } from '@/lib/mockData'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Bot, Sparkles } from 'lucide-react'
 import { useProductStore } from '@/stores/useProductStore'
+import { formatUSD } from '@/lib/utils'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
@@ -37,12 +38,8 @@ export default function Search() {
 
       if (filtered.length > 0) {
         const p = filtered[0]
-        const formattedPrice = new Intl.NumberFormat('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-        }).format(p.price)
         setAiMessage(
-          `Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formattedPrice}** e temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : 'indisponível no momento'}. As modalidades de entrega são: **${p.deliveryModes}**.`,
+          `Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formatUSD(p.priceMiami)} (Retirada em Miami)** ou **${formatUSD(p.priceBrazil)} (Entrega no Brasil)**. Temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : 'indisponível no momento'}. As modalidades de entrega são: **${p.deliveryModes}**.`,
         )
       } else {
         setAiMessage(

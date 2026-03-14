@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { useCartStore } from '@/stores/useCartStore'
 import { useProductStore } from '@/stores/useProductStore'
 import { toast } from '@/hooks/use-toast'
-import { ShoppingCart, Check, Truck, ShieldAlert, Bot } from 'lucide-react'
+import { formatUSD } from '@/lib/utils'
+import { ShoppingCart, Check, Truck, ShieldAlert, Bot, Plane, MapPin } from 'lucide-react'
 
 export default function Product() {
   const { id } = useParams()
@@ -86,13 +87,32 @@ export default function Product() {
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight mt-2">{product.name}</h1>
           </div>
 
-          <div className="mt-6 mb-8">
-            <p className="text-4xl font-mono font-light">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                product.price,
-              )}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+          <div className="mt-8 mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-card border border-white/10 rounded-xl p-5 shadow-subtle flex flex-col">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm font-medium uppercase tracking-wider">
+                  Entrega no Brasil
+                </span>
+              </div>
+              <p className="text-3xl font-mono font-bold text-foreground">
+                {formatUSD(product.priceBrazil)}
+              </p>
+            </div>
+
+            <div className="bg-white/5 border border-white/5 rounded-xl p-5 flex flex-col">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <Plane className="w-4 h-4" />
+                <span className="text-sm font-medium uppercase tracking-wider">Retirada Miami</span>
+              </div>
+              <p className="text-3xl font-mono font-light text-muted-foreground">
+                {formatUSD(product.priceMiami)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
               {product.inStock ? (
                 <>
                   <Check className="w-4 h-4 text-green-500" /> Em estoque ({product.stockQuantity}{' '}

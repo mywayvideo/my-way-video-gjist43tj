@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/stores/useCartStore'
 import { ShoppingCart } from 'lucide-react'
+import { formatUSD } from '@/lib/utils'
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCartStore()
@@ -37,12 +38,17 @@ export function ProductCard({ product }: { product: Product }) {
             <Link to={`/product/${product.id}`}>{product.name}</Link>
           </h3>
         </div>
-        <div className="mt-4 flex items-center justify-between">
-          <span className="font-mono text-lg text-primary-foreground font-bold">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-              product.price,
-            )}
-          </span>
+        <div className="mt-4 flex flex-col gap-1">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Miami:</span>
+            <span className="font-mono text-muted-foreground">{formatUSD(product.priceMiami)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Brasil:</span>
+            <span className="font-mono text-lg text-primary-foreground font-bold">
+              {formatUSD(product.priceBrazil)}
+            </span>
+          </div>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">

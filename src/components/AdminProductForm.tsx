@@ -19,7 +19,8 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
       name: '',
       brand: '',
       category: '',
-      price: 0,
+      priceMiami: 0,
+      priceBrazil: 0,
       image: 'https://img.usecurling.com/p/600/600?q=camera',
       stockQuantity: 0,
       inStock: false,
@@ -38,9 +39,10 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
+    const numericFields = ['priceMiami', 'priceBrazil', 'stockQuantity']
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'price' || name === 'stockQuantity' ? Number(value) : value,
+      [name]: numericFields.includes(name) ? Number(value) : value,
     }))
   }
 
@@ -116,21 +118,6 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="price" className="text-muted-foreground">
-            Preço (R$)
-          </Label>
-          <Input
-            id="price"
-            name="price"
-            type="number"
-            step="0.01"
-            value={formData.price}
-            onChange={handleChange}
-            required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="stockQuantity" className="text-muted-foreground">
             Quantidade em Estoque
           </Label>
@@ -145,6 +132,36 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
           />
         </div>
         <div className="space-y-2">
+          <Label htmlFor="priceMiami" className="text-muted-foreground">
+            Preço Retirada Miami (US$)
+          </Label>
+          <Input
+            id="priceMiami"
+            name="priceMiami"
+            type="number"
+            step="0.01"
+            value={formData.priceMiami}
+            onChange={handleChange}
+            required
+            className="bg-background/50 border-white/10 focus-visible:ring-accent"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="priceBrazil" className="text-muted-foreground">
+            Preço Entrega Brasil (US$)
+          </Label>
+          <Input
+            id="priceBrazil"
+            name="priceBrazil"
+            type="number"
+            step="0.01"
+            value={formData.priceBrazil}
+            onChange={handleChange}
+            required
+            className="bg-background/50 border-white/10 focus-visible:ring-accent"
+          />
+        </div>
+        <div className="space-y-2 md:col-span-2">
           <Label htmlFor="deliveryModes" className="text-muted-foreground">
             Modalidades de Entrega
           </Label>

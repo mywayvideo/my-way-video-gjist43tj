@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useProductStore } from '@/stores/useProductStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { Product } from '@/lib/mockData'
+import { formatUSD } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -13,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, Box, Package, ArrowLeft, Database, Search } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -25,10 +27,15 @@ import {
 import { AdminProductForm } from '@/components/AdminProductForm'
 
 export default function Admin() {
+  const { user } = useAuthStore()
   const { products, deleteProduct } = useProductStore()
   const [search, setSearch] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/login" replace />
+  }
 
   const filteredProducts = products.filter(
     (p) =>
@@ -150,9 +157,9 @@ export default function Admin() {
               <TableRow className="border-white/10 hover:bg-transparent">
                 <TableHead className="w-[300px]">Equipamento</TableHead>
                 <TableHead>Categoria</TableHead>
-                <TableHead>Preço</TableHead>
+                <TableHead>Preço Miami</TableHead>
+                <TableHead>Preço Brasil</TableHead>
                 <TableHead>Estoque</TableHead>
-                <TableHead>Entrega</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -186,10 +193,11 @@ export default function Admin() {
                       {product.category}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      product.price,
-                    )}
+                  <TableCell className="font-mono text-muted-foreground">
+                    {formatUSD(product.priceMiami)}
+                  </TableCell>
+                  <TableCell className="font-mono font-medium text-foreground">
+                    {formatUSD(product.priceBrazil)}
                   </TableCell>
                   <TableCell>
                     {product.inStock ? (
@@ -203,14 +211,6 @@ export default function Admin() {
                         <span className="font-medium">Esgotado</span>
                       </div>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className="text-sm text-muted-foreground line-clamp-1"
-                      title={product.deliveryModes}
-                    >
-                      {product.deliveryModes}
-                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
