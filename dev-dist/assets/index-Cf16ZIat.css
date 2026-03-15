@@ -1901,10 +1901,6 @@ section[aria-label='Notifications alt+T'] {
   min-height: 100px;
 }
 
-.min-h-\[150px\]{
-  min-height: 150px;
-}
-
 .min-h-\[60vh\]{
   min-height: 60vh;
 }
@@ -2572,6 +2568,10 @@ section[aria-label='Notifications alt+T'] {
   border-color: rgb(245 158 11 / 0.2);
 }
 
+.border-blue-500\/10{
+  border-color: rgb(59 130 246 / 0.1);
+}
+
 .border-blue-500\/20{
   border-color: rgb(59 130 246 / 0.2);
 }
@@ -3199,6 +3199,11 @@ section[aria-label='Notifications alt+T'] {
 .text-amber-500{
   --tw-text-opacity: 1;
   color: rgb(245 158 11 / var(--tw-text-opacity, 1));
+}
+
+.text-blue-100{
+  --tw-text-opacity: 1;
+  color: rgb(219 234 254 / var(--tw-text-opacity, 1));
 }
 
 .text-blue-400{

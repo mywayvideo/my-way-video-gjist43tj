@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { Product, CompanyInfo } from '@/types'
+import { Product } from '@/types'
 import { supabase } from '@/lib/supabase/client'
 import {
   Table,
@@ -42,7 +42,8 @@ import { AdminProductForm } from '@/components/AdminProductForm'
 export default function Admin() {
   const { user, loading: authLoading } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
+  const [companyInfo, setCompanyInfo] = useState<any>(null)
+  const [footerInfo, setFooterInfo] = useState<any>(null)
   const [search, setSearch] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -56,8 +57,11 @@ export default function Admin() {
       .order('created_at', { ascending: false })
     if (pData) setProducts(pData)
 
-    const { data: cData } = await supabase.from('company_info').select('*').limit(1).single()
-    if (cData) setCompanyInfo(cData)
+    const { data: cData } = await supabase.from('company_info').select('*')
+    if (cData) {
+      setCompanyInfo(cData.find((c: any) => c.type === 'ai_knowledge') || cData[0])
+      setFooterInfo(cData.find((c: any) => c.type === 'footer_about'))
+    }
   }
 
   useEffect(() => {
@@ -73,11 +77,6 @@ export default function Admin() {
       (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())),
   )
 
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product)
-    setIsDialogOpen(true)
-  }
-
   const handleDelete = async (id: string) => {
     if (!confirm('Excluir produto?')) return
     const { error } = await supabase.from('products').delete().eq('id', id)
@@ -91,7 +90,6 @@ export default function Admin() {
   const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-
     setIsUploading(true)
     const reader = new FileReader()
     reader.onload = async (e) => {
@@ -101,8 +99,7 @@ export default function Admin() {
           .split('\n')
           .map((l) => l.trim())
           .filter(Boolean)
-        if (lines.length < 2) throw new Error('CSV vazio ou inválido')
-
+        if (lines.length < 2) throw new Error('CSV inválido')
         const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
         const validProducts = lines
           .slice(1)
@@ -111,36 +108,23 @@ export default function Admin() {
             const prod: any = {}
             headers.forEach((h, i) => {
               let val = values[i]?.trim() || null
-              if (h === 'price_brl' || h === 'stock' || h === 'weight') {
-                prod[h] = val ? parseFloat(val) : 0
-              } else if (h === 'is_special') {
-                prod[h] =
-                  val === 'true' ||
-                  val === '1' ||
-                  val?.toLowerCase() === 'yes' ||
-                  val?.toLowerCase() === 'sim' ||
-                  val?.toLowerCase() === 's'
-              } else {
-                prod[h] = val
-              }
+              if (['price_brl', 'stock', 'weight'].includes(h)) prod[h] = val ? parseFloat(val) : 0
+              else if (h === 'is_special')
+                prod[h] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
+              else prod[h] = val
             })
             return prod
           })
           .filter((p) => p.name)
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('products')
-          .upsert(validProducts, { onConflict: 'sku', ignoreDuplicates: false })
-          .select()
-
+          .upsert(validProducts, { onConflict: 'sku' })
         if (error) throw error
-        toast({
-          title: 'Sucesso',
-          description: `Sucesso: ${data?.length || 0} produtos criados/atualizados.`,
-        })
+        toast({ title: 'Sucesso', description: `Produtos importados.` })
         fetchData()
       } catch (err: any) {
-        toast({ title: 'Erro na importação', description: err.message, variant: 'destructive' })
+        toast({ title: 'Erro', description: err.message, variant: 'destructive' })
       } finally {
         setIsUploading(false)
       }
@@ -149,15 +133,19 @@ export default function Admin() {
   }
 
   const handleSaveCompanyInfo = async () => {
-    if (!companyInfo) return
     setSavingInfo(true)
-    const { error } = await supabase
-      .from('company_info')
-      .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
-      .eq('id', companyInfo.id)
+    if (companyInfo)
+      await supabase
+        .from('company_info')
+        .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
+        .eq('id', companyInfo.id)
+    if (footerInfo)
+      await supabase
+        .from('company_info')
+        .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
+        .eq('id', footerInfo.id)
     setSavingInfo(false)
-    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-    else toast({ title: 'Salvo', description: 'Base de Conhecimento atualizada.' })
+    toast({ title: 'Salvo', description: 'Configurações atualizadas.' })
   }
 
   return (
@@ -203,7 +191,7 @@ export default function Admin() {
             }}
           >
             <DialogTrigger asChild>
-              <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg">
+              <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
                 <Plus className="w-5 h-5 mr-2" /> Novo Produto
               </Button>
             </DialogTrigger>
@@ -229,16 +217,26 @@ export default function Admin() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-card border border-white/5 rounded-xl p-6 flex flex-col shadow-subtle">
-          <h2 className="font-semibold text-lg mb-4 text-accent">Base de Conhecimento (IA)</h2>
-          <Label className="mb-2 text-muted-foreground">Contexto Institucional para o Agente</Label>
-          <Textarea
-            className="min-h-[150px] bg-background/50 border-white/10 font-mono text-xs"
-            value={companyInfo?.content || ''}
-            onChange={(e) =>
-              setCompanyInfo((prev) => (prev ? { ...prev, content: e.target.value } : null))
-            }
-          />
+        <div className="bg-card border border-white/5 rounded-xl p-6 flex flex-col shadow-subtle space-y-4">
+          <div>
+            <h2 className="font-semibold text-lg mb-4 text-accent">Configurações (IA & Site)</h2>
+            <Label className="mb-2 text-muted-foreground">Contexto Institucional (IA)</Label>
+            <Textarea
+              className="min-h-[100px] bg-background/50 border-white/10 font-mono text-xs mb-4"
+              value={companyInfo?.content || ''}
+              onChange={(e) =>
+                setCompanyInfo((p: any) => (p ? { ...p, content: e.target.value } : null))
+              }
+            />
+            <Label className="mb-2 text-muted-foreground">Sobre a My Way (Texto do Footer)</Label>
+            <Textarea
+              className="min-h-[80px] bg-background/50 border-white/10 text-xs"
+              value={footerInfo?.content || ''}
+              onChange={(e) =>
+                setFooterInfo((p: any) => (p ? { ...p, content: e.target.value } : null))
+              }
+            />
+          </div>
           <div className="mt-4 flex justify-end">
             <Button
               onClick={handleSaveCompanyInfo}
@@ -246,7 +244,7 @@ export default function Admin() {
               variant="outline"
               className="border-accent text-accent hover:bg-accent/10"
             >
-              {savingInfo ? 'Salvando...' : 'Salvar Contexto IA'}
+              {savingInfo ? 'Salvando...' : 'Salvar Configurações'}
             </Button>
           </div>
         </div>
@@ -281,8 +279,8 @@ export default function Admin() {
           <div className="relative w-full sm:w-auto">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou SKU..."
-              className="pl-9 w-full sm:w-[300px] bg-background border-white/10 focus-visible:ring-accent"
+              placeholder="Buscar..."
+              className="pl-9 w-full sm:w-[300px] bg-background border-white/10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -326,24 +324,25 @@ export default function Admin() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(product)}
-                        className="text-muted-foreground hover:text-accent"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(product.id)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingProduct(product)
+                        setIsDialogOpen(true)
+                      }}
+                      className="text-muted-foreground hover:text-accent"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(product.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

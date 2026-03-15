@@ -35,6 +35,7 @@ export type Database = {
           dimensions: string | null
           id: string
           image_url: string | null
+          is_special: boolean
           name: string
           ncm: string | null
           price_brl: number | null
@@ -49,6 +50,7 @@ export type Database = {
           dimensions?: string | null
           id?: string
           image_url?: string | null
+          is_special?: boolean
           name: string
           ncm?: string | null
           price_brl?: number | null
@@ -63,6 +65,7 @@ export type Database = {
           dimensions?: string | null
           id?: string
           image_url?: string | null
+          is_special?: boolean
           name?: string
           ncm?: string | null
           price_brl?: number | null
@@ -236,6 +239,7 @@ export const Constants = {
 //   dimensions: text (nullable)
 //   category: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+//   is_special: boolean (not null, default: false)
 
 // --- CONSTRAINTS ---
 // Table: company_info
@@ -246,4 +250,5 @@ export const Constants = {
 
 // --- INDEXES ---
 // Table: products
+//   CREATE INDEX products_is_special_idx ON public.products USING btree (is_special)
 //   CREATE UNIQUE INDEX products_sku_key ON public.products USING btree (sku)

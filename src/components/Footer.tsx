@@ -1,8 +1,26 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Facebook, Instagram, Twitter, Youtube, MapPin, Phone, Mail } from 'lucide-react'
 import logoUrl from '@/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png'
+import { supabase } from '@/lib/supabase/client'
 
 export function Footer() {
+  const [aboutText, setAboutText] = useState(
+    'Seu parceiro definitivo em equipamentos de audiovisual profissional. Qualidade, garantia e suporte técnico especializado.',
+  )
+
+  useEffect(() => {
+    supabase
+      .from('company_info')
+      .select('content')
+      .eq('type', 'footer_about')
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) setAboutText(data.content)
+      })
+  }, [])
+
   return (
     <footer className="bg-muted/30 border-t mt-auto">
       <div className="container mx-auto px-4 py-12">
@@ -11,10 +29,7 @@ export function Footer() {
             <Link to="/" className="flex items-center space-x-2 mb-6">
               <img src={logoUrl} alt="My Way Video" className="h-8 md:h-10 w-auto" />
             </Link>
-            <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
-              Seu parceiro definitivo em equipamentos de audiovisual profissional. Qualidade,
-              garantia e suporte técnico especializado.
-            </p>
+            <p className="text-muted-foreground mb-6 text-sm leading-relaxed">{aboutText}</p>
             <div className="flex space-x-4">
               <a
                 href="#"

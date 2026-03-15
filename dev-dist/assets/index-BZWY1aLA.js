@@ -39895,30 +39895,36 @@ function Header() {
 //#endregion
 //#region src/components/Footer.tsx
 function Footer() {
+	const [aboutText, setAboutText] = (0, import_react.useState)("Seu parceiro definitivo em equipamentos de audiovisual profissional. Qualidade, garantia e suporte técnico especializado.");
+	(0, import_react.useEffect)(() => {
+		supabase.from("company_info").select("content").eq("type", "footer_about").limit(1).single().then(({ data }) => {
+			if (data) setAboutText(data.content);
+		});
+	}, []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("footer", {
-		"data-uid": "src/components/Footer.tsx:7:5",
+		"data-uid": "src/components/Footer.tsx:25:5",
 		"data-prohibitions": "[editContent]",
 		className: "bg-muted/30 border-t mt-auto",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/Footer.tsx:8:7",
+			"data-uid": "src/components/Footer.tsx:26:7",
 			"data-prohibitions": "[editContent]",
 			className: "container mx-auto px-4 py-12",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/Footer.tsx:9:9",
-				"data-prohibitions": "[]",
+				"data-uid": "src/components/Footer.tsx:27:9",
+				"data-prohibitions": "[editContent]",
 				className: "flex flex-col md:flex-row justify-between gap-12",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/Footer.tsx:10:11",
-					"data-prohibitions": "[]",
+					"data-uid": "src/components/Footer.tsx:28:11",
+					"data-prohibitions": "[editContent]",
 					className: "md:w-1/2 max-w-sm",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-							"data-uid": "src/components/Footer.tsx:11:13",
+							"data-uid": "src/components/Footer.tsx:29:13",
 							"data-prohibitions": "[]",
 							to: "/",
 							className: "flex items-center space-x-2 mb-6",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-								"data-uid": "src/components/Footer.tsx:12:15",
+								"data-uid": "src/components/Footer.tsx:30:15",
 								"data-prohibitions": "[editContent]",
 								src: mw_logo_horiz_1200x318_fundo_escuro_a5934_default,
 								alt: "My Way Video",
@@ -39926,56 +39932,56 @@ function Footer() {
 							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/components/Footer.tsx:14:13",
-							"data-prohibitions": "[]",
+							"data-uid": "src/components/Footer.tsx:32:13",
+							"data-prohibitions": "[editContent]",
 							className: "text-muted-foreground mb-6 text-sm leading-relaxed",
-							children: "Seu parceiro definitivo em equipamentos de audiovisual profissional. Qualidade, garantia e suporte técnico especializado."
+							children: aboutText
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/components/Footer.tsx:18:13",
+							"data-uid": "src/components/Footer.tsx:33:13",
 							"data-prohibitions": "[]",
 							className: "flex space-x-4",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-									"data-uid": "src/components/Footer.tsx:19:15",
+									"data-uid": "src/components/Footer.tsx:34:15",
 									"data-prohibitions": "[]",
 									href: "#",
 									className: "bg-background border border-border p-2 rounded-full text-muted-foreground hover:text-primary hover:border-primary transition-all",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Instagram, {
-										"data-uid": "src/components/Footer.tsx:23:17",
+										"data-uid": "src/components/Footer.tsx:38:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-									"data-uid": "src/components/Footer.tsx:25:15",
+									"data-uid": "src/components/Footer.tsx:40:15",
 									"data-prohibitions": "[]",
 									href: "#",
 									className: "bg-background border border-border p-2 rounded-full text-muted-foreground hover:text-primary hover:border-primary transition-all",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Facebook, {
-										"data-uid": "src/components/Footer.tsx:29:17",
+										"data-uid": "src/components/Footer.tsx:44:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-									"data-uid": "src/components/Footer.tsx:31:15",
+									"data-uid": "src/components/Footer.tsx:46:15",
 									"data-prohibitions": "[]",
 									href: "#",
 									className: "bg-background border border-border p-2 rounded-full text-muted-foreground hover:text-primary hover:border-primary transition-all",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Youtube, {
-										"data-uid": "src/components/Footer.tsx:35:17",
+										"data-uid": "src/components/Footer.tsx:50:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-									"data-uid": "src/components/Footer.tsx:37:15",
+									"data-uid": "src/components/Footer.tsx:52:15",
 									"data-prohibitions": "[]",
 									href: "#",
 									className: "bg-background border border-border p-2 rounded-full text-muted-foreground hover:text-primary hover:border-primary transition-all",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Twitter, {
-										"data-uid": "src/components/Footer.tsx:41:17",
+										"data-uid": "src/components/Footer.tsx:56:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
@@ -39984,73 +39990,73 @@ function Footer() {
 						})
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/Footer.tsx:46:11",
+					"data-uid": "src/components/Footer.tsx:61:11",
 					"data-prohibitions": "[]",
 					className: "md:w-1/2 max-w-sm md:text-right flex flex-col md:items-end",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/components/Footer.tsx:47:13",
+						"data-uid": "src/components/Footer.tsx:62:13",
 						"data-prohibitions": "[]",
 						className: "font-semibold text-lg mb-6 text-foreground",
 						children: "Informações de Contato"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
-						"data-uid": "src/components/Footer.tsx:48:13",
+						"data-uid": "src/components/Footer.tsx:63:13",
 						"data-prohibitions": "[]",
 						className: "space-y-4 text-sm w-full",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-								"data-uid": "src/components/Footer.tsx:49:15",
+								"data-uid": "src/components/Footer.tsx:64:15",
 								"data-prohibitions": "[]",
 								className: "flex items-start md:justify-end gap-4 text-muted-foreground group",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"data-uid": "src/components/Footer.tsx:50:17",
+									"data-uid": "src/components/Footer.tsx:65:17",
 									"data-prohibitions": "[]",
 									className: "pt-1 leading-relaxed text-left md:text-right",
 									children: "1735 NW 79th Av., Doral, FL 33126"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									"data-uid": "src/components/Footer.tsx:53:17",
+									"data-uid": "src/components/Footer.tsx:68:17",
 									"data-prohibitions": "[]",
 									className: "bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, {
-										"data-uid": "src/components/Footer.tsx:54:19",
+										"data-uid": "src/components/Footer.tsx:69:19",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
 								})]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-								"data-uid": "src/components/Footer.tsx:57:15",
+								"data-uid": "src/components/Footer.tsx:72:15",
 								"data-prohibitions": "[]",
 								className: "flex items-center md:justify-end gap-4 text-muted-foreground group",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"data-uid": "src/components/Footer.tsx:58:17",
+									"data-uid": "src/components/Footer.tsx:73:17",
 									"data-prohibitions": "[]",
 									className: "font-medium tracking-wide",
 									children: "+1-786-716-1170"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									"data-uid": "src/components/Footer.tsx:59:17",
+									"data-uid": "src/components/Footer.tsx:74:17",
 									"data-prohibitions": "[]",
 									className: "bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Phone, {
-										"data-uid": "src/components/Footer.tsx:60:19",
+										"data-uid": "src/components/Footer.tsx:75:19",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
 								})]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-								"data-uid": "src/components/Footer.tsx:63:15",
+								"data-uid": "src/components/Footer.tsx:78:15",
 								"data-prohibitions": "[]",
 								className: "flex items-center md:justify-end gap-4 text-muted-foreground group",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"data-uid": "src/components/Footer.tsx:64:17",
+									"data-uid": "src/components/Footer.tsx:79:17",
 									"data-prohibitions": "[]",
 									children: "sales@mywayvideo.com"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									"data-uid": "src/components/Footer.tsx:65:17",
+									"data-uid": "src/components/Footer.tsx:80:17",
 									"data-prohibitions": "[]",
 									className: "bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mail, {
-										"data-uid": "src/components/Footer.tsx:66:19",
+										"data-uid": "src/components/Footer.tsx:81:19",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									})
@@ -40060,11 +40066,11 @@ function Footer() {
 					})]
 				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/Footer.tsx:73:9",
+				"data-uid": "src/components/Footer.tsx:88:9",
 				"data-prohibitions": "[editContent]",
 				className: "border-t border-white/5 mt-12 pt-8 text-center text-muted-foreground text-sm flex flex-col md:flex-row justify-between items-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					"data-uid": "src/components/Footer.tsx:74:11",
+					"data-uid": "src/components/Footer.tsx:89:11",
 					"data-prohibitions": "[editContent]",
 					children: [
 						"© ",
@@ -40072,17 +40078,17 @@ function Footer() {
 						" My Way Video. Todos os direitos reservados."
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/Footer.tsx:75:11",
+					"data-uid": "src/components/Footer.tsx:90:11",
 					"data-prohibitions": "[]",
 					className: "mt-4 md:mt-0 space-x-6 font-medium",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/components/Footer.tsx:76:13",
+						"data-uid": "src/components/Footer.tsx:91:13",
 						"data-prohibitions": "[]",
 						to: "/terms",
 						className: "hover:text-primary transition-colors",
 						children: "Termos de Uso"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/components/Footer.tsx:79:13",
+						"data-uid": "src/components/Footer.tsx:94:13",
 						"data-prohibitions": "[]",
 						to: "/privacy",
 						className: "hover:text-primary transition-colors",
@@ -40717,6 +40723,9 @@ function Product() {
 	const { id } = useParams();
 	const { addItem } = useCartStore();
 	const [product, setProduct] = (0, import_react.useState)(null);
+	const [aiLoading, setAiLoading] = (0, import_react.useState)(false);
+	const [aiResponse, setAiResponse] = (0, import_react.useState)(null);
+	const [question, setQuestion] = (0, import_react.useState)("");
 	(0, import_react.useEffect)(() => {
 		if (!id) return;
 		async function fetchProduct() {
@@ -40725,34 +40734,43 @@ function Product() {
 		}
 		fetchProduct();
 	}, [id]);
-	const handleAskAI = (e) => {
+	const handleAskAI = async (e) => {
 		e.preventDefault();
-		const input = e.currentTarget.elements.namedItem("question");
-		if (!input.value.trim()) return;
+		if (!question.trim()) return;
+		setAiLoading(true);
+		setAiResponse(null);
 		toast$1({
-			title: "IA Analisando...",
-			description: `Buscando resposta técnica no DB em tempo real.`
+			title: "Consultando IA...",
+			description: "Buscando especificações técnicas e web."
 		});
-		input.value = "";
+		const { data } = await performAISearch(`Sobre o equipamento ${product?.name} (SKU: ${product?.sku}): ${question}`);
+		setAiLoading(false);
+		if (data) setAiResponse(data.message);
+		else toast$1({
+			title: "Erro",
+			description: "Falha ao consultar a IA.",
+			variant: "destructive"
+		});
+		setQuestion("");
 	};
 	if (!product) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/pages/Product.tsx:38:24",
+		"data-uid": "src/pages/Product.tsx:49:12",
 		"data-prohibitions": "[]",
-		className: "p-12 text-center",
+		className: "p-12 text-center text-muted-foreground",
 		children: "Carregando produto..."
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Product.tsx:41:5",
+		"data-uid": "src/pages/Product.tsx:52:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 animate-fade-in",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:42:7",
+				"data-uid": "src/pages/Product.tsx:53:7",
 				"data-prohibitions": "[editContent]",
 				className: "text-sm text-muted-foreground mb-8 font-mono",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/pages/Product.tsx:43:9",
+						"data-uid": "src/pages/Product.tsx:54:9",
 						"data-prohibitions": "[]",
 						to: "/",
 						className: "hover:text-foreground",
@@ -40761,7 +40779,7 @@ function Product() {
 					" ",
 					"/",
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"data-uid": "src/pages/Product.tsx:46:10",
+						"data-uid": "src/pages/Product.tsx:57:10",
 						"data-prohibitions": "[editContent]",
 						className: "text-foreground ml-2",
 						children: product.name
@@ -40769,19 +40787,19 @@ function Product() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:49:7",
+				"data-uid": "src/pages/Product.tsx:60:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:50:9",
+					"data-uid": "src/pages/Product.tsx:61:9",
 					"data-prohibitions": "[]",
 					className: "space-y-4",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Product.tsx:51:11",
+						"data-uid": "src/pages/Product.tsx:62:11",
 						"data-prohibitions": "[]",
 						className: "aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							"data-uid": "src/pages/Product.tsx:52:13",
+							"data-uid": "src/pages/Product.tsx:63:13",
 							"data-prohibitions": "[editContent]",
 							src: product.image_url || "https://img.usecurling.com/p/600/600?q=camera",
 							alt: product.name,
@@ -40789,50 +40807,50 @@ function Product() {
 						})
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:60:9",
+					"data-uid": "src/pages/Product.tsx:71:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:61:11",
+							"data-uid": "src/pages/Product.tsx:72:11",
 							"data-prohibitions": "[editContent]",
 							className: "mb-2",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:62:13",
+								"data-uid": "src/pages/Product.tsx:73:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-accent font-mono uppercase tracking-widest text-sm",
 								children: product.category
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-								"data-uid": "src/pages/Product.tsx:65:13",
+								"data-uid": "src/pages/Product.tsx:76:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl md:text-5xl font-bold tracking-tight mt-2",
 								children: product.name
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:68:11",
+							"data-uid": "src/pages/Product.tsx:79:11",
 							"data-prohibitions": "[editContent]",
 							className: "mt-8 mb-8",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:69:13",
+								"data-uid": "src/pages/Product.tsx:80:13",
 								"data-prohibitions": "[editContent]",
 								className: "bg-card border border-white/10 rounded-xl p-5 shadow-subtle flex flex-col max-w-sm",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:70:15",
+									"data-uid": "src/pages/Product.tsx:81:15",
 									"data-prohibitions": "[]",
 									className: "flex items-center gap-2 text-muted-foreground mb-2",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, {
-										"data-uid": "src/pages/Product.tsx:71:17",
+										"data-uid": "src/pages/Product.tsx:82:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4"
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"data-uid": "src/pages/Product.tsx:72:17",
+										"data-uid": "src/pages/Product.tsx:83:17",
 										"data-prohibitions": "[]",
 										className: "text-sm font-medium uppercase tracking-wider",
 										children: "Valor em Reais (BRL)"
 									})]
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-									"data-uid": "src/pages/Product.tsx:76:15",
+									"data-uid": "src/pages/Product.tsx:87:15",
 									"data-prohibitions": "[editContent]",
 									className: "text-4xl font-mono font-bold text-foreground",
 									children: ["R$ ", product.price_brl.toLocaleString("pt-BR")]
@@ -40840,16 +40858,16 @@ function Product() {
 							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:82:11",
+							"data-uid": "src/pages/Product.tsx:93:11",
 							"data-prohibitions": "[editContent]",
 							className: "mb-8",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Product.tsx:83:13",
+								"data-uid": "src/pages/Product.tsx:94:13",
 								"data-prohibitions": "[editContent]",
 								className: "text-sm text-muted-foreground flex items-center gap-2",
 								children: product.stock > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
-										"data-uid": "src/pages/Product.tsx:86:19",
+										"data-uid": "src/pages/Product.tsx:97:19",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4 text-green-500"
 									}),
@@ -40857,146 +40875,162 @@ function Product() {
 									product.stock,
 									" un.) - Envio Imediato"
 								] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, {
-									"data-uid": "src/pages/Product.tsx:91:19",
+									"data-uid": "src/pages/Product.tsx:102:19",
 									"data-prohibitions": "[editContent]",
 									className: "w-4 h-4 text-amber-500"
 								}), " Sob Encomenda"] })
 							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/pages/Product.tsx:97:11",
+							"data-uid": "src/pages/Product.tsx:108:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-lg text-foreground/80 leading-relaxed mb-8",
 							children: product.description
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/pages/Product.tsx:99:11",
+							"data-uid": "src/pages/Product.tsx:110:11",
 							"data-prohibitions": "[]",
 							size: "lg",
 							onClick: () => addItem(product),
 							disabled: product.stock <= 0,
 							className: "w-full sm:w-auto text-lg h-14 bg-accent text-accent-foreground hover:bg-accent/90",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-								"data-uid": "src/pages/Product.tsx:105:13",
+								"data-uid": "src/pages/Product.tsx:116:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5 mr-2"
-							}), "Adicionar ao Projeto"]
+							}), " Adicionar ao Projeto"]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:109:11",
-							"data-prohibitions": "[]",
+							"data-uid": "src/pages/Product.tsx:119:11",
+							"data-prohibitions": "[editContent]",
 							className: "mt-12 grid grid-cols-1 gap-6 border-t border-white/10 pt-8",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:110:13",
-								"data-prohibitions": "[]",
+								"data-uid": "src/pages/Product.tsx:120:13",
+								"data-prohibitions": "[editContent]",
 								className: "bg-blue-950/20 border border-blue-500/20 rounded-xl p-6",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-									"data-uid": "src/pages/Product.tsx:111:15",
-									"data-prohibitions": "[]",
-									className: "font-semibold flex items-center gap-2 mb-4 text-blue-400",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-										"data-uid": "src/pages/Product.tsx:112:17",
-										"data-prohibitions": "[editContent]",
-										className: "w-5 h-5"
-									}), " Pergunte à IA"]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-									"data-uid": "src/pages/Product.tsx:114:15",
-									"data-prohibitions": "[]",
-									onSubmit: handleAskAI,
-									className: "space-y-3",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										"data-uid": "src/pages/Product.tsx:115:17",
-										"data-prohibitions": "[editContent]",
-										name: "question",
-										placeholder: "Ex: Funciona com lente EF?",
-										className: "bg-background/50 border-blue-500/20 focus-visible:ring-blue-500"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										"data-uid": "src/pages/Product.tsx:120:17",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+										"data-uid": "src/pages/Product.tsx:121:15",
 										"data-prohibitions": "[]",
-										type: "submit",
-										variant: "outline",
-										className: "w-full border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300",
-										children: "Consultar Agente"
-									})]
-								})]
+										className: "font-semibold flex items-center gap-2 mb-4 text-blue-400",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
+											"data-uid": "src/pages/Product.tsx:122:17",
+											"data-prohibitions": "[editContent]",
+											className: "w-5 h-5"
+										}), " Consultor Técnico (IA)"]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+										"data-uid": "src/pages/Product.tsx:124:15",
+										"data-prohibitions": "[editContent]",
+										onSubmit: handleAskAI,
+										className: "space-y-3",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+											"data-uid": "src/pages/Product.tsx:125:17",
+											"data-prohibitions": "[editContent]",
+											disabled: aiLoading,
+											value: question,
+											onChange: (e) => setQuestion(e.target.value),
+											placeholder: "Ex: Qual a resolução do sensor? Qual o native ISO?",
+											className: "bg-background/50 border-blue-500/20 focus-visible:ring-blue-500"
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											"data-uid": "src/pages/Product.tsx:132:17",
+											"data-prohibitions": "[editContent]",
+											type: "submit",
+											disabled: aiLoading,
+											variant: "outline",
+											className: "w-full border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300",
+											children: aiLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
+												"data-uid": "src/pages/Product.tsx:140:23",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4 mr-2 animate-spin"
+											}), " Analisando Dados..."] }) : "Consultar Agente"
+										})]
+									}),
+									aiResponse && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										"data-uid": "src/pages/Product.tsx:148:17",
+										"data-prohibitions": "[editContent]",
+										className: "mt-4 p-4 bg-background/50 rounded-lg border border-blue-500/10 text-sm text-blue-100 leading-relaxed font-mono",
+										children: aiResponse
+									})
+								]
 							})
 						})
 					]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:134:7",
+				"data-uid": "src/pages/Product.tsx:157:7",
 				"data-prohibitions": "[editContent]",
 				className: "mt-24 max-w-4xl",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-					"data-uid": "src/pages/Product.tsx:135:9",
+					"data-uid": "src/pages/Product.tsx:158:9",
 					"data-prohibitions": "[]",
 					className: "text-2xl font-bold mb-6 tracking-tight",
 					children: "Especificações Técnicas"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:136:9",
+					"data-uid": "src/pages/Product.tsx:159:9",
 					"data-prohibitions": "[editContent]",
 					className: "bg-card/30 border border-white/5 rounded-2xl overflow-hidden",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:137:11",
+							"data-uid": "src/pages/Product.tsx:160:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6 bg-white/5",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:138:13",
+								"data-uid": "src/pages/Product.tsx:161:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "SKU"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:139:13",
+								"data-uid": "src/pages/Product.tsx:162:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.sku || "N/A"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:141:11",
+							"data-uid": "src/pages/Product.tsx:164:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:142:13",
+								"data-uid": "src/pages/Product.tsx:165:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "NCM"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:143:13",
+								"data-uid": "src/pages/Product.tsx:166:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.ncm || "N/A"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:145:11",
+							"data-uid": "src/pages/Product.tsx:168:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6 bg-white/5",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:146:13",
+								"data-uid": "src/pages/Product.tsx:169:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "Peso"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:147:13",
+								"data-uid": "src/pages/Product.tsx:170:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.weight ? `${product.weight} kg` : "N/A"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:151:11",
+							"data-uid": "src/pages/Product.tsx:174:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:152:13",
+								"data-uid": "src/pages/Product.tsx:175:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "Dimensões"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:153:13",
+								"data-uid": "src/pages/Product.tsx:176:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.dimensions || "N/A"
@@ -41650,6 +41684,7 @@ function Admin() {
 	const { user, loading: authLoading } = useAuth();
 	const [products, setProducts] = (0, import_react.useState)([]);
 	const [companyInfo, setCompanyInfo] = (0, import_react.useState)(null);
+	const [footerInfo, setFooterInfo] = (0, import_react.useState)(null);
 	const [search, setSearch] = (0, import_react.useState)("");
 	const [editingProduct, setEditingProduct] = (0, import_react.useState)(null);
 	const [isDialogOpen, setIsDialogOpen] = (0, import_react.useState)(false);
@@ -41658,29 +41693,28 @@ function Admin() {
 	const fetchData = async () => {
 		const { data: pData } = await supabase.from("products").select("*").order("created_at", { ascending: false });
 		if (pData) setProducts(pData);
-		const { data: cData } = await supabase.from("company_info").select("*").limit(1).single();
-		if (cData) setCompanyInfo(cData);
+		const { data: cData } = await supabase.from("company_info").select("*");
+		if (cData) {
+			setCompanyInfo(cData.find((c) => c.type === "ai_knowledge") || cData[0]);
+			setFooterInfo(cData.find((c) => c.type === "footer_about"));
+		}
 	};
 	(0, import_react.useEffect)(() => {
 		if (user) fetchData();
 	}, [user]);
 	if (authLoading) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/pages/Admin.tsx:67:27",
+		"data-uid": "src/pages/Admin.tsx:71:27",
 		"data-prohibitions": "[]",
 		className: "p-8 text-center",
 		children: "Loading..."
 	});
 	if (!user) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Navigate, {
-		"data-uid": "src/pages/Admin.tsx:68:21",
+		"data-uid": "src/pages/Admin.tsx:72:21",
 		"data-prohibitions": "[editContent]",
 		to: "/login",
 		replace: true
 	});
 	const filteredProducts = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku && p.sku.toLowerCase().includes(search.toLowerCase()));
-	const handleEdit = (product) => {
-		setEditingProduct(product);
-		setIsDialogOpen(true);
-	};
 	const handleDelete = async (id) => {
 		if (!confirm("Excluir produto?")) return;
 		const { error } = await supabase.from("products").delete().eq("id", id);
@@ -41705,32 +41739,33 @@ function Admin() {
 		reader.onload = async (e) => {
 			try {
 				const lines = (e.target?.result).split("\n").map((l) => l.trim()).filter(Boolean);
-				if (lines.length < 2) throw new Error("CSV vazio ou inválido");
+				if (lines.length < 2) throw new Error("CSV inválido");
 				const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
 				const validProducts = lines.slice(1).map((line) => {
 					const values = line.split(",");
 					const prod = {};
 					headers.forEach((h, i) => {
 						let val = values[i]?.trim() || null;
-						if (h === "price_brl" || h === "stock" || h === "weight") prod[h] = val ? parseFloat(val) : 0;
-						else if (h === "is_special") prod[h] = val === "true" || val === "1" || val?.toLowerCase() === "yes" || val?.toLowerCase() === "sim" || val?.toLowerCase() === "s";
+						if ([
+							"price_brl",
+							"stock",
+							"weight"
+						].includes(h)) prod[h] = val ? parseFloat(val) : 0;
+						else if (h === "is_special") prod[h] = val === "true" || val === "1" || val?.toLowerCase() === "sim";
 						else prod[h] = val;
 					});
 					return prod;
 				}).filter((p) => p.name);
-				const { data, error } = await supabase.from("products").upsert(validProducts, {
-					onConflict: "sku",
-					ignoreDuplicates: false
-				}).select();
+				const { error } = await supabase.from("products").upsert(validProducts, { onConflict: "sku" });
 				if (error) throw error;
 				toast$1({
 					title: "Sucesso",
-					description: `Sucesso: ${data?.length || 0} produtos criados/atualizados.`
+					description: `Produtos importados.`
 				});
 				fetchData();
 			} catch (err) {
 				toast$1({
-					title: "Erro na importação",
+					title: "Erro",
 					description: err.message,
 					variant: "destructive"
 				});
@@ -41741,94 +41776,92 @@ function Admin() {
 		reader.readAsText(file);
 	};
 	const handleSaveCompanyInfo = async () => {
-		if (!companyInfo) return;
 		setSavingInfo(true);
-		const { error } = await supabase.from("company_info").update({
+		if (companyInfo) await supabase.from("company_info").update({
 			content: companyInfo.content,
 			updated_at: (/* @__PURE__ */ new Date()).toISOString()
 		}).eq("id", companyInfo.id);
+		if (footerInfo) await supabase.from("company_info").update({
+			content: footerInfo.content,
+			updated_at: (/* @__PURE__ */ new Date()).toISOString()
+		}).eq("id", footerInfo.id);
 		setSavingInfo(false);
-		if (error) toast$1({
-			title: "Erro",
-			description: error.message,
-			variant: "destructive"
-		});
-		else toast$1({
+		toast$1({
 			title: "Salvo",
-			description: "Base de Conhecimento atualizada."
+			description: "Configurações atualizadas."
 		});
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Admin.tsx:164:5",
+		"data-uid": "src/pages/Admin.tsx:152:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 flex flex-col gap-8 max-w-7xl animate-fade-in",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Admin.tsx:165:7",
+				"data-uid": "src/pages/Admin.tsx:153:7",
 				"data-prohibitions": "[editContent]",
 				className: "flex flex-col md:flex-row md:items-center justify-between gap-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Admin.tsx:166:9",
+					"data-uid": "src/pages/Admin.tsx:154:9",
 					"data-prohibitions": "[]",
 					className: "flex items-center gap-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/pages/Admin.tsx:167:11",
+						"data-uid": "src/pages/Admin.tsx:155:11",
 						"data-prohibitions": "[]",
 						to: "/",
 						className: "p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
-							"data-uid": "src/pages/Admin.tsx:171:13",
+							"data-uid": "src/pages/Admin.tsx:159:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-5 h-5"
 						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Admin.tsx:173:11",
+						"data-uid": "src/pages/Admin.tsx:161:11",
 						"data-prohibitions": "[]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
-							"data-uid": "src/pages/Admin.tsx:174:13",
+							"data-uid": "src/pages/Admin.tsx:162:13",
 							"data-prohibitions": "[]",
 							className: "text-3xl font-bold tracking-tight text-white flex items-center gap-3",
 							children: [
 								"Admin Dashboard",
 								" ",
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Badge, {
-									"data-uid": "src/pages/Admin.tsx:176:15",
+									"data-uid": "src/pages/Admin.tsx:164:15",
 									"data-prohibitions": "[]",
 									className: "bg-accent/20 text-accent hover:bg-accent/30 border-none",
 									children: "PRO"
 								})
 							]
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							"data-uid": "src/pages/Admin.tsx:178:13",
+							"data-uid": "src/pages/Admin.tsx:166:13",
 							"data-prohibitions": "[]",
 							className: "text-muted-foreground flex items-center gap-2 mt-1",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Database, {
-								"data-uid": "src/pages/Admin.tsx:179:15",
+								"data-uid": "src/pages/Admin.tsx:167:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-3 h-3"
 							}), " Supabase Real-time DB"]
 						})]
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Admin.tsx:184:9",
+					"data-uid": "src/pages/Admin.tsx:172:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex gap-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Admin.tsx:185:11",
+						"data-uid": "src/pages/Admin.tsx:173:11",
 						"data-prohibitions": "[editContent]",
 						className: "relative overflow-hidden inline-block",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/pages/Admin.tsx:186:13",
+							"data-uid": "src/pages/Admin.tsx:174:13",
 							"data-prohibitions": "[editContent]",
 							variant: "secondary",
 							disabled: isUploading,
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Upload, {
-								"data-uid": "src/pages/Admin.tsx:187:15",
+								"data-uid": "src/pages/Admin.tsx:175:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-4 h-4 mr-2"
 							}), isUploading ? "Processando..." : "Importar CSV"]
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-							"data-uid": "src/pages/Admin.tsx:190:13",
+							"data-uid": "src/pages/Admin.tsx:178:13",
 							"data-prohibitions": "[editContent]",
 							type: "file",
 							accept: ".csv",
@@ -41836,7 +41869,7 @@ function Admin() {
 							className: "absolute inset-0 opacity-0 cursor-pointer"
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
-						"data-uid": "src/pages/Admin.tsx:198:11",
+						"data-uid": "src/pages/Admin.tsx:186:11",
 						"data-prohibitions": "[editContent]",
 						open: isDialogOpen,
 						onOpenChange: (open) => {
@@ -41844,38 +41877,38 @@ function Admin() {
 							if (!open) setEditingProduct(null);
 						},
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
-							"data-uid": "src/pages/Admin.tsx:205:13",
+							"data-uid": "src/pages/Admin.tsx:193:13",
 							"data-prohibitions": "[]",
 							asChild: true,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-								"data-uid": "src/pages/Admin.tsx:206:15",
+								"data-uid": "src/pages/Admin.tsx:194:15",
 								"data-prohibitions": "[]",
-								className: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg",
+								className: "bg-accent text-accent-foreground hover:bg-accent/90",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
-									"data-uid": "src/pages/Admin.tsx:207:17",
+									"data-uid": "src/pages/Admin.tsx:195:17",
 									"data-prohibitions": "[editContent]",
 									className: "w-5 h-5 mr-2"
 								}), " Novo Produto"]
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
-							"data-uid": "src/pages/Admin.tsx:210:13",
+							"data-uid": "src/pages/Admin.tsx:198:13",
 							"data-prohibitions": "[editContent]",
 							className: "max-w-3xl max-h-[90vh] overflow-y-auto bg-card border-white/10 shadow-elevation",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogHeader, {
-								"data-uid": "src/pages/Admin.tsx:211:15",
+								"data-uid": "src/pages/Admin.tsx:199:15",
 								"data-prohibitions": "[editContent]",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
-									"data-uid": "src/pages/Admin.tsx:212:17",
+									"data-uid": "src/pages/Admin.tsx:200:17",
 									"data-prohibitions": "[editContent]",
 									className: "text-2xl",
 									children: editingProduct ? "Editar Equipamento" : "Adicionar ao Inventário"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogDescription, {
-									"data-uid": "src/pages/Admin.tsx:215:17",
+									"data-uid": "src/pages/Admin.tsx:203:17",
 									"data-prohibitions": "[]",
 									children: "Salva diretamente no Supabase e atualiza o Agente de IA."
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminProductForm, {
-								"data-uid": "src/pages/Admin.tsx:219:15",
+								"data-uid": "src/pages/Admin.tsx:207:15",
 								"data-prohibitions": "[editContent]",
 								initialData: editingProduct,
 								onSuccess: () => {
@@ -41888,106 +41921,125 @@ function Admin() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Admin.tsx:231:7",
+				"data-uid": "src/pages/Admin.tsx:219:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Admin.tsx:232:9",
+					"data-uid": "src/pages/Admin.tsx:220:9",
 					"data-prohibitions": "[editContent]",
-					className: "bg-card border border-white/5 rounded-xl p-6 flex flex-col shadow-subtle",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							"data-uid": "src/pages/Admin.tsx:233:11",
-							"data-prohibitions": "[]",
-							className: "font-semibold text-lg mb-4 text-accent",
-							children: "Base de Conhecimento (IA)"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
-							"data-uid": "src/pages/Admin.tsx:234:11",
-							"data-prohibitions": "[]",
-							className: "mb-2 text-muted-foreground",
-							children: "Contexto Institucional para o Agente"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
-							"data-uid": "src/pages/Admin.tsx:235:11",
-							"data-prohibitions": "[editContent]",
-							className: "min-h-[150px] bg-background/50 border-white/10 font-mono text-xs",
-							value: companyInfo?.content || "",
-							onChange: (e) => setCompanyInfo((prev) => prev ? {
-								...prev,
-								content: e.target.value
-							} : null)
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Admin.tsx:242:11",
-							"data-prohibitions": "[editContent]",
-							className: "mt-4 flex justify-end",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-								"data-uid": "src/pages/Admin.tsx:243:13",
+					className: "bg-card border border-white/5 rounded-xl p-6 flex flex-col shadow-subtle space-y-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Admin.tsx:221:11",
+						"data-prohibitions": "[]",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								"data-uid": "src/pages/Admin.tsx:222:13",
+								"data-prohibitions": "[]",
+								className: "font-semibold text-lg mb-4 text-accent",
+								children: "Configurações (IA & Site)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+								"data-uid": "src/pages/Admin.tsx:223:13",
+								"data-prohibitions": "[]",
+								className: "mb-2 text-muted-foreground",
+								children: "Contexto Institucional (IA)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+								"data-uid": "src/pages/Admin.tsx:224:13",
 								"data-prohibitions": "[editContent]",
-								onClick: handleSaveCompanyInfo,
-								disabled: savingInfo,
-								variant: "outline",
-								className: "border-accent text-accent hover:bg-accent/10",
-								children: savingInfo ? "Salvando..." : "Salvar Contexto IA"
+								className: "min-h-[100px] bg-background/50 border-white/10 font-mono text-xs mb-4",
+								value: companyInfo?.content || "",
+								onChange: (e) => setCompanyInfo((p) => p ? {
+									...p,
+									content: e.target.value
+								} : null)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, {
+								"data-uid": "src/pages/Admin.tsx:231:13",
+								"data-prohibitions": "[]",
+								className: "mb-2 text-muted-foreground",
+								children: "Sobre a My Way (Texto do Footer)"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Textarea, {
+								"data-uid": "src/pages/Admin.tsx:232:13",
+								"data-prohibitions": "[editContent]",
+								className: "min-h-[80px] bg-background/50 border-white/10 text-xs",
+								value: footerInfo?.content || "",
+								onChange: (e) => setFooterInfo((p) => p ? {
+									...p,
+									content: e.target.value
+								} : null)
 							})
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						"data-uid": "src/pages/Admin.tsx:240:11",
+						"data-prohibitions": "[editContent]",
+						className: "mt-4 flex justify-end",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+							"data-uid": "src/pages/Admin.tsx:241:13",
+							"data-prohibitions": "[editContent]",
+							onClick: handleSaveCompanyInfo,
+							disabled: savingInfo,
+							variant: "outline",
+							className: "border-accent text-accent hover:bg-accent/10",
+							children: savingInfo ? "Salvando..." : "Salvar Configurações"
 						})
-					]
+					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Admin.tsx:254:9",
+					"data-uid": "src/pages/Admin.tsx:252:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col gap-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Admin.tsx:255:11",
+						"data-uid": "src/pages/Admin.tsx:253:11",
 						"data-prohibitions": "[editContent]",
 						className: "bg-card border border-white/5 rounded-xl p-6 flex items-center gap-5 shadow-subtle",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Admin.tsx:256:13",
+							"data-uid": "src/pages/Admin.tsx:254:13",
 							"data-prohibitions": "[]",
 							className: "p-4 bg-accent/10 text-accent rounded-xl border border-accent/20",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Box, {
-								"data-uid": "src/pages/Admin.tsx:257:15",
+								"data-uid": "src/pages/Admin.tsx:255:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-6 h-6"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Admin.tsx:259:13",
+							"data-uid": "src/pages/Admin.tsx:257:13",
 							"data-prohibitions": "[editContent]",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Admin.tsx:260:15",
+								"data-uid": "src/pages/Admin.tsx:258:15",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Total de Produtos"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Admin.tsx:261:15",
+								"data-uid": "src/pages/Admin.tsx:259:15",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold font-mono",
 								children: products.length
 							})]
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Admin.tsx:264:11",
+						"data-uid": "src/pages/Admin.tsx:262:11",
 						"data-prohibitions": "[editContent]",
 						className: "bg-card border border-white/5 rounded-xl p-6 flex items-center gap-5 shadow-subtle",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Admin.tsx:265:13",
+							"data-uid": "src/pages/Admin.tsx:263:13",
 							"data-prohibitions": "[]",
 							className: "p-4 bg-blue-500/10 text-blue-500 rounded-xl border border-blue-500/20",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Package, {
-								"data-uid": "src/pages/Admin.tsx:266:15",
+								"data-uid": "src/pages/Admin.tsx:264:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-6 h-6"
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Admin.tsx:268:13",
+							"data-uid": "src/pages/Admin.tsx:266:13",
 							"data-prohibitions": "[editContent]",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Admin.tsx:269:15",
+								"data-uid": "src/pages/Admin.tsx:267:15",
 								"data-prohibitions": "[]",
 								className: "text-sm font-medium text-muted-foreground",
 								children: "Itens em Estoque"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Admin.tsx:270:15",
+								"data-uid": "src/pages/Admin.tsx:268:15",
 								"data-prohibitions": "[editContent]",
 								className: "text-3xl font-bold font-mono",
 								children: products.filter((p) => p.stock > 0).length
@@ -41997,74 +42049,74 @@ function Admin() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Admin.tsx:278:7",
+				"data-uid": "src/pages/Admin.tsx:276:7",
 				"data-prohibitions": "[editContent]",
 				className: "bg-card border border-white/5 rounded-xl overflow-hidden shadow-subtle flex flex-col",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Admin.tsx:279:9",
+					"data-uid": "src/pages/Admin.tsx:277:9",
 					"data-prohibitions": "[]",
 					className: "p-4 border-b border-white/5 bg-muted/20 flex flex-col sm:flex-row gap-4 justify-between items-center",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						"data-uid": "src/pages/Admin.tsx:280:11",
+						"data-uid": "src/pages/Admin.tsx:278:11",
 						"data-prohibitions": "[]",
 						className: "font-semibold text-lg",
 						children: "Catálogo Supabase"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Admin.tsx:281:11",
+						"data-uid": "src/pages/Admin.tsx:279:11",
 						"data-prohibitions": "[]",
 						className: "relative w-full sm:w-auto",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-							"data-uid": "src/pages/Admin.tsx:282:13",
+							"data-uid": "src/pages/Admin.tsx:280:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/pages/Admin.tsx:283:13",
+							"data-uid": "src/pages/Admin.tsx:281:13",
 							"data-prohibitions": "[editContent]",
-							placeholder: "Buscar por nome ou SKU...",
-							className: "pl-9 w-full sm:w-[300px] bg-background border-white/10 focus-visible:ring-accent",
+							placeholder: "Buscar...",
+							className: "pl-9 w-full sm:w-[300px] bg-background border-white/10",
 							value: search,
 							onChange: (e) => setSearch(e.target.value)
 						})]
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Admin.tsx:292:9",
+					"data-uid": "src/pages/Admin.tsx:290:9",
 					"data-prohibitions": "[editContent]",
 					className: "overflow-x-auto",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Table, {
-						"data-uid": "src/pages/Admin.tsx:293:11",
+						"data-uid": "src/pages/Admin.tsx:291:11",
 						"data-prohibitions": "[editContent]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHeader, {
-							"data-uid": "src/pages/Admin.tsx:294:13",
+							"data-uid": "src/pages/Admin.tsx:292:13",
 							"data-prohibitions": "[]",
 							className: "bg-muted/40",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Admin.tsx:295:15",
+								"data-uid": "src/pages/Admin.tsx:293:15",
 								"data-prohibitions": "[]",
 								className: "border-white/10",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Admin.tsx:296:17",
+										"data-uid": "src/pages/Admin.tsx:294:17",
 										"data-prohibitions": "[]",
 										className: "w-[300px]",
 										children: "Equipamento"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Admin.tsx:297:17",
+										"data-uid": "src/pages/Admin.tsx:295:17",
 										"data-prohibitions": "[]",
 										children: "SKU"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Admin.tsx:298:17",
+										"data-uid": "src/pages/Admin.tsx:296:17",
 										"data-prohibitions": "[]",
 										children: "Preço BRL"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Admin.tsx:299:17",
+										"data-uid": "src/pages/Admin.tsx:297:17",
 										"data-prohibitions": "[]",
 										children: "Estoque"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
-										"data-uid": "src/pages/Admin.tsx:300:17",
+										"data-uid": "src/pages/Admin.tsx:298:17",
 										"data-prohibitions": "[]",
 										className: "text-right",
 										children: "Ações"
@@ -42072,100 +42124,98 @@ function Admin() {
 								]
 							})
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableBody, {
-							"data-uid": "src/pages/Admin.tsx:303:13",
+							"data-uid": "src/pages/Admin.tsx:301:13",
 							"data-prohibitions": "[editContent]",
 							children: filteredProducts.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableRow, {
-								"data-uid": "src/pages/Admin.tsx:305:17",
+								"data-uid": "src/pages/Admin.tsx:303:17",
 								"data-prohibitions": "[editContent]",
 								className: "border-white/5 hover:bg-white/5",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-										"data-uid": "src/pages/Admin.tsx:306:19",
+										"data-uid": "src/pages/Admin.tsx:304:19",
 										"data-prohibitions": "[editContent]",
 										className: "font-medium",
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Admin.tsx:307:21",
+											"data-uid": "src/pages/Admin.tsx:305:21",
 											"data-prohibitions": "[editContent]",
 											className: "flex items-center gap-2",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-												"data-uid": "src/pages/Admin.tsx:308:23",
+												"data-uid": "src/pages/Admin.tsx:306:23",
 												"data-prohibitions": "[editContent]",
 												className: "line-clamp-1 text-foreground",
 												title: product.name,
 												children: product.name
 											}), product.is_special && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, {
-												"data-uid": "src/pages/Admin.tsx:312:25",
+												"data-uid": "src/pages/Admin.tsx:310:25",
 												"data-prohibitions": "[editContent]",
 												className: "w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0"
 											})]
 										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-											"data-uid": "src/pages/Admin.tsx:315:21",
+											"data-uid": "src/pages/Admin.tsx:313:21",
 											"data-prohibitions": "[editContent]",
 											className: "text-xs text-muted-foreground mt-0.5",
 											children: product.category
 										})]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-										"data-uid": "src/pages/Admin.tsx:317:19",
+										"data-uid": "src/pages/Admin.tsx:315:19",
 										"data-prohibitions": "[editContent]",
 										className: "font-mono text-xs",
 										children: product.sku
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
-										"data-uid": "src/pages/Admin.tsx:318:19",
+										"data-uid": "src/pages/Admin.tsx:316:19",
 										"data-prohibitions": "[editContent]",
 										className: "font-mono font-medium text-foreground",
 										children: ["R$ ", product.price_brl.toLocaleString("pt-BR")]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-										"data-uid": "src/pages/Admin.tsx:321:19",
+										"data-uid": "src/pages/Admin.tsx:319:19",
 										"data-prohibitions": "[editContent]",
 										children: product.stock > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											"data-uid": "src/pages/Admin.tsx:323:23",
+											"data-uid": "src/pages/Admin.tsx:321:23",
 											"data-prohibitions": "[editContent]",
 											className: "text-green-500 font-medium",
 											children: [product.stock, " un."]
 										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"data-uid": "src/pages/Admin.tsx:325:23",
+											"data-uid": "src/pages/Admin.tsx:323:23",
 											"data-prohibitions": "[]",
 											className: "text-destructive font-medium",
 											children: "Esgotado"
 										})
 									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableCell, {
-										"data-uid": "src/pages/Admin.tsx:328:19",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
+										"data-uid": "src/pages/Admin.tsx:326:19",
 										"data-prohibitions": "[]",
 										className: "text-right",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Admin.tsx:329:21",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											"data-uid": "src/pages/Admin.tsx:327:21",
 											"data-prohibitions": "[]",
-											className: "flex justify-end gap-1",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-												"data-uid": "src/pages/Admin.tsx:330:23",
-												"data-prohibitions": "[]",
-												variant: "ghost",
-												size: "icon",
-												onClick: () => handleEdit(product),
-												className: "text-muted-foreground hover:text-accent",
-												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SquarePen, {
-													"data-uid": "src/pages/Admin.tsx:336:25",
-													"data-prohibitions": "[editContent]",
-													className: "w-4 h-4"
-												})
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-												"data-uid": "src/pages/Admin.tsx:338:23",
-												"data-prohibitions": "[]",
-												variant: "ghost",
-												size: "icon",
-												onClick: () => handleDelete(product.id),
-												className: "text-muted-foreground hover:text-destructive",
-												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-													"data-uid": "src/pages/Admin.tsx:344:25",
-													"data-prohibitions": "[editContent]",
-													className: "w-4 h-4"
-												})
-											})]
-										})
+											variant: "ghost",
+											size: "icon",
+											onClick: () => {
+												setEditingProduct(product);
+												setIsDialogOpen(true);
+											},
+											className: "text-muted-foreground hover:text-accent",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SquarePen, {
+												"data-uid": "src/pages/Admin.tsx:336:23",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4"
+											})
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											"data-uid": "src/pages/Admin.tsx:338:21",
+											"data-prohibitions": "[]",
+											variant: "ghost",
+											size: "icon",
+											onClick: () => handleDelete(product.id),
+											className: "text-muted-foreground hover:text-destructive",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+												"data-uid": "src/pages/Admin.tsx:344:23",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4"
+											})
+										})]
 									})
 								]
 							}, product.id))
@@ -42641,4 +42691,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-tqmo0XSF.js.map
+//# sourceMappingURL=index-BZWY1aLA.js.map
