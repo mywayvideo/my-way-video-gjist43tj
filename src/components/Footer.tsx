@@ -4,16 +4,16 @@ import logoUrl from '@/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png'
 
 export function Footer() {
   return (
-    <footer className="bg-muted/30 border-t">
+    <footer className="bg-muted/30 border-t mt-auto">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-1">
+        <div className="flex flex-col md:flex-row justify-between gap-12">
+          <div className="md:w-1/2 max-w-sm">
             <Link to="/" className="flex items-center space-x-2 mb-6">
               <img src={logoUrl} alt="My Way Video" className="h-8 md:h-10 w-auto" />
             </Link>
-            <p className="text-muted-foreground mb-6 text-sm">
+            <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
               Seu parceiro definitivo em equipamentos de audiovisual profissional. Qualidade,
-              garantia e suporte especializado.
+              garantia e suporte técnico especializado.
             </p>
             <div className="flex space-x-4">
               <a
@@ -43,101 +43,36 @@ export function Footer() {
             </div>
           </div>
 
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Links Rápidos</h3>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
-                  Início
-                </Link>
+          <div className="md:w-1/2 max-w-sm md:text-right flex flex-col md:items-end">
+            <h3 className="font-semibold text-lg mb-6 text-foreground">Informações de Contato</h3>
+            <ul className="space-y-4 text-sm w-full">
+              <li className="flex items-start md:justify-end gap-4 text-muted-foreground group">
+                <span className="pt-1 leading-relaxed text-left md:text-right">
+                  1735 NW 79th Av., Doral, FL 33126
+                </span>
+                <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
               </li>
-              <li>
-                <Link
-                  to="/search"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Produtos e Busca IA
-                </Link>
+              <li className="flex items-center md:justify-end gap-4 text-muted-foreground group">
+                <span className="font-medium tracking-wide">+1-786-716-1170</span>
+                <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
               </li>
-              <li>
-                <Link
-                  to="/about"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Sobre Nós
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/contact"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Contato
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Categorias</h3>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <Link
-                  to="/search?q=cameras"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Câmeras
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/search?q=lentes"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Lentes
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/search?q=iluminacao"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Iluminação
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/search?q=audio"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  Áudio Profissional
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Contato</h3>
-            <ul className="space-y-4 text-sm">
-              <li className="flex items-start gap-3 text-muted-foreground">
-                <MapPin className="w-5 h-5 shrink-0 text-primary" />
-                <span>Rua da Tecnologia, 1000 - Vila Olímpia, São Paulo - SP</span>
-              </li>
-              <li className="flex items-center gap-3 text-muted-foreground">
-                <Phone className="w-5 h-5 shrink-0 text-primary" />
-                <span>(11) 99999-9999</span>
-              </li>
-              <li className="flex items-center gap-3 text-muted-foreground">
-                <Mail className="w-5 h-5 shrink-0 text-primary" />
-                <span>contato@mywayvideo.com.br</span>
+              <li className="flex items-center md:justify-end gap-4 text-muted-foreground group">
+                <span>sales@mywayvideo.com</span>
+                <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t mt-12 pt-8 text-center text-muted-foreground text-sm flex flex-col md:flex-row justify-between items-center">
+        <div className="border-t border-white/5 mt-12 pt-8 text-center text-muted-foreground text-sm flex flex-col md:flex-row justify-between items-center">
           <p>&copy; {new Date().getFullYear()} My Way Video. Todos os direitos reservados.</p>
-          <div className="mt-4 md:mt-0 space-x-4">
+          <div className="mt-4 md:mt-0 space-x-6 font-medium">
             <Link to="/terms" className="hover:text-primary transition-colors">
               Termos de Uso
             </Link>

@@ -63,7 +63,7 @@ export default function Search() {
         case 'institutional':
           return 'Institucional'
         case 'technical':
-          return 'Especialista AV'
+          return 'Consultor Técnico'
         case 'products':
           return 'Inventário'
         case 'not_found':
@@ -90,7 +90,7 @@ export default function Search() {
                 {getBadge()}
               </span>
             </h3>
-            <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none">
+            <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none font-medium">
               {aiResponse.message}
             </div>
 
@@ -101,7 +101,7 @@ export default function Search() {
                   className="bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105"
                   onClick={() =>
                     window.open(
-                      `https://wa.me/5511999999999?text=${encodeURIComponent(`Olá! Gostaria de falar com um especialista sobre: "${query}"`)}`,
+                      `https://wa.me/17867161170?text=${encodeURIComponent(`Olá! Gostaria de falar com um especialista sobre: "${query}"`)}`,
                       '_blank',
                     )
                   }

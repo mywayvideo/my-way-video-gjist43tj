@@ -1440,6 +1440,10 @@ section[aria-label='Notifications alt+T'] {
   position: sticky;
 }
 
+.-inset-0\.5{
+  inset: -0.125rem;
+}
+
 .inset-0{
   inset: 0px;
 }
@@ -1669,6 +1673,10 @@ section[aria-label='Notifications alt+T'] {
   margin-right: 0.5rem;
 }
 
+.mt-0\.5{
+  margin-top: 0.125rem;
+}
+
 .mt-1{
   margin-top: 0.25rem;
 }
@@ -1801,6 +1809,10 @@ section[aria-label='Notifications alt+T'] {
   height: 1rem;
 }
 
+.h-40{
+  height: 10rem;
+}
+
 .h-5{
   height: 1.25rem;
 }
@@ -1893,6 +1905,10 @@ section[aria-label='Notifications alt+T'] {
   min-height: 150px;
 }
 
+.min-h-\[60vh\]{
+  min-height: 60vh;
+}
+
 .min-h-\[70vh\]{
   min-height: 70vh;
 }
@@ -1955,6 +1971,10 @@ section[aria-label='Notifications alt+T'] {
 
 .w-4{
   width: 1rem;
+}
+
+.w-40{
+  width: 10rem;
 }
 
 .w-48{
@@ -2212,18 +2232,6 @@ section[aria-label='Notifications alt+T'] {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
-@keyframes ping{
-
-  75%, 100%{
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-.animate-ping{
-  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
 @keyframes pulse{
 
   50%{
@@ -2328,12 +2336,12 @@ section[aria-label='Notifications alt+T'] {
   gap: 3rem;
 }
 
-.gap-2{
-  gap: 0.5rem;
+.gap-16{
+  gap: 4rem;
 }
 
-.gap-24{
-  gap: 6rem;
+.gap-2{
+  gap: 0.5rem;
 }
 
 .gap-3{
@@ -2372,6 +2380,18 @@ section[aria-label='Notifications alt+T'] {
   --tw-space-x-reverse: 0;
   margin-right: calc(1rem * var(--tw-space-x-reverse));
   margin-left: calc(1rem * calc(1 - var(--tw-space-x-reverse)));
+}
+
+.space-x-6 > :not([hidden]) ~ :not([hidden]){
+  --tw-space-x-reverse: 0;
+  margin-right: calc(1.5rem * var(--tw-space-x-reverse));
+  margin-left: calc(1.5rem * calc(1 - var(--tw-space-x-reverse)));
+}
+
+.space-y-0\.5 > :not([hidden]) ~ :not([hidden]){
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.125rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.125rem * var(--tw-space-y-reverse));
 }
 
 .space-y-1\.5 > :not([hidden]) ~ :not([hidden]){
@@ -2546,6 +2566,10 @@ section[aria-label='Notifications alt+T'] {
 
 .border-accent\/20{
   border-color: hsl(var(--accent) / 0.2);
+}
+
+.border-amber-500\/20{
+  border-color: rgb(245 158 11 / 0.2);
 }
 
 .border-blue-500\/20{
@@ -2726,19 +2750,56 @@ section[aria-label='Notifications alt+T'] {
   background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
 }
 
+.bg-gradient-to-br{
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+.bg-gradient-to-r{
+  background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+.from-amber-500\/10{
+  --tw-gradient-from: rgb(245 158 11 / 0.1) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(245 158 11 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-amber-500\/50{
+  --tw-gradient-from: rgb(245 158 11 / 0.5) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(245 158 11 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
 .from-white{
   --tw-gradient-from: #fff var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+.via-background{
+  --tw-gradient-to: hsl(var(--background) / 0)  var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--background)) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.to-background{
+  --tw-gradient-to: hsl(var(--background)) var(--tw-gradient-to-position);
+}
+
 .to-white\/60{
   --tw-gradient-to: rgb(255 255 255 / 0.6) var(--tw-gradient-to-position);
+}
+
+.to-yellow-500\/50{
+  --tw-gradient-to: rgb(234 179 8 / 0.5) var(--tw-gradient-to-position);
 }
 
 .bg-clip-text{
   -webkit-background-clip: text;
           background-clip: text;
+}
+
+.fill-amber-400{
+  fill: #fbbf24;
 }
 
 .fill-current{
@@ -2855,6 +2916,11 @@ section[aria-label='Notifications alt+T'] {
   padding-bottom: 0.375rem;
 }
 
+.py-10{
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
 .py-12{
   padding-top: 3rem;
   padding-bottom: 3rem;
@@ -2895,8 +2961,8 @@ section[aria-label='Notifications alt+T'] {
   padding-bottom: 2rem;
 }
 
-.pb-20{
-  padding-bottom: 5rem;
+.pb-16{
+  padding-bottom: 4rem;
 }
 
 .pb-24{
@@ -2957,6 +3023,10 @@ section[aria-label='Notifications alt+T'] {
 
 .pt-0{
   padding-top: 0px;
+}
+
+.pt-1{
+  padding-top: 0.25rem;
 }
 
 .pt-2{
@@ -3121,6 +3191,11 @@ section[aria-label='Notifications alt+T'] {
   color: hsl(var(--accent-foreground));
 }
 
+.text-amber-400{
+  --tw-text-opacity: 1;
+  color: rgb(251 191 36 / var(--tw-text-opacity, 1));
+}
+
 .text-amber-500{
   --tw-text-opacity: 1;
   color: rgb(245 158 11 / var(--tw-text-opacity, 1));
@@ -3223,6 +3298,10 @@ section[aria-label='Notifications alt+T'] {
   opacity: 0;
 }
 
+.opacity-10{
+  opacity: 0.1;
+}
+
 .opacity-50{
   opacity: 0.5;
 }
@@ -3233,10 +3312,6 @@ section[aria-label='Notifications alt+T'] {
 
 .opacity-70{
   opacity: 0.7;
-}
-
-.opacity-75{
-  opacity: 0.75;
 }
 
 .opacity-80{
@@ -3322,6 +3397,11 @@ section[aria-label='Notifications alt+T'] {
 
 .ring-offset-background{
   --tw-ring-offset-color: hsl(var(--background));
+}
+
+.blur{
+  --tw-blur: blur(8px);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
 .filter{
@@ -3912,8 +3992,16 @@ section[aria-label='Notifications alt+T'] {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
+.group:hover .group-hover\:bg-primary{
+  background-color: hsl(var(--primary));
+}
+
 .group:hover .group-hover\:text-primary{
   color: hsl(var(--primary));
+}
+
+.group:hover .group-hover\:text-primary-foreground{
+  color: hsl(var(--primary-foreground));
 }
 
 .group\/menu-item:hover .group-hover\/menu-item\:opacity-100{
@@ -4128,6 +4216,11 @@ section[aria-label='Notifications alt+T'] {
 
 .data-\[state\=active\]\:bg-background[data-state="active"]{
   background-color: hsl(var(--background));
+}
+
+.data-\[state\=checked\]\:bg-amber-500[data-state="checked"]{
+  --tw-bg-opacity: 1;
+  background-color: rgb(245 158 11 / var(--tw-bg-opacity, 1));
 }
 
 .data-\[state\=checked\]\:bg-primary[data-state="checked"]{
@@ -4704,10 +4797,6 @@ section[aria-label='Notifications alt+T'] {
     position: absolute;
   }
 
-  .md\:col-span-1{
-    grid-column: span 1 / span 1;
-  }
-
   .md\:col-span-2{
     grid-column: span 2 / span 2;
   }
@@ -4740,6 +4829,10 @@ section[aria-label='Notifications alt+T'] {
     height: 1.25rem;
   }
 
+  .md\:w-1\/2{
+    width: 50%;
+  }
+
   .md\:w-12{
     width: 3rem;
   }
@@ -4768,16 +4861,20 @@ section[aria-label='Notifications alt+T'] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .md\:grid-cols-4{
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .md\:flex-row{
     flex-direction: row;
   }
 
+  .md\:items-end{
+    align-items: flex-end;
+  }
+
   .md\:items-center{
     align-items: center;
+  }
+
+  .md\:justify-end{
+    justify-content: flex-end;
   }
 
   .md\:gap-2{
@@ -4786,6 +4883,10 @@ section[aria-label='Notifications alt+T'] {
 
   .md\:gap-6{
     gap: 1.5rem;
+  }
+
+  .md\:p-10{
+    padding: 2.5rem;
   }
 
   .md\:p-8{
@@ -4799,6 +4900,10 @@ section[aria-label='Notifications alt+T'] {
 
   .md\:pr-3{
     padding-right: 0.75rem;
+  }
+
+  .md\:text-right{
+    text-align: right;
   }
 
   .md\:text-5xl{

@@ -10,6 +10,7 @@ export type Product = {
   weight: number | null
   dimensions: string | null
   category: string | null
+  is_special: boolean
   created_at?: string
 }
 

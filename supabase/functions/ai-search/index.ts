@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: productsData } = await supabase
       .from('products')
-      .select('id, name, description, sku, category')
+      .select('id, name, description, sku, category, is_special')
     const products = productsData || []
 
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
@@ -37,20 +37,26 @@ Deno.serve(async (req: Request) => {
 
     if (openAiKey) {
       const systemPrompt = `
-You are a highly intelligent and professional AI assistant for "My Way Video", an e-commerce platform for professional audiovisual equipment. 
-Your tone must be extremely gentle, professional, and concise. Only provide the requested information without unnecessary fluff.
+You are an expert technical AI assistant for "My Way Video", an e-commerce platform for professional audiovisual equipment. 
+Your tone must be highly professional, direct, and extremely concise. Do NOT use filler words. Return ONLY the requested information.
 
-Priority 1 - Institutional: If the user asks about the company (address, policies, hours, etc), respond strictly using this data: ${companyInfo}. If info is not there, say you don't know and suggest WhatsApp.
-Priority 2 - Inventory: If the query is related to a product, search the provided inventory. Return the IDs of matching products.
-Priority 3 - Technical: If the query is a technical AV question (e.g. "How to increase focal plane?"), act as a professional Audiovisual Specialist. Answer concisely. Example: "Deverá deixar a abertura da lente o mais fechada possível."
+Knowledge Base (Institutional):
+${companyInfo}
 
-Inventory:
+Current Inventory:
 ${JSON.stringify(products)}
+
+Priority of answers (Strict):
+1. Institutional: If the user asks for company details, extract ONLY the exact information requested from the Knowledge Base. DO NOT return the full text.
+2. Inventory Search: If the user is looking for a product we have, return a concise message and the IDs of the products.
+3. Technical Audiovisual Consulting: If the user asks a technical question (e.g., "Does FX3 have native SLOG?", "How to light a set?"), act as an industry expert and answer using your internal knowledge concisely, even if the equipment is not in our inventory.
+
+If the user query does not fit the above or you cannot help, return type "not_found" and a concise message suggesting they speak to an expert via WhatsApp.
 
 You MUST return a JSON object with this exact structure:
 {
   "type": "institutional" | "products" | "technical" | "not_found",
-  "message": "Your gentle, professional, concise response in Portuguese",
+  "message": "Your highly concise, professional response in Portuguese",
   "product_ids": ["uuid1", "uuid2"] // only for 'products' type, empty array otherwise
 }
 `
@@ -78,6 +84,7 @@ You MUST return a JSON object with this exact structure:
         result.type = 'not_found'
       }
     } else {
+      // Mock logic without OpenAI
       const qLower = query.toLowerCase()
 
       const institutionalKeywords = [
@@ -113,6 +120,10 @@ You MUST return a JSON object with this exact structure:
         'configuração',
         'dica',
         'ajuda',
+        'slog',
+        'nativo',
+        'resolução',
+        'fps',
       ]
 
       const isInst = institutionalKeywords.some((kw) => qLower.includes(kw))
@@ -125,24 +136,18 @@ You MUST return a JSON object with this exact structure:
       if (isInst) {
         result = {
           type: 'institutional',
-          message: companyInfo
-            ? `Aqui estão as informações institucionais solicitadas:\n\n${companyInfo}`
-            : 'No momento não tenho essa informação institucional, mas você pode falar com um especialista pelo WhatsApp.',
+          message:
+            'Endereço: 1735 NW 79th Av., Doral, FL 33126. Telefone: +1-786-716-1170. E-mail: sales@mywayvideo.com',
           product_ids: [],
         }
       } else if (isTech) {
-        let msg =
-          'Como especialista audiovisual, recomendo sempre verificar as especificações técnicas detalhadas para obter o melhor resultado no seu projeto.'
-        if (
-          qLower.includes('focal') ||
-          qLower.includes('profundidade') ||
-          qLower.includes('abertura')
-        ) {
+        let msg = 'Como consultor técnico, sugiro sempre otimizar seu setup.'
+        if (qLower.includes('slog') || qLower.includes('sensor')) {
           msg =
-            'Deverá deixar a abertura da lente o mais fechada possível para aumentar o plano focal e a profundidade de campo.'
+            'Câmeras da linha cinema, como a Sony FX3, possuem curvas S-Log3 nativas e dual base ISO, proporcionando maior latitude e flexibilidade na coloração.'
         } else if (qLower.includes('iluminação') || qLower.includes('entrevista')) {
           msg =
-            'Para entrevistas, a configuração clássica de 3 pontos (Key, Fill, Backlight) utilizando luzes Daylight ou Bicolores é o padrão da indústria.'
+            'Para entrevistas corporativas, a iluminação de 3 pontos (Key, Fill, Backlight) utilizando LEDs Bicolores é a técnica padrão e mais recomendada.'
         }
         result = {
           type: 'technical',
@@ -161,13 +166,14 @@ You MUST return a JSON object with this exact structure:
         if (matched.length > 0) {
           result = {
             type: 'products',
-            message: `Encontrei ${matched.length} equipamento(s) em nosso inventário que corresponde(m) à sua busca.`,
+            message: `Encontrado(s) ${matched.length} equipamento(s) no inventário.`,
             product_ids: matched.map((m: any) => m.id),
           }
         } else {
           result = {
             type: 'not_found',
-            message: `Não encontrei equipamentos correspondentes a "${query}" em nosso inventário atual. Como possuímos contato direto com os maiores fabricantes, podemos verificar a disponibilidade para você.`,
+            message:
+              'Não localizei este item ou informação específica. Nossa equipe pode ajudar via WhatsApp.',
             product_ids: [],
           }
         }

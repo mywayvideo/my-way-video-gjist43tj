@@ -5,24 +5,26 @@ import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Sparkles, TrendingUp } from 'lucide-react'
 
 export default function Index() {
-  const [products, setProducts] = useState<Product[]>([])
+  const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchTopProducts() {
-      const { data } = await supabase.from('products').select('*').limit(4)
-      if (data) setProducts(data)
+    async function fetchSpecials() {
+      const { data } = await supabase.from('products').select('*').eq('is_special', true).limit(8)
+
+      if (data) setSpecials(data)
       setLoading(false)
     }
-    fetchTopProducts()
+    fetchSpecials()
   }, [])
 
   return (
-    <div className="flex flex-col gap-24 pb-24">
+    <div className="flex flex-col gap-16 pb-24">
       {/* Hero / Command Center */}
-      <section className="relative pt-32 pb-20 px-4 flex flex-col items-center justify-center min-h-[70vh] overflow-hidden">
+      <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
         <div className="text-center space-y-6 z-10 w-full max-w-4xl animate-fade-in-up">
@@ -59,28 +61,41 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Destaques */}
+      {/* SPECIALS Showcase */}
       <section className="container mx-auto px-4">
-        <h2 className="text-2xl font-bold mb-8 uppercase tracking-wide border-b border-white/10 pb-4 flex items-center gap-2">
-          Recomendados pela IA{' '}
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
-          </span>
-        </h2>
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
-            ))}
+        <div className="bg-gradient-to-br from-amber-500/10 via-background to-background border border-amber-500/20 rounded-2xl p-6 md:p-10 shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <TrendingUp className="w-40 h-40 text-amber-500" />
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
+
+          <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-amber-500 relative z-10">
+            <Sparkles className="w-7 h-7" />
+            Specials
+          </h2>
+
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
+              ))}
+            </div>
+          ) : specials.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10">
+              {specials.map((product) => (
+                <div key={product.id} className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/50 to-yellow-500/50 rounded-xl opacity-0 group-hover:opacity-100 blur transition duration-500"></div>
+                  <div className="relative h-full bg-card rounded-xl">
+                    <ProductCard product={product} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-10 relative z-10 border border-dashed border-amber-500/20 rounded-xl">
+              Nenhum produto em destaque no momento.
+            </p>
+          )}
+        </div>
       </section>
     </div>
   )

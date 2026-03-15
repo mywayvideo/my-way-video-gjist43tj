@@ -15,7 +15,18 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Box, Package, ArrowLeft, Database, Search, Upload } from 'lucide-react'
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Box,
+  Package,
+  ArrowLeft,
+  Database,
+  Search,
+  Upload,
+  Star,
+} from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
 import {
@@ -102,13 +113,20 @@ export default function Admin() {
               let val = values[i]?.trim() || null
               if (h === 'price_brl' || h === 'stock' || h === 'weight') {
                 prod[h] = val ? parseFloat(val) : 0
+              } else if (h === 'is_special') {
+                prod[h] =
+                  val === 'true' ||
+                  val === '1' ||
+                  val?.toLowerCase() === 'yes' ||
+                  val?.toLowerCase() === 'sim' ||
+                  val?.toLowerCase() === 's'
               } else {
                 prod[h] = val
               }
             })
             return prod
           })
-          .filter((p) => p.name) // basic validation
+          .filter((p) => p.name)
 
         const { data, error } = await supabase
           .from('products')
@@ -286,10 +304,15 @@ export default function Admin() {
               {filteredProducts.map((product) => (
                 <TableRow key={product.id} className="border-white/5 hover:bg-white/5">
                   <TableCell className="font-medium">
-                    <p className="line-clamp-1 text-foreground" title={product.name}>
-                      {product.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{product.category}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="line-clamp-1 text-foreground" title={product.name}>
+                        {product.name}
+                      </p>
+                      {product.is_special && (
+                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{product.category}</p>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{product.sku}</TableCell>
                   <TableCell className="font-mono font-medium text-foreground">

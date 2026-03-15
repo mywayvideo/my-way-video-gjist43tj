@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { toast } from '@/hooks/use-toast'
 
 interface AdminProductFormProps {
@@ -26,6 +27,7 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
       ncm: '',
       weight: 0,
       dimensions: '',
+      is_special: false,
     },
   )
 
@@ -134,40 +136,24 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
             className="bg-background/50 border-white/10"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="ncm">NCM</Label>
-          <Input
-            id="ncm"
-            name="ncm"
-            value={formData.ncm || ''}
-            onChange={handleChange}
-            className="bg-background/50 border-white/10"
+
+        <div className="flex flex-row items-center justify-between rounded-lg border border-white/10 bg-background/50 p-3 shadow-sm md:col-span-2">
+          <div className="space-y-0.5">
+            <Label htmlFor="is_special" className="text-base text-amber-500 font-semibold">
+              Produto "SPECIAL"
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Destacar este equipamento na página inicial em uma seção especial.
+            </p>
+          </div>
+          <Switch
+            id="is_special"
+            checked={formData.is_special || false}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_special: checked }))}
+            className="data-[state=checked]:bg-amber-500"
           />
         </div>
-        <div className="flex gap-4">
-          <div className="space-y-2 flex-1">
-            <Label htmlFor="weight">Peso (kg)</Label>
-            <Input
-              id="weight"
-              name="weight"
-              type="number"
-              step="0.1"
-              value={formData.weight || 0}
-              onChange={handleChange}
-              className="bg-background/50 border-white/10"
-            />
-          </div>
-          <div className="space-y-2 flex-1">
-            <Label htmlFor="dimensions">Dimensões</Label>
-            <Input
-              id="dimensions"
-              name="dimensions"
-              value={formData.dimensions || ''}
-              onChange={handleChange}
-              className="bg-background/50 border-white/10"
-            />
-          </div>
-        </div>
+
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="description">Descrição</Label>
           <Textarea
