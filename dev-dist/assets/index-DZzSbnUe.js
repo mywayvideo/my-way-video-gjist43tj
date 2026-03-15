@@ -19133,6 +19133,28 @@ var Check = createLucideIcon("check", [["path", {
 	d: "M20 6 9 17l-5-5",
 	key: "1gmf2c"
 }]]);
+var CircleAlert = createLucideIcon("circle-alert", [
+	["circle", {
+		cx: "12",
+		cy: "12",
+		r: "10",
+		key: "1mglay"
+	}],
+	["line", {
+		x1: "12",
+		x2: "12",
+		y1: "8",
+		y2: "12",
+		key: "1pkeuh"
+	}],
+	["line", {
+		x1: "12",
+		x2: "12.01",
+		y1: "16",
+		y2: "16",
+		key: "4dfq90"
+	}]
+]);
 var Database = createLucideIcon("database", [
 	["ellipse", {
 		cx: "12",
@@ -40563,231 +40585,198 @@ function Index() {
 	});
 }
 //#endregion
+//#region src/services/ai-search.ts
+var performAISearch = async (query) => {
+	const { data, error } = await supabase.functions.invoke("ai-search", { body: { query } });
+	return {
+		data,
+		error
+	};
+};
+//#endregion
 //#region src/pages/Search.tsx
 function Search() {
 	const [searchParams] = useSearchParams();
 	const query = searchParams.get("q") || "";
 	const [loading, setLoading] = (0, import_react.useState)(false);
-	const [companyResult, setCompanyResult] = (0, import_react.useState)(null);
+	const [aiResponse, setAiResponse] = (0, import_react.useState)(null);
 	const [products, setProducts] = (0, import_react.useState)([]);
 	(0, import_react.useEffect)(() => {
-		async function performSearch() {
+		async function doSearch() {
 			if (!query.trim()) {
+				setAiResponse(null);
 				setProducts([]);
-				setCompanyResult(null);
 				return;
 			}
 			setLoading(true);
-			setCompanyResult(null);
+			setAiResponse(null);
 			setProducts([]);
 			try {
-				const { data: companyData } = await supabase.from("company_info").select("content");
-				let isInstitutional = false;
-				let matchedContent = null;
-				if (companyData && companyData.length > 0) {
-					const queryLower = query.toLowerCase();
-					isInstitutional = [
-						"horário",
-						"horario",
-						"endereço",
-						"endereco",
-						"telefone",
-						"contato",
-						"sobre",
-						"política",
-						"politica",
-						"garantia",
-						"devolução",
-						"devolucao",
-						"local",
-						"loja",
-						"pagamento",
-						"frete",
-						"entrega",
-						"cnpj",
-						"funcionamento",
-						"institucional",
-						"quem somos"
-					].some((kw) => queryLower.includes(kw));
-					if (!isInstitutional) isInstitutional = queryLower.split(/\s+/).filter((w) => w.length > 4).some((w) => companyData.some((c) => c.content?.toLowerCase().includes(w)));
-					if (isInstitutional) matchedContent = companyData.map((c) => c.content).filter(Boolean).join("\n\n");
-				}
-				if (isInstitutional && matchedContent) setCompanyResult(matchedContent);
-				else {
-					const { data: productsData } = await supabase.from("products").select("*").ilike("name", `%${query}%`);
-					if (productsData && productsData.length > 0) setProducts(productsData);
-					else {
-						const { data: descData } = await supabase.from("products").select("*").ilike("description", `%${query}%`);
-						if (descData && descData.length > 0) setProducts(descData);
+				const { data, error } = await performAISearch(query);
+				if (error) throw error;
+				if (data) {
+					setAiResponse(data);
+					if (data.type === "products" && data.product_ids?.length > 0) {
+						const { data: productsData } = await supabase.from("products").select("*").in("id", data.product_ids);
+						if (productsData) setProducts(productsData);
 					}
 				}
 			} catch (error) {
-				console.error("Error during search:", error);
+				console.error("Error during AI search:", error);
 			} finally {
 				setLoading(false);
 			}
 		}
-		performSearch();
+		doSearch();
 	}, [query]);
+	const renderAIResponse = () => {
+		if (!aiResponse) return null;
+		const getBadge = () => {
+			switch (aiResponse.type) {
+				case "institutional": return "Institucional";
+				case "technical": return "Especialista AV";
+				case "products": return "Inventário";
+				case "not_found": return "Assistente";
+				default: return "Assistente";
+			}
+		};
+		const getIcon = () => {
+			if (aiResponse.type === "technical") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Video, {
+				"data-uid": "src/pages/Search.tsx:77:51",
+				"data-prohibitions": "[editContent]",
+				className: "w-6 h-6 text-primary"
+			});
+			if (aiResponse.type === "not_found") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleAlert, {
+				"data-uid": "src/pages/Search.tsx:78:51",
+				"data-prohibitions": "[editContent]",
+				className: "w-6 h-6 text-primary"
+			});
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
+				"data-uid": "src/pages/Search.tsx:79:14",
+				"data-prohibitions": "[editContent]",
+				className: "w-6 h-6 text-primary"
+			});
+		};
+		return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			"data-uid": "src/pages/Search.tsx:83:7",
+			"data-prohibitions": "[editContent]",
+			className: "animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Search.tsx:84:9",
+				"data-prohibitions": "[editContent]",
+				className: "bg-muted/30 border border-primary/20 rounded-xl p-6 md:p-8 flex gap-4 md:gap-6 items-start shadow-sm",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/pages/Search.tsx:85:11",
+					"data-prohibitions": "[editContent]",
+					className: "bg-primary/10 p-3 rounded-full shrink-0",
+					children: getIcon()
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/pages/Search.tsx:86:11",
+					"data-prohibitions": "[editContent]",
+					className: "flex-1 space-y-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+							"data-uid": "src/pages/Search.tsx:87:13",
+							"data-prohibitions": "[editContent]",
+							className: "font-semibold text-lg flex items-center gap-2",
+							children: ["My Way Video AI", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"data-uid": "src/pages/Search.tsx:89:15",
+								"data-prohibitions": "[editContent]",
+								className: "text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium",
+								children: getBadge()
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							"data-uid": "src/pages/Search.tsx:93:13",
+							"data-prohibitions": "[editContent]",
+							className: "text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none",
+							children: aiResponse.message
+						}),
+						aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							"data-uid": "src/pages/Search.tsx:98:15",
+							"data-prohibitions": "[]",
+							className: "pt-2",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+								"data-uid": "src/pages/Search.tsx:99:17",
+								"data-prohibitions": "[]",
+								size: "lg",
+								className: "bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105",
+								onClick: () => window.open(`https://wa.me/5511999999999?text=${encodeURIComponent(`Olá! Gostaria de falar com um especialista sobre: "${query}"`)}`, "_blank"),
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
+									"data-uid": "src/pages/Search.tsx:109:19",
+									"data-prohibitions": "[editContent]",
+									className: "w-5 h-5"
+								}), "Falar com um especialista pelo WhatsApp"]
+							})
+						})
+					]
+				})]
+			})
+		});
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Search.tsx:110:5",
+		"data-uid": "src/pages/Search.tsx:121:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-12 max-w-6xl min-h-[70vh]",
 		children: [
 			!query && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:112:9",
+				"data-uid": "src/pages/Search.tsx:123:9",
 				"data-prohibitions": "[]",
 				className: "mb-12",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AIPrompt, {
-					"data-uid": "src/pages/Search.tsx:113:11",
+					"data-uid": "src/pages/Search.tsx:124:11",
 					"data-prohibitions": "[editContent]"
 				})
 			}),
 			query && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:118:9",
+				"data-uid": "src/pages/Search.tsx:129:9",
 				"data-prohibitions": "[editContent]",
 				className: "flex items-center gap-3 mb-8 pb-4 border-b",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-					"data-uid": "src/pages/Search.tsx:119:11",
+					"data-uid": "src/pages/Search.tsx:130:11",
 					"data-prohibitions": "[editContent]",
 					className: "w-6 h-6 text-primary"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-					"data-uid": "src/pages/Search.tsx:120:11",
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
+					"data-uid": "src/pages/Search.tsx:131:11",
 					"data-prohibitions": "[editContent]",
 					className: "text-2xl font-bold",
-					children: loading ? "Pesquisando..." : `Resultados para "${query}"`
+					children: [
+						"Resultados para \"",
+						query,
+						"\""
+					]
 				})]
 			}),
 			loading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:127:9",
+				"data-uid": "src/pages/Search.tsx:136:9",
 				"data-prohibitions": "[]",
 				className: "flex flex-col justify-center items-center py-20 space-y-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-					"data-uid": "src/pages/Search.tsx:128:11",
+					"data-uid": "src/pages/Search.tsx:137:11",
 					"data-prohibitions": "[editContent]",
 					className: "w-10 h-10 animate-spin text-primary"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					"data-uid": "src/pages/Search.tsx:129:11",
+					"data-uid": "src/pages/Search.tsx:138:11",
 					"data-prohibitions": "[]",
-					className: "text-muted-foreground animate-pulse",
+					className: "text-muted-foreground animate-pulse font-medium",
 					children: "A inteligência artificial está processando sua busca..."
 				})]
 			}),
-			!loading && companyResult && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:136:9",
+			!loading && renderAIResponse(),
+			!loading && aiResponse?.type === "products" && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				"data-uid": "src/pages/Search.tsx:147:9",
 				"data-prohibitions": "[editContent]",
-				className: "animate-in fade-in slide-in-from-bottom-4 duration-500",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:137:11",
-					"data-prohibitions": "[editContent]",
-					className: "bg-primary/5 border border-primary/20 rounded-xl p-6 md:p-8 flex gap-4 md:gap-6 items-start shadow-sm mb-8",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Search.tsx:138:13",
-						"data-prohibitions": "[]",
-						className: "bg-primary/20 p-3 rounded-full shrink-0",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-							"data-uid": "src/pages/Search.tsx:139:15",
-							"data-prohibitions": "[editContent]",
-							className: "w-8 h-8 text-primary"
-						})
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Search.tsx:141:13",
-						"data-prohibitions": "[editContent]",
-						className: "flex-1 space-y-3",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-							"data-uid": "src/pages/Search.tsx:142:15",
-							"data-prohibitions": "[]",
-							className: "font-semibold text-lg flex items-center gap-2",
-							children: ["Assistente IA My Way Video", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Search.tsx:144:17",
-								"data-prohibitions": "[]",
-								className: "text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium",
-								children: "Institucional"
-							})]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Search.tsx:148:15",
-							"data-prohibitions": "[editContent]",
-							className: "text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none",
-							children: companyResult
-						})]
-					})]
-				})
-			}),
-			!loading && !companyResult && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:157:9",
-				"data-prohibitions": "[editContent]",
-				className: "animate-in fade-in slide-in-from-bottom-4 duration-500",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:158:11",
-					"data-prohibitions": "[editContent]",
-					className: "mb-6 flex items-center justify-between",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						"data-uid": "src/pages/Search.tsx:159:13",
-						"data-prohibitions": "[editContent]",
-						className: "text-muted-foreground font-medium",
-						children: [
-							"Encontramos ",
-							products.length,
-							" produto",
-							products.length > 1 ? "s" : "",
-							" no nosso estoque."
-						]
-					})
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:164:11",
+				className: "animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/pages/Search.tsx:148:11",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6",
 					children: products.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-						"data-uid": "src/pages/Search.tsx:166:15",
+						"data-uid": "src/pages/Search.tsx:150:15",
 						"data-prohibitions": "[editContent]",
 						product
 					}, product.id))
-				})]
-			}),
-			!loading && !companyResult && products.length === 0 && query && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:173:9",
-				"data-prohibitions": "[editContent]",
-				className: "animate-in fade-in zoom-in-95 duration-500 bg-muted/30 border border-border rounded-xl p-8 md:p-12 text-center max-w-2xl mx-auto mt-8 shadow-sm",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Search.tsx:174:11",
-						"data-prohibitions": "[]",
-						className: "bg-background w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-border",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-							"data-uid": "src/pages/Search.tsx:175:13",
-							"data-prohibitions": "[editContent]",
-							className: "w-10 h-10 text-muted-foreground opacity-70"
-						})
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/pages/Search.tsx:177:11",
-						"data-prohibitions": "[]",
-						className: "text-2xl font-semibold mb-4 text-foreground",
-						children: "Produto não encontrado"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						"data-uid": "src/pages/Search.tsx:178:11",
-						"data-prohibitions": "[editContent]",
-						className: "text-muted-foreground mb-8 text-lg leading-relaxed",
-						children: [
-							"Não encontrei correspondências exatas no inventário atual para '",
-							query,
-							"'. Mas não se preocupe, a My Way Video tem contato direto com os maiores fabricantes."
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-						"data-uid": "src/pages/Search.tsx:182:11",
-						"data-prohibitions": "[]",
-						size: "lg",
-						className: "bg-[#25D366] hover:bg-[#1DA851] text-white gap-3 font-medium h-14 px-8 text-base shadow-lg shadow-[#25D366]/20 transition-all hover:scale-105",
-						onClick: () => window.open(`https://wa.me/5511999999999?text=${encodeURIComponent(`Olá! Estava procurando por "${query}" no site e gostaria de falar com um especialista sobre disponibilidade ou encomenda.`)}`, "_blank"),
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
-							"data-uid": "src/pages/Search.tsx:192:13",
-							"data-prohibitions": "[editContent]",
-							className: "w-6 h-6"
-						}), "Falar com um especialista pelo WhatsApp"]
-					})
-				]
+				})
 			})
 		]
 	});
@@ -42603,4 +42592,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-C189GTrN.js.map
+//# sourceMappingURL=index-DZzSbnUe.js.map
