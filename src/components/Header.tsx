@@ -1,112 +1,101 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, User, Video, Search, LogOut, Settings } from 'lucide-react'
-import { useCartStore } from '@/stores/useCartStore'
-import { useAuth } from '@/hooks/use-auth'
-import { Badge } from '@/components/ui/badge'
+import { Search, ShoppingCart, User, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { useAuth } from '@/hooks/use-auth'
+import { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { useCartStore } from '@/stores/useCartStore'
+import logoUrl from '@/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png'
 
 export function Header() {
-  const { itemCount } = useCartStore()
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+  const { totalItems } = useCartStore()
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    }
+  }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-background/80 backdrop-blur-xl">
-      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="bg-accent text-accent-foreground p-2 rounded-lg group-hover:scale-105 transition-transform">
-            <Video className="w-6 h-6" />
-          </div>
-          <span className="font-bold text-xl tracking-tight uppercase">
-            My Way<span className="text-muted-foreground font-light ml-1">Video</span>
-          </span>
-        </Link>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="w-5 h-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left">
+              <nav className="flex flex-col gap-4 mt-8">
+                <Link to="/" className="text-lg font-medium">
+                  Início
+                </Link>
+                <Link to="/search" className="text-lg font-medium">
+                  Produtos
+                </Link>
+                <Link to="/about" className="text-lg font-medium">
+                  Sobre
+                </Link>
+              </nav>
+            </SheetContent>
+          </Sheet>
 
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Sobre
+          <Link to="/" className="flex items-center space-x-2">
+            <img src={logoUrl} alt="My Way Video" className="h-8 md:h-10 w-auto" />
           </Link>
-        </nav>
+        </div>
 
-        <div className="flex items-center gap-2 md:gap-4">
-          <Link to="/search">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-accent">
-              <Search className="w-5 h-5" />
-            </Button>
-          </Link>
+        <div className="hidden md:flex flex-1 max-w-md mx-6">
+          <form onSubmit={handleSearch} className="w-full relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Input
+              type="search"
+              placeholder="Pesquise produtos ou pergunte à IA..."
+              className="w-full pl-10 rounded-full bg-muted/50 border-transparent focus-visible:bg-background transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </form>
+        </div>
 
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-accent hover:text-accent/80 hover:bg-accent/10"
-                >
-                  <User className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 border-white/10">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.user_metadata?.name || 'Usuário'}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Painel Admin</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={signOut}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sair</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="hidden md:flex items-center gap-2">
-              <Link to="/login">
-                <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                  Login
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button
-                  variant="secondary"
-                  className="bg-white/10 hover:bg-white/20 text-foreground"
-                >
-                  Cadastrar
-                </Button>
-              </Link>
-            </div>
-          )}
-
+        <div className="flex items-center gap-1 md:gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="relative text-muted-foreground hover:text-foreground"
+            className="md:hidden"
+            onClick={() => navigate('/search')}
+          >
+            <Search className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => navigate('/cart')}
           >
             <ShoppingCart className="w-5 h-5" />
-            {itemCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-accent text-accent-foreground">
-                {itemCount}
-              </Badge>
+            {totalItems > 0 && (
+              <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in">
+                {totalItems}
+              </span>
             )}
           </Button>
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={() => signOut()}>
+              Sair
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" onClick={() => navigate('/login')}>
+              <User className="w-5 h-5" />
+            </Button>
+          )}
         </div>
       </div>
     </header>

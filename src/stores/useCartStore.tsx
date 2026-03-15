@@ -1,52 +1,87 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
-import { Product } from '@/types'
-import { toast } from '@/hooks/use-toast'
+import { useSyncExternalStore } from 'react'
 
-interface CartItem {
-  product: Product
+export interface CartItem {
+  id: string
+  name: string
+  price: number
+  image_url?: string
   quantity: number
 }
 
-interface CartStore {
-  items: CartItem[]
-  addItem: (product: Product) => void
-  itemCount: number
-}
+class CartStore {
+  private items: CartItem[] = []
+  private listeners: Set<() => void> = new Set()
 
-const CartContext = createContext<CartStore | undefined>(undefined)
-
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
-
-  const addItem = (product: Product) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id)
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
-        )
+  constructor() {
+    try {
+      const stored = localStorage.getItem('mw-video-cart')
+      if (stored) {
+        this.items = JSON.parse(stored)
       }
-      return [...prev, { product, quantity: 1 }]
-    })
-    toast({
-      title: 'Adicionado ao carrinho',
-      description: `${product.name} foi adicionado.`,
-    })
+    } catch (e) {
+      console.error('Failed to load cart', e)
+    }
   }
 
-  const itemCount = items.reduce((acc, item) => acc + item.quantity, 0)
+  private notify() {
+    try {
+      localStorage.setItem('mw-video-cart', JSON.stringify(this.items))
+    } catch (e) {}
+    this.listeners.forEach((l) => l())
+  }
 
-  return React.createElement(
-    CartContext.Provider,
-    { value: { items, addItem, itemCount } },
-    children,
-  )
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  getSnapshot = () => this.items
+
+  addItem = (item: CartItem) => {
+    const existing = this.items.find((i) => i.id === item.id)
+    if (existing) {
+      this.items = this.items.map((i) =>
+        i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i,
+      )
+    } else {
+      this.items = [...this.items, item]
+    }
+    this.notify()
+  }
+
+  removeItem = (id: string) => {
+    this.items = this.items.filter((i) => i.id !== id)
+    this.notify()
+  }
+
+  updateQuantity = (id: string, quantity: number) => {
+    this.items = this.items.map((i) => (i.id === id ? { ...i, quantity } : i))
+    this.notify()
+  }
+
+  clearCart = () => {
+    this.items = []
+    this.notify()
+  }
 }
+
+const cartStore = new CartStore()
 
 export function useCartStore() {
-  const context = useContext(CartContext)
-  if (context === undefined) {
-    throw new Error('useCartStore must be used within a CartProvider')
+  const items = useSyncExternalStore(cartStore.subscribe, cartStore.getSnapshot)
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+  return {
+    items,
+    addItem: cartStore.addItem,
+    removeItem: cartStore.removeItem,
+    updateQuantity: cartStore.updateQuantity,
+    clearCart: cartStore.clearCart,
+    totalItems,
+    totalPrice,
   }
-  return context
 }

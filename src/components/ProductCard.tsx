@@ -1,62 +1,66 @@
 import { Link } from 'react-router-dom'
-import { Product } from '@/types'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ShoppingCart, PackageSearch } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
-import { ShoppingCart } from 'lucide-react'
-import { formatUSD } from '@/lib/utils'
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
 
   return (
-    <Card className="group overflow-hidden bg-card/50 border-white/5 hover:border-accent/50 transition-all duration-300 flex flex-col hover:-translate-y-1">
-      <Link
-        to={`/product/${product.id}`}
-        className="relative aspect-square overflow-hidden bg-muted/20"
-      >
-        <img
-          src={product.image_url || 'https://img.usecurling.com/p/600/600?q=camera'}
-          alt={product.name}
-          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-        />
-        {product.stock <= 0 && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center backdrop-blur-sm">
-            <Badge variant="destructive" className="uppercase tracking-widest">
-              Sob Consulta
-            </Badge>
+    <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
+      <CardHeader className="p-0 relative">
+        <Link
+          to={`/product/${product.id}`}
+          className="aspect-square overflow-hidden bg-muted/30 flex items-center justify-center"
+        >
+          {product.image_url ? (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-muted-foreground/50 h-full w-full bg-muted/20">
+              <PackageSearch className="w-12 h-12 mb-2" />
+              <span className="text-xs font-medium">Sem imagem</span>
+            </div>
+          )}
+        </Link>
+        {product.stock === 0 && (
+          <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-md">
+            Esgotado
           </div>
         )}
-      </Link>
-      <CardContent className="p-4 flex-1 flex flex-col justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-mono">
-            {product.category || 'Geral'}
-          </p>
-          <h3 className="font-semibold text-lg leading-tight group-hover:text-accent transition-colors line-clamp-2">
-            <Link to={`/product/${product.id}`}>{product.name}</Link>
+      </CardHeader>
+      <CardContent className="flex-1 p-5">
+        <Link to={`/product/${product.id}`}>
+          <h3 className="font-semibold text-sm md:text-base line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+            {product.name}
           </h3>
-        </div>
-        <div className="mt-4 flex flex-col gap-1">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Preço (BRL):</span>
-            <span className="font-mono text-lg text-primary-foreground font-bold">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                product.price_brl,
-              )}
-            </span>
-          </div>
-        </div>
+        </Link>
+        <p className="text-xl font-bold text-foreground mt-3">
+          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+            product.price || 0,
+          )}
+        </p>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-5 pt-0 mt-auto">
         <Button
-          onClick={() => addItem(product)}
-          disabled={product.stock <= 0}
-          className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+          className="w-full gap-2 transition-all hover:scale-[1.02]"
+          onClick={() =>
+            addItem({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image_url: product.image_url,
+              quantity: 1,
+            })
+          }
+          disabled={product.stock === 0}
         >
           <ShoppingCart className="w-4 h-4" />
-          {product.stock > 0 ? 'Adicionar' : 'Consultar'}
+          {product.stock === 0 ? 'Indisponível' : 'Adicionar'}
         </Button>
       </CardFooter>
     </Card>

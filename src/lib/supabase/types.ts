@@ -9,7 +9,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      company_info: {
+        Row: {
+          content: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          dimensions: string | null
+          id: string
+          image_url: string | null
+          name: string
+          ncm: string | null
+          price_brl: number | null
+          sku: string | null
+          stock: number | null
+          weight: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          dimensions?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          ncm?: string | null
+          price_brl?: number | null
+          sku?: string | null
+          stock?: number | null
+          weight?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          dimensions?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          ncm?: string | null
+          price_brl?: number | null
+          sku?: string | null
+          stock?: number | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +215,35 @@ export const Constants = {
 // IMPORTANT: The TypeScript types above map UUID, TEXT, VARCHAR all to "string".
 // Use the COLUMN TYPES section below to know the real PostgreSQL type for each column.
 // Always use the correct PostgreSQL type when writing SQL migrations.
+
+// --- COLUMN TYPES (actual PostgreSQL types) ---
+// Use this to know the real database type when writing migrations.
+// "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: company_info
+//   id: uuid (not null, default: gen_random_uuid())
+//   content: text (not null)
+//   updated_at: timestamp with time zone (not null, default: now())
+// Table: products
+//   id: uuid (not null, default: gen_random_uuid())
+//   name: text (not null)
+//   sku: text (nullable)
+//   description: text (nullable)
+//   price_brl: numeric (nullable, default: 0)
+//   stock: integer (nullable, default: 0)
+//   image_url: text (nullable)
+//   ncm: text (nullable)
+//   weight: numeric (nullable)
+//   dimensions: text (nullable)
+//   category: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+
+// --- CONSTRAINTS ---
+// Table: company_info
+//   PRIMARY KEY company_info_pkey: PRIMARY KEY (id)
+// Table: products
+//   PRIMARY KEY products_pkey: PRIMARY KEY (id)
+//   UNIQUE products_sku_key: UNIQUE (sku)
+
+// --- INDEXES ---
+// Table: products
+//   CREATE UNIQUE INDEX products_sku_key ON public.products USING btree (sku)

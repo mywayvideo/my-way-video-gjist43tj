@@ -1,127 +1,199 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AIPrompt } from '@/components/AIPrompt'
-import { ProductCard } from '@/components/ProductCard'
-import { Product } from '@/types'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { Bot, Sparkles, MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { ProductCard } from '@/components/ProductCard'
+import { Button } from '@/components/ui/button'
+import { Loader2, MessageCircle, Bot, Search as SearchIcon } from 'lucide-react'
+import { AIPrompt } from '@/components/AIPrompt'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
 
-  const [loading, setLoading] = useState(true)
-  const [results, setResults] = useState<Product[]>([])
-  const [aiMessage, setAiMessage] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [companyResult, setCompanyResult] = useState<string | null>(null)
+  const [products, setProducts] = useState<any[]>([])
 
   useEffect(() => {
-    if (!query) return
+    async function performSearch() {
+      if (!query.trim()) {
+        setProducts([])
+        setCompanyResult(null)
+        return
+      }
 
-    const fetchData = async () => {
       setLoading(true)
+      setCompanyResult(null)
+      setProducts([])
 
-      // Fetch Knowledge Base
-      const { data: kbData } = await supabase
-        .from('company_info')
-        .select('content')
-        .limit(1)
-        .single()
-      const kbText = kbData?.content || ''
+      try {
+        const { data: companyData } = await supabase.from('company_info').select('content')
 
-      // Fetch Products
-      const { data: products } = await supabase
-        .from('products')
-        .select('*')
-        .or(`name.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
+        let isInstitutional = false
+        let matchedContent = null
 
-      setResults(products || [])
+        if (companyData && companyData.length > 0) {
+          const queryLower = query.toLowerCase()
+          const institutionalKeywords = [
+            'horário',
+            'horario',
+            'endereço',
+            'endereco',
+            'telefone',
+            'contato',
+            'sobre',
+            'política',
+            'politica',
+            'garantia',
+            'devolução',
+            'devolucao',
+            'local',
+            'loja',
+            'pagamento',
+            'frete',
+            'entrega',
+            'cnpj',
+            'funcionamento',
+            'institucional',
+            'quem somos',
+          ]
 
-      // Mock AI response leveraging the real DB data
-      setTimeout(() => {
-        if (products && products.length > 0) {
-          const p = products[0]
-          setAiMessage(
-            `Analisando o banco de dados... Recomendo o equipamento **${p.name}**. Custa **R$ ${p.price_brl.toLocaleString('pt-BR')}**. Temos ${p.stock > 0 ? `**${p.stock} unidades** em estoque` : 'indisponível no momento'}. \n\nLembre-se: ${kbText.substring(0, 150)}...`,
-          )
-        } else {
-          setAiMessage(
-            `Não encontrei correspondências exatas no inventário atual para "${query}". Mas não se preocupe, a My Way Video tem contato direto com os maiores fabricantes. Consulte-nos via WhatsApp para encomendas especiais!`,
-          )
+          isInstitutional = institutionalKeywords.some((kw) => queryLower.includes(kw))
+
+          if (!isInstitutional) {
+            const queryWords = queryLower.split(/\s+/).filter((w) => w.length > 4)
+            isInstitutional = queryWords.some((w) =>
+              companyData.some((c) => c.content?.toLowerCase().includes(w)),
+            )
+          }
+
+          if (isInstitutional) {
+            matchedContent = companyData
+              .map((c) => c.content)
+              .filter(Boolean)
+              .join('\n\n')
+          }
         }
+
+        if (isInstitutional && matchedContent) {
+          setCompanyResult(matchedContent)
+        } else {
+          const { data: productsData } = await supabase
+            .from('products')
+            .select('*')
+            .ilike('name', `%${query}%`)
+
+          if (productsData && productsData.length > 0) {
+            setProducts(productsData)
+          } else {
+            const { data: descData } = await supabase
+              .from('products')
+              .select('*')
+              .ilike('description', `%${query}%`)
+
+            if (descData && descData.length > 0) {
+              setProducts(descData)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error during search:', error)
+      } finally {
         setLoading(false)
-      }, 1000)
+      }
     }
 
-    fetchData()
+    performSearch()
   }, [query])
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col gap-8 min-h-[80vh]">
-      <div className="bg-muted/20 border border-white/5 rounded-2xl p-6 md:p-8">
-        <AIPrompt initialValue={query} />
-      </div>
+    <div className="container mx-auto px-4 py-12 max-w-6xl min-h-[70vh]">
+      {!query && (
+        <div className="mb-12">
+          <AIPrompt />
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-4 sticky top-28 bg-card/40 border border-accent/20 rounded-xl p-6 shadow-elevation backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-4 text-accent">
-            <Bot className="w-6 h-6" />
-            <h3 className="font-semibold text-lg">MyWay AI Agent</h3>
-          </div>
+      {query && (
+        <div className="flex items-center gap-3 mb-8 pb-4 border-b">
+          <SearchIcon className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold">
+            {loading ? 'Pesquisando...' : `Resultados para "${query}"`}
+          </h1>
+        </div>
+      )}
 
-          {loading ? (
-            <div className="space-y-3 animate-pulse">
-              <Skeleton className="h-4 w-full bg-accent/10" />
-              <Skeleton className="h-4 w-[90%] bg-accent/10" />
-              <Skeleton className="h-4 w-[80%] bg-accent/10" />
-              <div className="flex items-center gap-2 pt-4 text-xs text-muted-foreground">
-                <Sparkles className="w-3 h-3 animate-spin" /> Processando banco de dados...
+      {loading && (
+        <div className="flex flex-col justify-center items-center py-20 space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-muted-foreground animate-pulse">
+            A inteligência artificial está processando sua busca...
+          </p>
+        </div>
+      )}
+
+      {!loading && companyResult && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 md:p-8 flex gap-4 md:gap-6 items-start shadow-sm mb-8">
+            <div className="bg-primary/20 p-3 rounded-full shrink-0">
+              <Bot className="w-8 h-8 text-primary" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                Assistente IA My Way Video
+                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
+                  Institucional
+                </span>
+              </h3>
+              <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none">
+                {companyResult}
               </div>
             </div>
-          ) : (
-            <div className="animate-fade-in text-foreground/90 leading-relaxed space-y-4">
-              <p
-                dangerouslySetInnerHTML={{
-                  __html: aiMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
-                }}
-              ></p>
-            </div>
-          )}
-        </div>
-
-        <div className="lg:col-span-8 space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">Resultados da Pesquisa</h2>
-            <span className="text-sm text-muted-foreground">{results.length} resultados</span>
           </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Skeleton className="h-[300px] w-full rounded-xl bg-white/5" />
-            </div>
-          ) : results.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-white/5 border border-white/10 rounded-2xl text-center space-y-6">
-              <h3 className="text-2xl font-bold">Nenhum resultado encontrado</h3>
-              <p className="text-muted-foreground">
-                Não achou o que procurava? Nossa equipe de especialistas pode conseguir para você.
-              </p>
-              <Button asChild size="lg" className="bg-[#25D366] hover:bg-[#128C7E] text-white">
-                <a href="https://wa.me/17867161170" target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Falar com um especialista via WhatsApp
-                </a>
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-in-up">
-              {results.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
         </div>
-      </div>
+      )}
+
+      {!loading && !companyResult && products.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="mb-6 flex items-center justify-between">
+            <p className="text-muted-foreground font-medium">
+              Encontramos {products.length} produto{products.length > 1 ? 's' : ''} no nosso
+              estoque.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && !companyResult && products.length === 0 && query && (
+        <div className="animate-in fade-in zoom-in-95 duration-500 bg-muted/30 border border-border rounded-xl p-8 md:p-12 text-center max-w-2xl mx-auto mt-8 shadow-sm">
+          <div className="bg-background w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-border">
+            <Bot className="w-10 h-10 text-muted-foreground opacity-70" />
+          </div>
+          <h3 className="text-2xl font-semibold mb-4 text-foreground">Produto não encontrado</h3>
+          <p className="text-muted-foreground mb-8 text-lg leading-relaxed">
+            Não encontrei correspondências exatas no inventário atual para '{query}'. Mas não se
+            preocupe, a My Way Video tem contato direto com os maiores fabricantes.
+          </p>
+          <Button
+            size="lg"
+            className="bg-[#25D366] hover:bg-[#1DA851] text-white gap-3 font-medium h-14 px-8 text-base shadow-lg shadow-[#25D366]/20 transition-all hover:scale-105"
+            onClick={() =>
+              window.open(
+                `https://wa.me/5511999999999?text=${encodeURIComponent(`Olá! Estava procurando por "${query}" no site e gostaria de falar com um especialista sobre disponibilidade ou encomenda.`)}`,
+                '_blank',
+              )
+            }
+          >
+            <MessageCircle className="w-6 h-6" />
+            Falar com um especialista pelo WhatsApp
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
