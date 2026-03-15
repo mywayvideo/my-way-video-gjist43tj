@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
-import { Product } from '@/lib/mockData'
+import { Product } from '@/types'
 import { toast } from '@/hooks/use-toast'
 
 interface CartItem {

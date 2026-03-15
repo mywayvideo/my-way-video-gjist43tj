@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useProductStore } from '@/stores/useProductStore'
-import { Product } from '@/lib/mockData'
+import { Product } from '@/types'
+import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { toast } from '@/hooks/use-toast'
 
 interface AdminProductFormProps {
   initialData: Product | null
@@ -12,206 +13,169 @@ interface AdminProductFormProps {
 }
 
 export function AdminProductForm({ initialData, onSuccess }: AdminProductFormProps) {
-  const { addProduct, updateProduct } = useProductStore()
-
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<Partial<Product>>(
     initialData || {
       name: '',
-      brand: '',
+      sku: '',
       category: '',
-      priceMiami: 0,
-      priceBrazil: 0,
-      image: 'https://img.usecurling.com/p/600/600?q=camera',
-      stockQuantity: 0,
-      inStock: false,
-      deliveryModes: 'Expressa 1 dia, Normal 3 dias',
+      price_brl: 0,
+      stock: 0,
+      image_url: '',
       description: '',
-      specs: { Sensor: 'Full-Frame', Montagem: 'E-Mount' },
+      ncm: '',
+      weight: 0,
+      dimensions: '',
     },
   )
 
-  const [specsText, setSpecsText] = useState(() => {
-    if (!initialData) return 'Sensor: Full-Frame\nMontagem: E-Mount\nResolução: 4K'
-    return Object.entries(initialData.specs)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join('\n')
-  })
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    const numericFields = ['priceMiami', 'priceBrazil', 'stockQuantity']
+    const numericFields = ['price_brl', 'stock', 'weight']
     setFormData((prev) => ({
       ...prev,
       [name]: numericFields.includes(name) ? Number(value) : value,
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
 
-    // Parse specs from text area
-    const specsObj: Record<string, string> = {}
-    specsText.split('\n').forEach((line) => {
-      const parts = line.split(':')
-      if (parts.length >= 2) {
-        specsObj[parts[0].trim()] = parts.slice(1).join(':').trim()
-      }
-    })
+    const payload = { ...formData }
+    delete payload.id
+    delete payload.created_at
 
-    const finalData = {
-      ...formData,
-      inStock: (formData.stockQuantity || 0) > 0,
-      specs: specsObj,
-    } as Product
-
+    let error
     if (initialData?.id) {
-      updateProduct(initialData.id, finalData)
+      const res = await supabase.from('products').update(payload).eq('id', initialData.id)
+      error = res.error
     } else {
-      addProduct(finalData)
+      const res = await supabase.from('products').insert([payload])
+      error = res.error
     }
-    onSuccess()
+
+    setLoading(false)
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+    } else {
+      toast({ title: 'Sucesso', description: 'Produto salvo no Supabase.' })
+      onSuccess()
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pt-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-muted-foreground">
-            Nome do Produto
-          </Label>
+          <Label htmlFor="name">Nome do Produto</Label>
           <Input
             id="name"
             name="name"
-            value={formData.name}
+            value={formData.name || ''}
             onChange={handleChange}
             required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
-            placeholder="Ex: Sony FX3"
+            className="bg-background/50 border-white/10"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="brand" className="text-muted-foreground">
-            Marca
-          </Label>
+          <Label htmlFor="sku">SKU (Código único)</Label>
           <Input
-            id="brand"
-            name="brand"
-            value={formData.brand}
+            id="sku"
+            name="sku"
+            value={formData.sku || ''}
             onChange={handleChange}
             required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
-            placeholder="Ex: Sony"
+            className="bg-background/50 border-white/10"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="category" className="text-muted-foreground">
-            Categoria
-          </Label>
+          <Label htmlFor="category">Categoria</Label>
           <Input
             id="category"
             name="category"
-            value={formData.category}
+            value={formData.category || ''}
             onChange={handleChange}
-            required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
-            placeholder="Ex: Câmeras"
+            className="bg-background/50 border-white/10"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="stockQuantity" className="text-muted-foreground">
-            Quantidade em Estoque
-          </Label>
+          <Label htmlFor="stock">Estoque</Label>
           <Input
-            id="stockQuantity"
-            name="stockQuantity"
+            id="stock"
+            name="stock"
             type="number"
-            value={formData.stockQuantity}
+            value={formData.stock || 0}
             onChange={handleChange}
             required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
+            className="bg-background/50 border-white/10"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="priceMiami" className="text-muted-foreground">
-            Preço Retirada Miami (US$)
-          </Label>
+          <Label htmlFor="price_brl">Preço (BRL)</Label>
           <Input
-            id="priceMiami"
-            name="priceMiami"
+            id="price_brl"
+            name="price_brl"
             type="number"
             step="0.01"
-            value={formData.priceMiami}
+            value={formData.price_brl || 0}
             onChange={handleChange}
             required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
+            className="bg-background/50 border-white/10"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="priceBrazil" className="text-muted-foreground">
-            Preço Entrega Brasil (US$)
-          </Label>
+          <Label htmlFor="image_url">URL da Imagem</Label>
           <Input
-            id="priceBrazil"
-            name="priceBrazil"
-            type="number"
-            step="0.01"
-            value={formData.priceBrazil}
+            id="image_url"
+            name="image_url"
+            value={formData.image_url || ''}
             onChange={handleChange}
-            required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
+            className="bg-background/50 border-white/10"
           />
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="deliveryModes" className="text-muted-foreground">
-            Modalidades de Entrega
-          </Label>
+        <div className="space-y-2">
+          <Label htmlFor="ncm">NCM</Label>
           <Input
-            id="deliveryModes"
-            name="deliveryModes"
-            value={formData.deliveryModes}
+            id="ncm"
+            name="ncm"
+            value={formData.ncm || ''}
             onChange={handleChange}
-            required
-            placeholder="Ex: Expressa, Retirada"
-            className="bg-background/50 border-white/10 focus-visible:ring-accent"
+            className="bg-background/50 border-white/10"
           />
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="image" className="text-muted-foreground">
-            URL da Imagem
-          </Label>
-          <Input
-            id="image"
-            name="image"
-            value={formData.image}
-            onChange={handleChange}
-            required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent font-mono text-sm"
-          />
+        <div className="flex gap-4">
+          <div className="space-y-2 flex-1">
+            <Label htmlFor="weight">Peso (kg)</Label>
+            <Input
+              id="weight"
+              name="weight"
+              type="number"
+              step="0.1"
+              value={formData.weight || 0}
+              onChange={handleChange}
+              className="bg-background/50 border-white/10"
+            />
+          </div>
+          <div className="space-y-2 flex-1">
+            <Label htmlFor="dimensions">Dimensões</Label>
+            <Input
+              id="dimensions"
+              name="dimensions"
+              value={formData.dimensions || ''}
+              onChange={handleChange}
+              className="bg-background/50 border-white/10"
+            />
+          </div>
         </div>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="description" className="text-muted-foreground">
-            Descrição Detalhada
-          </Label>
+          <Label htmlFor="description">Descrição</Label>
           <Textarea
             id="description"
             name="description"
-            value={formData.description}
+            value={formData.description || ''}
             onChange={handleChange}
-            required
-            className="bg-background/50 border-white/10 focus-visible:ring-accent min-h-[100px]"
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="specs" className="text-muted-foreground flex justify-between">
-            <span>Especificações Técnicas</span>
-            <span className="text-xs opacity-50 font-mono">Formato: "Chave: Valor"</span>
-          </Label>
-          <Textarea
-            id="specs"
-            value={specsText}
-            onChange={(e) => setSpecsText(e.target.value)}
-            className="bg-background/50 border-white/10 focus-visible:ring-accent font-mono text-sm min-h-[120px]"
-            placeholder="Sensor: Full-Frame&#10;Resolução: 4K"
+            className="bg-background/50 border-white/10 min-h-[100px]"
           />
         </div>
       </div>
@@ -219,8 +183,12 @@ export function AdminProductForm({ initialData, onSuccess }: AdminProductFormPro
         <Button type="button" variant="ghost" onClick={onSuccess} className="hover:bg-white/5">
           Cancelar
         </Button>
-        <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90 px-8">
-          {initialData ? 'Salvar Alterações' : 'Criar Produto no Banco'}
+        <Button
+          type="submit"
+          disabled={loading}
+          className="bg-accent text-accent-foreground hover:bg-accent/90 px-8"
+        >
+          {loading ? 'Salvando...' : 'Salvar Alterações'}
         </Button>
       </div>
     </form>

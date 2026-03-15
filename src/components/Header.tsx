@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingCart, User, Video, Search, LogOut, Settings } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,7 +15,7 @@ import {
 
 export function Header() {
   const { itemCount } = useCartStore()
-  const { user, logout } = useAuthStore()
+  const { user, signOut } = useAuth()
   const navigate = useNavigate()
 
   return (
@@ -31,15 +31,6 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Equipamentos
-          </Link>
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Serviços
-          </Link>
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Projetos
-          </Link>
           <Link to="/" className="hover:text-foreground transition-colors">
             Sobre
           </Link>
@@ -66,19 +57,19 @@ export function Header() {
               <DropdownMenuContent align="end" className="w-56 border-white/10">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {user.user_metadata?.name || 'Usuário'}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
-                {user.role === 'admin' && (
-                  <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Painel Admin</span>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Painel Admin</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={logout}
+                  onClick={signOut}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

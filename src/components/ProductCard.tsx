@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Product } from '@/lib/mockData'
+import { Product } from '@/types'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,11 +17,11 @@ export function ProductCard({ product }: { product: Product }) {
         className="relative aspect-square overflow-hidden bg-muted/20"
       >
         <img
-          src={product.image}
+          src={product.image_url || 'https://img.usecurling.com/p/600/600?q=camera'}
           alt={product.name}
           className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
         />
-        {!product.inStock && (
+        {product.stock <= 0 && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center backdrop-blur-sm">
             <Badge variant="destructive" className="uppercase tracking-widest">
               Sob Consulta
@@ -32,21 +32,19 @@ export function ProductCard({ product }: { product: Product }) {
       <CardContent className="p-4 flex-1 flex flex-col justify-between">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-mono">
-            {product.brand}
+            {product.category || 'Geral'}
           </p>
           <h3 className="font-semibold text-lg leading-tight group-hover:text-accent transition-colors line-clamp-2">
             <Link to={`/product/${product.id}`}>{product.name}</Link>
           </h3>
         </div>
         <div className="mt-4 flex flex-col gap-1">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Miami:</span>
-            <span className="font-mono text-muted-foreground">{formatUSD(product.priceMiami)}</span>
-          </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Brasil:</span>
+            <span className="text-sm font-medium">Preço (BRL):</span>
             <span className="font-mono text-lg text-primary-foreground font-bold">
-              {formatUSD(product.priceBrazil)}
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                product.price_brl,
+              )}
             </span>
           </div>
         </div>
@@ -54,11 +52,11 @@ export function ProductCard({ product }: { product: Product }) {
       <CardFooter className="p-4 pt-0">
         <Button
           onClick={() => addItem(product)}
-          disabled={!product.inStock}
+          disabled={product.stock <= 0}
           className="w-full bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
         >
           <ShoppingCart className="w-4 h-4" />
-          {product.inStock ? 'Adicionar' : 'Consultar'}
+          {product.stock > 0 ? 'Adicionar' : 'Consultar'}
         </Button>
       </CardFooter>
     </Card>

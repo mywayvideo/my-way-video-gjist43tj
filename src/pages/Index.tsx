@@ -1,12 +1,23 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AIPrompt } from '@/components/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
-import { CATEGORIES } from '@/lib/mockData'
-import { ShieldCheck, Truck, HeadphonesIcon } from 'lucide-react'
-import { useProductStore } from '@/stores/useProductStore'
+import { supabase } from '@/lib/supabase/client'
+import { Product } from '@/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Index() {
-  const { products } = useProductStore()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchTopProducts() {
+      const { data } = await supabase.from('products').select('*').limit(4)
+      if (data) setProducts(data)
+      setLoading(false)
+    }
+    fetchTopProducts()
+  }, [])
 
   return (
     <div className="flex flex-col gap-24 pb-24">
@@ -33,78 +44,17 @@ export default function Index() {
             className="pt-8 flex flex-wrap justify-center gap-2 opacity-80 animate-fade-in"
             style={{ animationDelay: '400ms' }}
           >
-            {[
-              'Câmera para streaming',
-              'Lentes anamórficas',
-              'Kit iluminação podcast',
-              'Prazo para RJ',
-            ].map((suggestion) => (
-              <Link
-                key={suggestion}
-                to={`/search?q=${encodeURIComponent(suggestion)}`}
-                className="text-xs bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full transition-colors"
-              >
-                {suggestion}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Categorias */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-2xl font-bold mb-8 uppercase tracking-wide border-b border-white/10 pb-4">
-          Navegar por Setor
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {CATEGORIES.map((cat) => (
-            <Link
-              key={cat.id}
-              to={`/search?q=${cat.name}`}
-              className="group relative aspect-video rounded-xl overflow-hidden bg-muted"
-            >
-              <img
-                src={cat.image}
-                alt={cat.name}
-                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent flex items-end p-6">
-                <span className="text-xl font-bold">{cat.name}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Value Proposition */}
-      <section className="bg-muted/30 border-y border-white/5 py-16">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-          <div className="flex flex-col items-center gap-4 p-6">
-            <div className="bg-background p-4 rounded-full text-accent shadow-elevation">
-              <HeadphonesIcon className="w-8 h-8" />
-            </div>
-            <h3 className="font-semibold text-lg">Consultoria Técnica</h3>
-            <p className="text-sm text-muted-foreground">
-              Especialistas prontos para otimizar o setup do seu projeto.
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-4 p-6">
-            <div className="bg-background p-4 rounded-full text-accent shadow-elevation">
-              <Truck className="w-8 h-8" />
-            </div>
-            <h3 className="font-semibold text-lg">Logística Expressa</h3>
-            <p className="text-sm text-muted-foreground">
-              Entregas seguradas para todo o Brasil com prazos imbatíveis.
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-4 p-6">
-            <div className="bg-background p-4 rounded-full text-accent shadow-elevation">
-              <ShieldCheck className="w-8 h-8" />
-            </div>
-            <h3 className="font-semibold text-lg">Garantia PRO</h3>
-            <p className="text-sm text-muted-foreground">
-              Suporte avançado e reposição emergencial para não parar seu set.
-            </p>
+            {['Câmera para streaming', 'Lentes anamórficas', 'Kit iluminação podcast'].map(
+              (suggestion) => (
+                <Link
+                  key={suggestion}
+                  to={`/search?q=${encodeURIComponent(suggestion)}`}
+                  className="text-xs bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full transition-colors"
+                >
+                  {suggestion}
+                </Link>
+              ),
+            )}
           </div>
         </div>
       </section>
@@ -118,11 +68,19 @@ export default function Index() {
             <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
           </span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.slice(0, 4).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )

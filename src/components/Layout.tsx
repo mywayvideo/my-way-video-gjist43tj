@@ -2,12 +2,12 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { CartProvider } from '@/stores/useCartStore'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuth } from '@/hooks/use-auth'
 import { Settings } from 'lucide-react'
 
 export default function Layout() {
   const location = useLocation()
-  const { user } = useAuthStore()
+  const { user } = useAuth()
   const isAdminRoute = location.pathname.startsWith('/admin')
 
   return (
@@ -20,7 +20,7 @@ export default function Layout() {
         {!isAdminRoute && <Footer />}
 
         {/* Floating Admin Button */}
-        {!isAdminRoute && user?.role === 'admin' && (
+        {!isAdminRoute && user && (
           <Link
             to="/admin"
             className="fixed bottom-6 right-6 p-4 bg-accent text-accent-foreground rounded-full shadow-elevation hover:scale-105 transition-all z-50 flex items-center justify-center group"

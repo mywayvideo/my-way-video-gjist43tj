@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { toast } from '@/hooks/use-toast'
 import {
   Card,
   CardContent,
@@ -16,7 +17,7 @@ import { Video } from 'lucide-react'
 
 export default function Signup() {
   const navigate = useNavigate()
-  const { signup } = useAuthStore()
+  const { signUp } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -25,10 +26,16 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const success = await signup(name, email, password)
+    const { error } = await signUp(email, password, name)
     setLoading(false)
-    if (success) {
-      navigate('/')
+    if (error) {
+      toast({ title: 'Erro ao criar conta', description: error.message, variant: 'destructive' })
+    } else {
+      toast({
+        title: 'Conta criada',
+        description: 'Por favor, confirme seu email ou faça login se autoconfirmado.',
+      })
+      navigate('/login')
     }
   }
 
@@ -40,9 +47,7 @@ export default function Signup() {
             <Video className="w-6 h-6" />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Criar Conta</CardTitle>
-          <CardDescription>
-            Junte-se ao My Way Video e acesse nosso catálogo exclusivo.
-          </CardDescription>
+          <CardDescription>Cadastre-se na My Way Video.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,6 +82,7 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
                 className="bg-background/50 border-white/10 focus-visible:ring-accent"
               />
             </div>

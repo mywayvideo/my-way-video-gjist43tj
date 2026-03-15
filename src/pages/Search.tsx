@@ -2,16 +2,15 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AIPrompt } from '@/components/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
-import { Product } from '@/lib/mockData'
+import { Product } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Bot, Sparkles } from 'lucide-react'
-import { useProductStore } from '@/stores/useProductStore'
-import { formatUSD } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Bot, Sparkles, MessageCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
-  const { products } = useProductStore()
 
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState<Product[]>([])
@@ -20,65 +19,51 @@ export default function Search() {
   useEffect(() => {
     if (!query) return
 
-    setLoading(true)
-    setAiMessage('')
+    const fetchData = async () => {
+      setLoading(true)
 
-    // Simulate AI processing and search against Real-Time Database
-    const timer = setTimeout(() => {
-      const lowerQuery = query.toLowerCase().trim()
+      // Fetch Knowledge Base
+      const { data: kbData } = await supabase
+        .from('company_info')
+        .select('content')
+        .limit(1)
+        .single()
+      const kbText = kbData?.content || ''
 
-      const isBroadQuery =
-        ['produtos', 'equipamentos', 'catálogo', 'catalogo', 'marcas', 'fabricantes'].includes(
-          lowerQuery,
-        ) ||
-        lowerQuery.includes('quais produtos') ||
-        lowerQuery.includes('o que vocês vendem') ||
-        lowerQuery.includes('o que vendem') ||
-        lowerQuery.includes('quais equipamentos')
+      // Fetch Products
+      const { data: products } = await supabase
+        .from('products')
+        .select('*')
+        .or(`name.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
 
-      if (isBroadQuery) {
-        setResults(products.slice(0, 4))
-        setAiMessage(
-          'Vendemos uma linha vasta de produtos para o Audiovisual Profissional, de diversos fabricantes renomados desta indústria, tais como **Sony**, **Blackmagic**... <br/><br/>**O que você precisa agora?**',
-        )
-      } else {
-        const filtered = products.filter(
-          (p) =>
-            p.name.toLowerCase().includes(lowerQuery) ||
-            p.category.toLowerCase().includes(lowerQuery) ||
-            p.brand.toLowerCase().includes(lowerQuery) ||
-            p.description.toLowerCase().includes(lowerQuery),
-        )
+      setResults(products || [])
 
-        setResults(filtered.length ? filtered : products.slice(0, 3)) // Fallback to recommendations
-
-        if (filtered.length > 0) {
-          const p = filtered[0]
+      // Mock AI response leveraging the real DB data
+      setTimeout(() => {
+        if (products && products.length > 0) {
+          const p = products[0]
           setAiMessage(
-            `Analisando o banco de dados em tempo real para "${query}"... Recomendo o equipamento **${p.name}** da ${p.brand}. Atualmente custa **${formatUSD(p.priceMiami)} (Retirada em Miami)** ou **${formatUSD(p.priceBrazil)} (Entrega no Brasil)**. Temos ${p.inStock ? `**${p.stockQuantity} unidades** em estoque` : 'indisponível no momento'}. As modalidades de entrega são: **${p.deliveryModes}**.`,
+            `Analisando o banco de dados... Recomendo o equipamento **${p.name}**. Custa **R$ ${p.price_brl.toLocaleString('pt-BR')}**. Temos ${p.stock > 0 ? `**${p.stock} unidades** em estoque` : 'indisponível no momento'}. \n\nLembre-se: ${kbText.substring(0, 150)}...`,
           )
         } else {
           setAiMessage(
-            `Não encontrei correspondências exatas no inventário atual para "${query}". No entanto, as opções abaixo são excelentes alternativas com disponibilidade imediata e entrega expressa.`,
+            `Não encontrei correspondências exatas no inventário atual para "${query}". Mas não se preocupe, a My Way Video tem contato direto com os maiores fabricantes. Consulte-nos via WhatsApp para encomendas especiais!`,
           )
         }
-      }
+        setLoading(false)
+      }, 1000)
+    }
 
-      setLoading(false)
-    }, 1500)
-
-    return () => clearTimeout(timer)
-  }, [query, products])
+    fetchData()
+  }, [query])
 
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col gap-8 min-h-[80vh]">
-      {/* Search Header */}
       <div className="bg-muted/20 border border-white/5 rounded-2xl p-6 md:p-8">
         <AIPrompt initialValue={query} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* AI Response Panel */}
         <div className="lg:col-span-4 sticky top-28 bg-card/40 border border-accent/20 rounded-xl p-6 shadow-elevation backdrop-blur-sm">
           <div className="flex items-center gap-3 mb-4 text-accent">
             <Bot className="w-6 h-6" />
@@ -91,7 +76,7 @@ export default function Search() {
               <Skeleton className="h-4 w-[90%] bg-accent/10" />
               <Skeleton className="h-4 w-[80%] bg-accent/10" />
               <div className="flex items-center gap-2 pt-4 text-xs text-muted-foreground">
-                <Sparkles className="w-3 h-3 animate-spin" /> Processando catálogo real-time...
+                <Sparkles className="w-3 h-3 animate-spin" /> Processando banco de dados...
               </div>
             </div>
           ) : (
@@ -101,33 +86,32 @@ export default function Search() {
                   __html: aiMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
                 }}
               ></p>
-              <div className="pt-4 border-t border-white/10 text-xs text-muted-foreground">
-                <p>
-                  💡 Dica: Os dados refletem o inventário exato no banco de dados administrativo.
-                </p>
-              </div>
             </div>
           )}
         </div>
 
-        {/* Results Grid */}
         <div className="lg:col-span-8 space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">Equipamentos Recomendados</h2>
+            <h2 className="text-xl font-bold tracking-tight">Resultados da Pesquisa</h2>
             <span className="text-sm text-muted-foreground">{results.length} resultados</span>
           </div>
 
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex flex-col space-y-3">
-                  <Skeleton className="h-[250px] w-full rounded-xl bg-white/5" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px] bg-white/5" />
-                    <Skeleton className="h-4 w-[200px] bg-white/5" />
-                  </div>
-                </div>
-              ))}
+              <Skeleton className="h-[300px] w-full rounded-xl bg-white/5" />
+            </div>
+          ) : results.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-white/5 border border-white/10 rounded-2xl text-center space-y-6">
+              <h3 className="text-2xl font-bold">Nenhum resultado encontrado</h3>
+              <p className="text-muted-foreground">
+                Não achou o que procurava? Nossa equipe de especialistas pode conseguir para você.
+              </p>
+              <Button asChild size="lg" className="bg-[#25D366] hover:bg-[#128C7E] text-white">
+                <a href="https://wa.me/17867161170" target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Falar com um especialista via WhatsApp
+                </a>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-in-up">
