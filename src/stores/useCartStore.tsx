@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, ReactNode } from 'react'
 
 export interface CartItem {
   id: string
@@ -26,7 +26,9 @@ class CartStore {
   private notify() {
     try {
       localStorage.setItem('mw-video-cart', JSON.stringify(this.items))
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Failed to save cart to localStorage', e)
+    }
     this.listeners.forEach((l) => l())
   }
 
@@ -84,4 +86,9 @@ export function useCartStore() {
     totalItems,
     totalPrice,
   }
+}
+
+// Dummy provider for backward compatibility
+export function CartProvider({ children }: { children: ReactNode }) {
+  return <>{children}</>
 }
