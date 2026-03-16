@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Sparkles } from 'lucide-react'
+import { Search, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -35,6 +35,19 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {query && (
+          <div className="pr-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setQuery('')}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
         <div className="pr-2 md:pr-3">
           <Button
             type="submit"

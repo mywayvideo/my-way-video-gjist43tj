@@ -30,6 +30,24 @@ export type Database = {
         }
         Relationships: []
       }
+      manufacturers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
@@ -39,9 +57,12 @@ export type Database = {
           id: string
           image_url: string | null
           is_special: boolean
+          manufacturer_id: string | null
           name: string
           ncm: string | null
           price_brl: number | null
+          price_cost: number | null
+          price_usd: number | null
           sku: string | null
           stock: number | null
           weight: number | null
@@ -54,9 +75,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_special?: boolean
+          manufacturer_id?: string | null
           name: string
           ncm?: string | null
           price_brl?: number | null
+          price_cost?: number | null
+          price_usd?: number | null
           sku?: string | null
           stock?: number | null
           weight?: number | null
@@ -69,14 +93,25 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_special?: boolean
+          manufacturer_id?: string | null
           name?: string
           ncm?: string | null
           price_brl?: number | null
+          price_cost?: number | null
+          price_usd?: number | null
           sku?: string | null
           stock?: number | null
           weight?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'products_manufacturer_id_fkey'
+            columns: ['manufacturer_id']
+            isOneToOne: false
+            referencedRelation: 'manufacturers'
+            referencedColumns: ['id']
+          },
+        ]
       }
     }
     Views: {
@@ -230,6 +265,10 @@ export const Constants = {
 //   content: text (not null)
 //   updated_at: timestamp with time zone (not null, default: now())
 //   type: text (not null, default: 'ai_knowledge'::text)
+// Table: manufacturers
+//   id: uuid (not null, default: gen_random_uuid())
+//   name: text (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: products
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -244,15 +283,37 @@ export const Constants = {
 //   category: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
 //   is_special: boolean (not null, default: false)
+//   manufacturer_id: uuid (nullable)
+//   price_usd: numeric (nullable, default: 0)
+//   price_cost: numeric (nullable, default: 0)
 
 // --- CONSTRAINTS ---
 // Table: company_info
 //   PRIMARY KEY company_info_pkey: PRIMARY KEY (id)
+// Table: manufacturers
+//   UNIQUE manufacturers_name_key: UNIQUE (name)
+//   PRIMARY KEY manufacturers_pkey: PRIMARY KEY (id)
 // Table: products
+//   FOREIGN KEY products_manufacturer_id_fkey: FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE SET NULL
 //   PRIMARY KEY products_pkey: PRIMARY KEY (id)
-//   UNIQUE products_sku_key: UNIQUE (sku)
+
+// --- ROW LEVEL SECURITY POLICIES ---
+// Table: manufacturers
+//   Policy "Allow anon read on manufacturers" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
+//   Policy "Allow authenticated delete on manufacturers" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "Allow authenticated insert on manufacturers" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "Allow authenticated read on manufacturers" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "Allow authenticated update on manufacturers" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
 
 // --- INDEXES ---
+// Table: manufacturers
+//   CREATE UNIQUE INDEX manufacturers_name_key ON public.manufacturers USING btree (name)
 // Table: products
 //   CREATE INDEX products_is_special_idx ON public.products USING btree (is_special)
-//   CREATE UNIQUE INDEX products_sku_key ON public.products USING btree (sku)
+//   CREATE UNIQUE INDEX products_manufacturer_sku_key ON public.products USING btree (manufacturer_id, sku)

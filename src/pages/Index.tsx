@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { AIPrompt } from '@/components/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Sparkles, TrendingUp } from 'lucide-react'
+import { Star, TrendingUp } from 'lucide-react'
 
 export default function Index() {
   const [specials, setSpecials] = useState<Product[]>([])
@@ -23,7 +22,6 @@ export default function Index() {
 
   return (
     <div className="flex flex-col gap-16 pb-24">
-      {/* Hero / Command Center */}
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
@@ -41,27 +39,9 @@ export default function Index() {
           <div className="pt-8 w-full animate-fade-in" style={{ animationDelay: '200ms' }}>
             <AIPrompt />
           </div>
-
-          <div
-            className="pt-8 flex flex-wrap justify-center gap-2 opacity-80 animate-fade-in"
-            style={{ animationDelay: '400ms' }}
-          >
-            {['Câmera para streaming', 'Lentes anamórficas', 'Kit iluminação podcast'].map(
-              (suggestion) => (
-                <Link
-                  key={suggestion}
-                  to={`/search?q=${encodeURIComponent(suggestion)}`}
-                  className="text-xs bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full transition-colors"
-                >
-                  {suggestion}
-                </Link>
-              ),
-            )}
-          </div>
         </div>
       </section>
 
-      {/* SPECIALS Showcase */}
       <section className="container mx-auto px-4">
         <div className="bg-gradient-to-br from-amber-500/10 via-background to-background border border-amber-500/20 rounded-2xl p-6 md:p-10 shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
@@ -69,8 +49,8 @@ export default function Index() {
           </div>
 
           <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-amber-500 relative z-10">
-            <Sparkles className="w-7 h-7" />
-            Specials
+            <Star className="w-7 h-7 fill-amber-500" />
+            DESTAQUES
           </h2>
 
           {loading ? (

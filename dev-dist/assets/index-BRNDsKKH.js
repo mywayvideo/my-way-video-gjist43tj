@@ -19326,15 +19326,6 @@ var Search$1 = createLucideIcon("search", [["path", {
 	r: "8",
 	key: "4ej97u"
 }]]);
-var Settings = createLucideIcon("settings", [["path", {
-	d: "M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915",
-	key: "1i5ecw"
-}], ["circle", {
-	cx: "12",
-	cy: "12",
-	r: "3",
-	key: "1v7zrd"
-}]]);
 var ShieldAlert = createLucideIcon("shield-alert", [
 	["path", {
 		d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
@@ -19393,6 +19384,10 @@ var SquarePen = createLucideIcon("square-pen", [["path", {
 }], ["path", {
 	d: "M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z",
 	key: "ohrbg2"
+}]]);
+var Star = createLucideIcon("star", [["path", {
+	d: "M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z",
+	key: "r04s7s"
 }]]);
 var Trash2 = createLucideIcon("trash-2", [
 	["path", {
@@ -39722,9 +39717,6 @@ function useCartStore() {
 		totalPrice
 	};
 }
-function CartProvider({ children }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children });
-}
 //#endregion
 //#region src/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png
 var mw_logo_horiz_1200x318_fundo_escuro_a5934_default = "/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934-Dctqg9FN.png";
@@ -39825,79 +39817,96 @@ function Header() {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					"data-uid": "src/components/Header.tsx:55:9",
-					"data-prohibitions": "[]",
+					"data-prohibitions": "[editContent]",
 					className: "hidden md:flex flex-1 max-w-md mx-6",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
 						"data-uid": "src/components/Header.tsx:56:11",
-						"data-prohibitions": "[]",
+						"data-prohibitions": "[editContent]",
 						onSubmit: handleSearch,
 						className: "w-full relative group",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-							"data-uid": "src/components/Header.tsx:57:13",
-							"data-prohibitions": "[editContent]",
-							className: "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-							"data-uid": "src/components/Header.tsx:58:13",
-							"data-prohibitions": "[editContent]",
-							type: "search",
-							placeholder: "Pesquise produtos ou pergunte à IA...",
-							className: "w-full pl-10 rounded-full bg-muted/50 border-transparent focus-visible:bg-background transition-all",
-							value: searchQuery,
-							onChange: (e) => setSearchQuery(e.target.value)
-						})]
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
+								"data-uid": "src/components/Header.tsx:57:13",
+								"data-prohibitions": "[editContent]",
+								className: "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+								"data-uid": "src/components/Header.tsx:58:13",
+								"data-prohibitions": "[editContent]",
+								type: "text",
+								placeholder: "Pesquise produtos ou pergunte à IA...",
+								className: "w-full pl-10 pr-10 rounded-full bg-muted/50 border-transparent focus-visible:bg-background transition-all",
+								value: searchQuery,
+								onChange: (e) => setSearchQuery(e.target.value)
+							}),
+							searchQuery && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								"data-uid": "src/components/Header.tsx:66:15",
+								"data-prohibitions": "[]",
+								type: "button",
+								variant: "ghost",
+								size: "icon",
+								className: "absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground rounded-full transition-colors",
+								onClick: () => setSearchQuery(""),
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+									"data-uid": "src/components/Header.tsx:73:17",
+									"data-prohibitions": "[editContent]",
+									className: "w-4 h-4"
+								})
+							})
+						]
 					})
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/components/Header.tsx:68:9",
+					"data-uid": "src/components/Header.tsx:79:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex items-center gap-1 md:gap-2",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							"data-uid": "src/components/Header.tsx:69:11",
+							"data-uid": "src/components/Header.tsx:80:11",
 							"data-prohibitions": "[]",
 							variant: "ghost",
 							size: "icon",
 							className: "md:hidden",
 							onClick: () => navigate("/search"),
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-								"data-uid": "src/components/Header.tsx:75:13",
+								"data-uid": "src/components/Header.tsx:86:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5"
 							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/components/Header.tsx:77:11",
+							"data-uid": "src/components/Header.tsx:88:11",
 							"data-prohibitions": "[editContent]",
 							variant: "ghost",
 							size: "icon",
 							className: "relative",
 							onClick: () => navigate("/cart"),
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-								"data-uid": "src/components/Header.tsx:83:13",
+								"data-uid": "src/components/Header.tsx:94:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5"
 							}), totalItems > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/components/Header.tsx:85:15",
+								"data-uid": "src/components/Header.tsx:96:15",
 								"data-prohibitions": "[editContent]",
 								className: "absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in",
 								children: totalItems
 							})]
 						}),
 						user ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							"data-uid": "src/components/Header.tsx:91:13",
+							"data-uid": "src/components/Header.tsx:102:13",
 							"data-prohibitions": "[]",
 							variant: "ghost",
 							size: "sm",
 							onClick: () => signOut(),
 							children: "Sair"
 						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							"data-uid": "src/components/Header.tsx:95:13",
+							"data-uid": "src/components/Header.tsx:106:13",
 							"data-prohibitions": "[]",
 							variant: "ghost",
 							size: "icon",
 							onClick: () => navigate("/login"),
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(User, {
-								"data-uid": "src/components/Header.tsx:96:15",
+								"data-uid": "src/components/Header.tsx:107:15",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5"
 							})
@@ -40116,54 +40125,53 @@ function Footer() {
 	});
 }
 //#endregion
+//#region src/components/WhatsAppButton.tsx
+function WhatsAppButton() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+		"data-uid": "src/components/WhatsAppButton.tsx:5:5",
+		"data-prohibitions": "[]",
+		href: "https://wa.me/17867161170",
+		target: "_blank",
+		rel: "noopener noreferrer",
+		className: "fixed bottom-6 right-6 z-50 p-4 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center animate-fade-in-up",
+		"aria-label": "Contato via WhatsApp",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
+			"data-uid": "src/components/WhatsAppButton.tsx:12:7",
+			"data-prohibitions": "[editContent]",
+			className: "w-7 h-7"
+		})
+	});
+}
+//#endregion
 //#region src/components/Layout.tsx
 function Layout() {
-	const location = useLocation();
-	const { user } = useAuth();
-	const isAdminRoute = location.pathname.startsWith("/admin");
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartProvider, {
-		"data-uid": "src/components/Layout.tsx:14:5",
-		"data-prohibitions": "[editContent]",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/Layout.tsx:15:7",
-			"data-prohibitions": "[editContent]",
-			className: "flex flex-col min-h-screen bg-background text-foreground selection:bg-accent/30 font-sans relative",
-			children: [
-				!isAdminRoute && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {
-					"data-uid": "src/components/Layout.tsx:16:27",
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		"data-uid": "src/components/Layout.tsx:8:5",
+		"data-prohibitions": "[]",
+		className: "min-h-screen flex flex-col bg-background text-foreground relative",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {
+				"data-uid": "src/components/Layout.tsx:9:7",
+				"data-prohibitions": "[editContent]"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
+				"data-uid": "src/components/Layout.tsx:10:7",
+				"data-prohibitions": "[]",
+				className: "flex-1",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {
+					"data-uid": "src/components/Layout.tsx:11:9",
 					"data-prohibitions": "[editContent]"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
-					"data-uid": "src/components/Layout.tsx:17:9",
-					"data-prohibitions": "[]",
-					className: "flex-1 flex flex-col w-full animate-fade-in",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {
-						"data-uid": "src/components/Layout.tsx:18:11",
-						"data-prohibitions": "[editContent]"
-					})
-				}),
-				!isAdminRoute && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Footer, {
-					"data-uid": "src/components/Layout.tsx:20:27",
-					"data-prohibitions": "[editContent]"
-				}),
-				!isAdminRoute && user && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Link, {
-					"data-uid": "src/components/Layout.tsx:24:11",
-					"data-prohibitions": "[]",
-					to: "/admin",
-					className: "fixed bottom-6 right-6 p-4 bg-accent text-accent-foreground rounded-full shadow-elevation hover:scale-105 transition-all z-50 flex items-center justify-center group",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Settings, {
-						"data-uid": "src/components/Layout.tsx:28:13",
-						"data-prohibitions": "[editContent]",
-						className: "w-5 h-5 group-hover:rotate-90 transition-transform duration-500"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"data-uid": "src/components/Layout.tsx:29:13",
-						"data-prohibitions": "[]",
-						className: "sr-only",
-						children: "Admin Panel"
-					})]
 				})
-			]
-		})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Footer, {
+				"data-uid": "src/components/Layout.tsx:13:7",
+				"data-prohibitions": "[editContent]"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WhatsAppButton, {
+				"data-uid": "src/components/Layout.tsx:14:7",
+				"data-prohibitions": "[editContent]"
+			})
+		]
 	});
 }
 //#endregion
@@ -40180,11 +40188,11 @@ function AIPrompt({ initialQuery = "" }) {
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		"data-uid": "src/components/AIPrompt.tsx:23:5",
-		"data-prohibitions": "[]",
+		"data-prohibitions": "[editContent]",
 		className: "w-full max-w-3xl mx-auto",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
 			"data-uid": "src/components/AIPrompt.tsx:24:7",
-			"data-prohibitions": "[]",
+			"data-prohibitions": "[editContent]",
 			onSubmit: handleSearch,
 			className: "relative group flex items-center shadow-lg rounded-full overflow-hidden border border-border/50 bg-background/50 backdrop-blur-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300",
 			children: [
@@ -40207,18 +40215,37 @@ function AIPrompt({ initialQuery = "" }) {
 					value: query,
 					onChange: (e) => setQuery(e.target.value)
 				}),
+				query && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/components/AIPrompt.tsx:39:11",
+					"data-prohibitions": "[]",
+					className: "pr-1",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						"data-uid": "src/components/AIPrompt.tsx:40:13",
+						"data-prohibitions": "[]",
+						type: "button",
+						variant: "ghost",
+						size: "icon",
+						className: "h-10 w-10 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors",
+						onClick: () => setQuery(""),
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+							"data-uid": "src/components/AIPrompt.tsx:47:15",
+							"data-prohibitions": "[editContent]",
+							className: "w-5 h-5"
+						})
+					})
+				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/components/AIPrompt.tsx:38:9",
+					"data-uid": "src/components/AIPrompt.tsx:51:9",
 					"data-prohibitions": "[]",
 					className: "pr-2 md:pr-3",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						"data-uid": "src/components/AIPrompt.tsx:39:11",
+						"data-uid": "src/components/AIPrompt.tsx:52:11",
 						"data-prohibitions": "[]",
 						type: "submit",
 						size: "icon",
 						className: "h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-							"data-uid": "src/components/AIPrompt.tsx:44:13",
+							"data-uid": "src/components/AIPrompt.tsx:57:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4 md:w-5 md:h-5"
 						})
@@ -40398,101 +40425,84 @@ function Index() {
 		fetchSpecials();
 	}, []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Index.tsx:25:5",
+		"data-uid": "src/pages/Index.tsx:24:5",
 		"data-prohibitions": "[editContent]",
 		className: "flex flex-col gap-16 pb-24",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-			"data-uid": "src/pages/Index.tsx:27:7",
-			"data-prohibitions": "[editContent]",
+			"data-uid": "src/pages/Index.tsx:25:7",
+			"data-prohibitions": "[]",
 			className: "relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Index.tsx:28:9",
+				"data-uid": "src/pages/Index.tsx:26:9",
 				"data-prohibitions": "[]",
 				className: "absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:30:9",
-				"data-prohibitions": "[editContent]",
+				"data-uid": "src/pages/Index.tsx:28:9",
+				"data-prohibitions": "[]",
 				className: "text-center space-y-6 z-10 w-full max-w-4xl animate-fade-in-up",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
-						"data-uid": "src/pages/Index.tsx:31:11",
+						"data-uid": "src/pages/Index.tsx:29:11",
 						"data-prohibitions": "[]",
 						className: "text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60",
 						children: [
 							"Inteligência em",
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {
-								"data-uid": "src/pages/Index.tsx:33:13",
+								"data-uid": "src/pages/Index.tsx:31:13",
 								"data-prohibitions": "[editContent]"
 							}),
 							"Audiovisual PRO"
 						]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Index.tsx:36:11",
+						"data-uid": "src/pages/Index.tsx:34:11",
 						"data-prohibitions": "[]",
 						className: "text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto",
 						children: "Seu assistente técnico pessoal. Encontre equipamentos ideais, simule projetos e consulte especialistas em segundos."
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Index.tsx:41:11",
+						"data-uid": "src/pages/Index.tsx:39:11",
 						"data-prohibitions": "[]",
 						className: "pt-8 w-full animate-fade-in",
 						style: { animationDelay: "200ms" },
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AIPrompt, {
-							"data-uid": "src/pages/Index.tsx:42:13",
+							"data-uid": "src/pages/Index.tsx:40:13",
 							"data-prohibitions": "[editContent]"
 						})
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Index.tsx:45:11",
-						"data-prohibitions": "[editContent]",
-						className: "pt-8 flex flex-wrap justify-center gap-2 opacity-80 animate-fade-in",
-						style: { animationDelay: "400ms" },
-						children: [
-							"Câmera para streaming",
-							"Lentes anamórficas",
-							"Kit iluminação podcast"
-						].map((suggestion) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-							"data-uid": "src/pages/Index.tsx:51:17",
-							"data-prohibitions": "[editContent]",
-							to: `/search?q=${encodeURIComponent(suggestion)}`,
-							className: "text-xs bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full transition-colors",
-							children: suggestion
-						}, suggestion))
 					})
 				]
 			})]
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-			"data-uid": "src/pages/Index.tsx:65:7",
+			"data-uid": "src/pages/Index.tsx:45:7",
 			"data-prohibitions": "[editContent]",
 			className: "container mx-auto px-4",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Index.tsx:66:9",
+				"data-uid": "src/pages/Index.tsx:46:9",
 				"data-prohibitions": "[editContent]",
 				className: "bg-gradient-to-br from-amber-500/10 via-background to-background border border-amber-500/20 rounded-2xl p-6 md:p-10 shadow-lg relative overflow-hidden",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Index.tsx:67:11",
+						"data-uid": "src/pages/Index.tsx:47:11",
 						"data-prohibitions": "[]",
 						className: "absolute top-0 right-0 p-8 opacity-10 pointer-events-none",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TrendingUp, {
-							"data-uid": "src/pages/Index.tsx:68:13",
+							"data-uid": "src/pages/Index.tsx:48:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-40 h-40 text-amber-500"
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-						"data-uid": "src/pages/Index.tsx:71:11",
+						"data-uid": "src/pages/Index.tsx:51:11",
 						"data-prohibitions": "[]",
 						className: "text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-amber-500 relative z-10",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-							"data-uid": "src/pages/Index.tsx:72:13",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, {
+							"data-uid": "src/pages/Index.tsx:52:13",
 							"data-prohibitions": "[editContent]",
-							className: "w-7 h-7"
-						}), "Specials"]
+							className: "w-7 h-7 fill-amber-500"
+						}), "DESTAQUES"]
 					}),
 					loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Index.tsx:77:13",
+						"data-uid": "src/pages/Index.tsx:57:13",
 						"data-prohibitions": "[editContent]",
 						className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10",
 						children: [
@@ -40501,35 +40511,35 @@ function Index() {
 							3,
 							4
 						].map((i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Skeleton, {
-							"data-uid": "src/pages/Index.tsx:79:17",
+							"data-uid": "src/pages/Index.tsx:59:17",
 							"data-prohibitions": "[editContent]",
 							className: "h-[350px] w-full rounded-xl bg-white/5"
 						}, i))
 					}) : specials.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Index.tsx:83:13",
+						"data-uid": "src/pages/Index.tsx:63:13",
 						"data-prohibitions": "[editContent]",
 						className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10",
 						children: specials.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Index.tsx:85:17",
+							"data-uid": "src/pages/Index.tsx:65:17",
 							"data-prohibitions": "[]",
 							className: "relative group",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:86:19",
+								"data-uid": "src/pages/Index.tsx:66:19",
 								"data-prohibitions": "[]",
 								className: "absolute -inset-0.5 bg-gradient-to-r from-amber-500/50 to-yellow-500/50 rounded-xl opacity-0 group-hover:opacity-100 blur transition duration-500"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Index.tsx:87:19",
+								"data-uid": "src/pages/Index.tsx:67:19",
 								"data-prohibitions": "[]",
 								className: "relative h-full bg-card rounded-xl",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-									"data-uid": "src/pages/Index.tsx:88:21",
+									"data-uid": "src/pages/Index.tsx:68:21",
 									"data-prohibitions": "[editContent]",
 									product
 								})
 							})]
 						}, product.id))
 					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Index.tsx:94:13",
+						"data-uid": "src/pages/Index.tsx:74:13",
 						"data-prohibitions": "[]",
 						className: "text-muted-foreground text-center py-10 relative z-10 border border-dashed border-amber-500/20 rounded-xl",
 						children: "Nenhum produto em destaque no momento."
@@ -40744,6 +40754,145 @@ function Search() {
 	});
 }
 //#endregion
+//#region ../../cache/modules/my-way-video-ia-ede01/node_modules/.pnpm/@radix-ui+react-use-previous@1.1.1_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-use-previous/dist/index.mjs
+function usePrevious(value) {
+	const ref = import_react.useRef({
+		value,
+		previous: value
+	});
+	return import_react.useMemo(() => {
+		if (ref.current.value !== value) {
+			ref.current.previous = ref.current.value;
+			ref.current.value = value;
+		}
+		return ref.current.previous;
+	}, [value]);
+}
+//#endregion
+//#region ../../cache/modules/my-way-video-ia-ede01/node_modules/.pnpm/@radix-ui+react-switch@1.2.6_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react_e3738c514c10df2ef7e24af5ee461853/node_modules/@radix-ui/react-switch/dist/index.mjs
+var SWITCH_NAME = "Switch";
+var [createSwitchContext, createSwitchScope] = createContextScope(SWITCH_NAME);
+var [SwitchProvider, useSwitchContext] = createSwitchContext(SWITCH_NAME);
+var Switch$1 = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeSwitch, name, checked: checkedProp, defaultChecked, required, disabled, value = "on", onCheckedChange, form, ...switchProps } = props;
+	const [button, setButton] = import_react.useState(null);
+	const composedRefs = useComposedRefs(forwardedRef, (node) => setButton(node));
+	const hasConsumerStoppedPropagationRef = import_react.useRef(false);
+	const isFormControl = button ? form || !!button.closest("form") : true;
+	const [checked, setChecked] = useControllableState({
+		prop: checkedProp,
+		defaultProp: defaultChecked ?? false,
+		onChange: onCheckedChange,
+		caller: SWITCH_NAME
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SwitchProvider, {
+		scope: __scopeSwitch,
+		checked,
+		disabled,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
+			type: "button",
+			role: "switch",
+			"aria-checked": checked,
+			"aria-required": required,
+			"data-state": getState(checked),
+			"data-disabled": disabled ? "" : void 0,
+			disabled,
+			value,
+			...switchProps,
+			ref: composedRefs,
+			onClick: composeEventHandlers(props.onClick, (event) => {
+				setChecked((prevChecked) => !prevChecked);
+				if (isFormControl) {
+					hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
+					if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
+				}
+			})
+		}), isFormControl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SwitchBubbleInput, {
+			control: button,
+			bubbles: !hasConsumerStoppedPropagationRef.current,
+			name,
+			value,
+			checked,
+			required,
+			disabled,
+			form,
+			style: { transform: "translateX(-100%)" }
+		})]
+	});
+});
+Switch$1.displayName = SWITCH_NAME;
+var THUMB_NAME = "SwitchThumb";
+var SwitchThumb = import_react.forwardRef((props, forwardedRef) => {
+	const { __scopeSwitch, ...thumbProps } = props;
+	const context = useSwitchContext(THUMB_NAME, __scopeSwitch);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.span, {
+		"data-state": getState(context.checked),
+		"data-disabled": context.disabled ? "" : void 0,
+		...thumbProps,
+		ref: forwardedRef
+	});
+});
+SwitchThumb.displayName = THUMB_NAME;
+var BUBBLE_INPUT_NAME$1 = "SwitchBubbleInput";
+var SwitchBubbleInput = import_react.forwardRef(({ __scopeSwitch, control, checked, bubbles = true, ...props }, forwardedRef) => {
+	const ref = import_react.useRef(null);
+	const composedRefs = useComposedRefs(ref, forwardedRef);
+	const prevChecked = usePrevious(checked);
+	const controlSize = useSize(control);
+	import_react.useEffect(() => {
+		const input = ref.current;
+		if (!input) return;
+		const inputProto = window.HTMLInputElement.prototype;
+		const setChecked = Object.getOwnPropertyDescriptor(inputProto, "checked").set;
+		if (prevChecked !== checked && setChecked) {
+			const event = new Event("click", { bubbles });
+			setChecked.call(input, checked);
+			input.dispatchEvent(event);
+		}
+	}, [
+		prevChecked,
+		checked,
+		bubbles
+	]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+		type: "checkbox",
+		"aria-hidden": true,
+		defaultChecked: checked,
+		...props,
+		tabIndex: -1,
+		ref: composedRefs,
+		style: {
+			...props.style,
+			...controlSize,
+			position: "absolute",
+			pointerEvents: "none",
+			opacity: 0,
+			margin: 0
+		}
+	});
+});
+SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
+function getState(checked) {
+	return checked ? "checked" : "unchecked";
+}
+var Root$1 = Switch$1;
+var Thumb = SwitchThumb;
+//#endregion
+//#region src/components/ui/switch.tsx
+var Switch = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$1, {
+	"data-uid": "src/components/ui/switch.tsx:11:3",
+	"data-prohibitions": "[editContent]",
+	className: cn$1("peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input", className),
+	...props,
+	ref,
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Thumb, {
+		"data-uid": "src/components/ui/switch.tsx:19:5",
+		"data-prohibitions": "[editContent]",
+		className: cn$1("pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0")
+	})
+}));
+Switch.displayName = Root$1.displayName;
+//#endregion
 //#region src/services/awesome-api.ts
 var fetchUSDRate = async () => {
 	try {
@@ -40762,10 +40911,10 @@ function Product() {
 	const [product, setProduct] = (0, import_react.useState)(null);
 	const [aiLoading, setAiLoading] = (0, import_react.useState)(false);
 	const [aiResponse, setAiResponse] = (0, import_react.useState)(null);
-	const [related, setRelated] = (0, import_react.useState)([]);
 	const [question, setQuestion] = (0, import_react.useState)("");
 	const [usdRate, setUsdRate] = (0, import_react.useState)(null);
 	const [loadingRate, setLoadingRate] = (0, import_react.useState)(false);
+	const [isMetric, setIsMetric] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
 		if (!id) return;
 		supabase.from("products").select("*, manufacturer:manufacturers(*)").eq("id", id).single().then(({ data }) => data && setProduct(data));
@@ -40790,17 +40939,10 @@ function Product() {
 		if (!question.trim() || !product) return;
 		setAiLoading(true);
 		setAiResponse(null);
-		setRelated([]);
 		try {
 			const { data, error } = await performAISearch(`[Contexto do Produto: ${product.name} - SKU: ${product.sku}] ${question}`);
 			if (error) throw error;
-			if (data) {
-				setAiResponse(data);
-				if (data.related_product_ids?.length) {
-					const { data: pData } = await supabase.from("products").select("*").in("id", data.related_product_ids);
-					if (pData) setRelated(pData);
-				}
-			}
+			if (data) setAiResponse(data);
 		} catch {
 			toast$1({
 				title: "Erro",
@@ -40812,12 +40954,22 @@ function Product() {
 			setQuestion("");
 		}
 	};
+	const displayWeight = (w) => {
+		if (w === null || w === void 0) return null;
+		if (isMetric) return `${(w * .453592).toFixed(2)} kg`;
+		return `${w} lb`;
+	};
+	const displayDimensions = (d) => {
+		if (!d) return null;
+		if (isMetric) return d.replace(/\d+(\.\d+)?/g, (m) => (parseFloat(m) * 2.54).toFixed(1)) + " cm";
+		return `${d} in`;
+	};
 	if (!product) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/pages/Product.tsx:95:7",
+		"data-uid": "src/pages/Product.tsx:98:7",
 		"data-prohibitions": "[]",
 		className: "p-12 text-center text-muted-foreground flex items-center justify-center min-h-[60vh]",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-			"data-uid": "src/pages/Product.tsx:96:9",
+			"data-uid": "src/pages/Product.tsx:99:9",
 			"data-prohibitions": "[editContent]",
 			className: "w-6 h-6 animate-spin"
 		})
@@ -40825,17 +40977,17 @@ function Product() {
 	const spreadRate = usdRate ? usdRate + .2 : 0;
 	const finalBrlPrice = product.price_usd * spreadRate;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Product.tsx:104:5",
+		"data-uid": "src/pages/Product.tsx:107:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 animate-fade-in",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:105:7",
+				"data-uid": "src/pages/Product.tsx:108:7",
 				"data-prohibitions": "[editContent]",
 				className: "text-sm text-muted-foreground mb-8 font-mono",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/pages/Product.tsx:106:9",
+						"data-uid": "src/pages/Product.tsx:109:9",
 						"data-prohibitions": "[]",
 						to: "/",
 						className: "hover:text-foreground",
@@ -40844,7 +40996,7 @@ function Product() {
 					" ",
 					"/ ",
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"data-uid": "src/pages/Product.tsx:109:11",
+						"data-uid": "src/pages/Product.tsx:112:11",
 						"data-prohibitions": "[editContent]",
 						className: "text-foreground ml-2",
 						children: product.name
@@ -40852,60 +41004,60 @@ function Product() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:111:7",
+				"data-uid": "src/pages/Product.tsx:114:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:112:9",
+					"data-uid": "src/pages/Product.tsx:115:9",
 					"data-prohibitions": "[]",
 					className: "aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						"data-uid": "src/pages/Product.tsx:113:11",
+						"data-uid": "src/pages/Product.tsx:116:11",
 						"data-prohibitions": "[editContent]",
 						src: product.image_url || "https://img.usecurling.com/p/600/600?q=camera",
 						alt: product.name,
 						className: "w-full h-full object-contain hover:scale-110 transition-transform duration-500"
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:119:9",
+					"data-uid": "src/pages/Product.tsx:122:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:120:11",
+							"data-uid": "src/pages/Product.tsx:123:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-accent font-mono uppercase tracking-widest text-sm font-semibold",
 							children: product.manufacturer?.name || product.category
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-							"data-uid": "src/pages/Product.tsx:123:11",
+							"data-uid": "src/pages/Product.tsx:126:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-3xl md:text-4xl font-bold tracking-tight mt-2 mb-6",
 							children: product.name
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:127:11",
+							"data-uid": "src/pages/Product.tsx:130:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col gap-4 mb-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:128:13",
+								"data-uid": "src/pages/Product.tsx:131:13",
 								"data-prohibitions": "[editContent]",
 								className: "bg-card border border-white/10 rounded-xl p-5 shadow-sm max-w-md",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										"data-uid": "src/pages/Product.tsx:129:15",
+										"data-uid": "src/pages/Product.tsx:132:15",
 										"data-prohibitions": "[]",
 										className: "flex items-center justify-between mb-2",
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Product.tsx:130:17",
+											"data-uid": "src/pages/Product.tsx:133:17",
 											"data-prohibitions": "[]",
 											className: "flex items-center gap-2 text-muted-foreground",
 											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, {
-												"data-uid": "src/pages/Product.tsx:131:19",
+												"data-uid": "src/pages/Product.tsx:134:19",
 												"data-prohibitions": "[editContent]",
 												className: "w-4 h-4"
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												"data-uid": "src/pages/Product.tsx:132:19",
+												"data-uid": "src/pages/Product.tsx:135:19",
 												"data-prohibitions": "[]",
 												className: "text-sm font-medium uppercase",
 												children: "Estoque Local (BRL)"
@@ -40913,18 +41065,18 @@ function Product() {
 										})
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-										"data-uid": "src/pages/Product.tsx:135:15",
+										"data-uid": "src/pages/Product.tsx:138:15",
 										"data-prohibitions": "[editContent]",
 										className: "text-4xl font-mono font-bold text-foreground",
 										children: ["R$ ", product.price_brl?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										"data-uid": "src/pages/Product.tsx:138:15",
+										"data-uid": "src/pages/Product.tsx:141:15",
 										"data-prohibitions": "[editContent]",
 										className: "text-sm text-muted-foreground mt-3 flex items-center gap-2",
 										children: product.stock > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
-												"data-uid": "src/pages/Product.tsx:141:21",
+												"data-uid": "src/pages/Product.tsx:144:21",
 												"data-prohibitions": "[editContent]",
 												className: "w-4 h-4 text-green-500"
 											}),
@@ -40932,111 +41084,111 @@ function Product() {
 											product.stock,
 											" un.)"
 										] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, {
-											"data-uid": "src/pages/Product.tsx:145:21",
+											"data-uid": "src/pages/Product.tsx:148:21",
 											"data-prohibitions": "[editContent]",
 											className: "w-4 h-4 text-amber-500"
 										}), " Sem estoque local"] })
 									})
 								]
 							}), product.price_usd > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:152:15",
+								"data-uid": "src/pages/Product.tsx:155:15",
 								"data-prohibitions": "[editContent]",
 								className: "bg-accent/5 border border-accent/20 rounded-xl p-5 shadow-sm max-w-md",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:153:17",
+									"data-uid": "src/pages/Product.tsx:156:17",
 									"data-prohibitions": "[editContent]",
 									className: "flex items-center justify-between mb-3",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										"data-uid": "src/pages/Product.tsx:154:19",
+										"data-uid": "src/pages/Product.tsx:157:19",
 										"data-prohibitions": "[]",
 										className: "flex items-center gap-2 text-accent",
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Globe, {
-											"data-uid": "src/pages/Product.tsx:155:21",
+											"data-uid": "src/pages/Product.tsx:158:21",
 											"data-prohibitions": "[editContent]",
 											className: "w-4 h-4"
 										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"data-uid": "src/pages/Product.tsx:156:21",
+											"data-uid": "src/pages/Product.tsx:159:21",
 											"data-prohibitions": "[]",
 											className: "text-sm font-medium uppercase",
 											children: "Importação Direta"
 										})]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										"data-uid": "src/pages/Product.tsx:158:19",
+										"data-uid": "src/pages/Product.tsx:161:19",
 										"data-prohibitions": "[editContent]",
 										className: "font-mono text-sm text-muted-foreground",
 										children: ["US$ ", product.price_usd]
 									})]
 								}), !usdRate ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-									"data-uid": "src/pages/Product.tsx:163:19",
+									"data-uid": "src/pages/Product.tsx:166:19",
 									"data-prohibitions": "[editContent]",
 									variant: "outline",
 									className: "w-full border-accent/50 text-accent hover:bg-accent/10",
 									onClick: handleCalculateDelivery,
 									disabled: loadingRate,
 									children: [loadingRate ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-										"data-uid": "src/pages/Product.tsx:169:36",
+										"data-uid": "src/pages/Product.tsx:172:36",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4 animate-spin mr-2"
 									}) : null, " Ver preço para entrega no Brasil"]
 								}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:173:19",
+									"data-uid": "src/pages/Product.tsx:176:19",
 									"data-prohibitions": "[editContent]",
 									className: "animate-fade-in-up",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-										"data-uid": "src/pages/Product.tsx:174:21",
+										"data-uid": "src/pages/Product.tsx:177:21",
 										"data-prohibitions": "[editContent]",
 										className: "text-3xl font-mono font-bold text-accent",
 										children: ["R$ ", finalBrlPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										"data-uid": "src/pages/Product.tsx:177:21",
+										"data-uid": "src/pages/Product.tsx:180:21",
 										"data-prohibitions": "[]",
 										className: "text-xs text-muted-foreground mt-2 leading-relaxed",
-										children: "Os preços em reais variam de acordo com o câmbio comercial. Taxa aplicada com spread cambial."
+										children: "Os preços em reais variam de acordo com o câmbio. Taxas bancárias também podem alterar."
 									})]
 								})]
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/pages/Product.tsx:187:11",
+							"data-uid": "src/pages/Product.tsx:190:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-lg text-foreground/80 leading-relaxed mb-8",
 							children: product.description
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/pages/Product.tsx:188:11",
+							"data-uid": "src/pages/Product.tsx:191:11",
 							"data-prohibitions": "[]",
 							size: "lg",
 							onClick: () => addItem(product),
 							disabled: product.stock <= 0,
 							className: "w-full sm:w-auto h-14",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-								"data-uid": "src/pages/Product.tsx:194:13",
+								"data-uid": "src/pages/Product.tsx:197:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5 mr-2"
 							}), " Adicionar ao Projeto"]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:197:11",
+							"data-uid": "src/pages/Product.tsx:200:11",
 							"data-prohibitions": "[editContent]",
 							className: "mt-10 border-t border-border/50 pt-8",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-									"data-uid": "src/pages/Product.tsx:198:13",
+									"data-uid": "src/pages/Product.tsx:201:13",
 									"data-prohibitions": "[]",
 									className: "text-lg font-semibold flex items-center gap-2 mb-4",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-										"data-uid": "src/pages/Product.tsx:199:15",
+										"data-uid": "src/pages/Product.tsx:202:15",
 										"data-prohibitions": "[editContent]",
 										className: "w-5 h-5 text-primary"
 									}), " Consultor IA Técnico"]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-									"data-uid": "src/pages/Product.tsx:201:13",
+									"data-uid": "src/pages/Product.tsx:204:13",
 									"data-prohibitions": "[editContent]",
 									onSubmit: handleAskAI,
 									className: "flex items-center shadow-sm rounded-full border border-border/50 bg-background/50 focus-within:ring-2 focus-within:ring-primary transition-all mb-6",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										"data-uid": "src/pages/Product.tsx:205:15",
+										"data-uid": "src/pages/Product.tsx:208:15",
 										"data-prohibitions": "[editContent]",
 										disabled: aiLoading,
 										value: question,
@@ -41044,75 +41196,62 @@ function Product() {
 										placeholder: "Pergunte sobre as especificações...",
 										className: "flex-1 border-0 bg-transparent px-6 py-6 shadow-none focus-visible:ring-0"
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										"data-uid": "src/pages/Product.tsx:212:15",
+										"data-uid": "src/pages/Product.tsx:215:15",
 										"data-prohibitions": "[editContent]",
 										type: "submit",
 										disabled: aiLoading,
 										size: "icon",
 										className: "h-12 w-12 rounded-full bg-primary mr-2",
 										children: aiLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-											"data-uid": "src/pages/Product.tsx:219:19",
+											"data-uid": "src/pages/Product.tsx:222:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5 animate-spin"
 										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-											"data-uid": "src/pages/Product.tsx:221:19",
+											"data-uid": "src/pages/Product.tsx:224:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5"
 										})
 									})]
 								}),
 								aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:226:15",
+									"data-uid": "src/pages/Product.tsx:229:15",
 									"data-prohibitions": "[]",
 									className: "text-center py-4 text-sm text-primary flex justify-center items-center gap-2",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-										"data-uid": "src/pages/Product.tsx:227:17",
+										"data-uid": "src/pages/Product.tsx:230:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4 animate-spin"
-									}), " O Agente de IA está pesquisando para fornecer a melhor resposta possível..."]
+									}), " Buscando informações técnicas detalhadas..."]
 								}),
 								aiResponse && !aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:232:15",
+									"data-uid": "src/pages/Product.tsx:235:15",
 									"data-prohibitions": "[editContent]",
 									className: "animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card border border-primary/20 rounded-xl p-5 shadow-sm flex flex-col gap-4",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Product.tsx:233:17",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										"data-uid": "src/pages/Product.tsx:236:17",
+										"data-prohibitions": "[]",
+										className: "flex items-center gap-3",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											"data-uid": "src/pages/Product.tsx:237:19",
 											"data-prohibitions": "[]",
-											className: "flex items-center gap-3",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												"data-uid": "src/pages/Product.tsx:234:19",
-												"data-prohibitions": "[]",
-												className: "bg-primary/10 p-2 rounded-full",
-												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-													"data-uid": "src/pages/Product.tsx:235:21",
-													"data-prohibitions": "[editContent]",
-													className: "w-5 h-5 text-primary"
-												})
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-												"data-uid": "src/pages/Product.tsx:237:19",
-												"data-prohibitions": "[]",
-												className: "font-semibold flex items-center gap-2",
-												children: "My Way Video AI"
-											})]
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											"data-uid": "src/pages/Product.tsx:239:17",
-											"data-prohibitions": "[editContent]",
-											className: "text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed",
-											children: aiResponse.message
-										}),
-										related.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											"data-uid": "src/pages/Product.tsx:243:19",
-											"data-prohibitions": "[editContent]",
-											className: "mt-4 pt-4 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-4",
-											children: related.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-												"data-uid": "src/pages/Product.tsx:245:23",
+											className: "bg-primary/10 p-2 rounded-full",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
+												"data-uid": "src/pages/Product.tsx:238:21",
 												"data-prohibitions": "[editContent]",
-												product: p
-											}, p.id))
-										})
-									]
+												className: "w-5 h-5 text-primary"
+											})
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+											"data-uid": "src/pages/Product.tsx:240:19",
+											"data-prohibitions": "[]",
+											className: "font-semibold flex items-center gap-2",
+											children: "My Way Video AI"
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										"data-uid": "src/pages/Product.tsx:242:17",
+										"data-prohibitions": "[editContent]",
+										className: "text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed",
+										children: aiResponse.message
+									})]
 								})
 							]
 						})
@@ -41120,16 +41259,45 @@ function Product() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:254:7",
+				"data-uid": "src/pages/Product.tsx:250:7",
 				"data-prohibitions": "[editContent]",
 				className: "mt-24 max-w-4xl",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-					"data-uid": "src/pages/Product.tsx:255:9",
-					"data-prohibitions": "[]",
-					className: "text-2xl font-bold mb-6 tracking-tight",
-					children: "Especificações Técnicas"
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/pages/Product.tsx:251:9",
+					"data-prohibitions": "[editContent]",
+					className: "flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+						"data-uid": "src/pages/Product.tsx:252:11",
+						"data-prohibitions": "[]",
+						className: "text-2xl font-bold tracking-tight",
+						children: "Especificações Técnicas"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Product.tsx:253:11",
+						"data-prohibitions": "[editContent]",
+						className: "flex items-center gap-3 text-sm bg-muted/50 px-4 py-2 rounded-full border border-border",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"data-uid": "src/pages/Product.tsx:254:13",
+								"data-prohibitions": "[editContent]",
+								className: !isMetric ? "font-semibold text-primary" : "text-muted-foreground",
+								children: "Imperial"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Switch, {
+								"data-uid": "src/pages/Product.tsx:257:13",
+								"data-prohibitions": "[editContent]",
+								checked: isMetric,
+								onCheckedChange: setIsMetric
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"data-uid": "src/pages/Product.tsx:258:13",
+								"data-prohibitions": "[editContent]",
+								className: isMetric ? "font-semibold text-primary" : "text-muted-foreground",
+								children: "Métrico"
+							})
+						]
+					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:256:9",
+					"data-uid": "src/pages/Product.tsx:263:9",
 					"data-prohibitions": "[editContent]",
 					className: "bg-card/30 border border-white/5 rounded-2xl overflow-hidden text-sm",
 					children: [
@@ -41147,23 +41315,23 @@ function Product() {
 						},
 						{
 							l: "Peso",
-							v: product.weight ? `${product.weight} kg` : null
+							v: displayWeight(product.weight)
 						},
 						{
 							l: "Dimensões",
-							v: product.dimensions
+							v: displayDimensions(product.dimensions)
 						}
 					].map((s, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Product.tsx:264:13",
+						"data-uid": "src/pages/Product.tsx:271:13",
 						"data-prohibitions": "[editContent]",
 						className: `flex flex-col sm:flex-row py-3 px-6 ${i % 2 === 0 ? "bg-white/5" : ""}`,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:268:15",
+							"data-uid": "src/pages/Product.tsx:275:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-48 text-muted-foreground font-medium",
 							children: s.l
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:269:15",
+							"data-uid": "src/pages/Product.tsx:276:15",
 							"data-prohibitions": "[editContent]",
 							className: "font-mono text-foreground",
 							children: s.v || "N/A"
@@ -41309,18 +41477,18 @@ var Label$2 = import_react.forwardRef((props, forwardedRef) => {
 	});
 });
 Label$2.displayName = NAME;
-var Root$1 = Label$2;
+var Root = Label$2;
 //#endregion
 //#region src/components/ui/label.tsx
 var labelVariants = cva("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70");
-var Label$1 = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root$1, {
+var Label$1 = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root, {
 	"data-uid": "src/components/ui/label.tsx:16:3",
 	"data-prohibitions": "[editContent]",
 	ref,
 	className: cn$1(labelVariants(), className),
 	...props
 }));
-Label$1.displayName = Root$1.displayName;
+Label$1.displayName = Root.displayName;
 //#endregion
 //#region src/components/ui/badge.tsx
 var badgeVariants = cva("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", {
@@ -41413,145 +41581,6 @@ var DialogDescription = import_react.forwardRef(({ className, ...props }, ref) =
 	...props
 }));
 DialogDescription.displayName = Description.displayName;
-//#endregion
-//#region ../../cache/modules/my-way-video-ia-ede01/node_modules/.pnpm/@radix-ui+react-use-previous@1.1.1_@types+react@19.2.14_react@19.2.4/node_modules/@radix-ui/react-use-previous/dist/index.mjs
-function usePrevious(value) {
-	const ref = import_react.useRef({
-		value,
-		previous: value
-	});
-	return import_react.useMemo(() => {
-		if (ref.current.value !== value) {
-			ref.current.previous = ref.current.value;
-			ref.current.value = value;
-		}
-		return ref.current.previous;
-	}, [value]);
-}
-//#endregion
-//#region ../../cache/modules/my-way-video-ia-ede01/node_modules/.pnpm/@radix-ui+react-switch@1.2.6_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react_e3738c514c10df2ef7e24af5ee461853/node_modules/@radix-ui/react-switch/dist/index.mjs
-var SWITCH_NAME = "Switch";
-var [createSwitchContext, createSwitchScope] = createContextScope(SWITCH_NAME);
-var [SwitchProvider, useSwitchContext] = createSwitchContext(SWITCH_NAME);
-var Switch$1 = import_react.forwardRef((props, forwardedRef) => {
-	const { __scopeSwitch, name, checked: checkedProp, defaultChecked, required, disabled, value = "on", onCheckedChange, form, ...switchProps } = props;
-	const [button, setButton] = import_react.useState(null);
-	const composedRefs = useComposedRefs(forwardedRef, (node) => setButton(node));
-	const hasConsumerStoppedPropagationRef = import_react.useRef(false);
-	const isFormControl = button ? form || !!button.closest("form") : true;
-	const [checked, setChecked] = useControllableState({
-		prop: checkedProp,
-		defaultProp: defaultChecked ?? false,
-		onChange: onCheckedChange,
-		caller: SWITCH_NAME
-	});
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SwitchProvider, {
-		scope: __scopeSwitch,
-		checked,
-		disabled,
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.button, {
-			type: "button",
-			role: "switch",
-			"aria-checked": checked,
-			"aria-required": required,
-			"data-state": getState(checked),
-			"data-disabled": disabled ? "" : void 0,
-			disabled,
-			value,
-			...switchProps,
-			ref: composedRefs,
-			onClick: composeEventHandlers(props.onClick, (event) => {
-				setChecked((prevChecked) => !prevChecked);
-				if (isFormControl) {
-					hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
-					if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
-				}
-			})
-		}), isFormControl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SwitchBubbleInput, {
-			control: button,
-			bubbles: !hasConsumerStoppedPropagationRef.current,
-			name,
-			value,
-			checked,
-			required,
-			disabled,
-			form,
-			style: { transform: "translateX(-100%)" }
-		})]
-	});
-});
-Switch$1.displayName = SWITCH_NAME;
-var THUMB_NAME = "SwitchThumb";
-var SwitchThumb = import_react.forwardRef((props, forwardedRef) => {
-	const { __scopeSwitch, ...thumbProps } = props;
-	const context = useSwitchContext(THUMB_NAME, __scopeSwitch);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Primitive$1.span, {
-		"data-state": getState(context.checked),
-		"data-disabled": context.disabled ? "" : void 0,
-		...thumbProps,
-		ref: forwardedRef
-	});
-});
-SwitchThumb.displayName = THUMB_NAME;
-var BUBBLE_INPUT_NAME$1 = "SwitchBubbleInput";
-var SwitchBubbleInput = import_react.forwardRef(({ __scopeSwitch, control, checked, bubbles = true, ...props }, forwardedRef) => {
-	const ref = import_react.useRef(null);
-	const composedRefs = useComposedRefs(ref, forwardedRef);
-	const prevChecked = usePrevious(checked);
-	const controlSize = useSize(control);
-	import_react.useEffect(() => {
-		const input = ref.current;
-		if (!input) return;
-		const inputProto = window.HTMLInputElement.prototype;
-		const setChecked = Object.getOwnPropertyDescriptor(inputProto, "checked").set;
-		if (prevChecked !== checked && setChecked) {
-			const event = new Event("click", { bubbles });
-			setChecked.call(input, checked);
-			input.dispatchEvent(event);
-		}
-	}, [
-		prevChecked,
-		checked,
-		bubbles
-	]);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-		type: "checkbox",
-		"aria-hidden": true,
-		defaultChecked: checked,
-		...props,
-		tabIndex: -1,
-		ref: composedRefs,
-		style: {
-			...props.style,
-			...controlSize,
-			position: "absolute",
-			pointerEvents: "none",
-			opacity: 0,
-			margin: 0
-		}
-	});
-});
-SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
-function getState(checked) {
-	return checked ? "checked" : "unchecked";
-}
-var Root = Switch$1;
-var Thumb = SwitchThumb;
-//#endregion
-//#region src/components/ui/switch.tsx
-var Switch = import_react.forwardRef(({ className, ...props }, ref) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Root, {
-	"data-uid": "src/components/ui/switch.tsx:11:3",
-	"data-prohibitions": "[editContent]",
-	className: cn$1("peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input", className),
-	...props,
-	ref,
-	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Thumb, {
-		"data-uid": "src/components/ui/switch.tsx:19:5",
-		"data-prohibitions": "[editContent]",
-		className: cn$1("pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0")
-	})
-}));
-Switch.displayName = Root.displayName;
 //#endregion
 //#region ../../cache/modules/my-way-video-ia-ede01/node_modules/.pnpm/@radix-ui+number@1.1.1/node_modules/@radix-ui/number/dist/index.mjs
 function clamp(value, [min, max]) {
@@ -43034,7 +43063,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 							"data-uid": "src/components/AdminProductForm.tsx:228:11",
 							"data-prohibitions": "[]",
 							htmlFor: "price_usd",
-							children: "Preço Base (USD)"
+							children: "Preço de Venda Miami (USD)"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 							"data-uid": "src/components/AdminProductForm.tsx:229:11",
 							"data-prohibitions": "[editContent]",
@@ -43055,7 +43084,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 							"data-uid": "src/components/AdminProductForm.tsx:240:11",
 							"data-prohibitions": "[]",
 							htmlFor: "price_brl",
-							children: "Preço Estoque (BRL)"
+							children: "Preço de Venda Brasil (USD)"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 							"data-uid": "src/components/AdminProductForm.tsx:241:11",
 							"data-prohibitions": "[editContent]",
@@ -43077,7 +43106,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 							"data-prohibitions": "[]",
 							htmlFor: "price_cost",
 							className: "text-amber-500",
-							children: "Custo Interno (BRL)"
+							children: "Preço de Custo Miami (USD)"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 							"data-uid": "src/components/AdminProductForm.tsx:255:11",
 							"data-prohibitions": "[editContent]",
@@ -43118,7 +43147,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 							"data-uid": "src/components/AdminProductForm.tsx:277:11",
 							"data-prohibitions": "[]",
 							htmlFor: "weight",
-							children: "Peso (kg)"
+							children: "Peso (lb)"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 							"data-uid": "src/components/AdminProductForm.tsx:278:11",
 							"data-prohibitions": "[editContent]",
@@ -43139,7 +43168,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 							"data-uid": "src/components/AdminProductForm.tsx:289:11",
 							"data-prohibitions": "[]",
 							htmlFor: "dimensions",
-							children: "Dimensões (CxLxA)"
+							children: "Dimensões (in)"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 							"data-uid": "src/components/AdminProductForm.tsx:290:11",
 							"data-prohibitions": "[editContent]",
@@ -43148,7 +43177,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 							value: formData.dimensions || "",
 							onChange: handleChange,
 							className: "bg-background/50",
-							placeholder: "99x99x99 cm"
+							placeholder: "10x10x10"
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -43162,7 +43191,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 								"data-uid": "src/components/AdminProductForm.tsx:302:13",
 								"data-prohibitions": "[]",
 								className: "text-amber-500",
-								children: "Produto \"SPECIAL\""
+								children: "Produto \"DESTAQUE\""
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 								"data-uid": "src/components/AdminProductForm.tsx:303:13",
 								"data-prohibitions": "[]",
@@ -43231,6 +43260,7 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 						...p,
 						manufacturer_id: id
 					}));
+					setShowMfgDialog(false);
 				}
 			})
 		]
@@ -43239,21 +43269,11 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 //#endregion
 //#region src/components/AdminCSVUploader.tsx
 function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
-	const [selectedMfg, setSelectedMfg] = (0, import_react.useState)("");
 	const [isUploading, setIsUploading] = (0, import_react.useState)(false);
-	const [showMfgDialog, setShowMfgDialog] = (0, import_react.useState)(false);
 	const fileInputRef = (0, import_react.useRef)(null);
 	const handleCSVUpload = async (event) => {
 		const file = event.target.files?.[0];
 		if (!file) return;
-		if (!selectedMfg) {
-			toast$1({
-				title: "Atenção",
-				description: "Selecione um fabricante para o lote.",
-				variant: "destructive"
-			});
-			return;
-		}
 		setIsUploading(true);
 		const reader = new FileReader();
 		reader.onload = async (e) => {
@@ -43261,11 +43281,14 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 				const lines = (e.target?.result).split("\n").map((l) => l.trim()).filter(Boolean);
 				if (lines.length < 2) throw new Error("CSV inválido");
 				const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-				const validProducts = lines.slice(1).map((line) => {
-					const values = line.split(",");
-					const prod = { manufacturer_id: selectedMfg };
+				const mfgIndex = headers.indexOf("manufacturer");
+				let validProducts = [];
+				let missingManufacturers = /* @__PURE__ */ new Set();
+				const parsedLines = lines.slice(1).map((line) => {
+					const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) => v.replace(/^"|"$/g, "").trim());
+					const prod = {};
 					headers.forEach((h, i) => {
-						let val = values[i]?.trim() || null;
+						let val = values[i] || null;
 						if (h === "sku" && val) val = val.replace(/[-/]/g, "");
 						if ([
 							"price_brl",
@@ -43279,6 +43302,36 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 					});
 					return prod;
 				}).filter((p) => p.name && p.sku);
+				if (mfgIndex !== -1) {
+					const existingMfgNames = new Map(manufacturers.map((m) => [m.name.toLowerCase(), m.id]));
+					parsedLines.forEach((p) => {
+						const mfgName = p.manufacturer;
+						if (mfgName && !existingMfgNames.has(mfgName.toLowerCase())) missingManufacturers.add(mfgName);
+					});
+					const newMfgMap = /* @__PURE__ */ new Map();
+					if (missingManufacturers.size > 0) {
+						const newMfgsToInsert = Array.from(missingManufacturers).map((name) => ({ name }));
+						const { data: insertedMfgs, error: mfgError } = await supabase.from("manufacturers").insert(newMfgsToInsert).select();
+						if (mfgError) throw new Error(`Erro ao criar fabricantes: ${mfgError.message}`);
+						if (insertedMfgs) {
+							insertedMfgs.forEach((m) => newMfgMap.set(m.name.toLowerCase(), m.id));
+							onAddManufacturer();
+						}
+					}
+					validProducts = parsedLines.map((p) => {
+						const mfgName = p.manufacturer;
+						let mfgId = null;
+						if (mfgName) {
+							const lowerName = mfgName.toLowerCase();
+							mfgId = existingMfgNames.get(lowerName) || newMfgMap.get(lowerName);
+						}
+						const { manufacturer, ...rest } = p;
+						return {
+							...rest,
+							manufacturer_id: mfgId
+						};
+					});
+				} else validProducts = parsedLines;
 				const { error } = await supabase.from("products").upsert(validProducts, { onConflict: "manufacturer_id,sku" });
 				if (error) throw error;
 				toast$1({
@@ -43299,85 +43352,35 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 		};
 		reader.readAsText(file);
 	};
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/components/AdminCSVUploader.tsx:90:5",
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		"data-uid": "src/components/AdminCSVUploader.tsx:117:5",
 		"data-prohibitions": "[editContent]",
 		className: "flex items-center gap-2",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
-				"data-uid": "src/components/AdminCSVUploader.tsx:91:7",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			"data-uid": "src/components/AdminCSVUploader.tsx:118:7",
+			"data-prohibitions": "[editContent]",
+			className: "relative overflow-hidden inline-block ml-2",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+				"data-uid": "src/components/AdminCSVUploader.tsx:119:9",
 				"data-prohibitions": "[editContent]",
-				value: selectedMfg,
-				onValueChange: setSelectedMfg,
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
-					"data-uid": "src/components/AdminCSVUploader.tsx:92:9",
-					"data-prohibitions": "[]",
-					className: "w-[180px] bg-background border-white/10",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
-						"data-uid": "src/components/AdminCSVUploader.tsx:93:11",
-						"data-prohibitions": "[editContent]",
-						placeholder: "Lote do Fabricante..."
-					})
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
-					"data-uid": "src/components/AdminCSVUploader.tsx:95:9",
+				variant: "secondary",
+				disabled: isUploading,
+				onClick: () => fileInputRef.current?.click(),
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Upload, {
+					"data-uid": "src/components/AdminCSVUploader.tsx:124:11",
 					"data-prohibitions": "[editContent]",
-					children: manufacturers.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
-						"data-uid": "src/components/AdminCSVUploader.tsx:97:13",
-						"data-prohibitions": "[editContent]",
-						value: m.id,
-						children: m.name
-					}, m.id))
-				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				"data-uid": "src/components/AdminCSVUploader.tsx:103:7",
-				"data-prohibitions": "[]",
-				variant: "outline",
-				size: "icon",
-				onClick: () => setShowMfgDialog(true),
-				className: "border-white/10 hover:bg-white/5",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
-					"data-uid": "src/components/AdminCSVUploader.tsx:109:9",
-					"data-prohibitions": "[editContent]",
-					className: "w-4 h-4"
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/components/AdminCSVUploader.tsx:111:7",
+					className: "w-4 h-4 mr-2"
+				}), isUploading ? "Processando..." : "Importar CSV"]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+				"data-uid": "src/components/AdminCSVUploader.tsx:127:9",
 				"data-prohibitions": "[editContent]",
-				className: "relative overflow-hidden inline-block ml-2",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-					"data-uid": "src/components/AdminCSVUploader.tsx:112:9",
-					"data-prohibitions": "[editContent]",
-					variant: "secondary",
-					disabled: isUploading || !selectedMfg,
-					onClick: () => fileInputRef.current?.click(),
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Upload, {
-						"data-uid": "src/components/AdminCSVUploader.tsx:117:11",
-						"data-prohibitions": "[editContent]",
-						className: "w-4 h-4 mr-2"
-					}), isUploading ? "Processando..." : "Importar CSV"]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-					"data-uid": "src/components/AdminCSVUploader.tsx:120:9",
-					"data-prohibitions": "[editContent]",
-					ref: fileInputRef,
-					type: "file",
-					accept: ".csv",
-					onChange: handleCSVUpload,
-					className: "hidden"
-				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminManufacturerDialog, {
-				"data-uid": "src/components/AdminCSVUploader.tsx:128:7",
-				"data-prohibitions": "[editContent]",
-				open: showMfgDialog,
-				onOpenChange: setShowMfgDialog,
-				onSuccess: (id) => {
-					onAddManufacturer();
-					setSelectedMfg(id);
-				}
-			})
-		]
+				ref: fileInputRef,
+				type: "file",
+				accept: ".csv",
+				onChange: handleCSVUpload,
+				className: "hidden"
+			})]
+		})
 	});
 }
 //#endregion
@@ -43741,13 +43744,13 @@ function Admin() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
 									"data-uid": "src/pages/Admin.tsx:221:15",
 									"data-prohibitions": "[]",
-									children: "Preço (USD / BRL)"
+									children: "Preço Venda (Miami / BR)"
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
 									"data-uid": "src/pages/Admin.tsx:222:15",
 									"data-prohibitions": "[]",
 									className: "text-amber-500",
-									children: "Custo (BRL)"
+									children: "Custo (Miami)"
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TableHead, {
 									"data-uid": "src/pages/Admin.tsx:223:15",
@@ -43809,7 +43812,7 @@ function Admin() {
 									children: [
 										"$",
 										p.price_usd,
-										" / R$",
+										" / $",
 										p.price_brl
 									]
 								}),
@@ -43817,7 +43820,7 @@ function Admin() {
 									"data-uid": "src/pages/Admin.tsx:248:17",
 									"data-prohibitions": "[editContent]",
 									className: "font-mono text-sm text-amber-500",
-									children: ["R$", p.price_cost]
+									children: ["$", p.price_cost]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
 									"data-uid": "src/pages/Admin.tsx:249:17",
@@ -44323,4 +44326,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-CBcHajKG.js.map
+//# sourceMappingURL=index-BRNDsKKH.js.map

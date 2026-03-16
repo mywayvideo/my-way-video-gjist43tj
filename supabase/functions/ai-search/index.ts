@@ -8,7 +8,7 @@ Deno.serve(async (req: Request) => {
   const fallbackResponse = {
     type: 'not_found',
     message:
-      'Fizemos uma busca rápida, mas não conseguimos confirmar todos os detalhes técnicos no momento. Nossos especialistas estão prontos para ajudar!',
+      'Não tenho uma informação precisa para lhe dar sobre isso, indicamos falar com um especialista.',
     related_product_ids: [],
   }
 
@@ -28,7 +28,6 @@ Deno.serve(async (req: Request) => {
     const { data: cData } = await supabase.from('company_info').select('content, type')
     const companyInfo = cData?.map((c: any) => `[${c.type}]: ${c.content}`).join('\n') || ''
 
-    // Mapped product names for context
     const { data: products } = await supabase
       .from('products')
       .select(
@@ -50,7 +49,7 @@ ${JSON.stringify(products || [])}
 
 HIERARQUIA DE BUSCA DE INFORMAÇÕES:
 1. BANCO DE DADOS INTERNO.
-2. B&H PHOTO VIDEO via 'search_web' tool se faltarem dados.
+2. Busca na web via 'search_web' tool se faltarem dados.
 
 REGRAS:
 - Você DEVE retornar os 'id's dos produtos do nosso inventário que correspondam à dúvida no array 'related_product_ids'.
@@ -68,7 +67,7 @@ FORMATO JSON STRICT:
         type: 'function',
         function: {
           name: 'search_web',
-          description: 'Busca na web no bhphotovideo.com',
+          description: 'Busca na web por especificações técnicas',
           parameters: {
             type: 'object',
             properties: { search_query: { type: 'string' } },

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { useCartStore } from '@/stores/useCartStore'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -14,14 +15,10 @@ import {
   Bot,
   MapPin,
   Loader2,
-  Video,
-  AlertCircle,
   Sparkles,
-  MessageCircle,
   Globe,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
-import { ProductCard } from '@/components/ProductCard'
 
 export default function Product() {
   const { id } = useParams()
@@ -29,10 +26,10 @@ export default function Product() {
   const [product, setProduct] = useState<ProductType | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<AISearchResponse | null>(null)
-  const [related, setRelated] = useState<any[]>([])
   const [question, setQuestion] = useState('')
   const [usdRate, setUsdRate] = useState<number | null>(null)
   const [loadingRate, setLoadingRate] = useState(false)
+  const [isMetric, setIsMetric] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -66,7 +63,6 @@ export default function Product() {
     if (!question.trim() || !product) return
     setAiLoading(true)
     setAiResponse(null)
-    setRelated([])
     try {
       const { data, error } = await performAISearch(
         `[Contexto do Produto: ${product.name} - SKU: ${product.sku}] ${question}`,
@@ -74,13 +70,6 @@ export default function Product() {
       if (error) throw error
       if (data) {
         setAiResponse(data)
-        if (data.related_product_ids?.length) {
-          const { data: pData } = await supabase
-            .from('products')
-            .select('*')
-            .in('id', data.related_product_ids)
-          if (pData) setRelated(pData)
-        }
       }
     } catch {
       toast({ title: 'Erro', description: 'Falha ao consultar a IA.', variant: 'destructive' })
@@ -88,6 +77,20 @@ export default function Product() {
       setAiLoading(false)
       setQuestion('')
     }
+  }
+
+  const displayWeight = (w: number | null) => {
+    if (w === null || w === undefined) return null
+    if (isMetric) return `${(w * 0.453592).toFixed(2)} kg`
+    return `${w} lb`
+  }
+
+  const displayDimensions = (d: string | null) => {
+    if (!d) return null
+    if (isMetric) {
+      return d.replace(/\d+(\.\d+)?/g, (m) => (parseFloat(m) * 2.54).toFixed(1)) + ' cm'
+    }
+    return `${d} in`
   }
 
   if (!product)
@@ -175,8 +178,8 @@ export default function Product() {
                       R$ {finalBrlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      Os preços em reais variam de acordo com o câmbio comercial. Taxa aplicada com
-                      spread cambial.
+                      Os preços em reais variam de acordo com o câmbio. Taxas bancárias também podem
+                      alterar.
                     </p>
                   </div>
                 )}
@@ -224,8 +227,8 @@ export default function Product() {
             </form>
             {aiLoading && (
               <div className="text-center py-4 text-sm text-primary flex justify-center items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> O Agente de IA está pesquisando para
-                fornecer a melhor resposta possível...
+                <Loader2 className="w-4 h-4 animate-spin" /> Buscando informações técnicas
+                detalhadas...
               </div>
             )}
             {aiResponse && !aiLoading && (
@@ -239,27 +242,31 @@ export default function Product() {
                 <div className="text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed">
                   {aiResponse.message}
                 </div>
-                {related.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {related.map((p) => (
-                      <ProductCard key={p.id} product={p} />
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
         </div>
       </div>
       <div className="mt-24 max-w-4xl">
-        <h2 className="text-2xl font-bold mb-6 tracking-tight">Especificações Técnicas</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <h2 className="text-2xl font-bold tracking-tight">Especificações Técnicas</h2>
+          <div className="flex items-center gap-3 text-sm bg-muted/50 px-4 py-2 rounded-full border border-border">
+            <span className={!isMetric ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+              Imperial
+            </span>
+            <Switch checked={isMetric} onCheckedChange={setIsMetric} />
+            <span className={isMetric ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+              Métrico
+            </span>
+          </div>
+        </div>
         <div className="bg-card/30 border border-white/5 rounded-2xl overflow-hidden text-sm">
           {[
             { l: 'Fabricante', v: product.manufacturer?.name },
             { l: 'SKU', v: product.sku },
             { l: 'NCM', v: product.ncm },
-            { l: 'Peso', v: product.weight ? `${product.weight} kg` : null },
-            { l: 'Dimensões', v: product.dimensions },
+            { l: 'Peso', v: displayWeight(product.weight) },
+            { l: 'Dimensões', v: displayDimensions(product.dimensions) },
           ].map((s, i) => (
             <div
               key={s.l}

@@ -1,17 +1,9 @@
 import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Upload, Plus } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { Manufacturer } from '@/types'
-import { AdminManufacturerDialog } from './AdminManufacturerDialog'
 
 interface Props {
   manufacturers: Manufacturer[]
@@ -20,22 +12,12 @@ interface Props {
 }
 
 export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }: Props) {
-  const [selectedMfg, setSelectedMfg] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
-  const [showMfgDialog, setShowMfgDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!selectedMfg) {
-      toast({
-        title: 'Atenção',
-        description: 'Selecione um fabricante para o lote.',
-        variant: 'destructive',
-      })
-      return
-    }
 
     setIsUploading(true)
     const reader = new FileReader()
@@ -49,13 +31,20 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         if (lines.length < 2) throw new Error('CSV inválido')
 
         const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
-        const validProducts = lines
+        const mfgIndex = headers.indexOf('manufacturer')
+
+        let validProducts: any[] = []
+        let missingManufacturers = new Set<string>()
+
+        const parsedLines = lines
           .slice(1)
           .map((line) => {
-            const values = line.split(',')
-            const prod: any = { manufacturer_id: selectedMfg }
+            const values = line
+              .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+              .map((v) => v.replace(/^"|"$/g, '').trim())
+            const prod: any = {}
             headers.forEach((h, i) => {
-              let val = values[i]?.trim() || null
+              let val = values[i] || null
               if (h === 'sku' && val) val = val.replace(/[-/]/g, '')
               if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(h)) {
                 prod[h] = val ? parseFloat(val) : 0
@@ -68,6 +57,44 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             return prod
           })
           .filter((p) => p.name && p.sku)
+
+        if (mfgIndex !== -1) {
+          const existingMfgNames = new Map(manufacturers.map((m) => [m.name.toLowerCase(), m.id]))
+          parsedLines.forEach((p) => {
+            const mfgName = p.manufacturer
+            if (mfgName && !existingMfgNames.has(mfgName.toLowerCase())) {
+              missingManufacturers.add(mfgName)
+            }
+          })
+
+          const newMfgMap = new Map<string, string>()
+          if (missingManufacturers.size > 0) {
+            const newMfgsToInsert = Array.from(missingManufacturers).map((name) => ({ name }))
+            const { data: insertedMfgs, error: mfgError } = await supabase
+              .from('manufacturers')
+              .insert(newMfgsToInsert)
+              .select()
+
+            if (mfgError) throw new Error(`Erro ao criar fabricantes: ${mfgError.message}`)
+            if (insertedMfgs) {
+              insertedMfgs.forEach((m) => newMfgMap.set(m.name.toLowerCase(), m.id))
+              onAddManufacturer()
+            }
+          }
+
+          validProducts = parsedLines.map((p) => {
+            const mfgName = p.manufacturer
+            let mfgId = null
+            if (mfgName) {
+              const lowerName = mfgName.toLowerCase()
+              mfgId = existingMfgNames.get(lowerName) || newMfgMap.get(lowerName)
+            }
+            const { manufacturer, ...rest } = p
+            return { ...rest, manufacturer_id: mfgId }
+          })
+        } else {
+          validProducts = parsedLines
+        }
 
         const { error } = await supabase
           .from('products')
@@ -88,30 +115,10 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={selectedMfg} onValueChange={setSelectedMfg}>
-        <SelectTrigger className="w-[180px] bg-background border-white/10">
-          <SelectValue placeholder="Lote do Fabricante..." />
-        </SelectTrigger>
-        <SelectContent>
-          {manufacturers.map((m) => (
-            <SelectItem key={m.id} value={m.id}>
-              {m.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setShowMfgDialog(true)}
-        className="border-white/10 hover:bg-white/5"
-      >
-        <Plus className="w-4 h-4" />
-      </Button>
       <div className="relative overflow-hidden inline-block ml-2">
         <Button
           variant="secondary"
-          disabled={isUploading || !selectedMfg}
+          disabled={isUploading}
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-4 h-4 mr-2" />
@@ -125,14 +132,6 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           className="hidden"
         />
       </div>
-      <AdminManufacturerDialog
-        open={showMfgDialog}
-        onOpenChange={setShowMfgDialog}
-        onSuccess={(id) => {
-          onAddManufacturer()
-          setSelectedMfg(id)
-        }}
-      />
     </div>
   )
 }

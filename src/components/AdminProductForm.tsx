@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/hooks/use-toast'
-import { UploadCloud, Image as ImageIcon, Plus } from 'lucide-react'
+import { UploadCloud, Plus } from 'lucide-react'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
 
 interface Props {
@@ -225,7 +225,7 @@ export function AdminProductForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="price_usd">Preço Base (USD)</Label>
+          <Label htmlFor="price_usd">Preço de Venda Miami (USD)</Label>
           <Input
             id="price_usd"
             name="price_usd"
@@ -237,7 +237,7 @@ export function AdminProductForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="price_brl">Preço Estoque (BRL)</Label>
+          <Label htmlFor="price_brl">Preço de Venda Brasil (USD)</Label>
           <Input
             id="price_brl"
             name="price_brl"
@@ -250,7 +250,7 @@ export function AdminProductForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="price_cost" className="text-amber-500">
-            Custo Interno (BRL)
+            Preço de Custo Miami (USD)
           </Label>
           <Input
             id="price_cost"
@@ -274,7 +274,7 @@ export function AdminProductForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="weight">Peso (kg)</Label>
+          <Label htmlFor="weight">Peso (lb)</Label>
           <Input
             id="weight"
             name="weight"
@@ -286,20 +286,20 @@ export function AdminProductForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="dimensions">Dimensões (CxLxA)</Label>
+          <Label htmlFor="dimensions">Dimensões (in)</Label>
           <Input
             id="dimensions"
             name="dimensions"
             value={formData.dimensions || ''}
             onChange={handleChange}
             className="bg-background/50"
-            placeholder="99x99x99 cm"
+            placeholder="10x10x10"
           />
         </div>
 
         <div className="flex items-center justify-between rounded-lg border border-white/10 bg-background/50 p-3 md:col-span-2">
           <div>
-            <Label className="text-amber-500">Produto "SPECIAL"</Label>
+            <Label className="text-amber-500">Produto "DESTAQUE"</Label>
             <p className="text-xs text-muted-foreground">Destacar na página inicial</p>
           </div>
           <Switch
@@ -333,6 +333,7 @@ export function AdminProductForm({
         onSuccess={(id) => {
           onAddManufacturer()
           setFormData((p) => ({ ...p, manufacturer_id: id }))
+          setShowMfgDialog(false)
         }}
       />
     </form>

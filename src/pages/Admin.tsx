@@ -218,8 +218,8 @@ export default function Admin() {
               <TableHead>Produto</TableHead>
               <TableHead>Fabricante</TableHead>
               <TableHead>SKU</TableHead>
-              <TableHead>Preço (USD / BRL)</TableHead>
-              <TableHead className="text-amber-500">Custo (BRL)</TableHead>
+              <TableHead>Preço Venda (Miami / BR)</TableHead>
+              <TableHead className="text-amber-500">Custo (Miami)</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,9 +243,9 @@ export default function Admin() {
                 <TableCell className="text-xs">{p.manufacturer?.name || '-'}</TableCell>
                 <TableCell className="font-mono text-xs">{p.sku}</TableCell>
                 <TableCell className="font-mono text-sm">
-                  ${p.price_usd} / R${p.price_brl}
+                  ${p.price_usd} / ${p.price_brl}
                 </TableCell>
-                <TableCell className="font-mono text-sm text-amber-500">R${p.price_cost}</TableCell>
+                <TableCell className="font-mono text-sm text-amber-500">${p.price_cost}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
