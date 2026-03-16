@@ -42,11 +42,11 @@ export default function Search() {
         if (data) {
           setAiResponse(data)
 
-          if (data.product_ids && data.product_ids.length > 0) {
+          if (data.related_product_ids && data.related_product_ids.length > 0) {
             const { data: productsData } = await supabase
               .from('products')
               .select('*')
-              .in('id', data.product_ids)
+              .in('id', data.related_product_ids)
 
             if (productsData) {
               setProducts(productsData)
@@ -110,8 +110,8 @@ export default function Search() {
               <div className="pt-6 mt-6 border-t border-border/50">
                 <p className="text-sm text-muted-foreground mb-4">
                   {hasRelatedProducts
-                    ? 'Não consegui encontrar esse detalhe técnico específico, mas aqui estão os equipamentos relacionados que você mencionou:'
-                    : 'Fizemos uma busca rápida em nossa base, mas não encontramos os detalhes exatos. Nossa equipe de especialistas está pronta para te ajudar diretamente.'}
+                    ? 'Não consegui encontrar os detalhes técnicos exatos para essa consulta, mas aqui estão os equipamentos relacionados do nosso estoque:'
+                    : 'Fizemos uma busca rápida, mas não encontramos os detalhes exatos. Nossa equipe de especialistas está pronta para ajudar.'}
                 </p>
                 <Button
                   size="lg"
@@ -154,9 +154,9 @@ export default function Search() {
             <Sparkles className="w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-semibold">Analisando Equipamentos...</h3>
+            <h3 className="text-xl font-semibold">Analisando Especificações...</h3>
             <p className="text-muted-foreground animate-pulse font-medium max-w-md mx-auto">
-              Buscando especificações técnicas e mapeando produtos no nosso inventário.
+              Buscando na base de dados, B&H Photo Video e mapeando nosso inventário.
             </p>
           </div>
         </div>

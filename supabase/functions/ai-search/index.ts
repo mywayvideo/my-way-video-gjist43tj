@@ -9,7 +9,7 @@ Deno.serve(async (req: Request) => {
     type: 'not_found',
     message:
       'Fizemos uma busca rápida, mas não conseguimos confirmar todos os detalhes técnicos no momento. Nossos especialistas estão prontos para ajudar!',
-    product_ids: [],
+    related_product_ids: [],
   }
 
   try {
@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: products } = await supabase
       .from('products')
-      .select('id, name, sku, description, category')
+      .select('id, name, sku, description, category, dimensions, weight, ncm, price_brl')
 
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openAiKey) throw new Error('Missing OpenAI key')
@@ -44,22 +44,27 @@ ${companyInfo}
 Inventário Disponível (Produtos na loja):
 ${JSON.stringify(products || [])}
 
-REGRAS DE OURO:
-1. FOCO NO CATÁLOGO: Sua principal tarefa é identificar quais produtos do "Inventário Disponível" correspondem ou se relacionam à pergunta do usuário.
-2. RETORNO OBRIGATÓRIO DE PRODUTOS: Você DEVE incluir os 'id's dos produtos correspondentes no array 'product_ids'. Mesmo que a pergunta seja muito específica (ex: "Qual a montagem de lente da FX3?") e você não ache a resposta exata, RETORNE O ID DA CÂMERA MENCIONADA. NUNCA deixe 'product_ids' vazio se o produto existir no inventário.
-3. BUSCA NA WEB RESTRITA: Utilize a ferramenta 'search_web' apenas se o usuário pedir um detalhe técnico (bocal, peso, resolução) que não está na descrição do produto. 
-4. TIPOS DE RESPOSTA (type):
-   - 'technical': Achou a resposta técnica exata.
-   - 'not_found': Não achou a especificação técnica exata após buscar, MAS você ainda deve retornar os IDs dos produtos relacionados.
+HIERARQUIA DE BUSCA DE INFORMAÇÕES:
+1. BANCO DE DADOS INTERNO: Verifique os detalhes na Base de Conhecimento e no Inventário Disponível acima.
+2. B&H PHOTO VIDEO: Se faltarem dados técnicos ou se for necessário comparar com um produto fora do inventário, você DEVE usar a ferramenta 'search_web'. PRIORIZE O SITE DA B&H PHOTO VIDEO buscando especificações na aba "Specs" (Ex: adicione "site:bhphotovideo.com specs" na busca).
+3. WEB GERAL: Apenas como último recurso, se a B&H não tiver a informação.
+
+REGRAS OBRIGATÓRIAS DE IDENTIFICAÇÃO DE PRODUTOS:
+- MAPEMENTO ROBUSTO: Analise a pergunta do usuário e procure por menções aos nomes (mesmo que parciais ou em case-insensitive) ou SKUs dos produtos do "Inventário Disponível".
+- RETORNO DE IDs: Você DEVE incluir os 'id's dos produtos correspondentes no array 'related_product_ids'. Em caso de COMPARAÇÕES (ex: "Sony FX3 vs Canon R8"), retorne os IDs de QUALQUER produto mencionado que exista no inventário. NUNCA deixe 'related_product_ids' vazio se pelo menos um produto do inventário for mencionado.
+- COMPARAÇÃO TÉCNICA: Se for pedido para comparar, extraia dados precisos (tamanho de sensor, resolução, dimensões, etc) do banco de dados ou via B&H, e forneça um texto estruturado comparando os atributos técnicos específicos.
+
+TIPOS DE RESPOSTA (type):
+   - 'technical': Encontrou a resposta técnica (interna ou no B&H). Use para comparações de especificações.
+   - 'not_found': Não encontrou a especificação exata, MAS você ainda deve retornar os IDs dos produtos do inventário mencionados.
    - 'products': O usuário pediu recomendação genérica ou busca de equipamento.
-   - 'institutional': Dúvidas sobre a empresa (endereço, telefone, entrega).
-5. CLAREZA E OBJETIVIDADE: Sem alucinações. Responda em Português (PT-BR). Se 'not_found', diga que a especificação técnica exata não foi encontrada, mas mencione o equipamento.
+   - 'institutional': Dúvidas sobre a empresa.
 
 FORMATO DE RESPOSTA (JSON STRICT):
 {
   "type": "technical" | "not_found" | "products" | "institutional",
-  "message": "Texto direto e claro em PT-BR.",
-  "product_ids": ["uuid-1", "uuid-2"]
+  "message": "Texto direto e estruturado em PT-BR com os detalhes técnicos e/ou comparativos.",
+  "related_product_ids": ["uuid-1", "uuid-2"]
 }`
 
     const tools = [
@@ -68,7 +73,7 @@ FORMATO DE RESPOSTA (JSON STRICT):
         function: {
           name: 'search_web',
           description:
-            'Busca na web por especificações técnicas exatas de equipamentos de audiovisual (ex: "Sony FX3 lens mount", "ARRI Alexa Mini sensor size").',
+            'Busca na web por especificações técnicas exatas. Dê preferência à busca no site da B&H Photo Video usando "site:bhphotovideo.com specs [nome do produto]".',
           parameters: {
             type: 'object',
             properties: { search_query: { type: 'string' } },
@@ -83,7 +88,7 @@ FORMATO DE RESPOSTA (JSON STRICT):
       { role: 'user', content: query },
     ]
 
-    let maxToolCalls = 2 // Strict limit
+    let maxToolCalls = 3
     let toolCallCount = 0
     let finalMessage = null
 
@@ -161,7 +166,7 @@ FORMATO DE RESPOSTA (JSON STRICT):
               tool_call_id: t.id,
               content:
                 content ||
-                'No exact data found on web. Stop searching and provide the best possible answer with internal data. If technical spec is missing, set type to not_found but DO NOT FORGET to include product_ids from inventory.',
+                'No exact data found on web. Stop searching and provide the best possible answer with internal data. If technical spec is missing, set type to not_found but DO NOT FORGET to include related_product_ids from inventory.',
             })
           }
         }
@@ -175,8 +180,8 @@ FORMATO DE RESPOSTA (JSON STRICT):
     let result
     try {
       result = JSON.parse(finalMessage?.content || JSON.stringify(fallbackResponse))
-      if (!Array.isArray(result.product_ids)) {
-        result.product_ids = []
+      if (!Array.isArray(result.related_product_ids)) {
+        result.related_product_ids = []
       }
     } catch (e) {
       result = fallbackResponse

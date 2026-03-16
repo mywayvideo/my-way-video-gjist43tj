@@ -40555,8 +40555,8 @@ function Search() {
 				if (error) throw error;
 				if (data) {
 					setAiResponse(data);
-					if (data.product_ids && data.product_ids.length > 0) {
-						const { data: productsData } = await supabase.from("products").select("*").in("id", data.product_ids);
+					if (data.related_product_ids && data.related_product_ids.length > 0) {
+						const { data: productsData } = await supabase.from("products").select("*").in("id", data.related_product_ids);
 						if (productsData) setProducts(productsData);
 					}
 				}
@@ -40640,7 +40640,7 @@ function Search() {
 								"data-uid": "src/pages/Search.tsx:111:17",
 								"data-prohibitions": "[editContent]",
 								className: "text-sm text-muted-foreground mb-4",
-								children: hasRelatedProducts ? "Não consegui encontrar esse detalhe técnico específico, mas aqui estão os equipamentos relacionados que você mencionou:" : "Fizemos uma busca rápida em nossa base, mas não encontramos os detalhes exatos. Nossa equipe de especialistas está pronta para te ajudar diretamente."
+								children: hasRelatedProducts ? "Não consegui encontrar os detalhes técnicos exatos para essa consulta, mas aqui estão os equipamentos relacionados do nosso estoque:" : "Fizemos uma busca rápida, mas não encontramos os detalhes exatos. Nossa equipe de especialistas está pronta para ajudar."
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
 								"data-uid": "src/pages/Search.tsx:116:17",
 								"data-prohibitions": "[]",
@@ -40718,12 +40718,12 @@ function Search() {
 						"data-uid": "src/pages/Search.tsx:157:13",
 						"data-prohibitions": "[]",
 						className: "text-xl font-semibold",
-						children: "Analisando Equipamentos..."
+						children: "Analisando Especificações..."
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						"data-uid": "src/pages/Search.tsx:158:13",
 						"data-prohibitions": "[]",
 						className: "text-muted-foreground animate-pulse font-medium max-w-md mx-auto",
-						children: "Buscando especificações técnicas e mapeando produtos no nosso inventário."
+						children: "Buscando na base de dados, B&H Photo Video e mapeando nosso inventário."
 					})]
 				})]
 			}),
@@ -42833,4 +42833,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-CX9QypcE.js.map
+//# sourceMappingURL=index-CwwJ4Sa7.js.map
