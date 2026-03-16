@@ -8,7 +8,7 @@ Deno.serve(async (req: Request) => {
   const fallbackResponse = {
     type: 'not_found',
     message:
-      'Fizemos uma busca rápida, mas não conseguimos confirmar todos os detalhes técnicos no momento. Fale com um de nossos especialistas!',
+      'Fizemos uma busca rápida, mas não conseguimos confirmar todos os detalhes técnicos no momento. Nossos especialistas estão prontos para ajudar!',
     product_ids: [],
   }
 
@@ -30,32 +30,37 @@ Deno.serve(async (req: Request) => {
 
     const { data: products } = await supabase
       .from('products')
-      .select(
-        'id, name, sku, description, price_brl, stock, ncm, weight, dimensions, category, is_special',
-      )
+      .select('id, name, sku, description, category')
 
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openAiKey) throw new Error('Missing OpenAI key')
 
-    const systemPrompt = `You are a technical AI assistant for "My Way Video".
-Your goal is EXTREME TECHNICAL ACCURACY and FAST RESPONSES.
+    const systemPrompt = `Você é o assistente de IA técnico oficial da "My Way Video".
+Sua missão é fornecer respostas EXTREMAMENTE PRECISAS sobre especificações técnicas e SEMPRE mapear a intenção do usuário para os produtos do nosso catálogo.
 
-Knowledge Base:
+Base de Conhecimento da Empresa:
 ${companyInfo}
 
-Inventory:
+Inventário Disponível (Produtos na loja):
 ${JSON.stringify(products || [])}
 
-Rules:
-1. Internal Data Priority: The internal Inventory and Knowledge Base are your PRIMARY sources of truth. Always check them first.
-2. Web Search Limit: Use the 'search_web' tool ONLY if internal data is insufficient.
-3. Objectivity & No Hallucination: Be direct and objective. Do NOT hallucinate or guess specifications. Avoid over-interpreting ambiguous queries. If the query is ambiguous or you cannot find reliable data, suggest human contact.
-4. Inconclusive Searches: If you cannot find the exact technical details after searching, set "type" to "not_found", politely state that the specific technical information wasn't found in our quick search, and suggest they contact our specialists via WhatsApp.
-5. ALWAYS Include Products: This is CRITICAL. Even if the search is inconclusive ("not_found") or you are answering an institutional question, YOU MUST include the IDs of any products from our Inventory that relate to the user's query in the 'product_ids' array. Never return an empty array if relevant products exist in the Inventory.
-6. Format: Fluid PT-BR response.
+REGRAS DE OURO:
+1. FOCO NO CATÁLOGO: Sua principal tarefa é identificar quais produtos do "Inventário Disponível" correspondem ou se relacionam à pergunta do usuário.
+2. RETORNO OBRIGATÓRIO DE PRODUTOS: Você DEVE incluir os 'id's dos produtos correspondentes no array 'product_ids'. Mesmo que a pergunta seja muito específica (ex: "Qual a montagem de lente da FX3?") e você não ache a resposta exata, RETORNE O ID DA CÂMERA MENCIONADA. NUNCA deixe 'product_ids' vazio se o produto existir no inventário.
+3. BUSCA NA WEB RESTRITA: Utilize a ferramenta 'search_web' apenas se o usuário pedir um detalhe técnico (bocal, peso, resolução) que não está na descrição do produto. 
+4. TIPOS DE RESPOSTA (type):
+   - 'technical': Achou a resposta técnica exata.
+   - 'not_found': Não achou a especificação técnica exata após buscar, MAS você ainda deve retornar os IDs dos produtos relacionados.
+   - 'products': O usuário pediu recomendação genérica ou busca de equipamento.
+   - 'institutional': Dúvidas sobre a empresa (endereço, telefone, entrega).
+5. CLAREZA E OBJETIVIDADE: Sem alucinações. Responda em Português (PT-BR). Se 'not_found', diga que a especificação técnica exata não foi encontrada, mas mencione o equipamento.
 
-Return JSON:
-{ "type": "institutional"|"products"|"technical"|"not_found", "message": "Text response in PT-BR", "product_ids": ["uuid1", "uuid2"] }`
+FORMATO DE RESPOSTA (JSON STRICT):
+{
+  "type": "technical" | "not_found" | "products" | "institutional",
+  "message": "Texto direto e claro em PT-BR.",
+  "product_ids": ["uuid-1", "uuid-2"]
+}`
 
     const tools = [
       {
@@ -63,7 +68,7 @@ Return JSON:
         function: {
           name: 'search_web',
           description:
-            'Search web for specs. Always use site:domain.com for manufacturer sites first (e.g., site:sony.com Sony FX3 lens mount).',
+            'Busca na web por especificações técnicas exatas de equipamentos de audiovisual (ex: "Sony FX3 lens mount", "ARRI Alexa Mini sensor size").',
           parameters: {
             type: 'object',
             properties: { search_query: { type: 'string' } },
@@ -78,7 +83,7 @@ Return JSON:
       { role: 'user', content: query },
     ]
 
-    let maxToolCalls = 2 // Strict limit of 2 tool call iterations to avoid timeouts
+    let maxToolCalls = 2 // Strict limit
     let toolCallCount = 0
     let finalMessage = null
 
@@ -89,7 +94,6 @@ Return JSON:
         response_format: { type: 'json_object' },
       }
 
-      // Only provide tools if we haven't reached the limit
       if (toolCallCount < maxToolCalls) {
         payload.tools = tools
         payload.tool_choice = 'auto'
@@ -157,7 +161,7 @@ Return JSON:
               tool_call_id: t.id,
               content:
                 content ||
-                'No exact data found on web. Stop searching and provide the best possible answer with internal data, setting type to not_found if necessary.',
+                'No exact data found on web. Stop searching and provide the best possible answer with internal data. If technical spec is missing, set type to not_found but DO NOT FORGET to include product_ids from inventory.',
             })
           }
         }

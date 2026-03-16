@@ -40596,58 +40596,59 @@ function Search() {
 				className: "w-6 h-6 text-primary"
 			});
 		};
+		const hasRelatedProducts = products.length > 0;
 		return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			"data-uid": "src/pages/Search.tsx:91:7",
+			"data-uid": "src/pages/Search.tsx:93:7",
 			"data-prohibitions": "[editContent]",
 			className: "animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:92:9",
+				"data-uid": "src/pages/Search.tsx:94:9",
 				"data-prohibitions": "[editContent]",
 				className: "bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:93:11",
+					"data-uid": "src/pages/Search.tsx:95:11",
 					"data-prohibitions": "[editContent]",
 					className: "bg-primary/10 p-4 rounded-full shrink-0 flex items-center justify-center",
 					children: getIcon()
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:96:11",
+					"data-uid": "src/pages/Search.tsx:98:11",
 					"data-prohibitions": "[editContent]",
 					className: "flex-1 space-y-4 w-full",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-							"data-uid": "src/pages/Search.tsx:97:13",
+							"data-uid": "src/pages/Search.tsx:99:13",
 							"data-prohibitions": "[editContent]",
 							className: "font-semibold text-xl flex items-center gap-3",
 							children: ["My Way Video AI", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Search.tsx:99:15",
+								"data-uid": "src/pages/Search.tsx:101:15",
 								"data-prohibitions": "[editContent]",
 								className: "text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium tracking-wide uppercase",
 								children: getBadge()
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Search.tsx:103:13",
+							"data-uid": "src/pages/Search.tsx:105:13",
 							"data-prohibitions": "[editContent]",
 							className: "text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none text-base md:text-lg",
 							children: aiResponse.message
 						}),
 						aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Search.tsx:108:15",
-							"data-prohibitions": "[]",
+							"data-uid": "src/pages/Search.tsx:110:15",
+							"data-prohibitions": "[editContent]",
 							className: "pt-6 mt-6 border-t border-border/50",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Search.tsx:109:17",
-								"data-prohibitions": "[]",
+								"data-uid": "src/pages/Search.tsx:111:17",
+								"data-prohibitions": "[editContent]",
 								className: "text-sm text-muted-foreground mb-4",
-								children: "Fizemos uma busca rápida em nossa base e fontes externas, mas não encontramos todos os detalhes técnicos exatos. Nossa equipe de especialistas está pronta para te ajudar com essa especificação diretamente."
+								children: hasRelatedProducts ? "Não consegui encontrar esse detalhe técnico específico, mas aqui estão os equipamentos relacionados que você mencionou:" : "Fizemos uma busca rápida em nossa base, mas não encontramos os detalhes exatos. Nossa equipe de especialistas está pronta para te ajudar diretamente."
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-								"data-uid": "src/pages/Search.tsx:114:17",
+								"data-uid": "src/pages/Search.tsx:116:17",
 								"data-prohibitions": "[]",
 								size: "lg",
 								className: "bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105 w-full sm:w-auto",
 								onClick: () => window.open(`https://wa.me/17867161170?text=${encodeURIComponent(`Olá! Gostaria de falar com um especialista sobre: "${query}"`)}`, "_blank"),
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
-									"data-uid": "src/pages/Search.tsx:124:19",
+									"data-uid": "src/pages/Search.tsx:126:19",
 									"data-prohibitions": "[editContent]",
 									className: "w-5 h-5"
 								}), "Falar com um especialista no WhatsApp"]
@@ -40659,30 +40660,30 @@ function Search() {
 		});
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Search.tsx:136:5",
+		"data-uid": "src/pages/Search.tsx:138:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:137:7",
+				"data-uid": "src/pages/Search.tsx:139:7",
 				"data-prohibitions": "[]",
 				className: "mb-8 md:mb-12",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AIPrompt, {
-					"data-uid": "src/pages/Search.tsx:138:9",
+					"data-uid": "src/pages/Search.tsx:140:9",
 					"data-prohibitions": "[editContent]",
 					initialQuery: query
 				})
 			}),
 			query && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:142:9",
+				"data-uid": "src/pages/Search.tsx:144:9",
 				"data-prohibitions": "[editContent]",
 				className: "flex items-center gap-3 mb-8 pb-4 border-b",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-					"data-uid": "src/pages/Search.tsx:143:11",
+					"data-uid": "src/pages/Search.tsx:145:11",
 					"data-prohibitions": "[editContent]",
 					className: "w-6 h-6 text-primary"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
-					"data-uid": "src/pages/Search.tsx:144:11",
+					"data-uid": "src/pages/Search.tsx:146:11",
 					"data-prohibitions": "[editContent]",
 					className: "text-2xl font-bold",
 					children: [
@@ -40693,59 +40694,59 @@ function Search() {
 				})]
 			}),
 			loading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:149:9",
+				"data-uid": "src/pages/Search.tsx:151:9",
 				"data-prohibitions": "[]",
 				className: "flex flex-col justify-center items-center py-24 space-y-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:150:11",
+					"data-uid": "src/pages/Search.tsx:152:11",
 					"data-prohibitions": "[]",
 					className: "relative",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-						"data-uid": "src/pages/Search.tsx:151:13",
+						"data-uid": "src/pages/Search.tsx:153:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-14 h-14 animate-spin text-primary"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-						"data-uid": "src/pages/Search.tsx:152:13",
+						"data-uid": "src/pages/Search.tsx:154:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse"
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:154:11",
+					"data-uid": "src/pages/Search.tsx:156:11",
 					"data-prohibitions": "[]",
 					className: "text-center space-y-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/pages/Search.tsx:155:13",
+						"data-uid": "src/pages/Search.tsx:157:13",
 						"data-prohibitions": "[]",
 						className: "text-xl font-semibold",
-						children: "Pesquisa Híbrida em Andamento..."
+						children: "Analisando Equipamentos..."
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Search.tsx:156:13",
+						"data-uid": "src/pages/Search.tsx:158:13",
 						"data-prohibitions": "[]",
 						className: "text-muted-foreground animate-pulse font-medium max-w-md mx-auto",
-						children: "Analisando banco de dados interno e consultando a web para especificações técnicas detalhadas."
+						children: "Buscando especificações técnicas e mapeando produtos no nosso inventário."
 					})]
 				})]
 			}),
 			!loading && renderAIResponse(),
-			!loading && aiResponse?.product_ids && aiResponse.product_ids.length > 0 && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:170:11",
+			!loading && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Search.tsx:168:9",
 				"data-prohibitions": "[editContent]",
 				className: "animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-					"data-uid": "src/pages/Search.tsx:171:13",
+					"data-uid": "src/pages/Search.tsx:169:11",
 					"data-prohibitions": "[]",
 					className: "text-xl font-semibold mb-6 flex items-center gap-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-						"data-uid": "src/pages/Search.tsx:172:15",
+						"data-uid": "src/pages/Search.tsx:170:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-5 h-5 text-accent"
 					}), " Equipamentos Relacionados"]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:174:13",
+					"data-uid": "src/pages/Search.tsx:172:11",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6",
 					children: products.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-						"data-uid": "src/pages/Search.tsx:176:17",
+						"data-uid": "src/pages/Search.tsx:174:15",
 						"data-prohibitions": "[editContent]",
 						product
 					}, product.id))
@@ -42832,4 +42833,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-EemS4GUS.js.map
+//# sourceMappingURL=index-CX9QypcE.js.map

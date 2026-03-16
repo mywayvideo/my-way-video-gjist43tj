@@ -87,6 +87,8 @@ export default function Search() {
       return <Bot className="w-6 h-6 text-primary" />
     }
 
+    const hasRelatedProducts = products.length > 0
+
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8">
         <div className="bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm">
@@ -107,9 +109,9 @@ export default function Search() {
             {aiResponse.type === 'not_found' && (
               <div className="pt-6 mt-6 border-t border-border/50">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Fizemos uma busca rápida em nossa base e fontes externas, mas não encontramos
-                  todos os detalhes técnicos exatos. Nossa equipe de especialistas está pronta para
-                  te ajudar com essa especificação diretamente.
+                  {hasRelatedProducts
+                    ? 'Não consegui encontrar esse detalhe técnico específico, mas aqui estão os equipamentos relacionados que você mencionou:'
+                    : 'Fizemos uma busca rápida em nossa base, mas não encontramos os detalhes exatos. Nossa equipe de especialistas está pronta para te ajudar diretamente.'}
                 </p>
                 <Button
                   size="lg"
@@ -152,10 +154,9 @@ export default function Search() {
             <Sparkles className="w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-semibold">Pesquisa Híbrida em Andamento...</h3>
+            <h3 className="text-xl font-semibold">Analisando Equipamentos...</h3>
             <p className="text-muted-foreground animate-pulse font-medium max-w-md mx-auto">
-              Analisando banco de dados interno e consultando a web para especificações técnicas
-              detalhadas.
+              Buscando especificações técnicas e mapeando produtos no nosso inventário.
             </p>
           </div>
         </div>
@@ -163,21 +164,18 @@ export default function Search() {
 
       {!loading && renderAIResponse()}
 
-      {!loading &&
-        aiResponse?.product_ids &&
-        aiResponse.product_ids.length > 0 &&
-        products.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12">
-            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Relacionados
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+      {!loading && products.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12">
+          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Relacionados
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
-        )}
+        </div>
+      )}
     </div>
   )
 }
