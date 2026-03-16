@@ -42,7 +42,7 @@ export default function Search() {
         if (data) {
           setAiResponse(data)
 
-          if (data.type === 'products' && data.product_ids?.length > 0) {
+          if (data.product_ids && data.product_ids.length > 0) {
             const { data: productsData } = await supabase
               .from('products')
               .select('*')
@@ -163,18 +163,21 @@ export default function Search() {
 
       {!loading && renderAIResponse()}
 
-      {!loading && aiResponse?.type === 'products' && products.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12">
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Encontrados no Inventário
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+      {!loading &&
+        aiResponse?.product_ids &&
+        aiResponse.product_ids.length > 0 &&
+        products.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12">
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Relacionados
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   )
 }

@@ -40555,7 +40555,7 @@ function Search() {
 				if (error) throw error;
 				if (data) {
 					setAiResponse(data);
-					if (data.type === "products" && data.product_ids?.length > 0) {
+					if (data.product_ids && data.product_ids.length > 0) {
 						const { data: productsData } = await supabase.from("products").select("*").in("id", data.product_ids);
 						if (productsData) setProducts(productsData);
 					}
@@ -40727,25 +40727,25 @@ function Search() {
 				})]
 			}),
 			!loading && renderAIResponse(),
-			!loading && aiResponse?.type === "products" && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:167:9",
+			!loading && aiResponse?.product_ids && aiResponse.product_ids.length > 0 && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Search.tsx:170:11",
 				"data-prohibitions": "[editContent]",
 				className: "animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-					"data-uid": "src/pages/Search.tsx:168:11",
+					"data-uid": "src/pages/Search.tsx:171:13",
 					"data-prohibitions": "[]",
 					className: "text-xl font-semibold mb-6 flex items-center gap-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-						"data-uid": "src/pages/Search.tsx:169:13",
+						"data-uid": "src/pages/Search.tsx:172:15",
 						"data-prohibitions": "[editContent]",
 						className: "w-5 h-5 text-accent"
-					}), " Equipamentos Encontrados no Inventário"]
+					}), " Equipamentos Relacionados"]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:171:11",
+					"data-uid": "src/pages/Search.tsx:174:13",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6",
 					children: products.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-						"data-uid": "src/pages/Search.tsx:173:15",
+						"data-uid": "src/pages/Search.tsx:176:17",
 						"data-prohibitions": "[editContent]",
 						product
 					}, product.id))
@@ -42755,4 +42755,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-B2WUrzge.js.map
+//# sourceMappingURL=index-Cr5IZBsW.js.map

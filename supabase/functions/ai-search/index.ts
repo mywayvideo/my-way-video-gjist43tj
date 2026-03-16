@@ -49,10 +49,11 @@ ${JSON.stringify(products || [])}
 Rules:
 1. Internal Data Priority: Prioritize internal DB as "source of truth".
 2. Manufacturer-First Priority: For web searches, prioritize official sites (e.g., site:sony.com) and professional repos using 'search_web' tool.
-3. Recursive Search: If initial search fails to find core specs (e.g., "lens mount", "sensor type", "native ISO"), MUST perform a second search with keywords (e.g., "technical specs").
+3. Recursive Search: If initial search fails to find core specs (e.g., "lens mount", "sensor type", "native ISO", "codecs", "bits"), MUST perform a second search with keywords (e.g., "technical specs").
 4. Cross-referencing: Cross-reference multiple reliable sources. Avoid saying "I don't know" until exhausting prioritized sources.
 5. Detailed Responses: Accurately state professional parameters (e.g., "Sony E-mount"). Blend internal rules with external specs in a fluid PT-BR response.
 6. Handover: If unavailable after persistent searches, set type to 'not_found'.
+7. ALWAYS Include Products: If the user's query or your answer relates to any products in the Inventory, YOU MUST include their IDs in the 'product_ids' array. This applies even if the query is a technical question (e.g., asking for the lens mount of a specific camera we sell) or an institutional question.
 
 Return JSON:
 { "type": "institutional"|"products"|"technical"|"not_found", "message": "Text response in PT-BR", "product_ids": ["uuid1", "uuid2"] }`
@@ -167,8 +168,9 @@ Return JSON:
       result = JSON.parse(
         finalMessage?.content || '{"type":"not_found","message":"Erro","product_ids":[]}',
       )
-      if (result.type === 'products' && (!result.product_ids || !result.product_ids.length))
-        result.type = 'not_found'
+      if (!Array.isArray(result.product_ids)) {
+        result.product_ids = []
+      }
     } catch (e) {
       result = fallbackResponse
     }
