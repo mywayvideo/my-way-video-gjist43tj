@@ -40762,61 +40762,93 @@ function Product() {
 	const [product, setProduct] = (0, import_react.useState)(null);
 	const [aiLoading, setAiLoading] = (0, import_react.useState)(false);
 	const [aiResponse, setAiResponse] = (0, import_react.useState)(null);
+	const [related, setRelated] = (0, import_react.useState)([]);
 	const [question, setQuestion] = (0, import_react.useState)("");
 	(0, import_react.useEffect)(() => {
 		if (!id) return;
-		async function fetchProduct() {
-			const { data } = await supabase.from("products").select("*").eq("id", id).single();
-			if (data) setProduct(data);
-		}
-		fetchProduct();
+		supabase.from("products").select("*").eq("id", id).single().then(({ data }) => data && setProduct(data));
 	}, [id]);
 	const handleAskAI = async (e) => {
 		e.preventDefault();
-		if (!question.trim()) return;
+		if (!question.trim() || !product) return;
 		setAiLoading(true);
 		setAiResponse(null);
+		setRelated([]);
 		toast$1({
 			title: "Consultando IA...",
-			description: "Buscando especificações técnicas e web."
+			description: "Buscando dados no catálogo e na web..."
 		});
-		const { data } = await performAISearch(`Sobre o equipamento ${product?.name} (SKU: ${product?.sku}): ${question}`);
-		setAiLoading(false);
-		if (data) setAiResponse(data.message);
-		else toast$1({
-			title: "Erro",
-			description: "Falha ao consultar a IA.",
-			variant: "destructive"
-		});
-		setQuestion("");
+		try {
+			const { data, error } = await performAISearch(`[Contexto do Produto: ${product.name} - SKU: ${product.sku}] ${question}`);
+			if (error) throw error;
+			if (data) {
+				setAiResponse(data);
+				if (data.product_ids?.length) {
+					const { data: pData } = await supabase.from("products").select("*").in("id", data.product_ids);
+					if (pData) setRelated(pData);
+				}
+			}
+		} catch {
+			toast$1({
+				title: "Erro",
+				description: "Falha ao consultar a IA.",
+				variant: "destructive"
+			});
+		} finally {
+			setAiLoading(false);
+			setQuestion("");
+		}
+	};
+	const getBI = (t) => t === "technical" ? {
+		b: "Consultor",
+		i: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Video, {
+			"data-uid": "src/pages/Product.tsx:75:30",
+			"data-prohibitions": "[editContent]",
+			className: "w-5 h-5 text-primary"
+		})
+	} : t === "not_found" ? {
+		b: "Assistente",
+		i: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleAlert, {
+			"data-uid": "src/pages/Product.tsx:77:33",
+			"data-prohibitions": "[editContent]",
+			className: "w-5 h-5 text-primary"
+		})
+	} : {
+		b: "IA",
+		i: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
+			"data-uid": "src/pages/Product.tsx:78:25",
+			"data-prohibitions": "[editContent]",
+			className: "w-5 h-5 text-primary"
+		})
 	};
 	if (!product) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/pages/Product.tsx:49:12",
+		"data-uid": "src/pages/Product.tsx:80:24",
 		"data-prohibitions": "[]",
 		className: "p-12 text-center text-muted-foreground",
-		children: "Carregando produto..."
+		children: "Carregando..."
 	});
+	const bi = getBI(aiResponse?.type);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Product.tsx:52:5",
+		"data-uid": "src/pages/Product.tsx:84:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 animate-fade-in",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:53:7",
+				"data-uid": "src/pages/Product.tsx:85:7",
 				"data-prohibitions": "[editContent]",
 				className: "text-sm text-muted-foreground mb-8 font-mono",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/pages/Product.tsx:54:9",
+						"data-uid": "src/pages/Product.tsx:86:9",
 						"data-prohibitions": "[]",
 						to: "/",
 						className: "hover:text-foreground",
 						children: "Home"
 					}),
 					" ",
-					"/",
+					"/ ",
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"data-uid": "src/pages/Product.tsx:57:10",
+						"data-uid": "src/pages/Product.tsx:89:11",
 						"data-prohibitions": "[editContent]",
 						className: "text-foreground ml-2",
 						children: product.name
@@ -40824,250 +40856,295 @@ function Product() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:60:7",
+				"data-uid": "src/pages/Product.tsx:91:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:61:9",
+					"data-uid": "src/pages/Product.tsx:92:9",
 					"data-prohibitions": "[]",
-					className: "space-y-4",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Product.tsx:62:11",
-						"data-prohibitions": "[]",
-						className: "aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							"data-uid": "src/pages/Product.tsx:63:13",
-							"data-prohibitions": "[editContent]",
-							src: product.image_url || "https://img.usecurling.com/p/600/600?q=camera",
-							alt: product.name,
-							className: "w-full h-full object-contain hover:scale-110 transition-transform duration-500"
-						})
+					className: "aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						"data-uid": "src/pages/Product.tsx:93:11",
+						"data-prohibitions": "[editContent]",
+						src: product.image_url || "https://img.usecurling.com/p/600/600?q=camera",
+						alt: product.name,
+						className: "w-full h-full object-contain hover:scale-110 transition-transform duration-500"
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:71:9",
+					"data-uid": "src/pages/Product.tsx:99:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:72:11",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"data-uid": "src/pages/Product.tsx:100:11",
 							"data-prohibitions": "[editContent]",
-							className: "mb-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:73:13",
+							className: "text-accent font-mono uppercase tracking-widest text-sm",
+							children: product.category
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							"data-uid": "src/pages/Product.tsx:103:11",
+							"data-prohibitions": "[editContent]",
+							className: "text-3xl md:text-4xl font-bold tracking-tight mt-2 mb-6",
+							children: product.name
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/pages/Product.tsx:106:11",
+							"data-prohibitions": "[editContent]",
+							className: "bg-card border border-white/10 rounded-xl p-5 shadow-sm max-w-sm mb-6",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/pages/Product.tsx:107:13",
+								"data-prohibitions": "[]",
+								className: "flex items-center gap-2 text-muted-foreground mb-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, {
+									"data-uid": "src/pages/Product.tsx:108:15",
+									"data-prohibitions": "[editContent]",
+									className: "w-4 h-4"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									"data-uid": "src/pages/Product.tsx:109:15",
+									"data-prohibitions": "[]",
+									className: "text-sm font-medium uppercase",
+									children: "Valor (BRL)"
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								"data-uid": "src/pages/Product.tsx:111:13",
 								"data-prohibitions": "[editContent]",
-								className: "text-accent font-mono uppercase tracking-widest text-sm",
-								children: product.category
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-								"data-uid": "src/pages/Product.tsx:76:13",
-								"data-prohibitions": "[editContent]",
-								className: "text-3xl md:text-5xl font-bold tracking-tight mt-2",
-								children: product.name
+								className: "text-4xl font-mono font-bold text-foreground",
+								children: ["R$ ", product.price_brl?.toLocaleString("pt-BR")]
 							})]
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:79:11",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							"data-uid": "src/pages/Product.tsx:115:11",
 							"data-prohibitions": "[editContent]",
-							className: "mt-8 mb-8",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:80:13",
-								"data-prohibitions": "[editContent]",
-								className: "bg-card border border-white/10 rounded-xl p-5 shadow-subtle flex flex-col max-w-sm",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:81:15",
-									"data-prohibitions": "[]",
-									className: "flex items-center gap-2 text-muted-foreground mb-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, {
-										"data-uid": "src/pages/Product.tsx:82:17",
-										"data-prohibitions": "[editContent]",
-										className: "w-4 h-4"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"data-uid": "src/pages/Product.tsx:83:17",
-										"data-prohibitions": "[]",
-										className: "text-sm font-medium uppercase tracking-wider",
-										children: "Valor em Reais (BRL)"
-									})]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-									"data-uid": "src/pages/Product.tsx:87:15",
+							className: "text-sm text-muted-foreground flex items-center gap-2 mb-6",
+							children: product.stock > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
+									"data-uid": "src/pages/Product.tsx:118:17",
 									"data-prohibitions": "[editContent]",
-									className: "text-4xl font-mono font-bold text-foreground",
-									children: ["R$ ", product.price_brl.toLocaleString("pt-BR")]
-								})]
-							})
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:93:11",
-							"data-prohibitions": "[editContent]",
-							className: "mb-8",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								"data-uid": "src/pages/Product.tsx:94:13",
+									className: "w-4 h-4 text-green-500"
+								}),
+								" Em estoque (",
+								product.stock,
+								" un.)"
+							] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, {
+								"data-uid": "src/pages/Product.tsx:122:17",
 								"data-prohibitions": "[editContent]",
-								className: "text-sm text-muted-foreground flex items-center gap-2",
-								children: product.stock > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
-										"data-uid": "src/pages/Product.tsx:97:19",
-										"data-prohibitions": "[editContent]",
-										className: "w-4 h-4 text-green-500"
-									}),
-									" Em estoque (",
-									product.stock,
-									" un.) - Envio Imediato"
-								] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, {
-									"data-uid": "src/pages/Product.tsx:102:19",
-									"data-prohibitions": "[editContent]",
-									className: "w-4 h-4 text-amber-500"
-								}), " Sob Encomenda"] })
-							})
+								className: "w-4 h-4 text-amber-500"
+							}), " Sob Encomenda"] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/pages/Product.tsx:108:11",
+							"data-uid": "src/pages/Product.tsx:126:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-lg text-foreground/80 leading-relaxed mb-8",
 							children: product.description
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/pages/Product.tsx:110:11",
+							"data-uid": "src/pages/Product.tsx:127:11",
 							"data-prohibitions": "[]",
 							size: "lg",
 							onClick: () => addItem(product),
 							disabled: product.stock <= 0,
-							className: "w-full sm:w-auto text-lg h-14 bg-accent text-accent-foreground hover:bg-accent/90",
+							className: "w-full sm:w-auto h-14",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-								"data-uid": "src/pages/Product.tsx:116:13",
+								"data-uid": "src/pages/Product.tsx:133:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5 mr-2"
 							}), " Adicionar ao Projeto"]
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:119:11",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/pages/Product.tsx:136:11",
 							"data-prohibitions": "[editContent]",
-							className: "mt-12 grid grid-cols-1 gap-6 border-t border-white/10 pt-8",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:120:13",
-								"data-prohibitions": "[editContent]",
-								className: "bg-blue-950/20 border border-blue-500/20 rounded-xl p-6",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-										"data-uid": "src/pages/Product.tsx:121:15",
-										"data-prohibitions": "[]",
-										className: "font-semibold flex items-center gap-2 mb-4 text-blue-400",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-											"data-uid": "src/pages/Product.tsx:122:17",
+							className: "mt-10 border-t border-border/50 pt-8",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+									"data-uid": "src/pages/Product.tsx:137:13",
+									"data-prohibitions": "[editContent]",
+									className: "text-lg font-semibold flex items-center gap-2 mb-4",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
+											"data-uid": "src/pages/Product.tsx:138:15",
+											"data-prohibitions": "[editContent]",
+											className: "w-5 h-5 text-primary"
+										}),
+										" Consultor IA (",
+										product.name,
+										")"
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+									"data-uid": "src/pages/Product.tsx:140:13",
+									"data-prohibitions": "[editContent]",
+									onSubmit: handleAskAI,
+									className: "flex items-center shadow-sm rounded-full border border-border/50 bg-background/50 focus-within:ring-2 focus-within:ring-primary transition-all mb-6",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+										"data-uid": "src/pages/Product.tsx:144:15",
+										"data-prohibitions": "[editContent]",
+										disabled: aiLoading,
+										value: question,
+										onChange: (e) => setQuestion(e.target.value),
+										placeholder: "Pergunte sobre as especificações...",
+										className: "flex-1 border-0 bg-transparent px-6 py-6 shadow-none focus-visible:ring-0"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+										"data-uid": "src/pages/Product.tsx:151:15",
+										"data-prohibitions": "[editContent]",
+										type: "submit",
+										disabled: aiLoading,
+										size: "icon",
+										className: "h-12 w-12 rounded-full bg-primary mr-2",
+										children: aiLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
+											"data-uid": "src/pages/Product.tsx:158:19",
+											"data-prohibitions": "[editContent]",
+											className: "w-5 h-5 animate-spin"
+										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
+											"data-uid": "src/pages/Product.tsx:160:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5"
-										}), " Consultor Técnico (IA)"]
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-										"data-uid": "src/pages/Product.tsx:124:15",
+										})
+									})]
+								}),
+								aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									"data-uid": "src/pages/Product.tsx:165:15",
+									"data-prohibitions": "[]",
+									className: "flex justify-center py-4",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
+										"data-uid": "src/pages/Product.tsx:166:17",
 										"data-prohibitions": "[editContent]",
-										onSubmit: handleAskAI,
-										className: "space-y-3",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-											"data-uid": "src/pages/Product.tsx:125:17",
-											"data-prohibitions": "[editContent]",
-											disabled: aiLoading,
-											value: question,
-											onChange: (e) => setQuestion(e.target.value),
-											placeholder: "Ex: Qual a resolução do sensor? Qual o native ISO?",
-											className: "bg-background/50 border-blue-500/20 focus-visible:ring-blue-500"
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-											"data-uid": "src/pages/Product.tsx:132:17",
-											"data-prohibitions": "[editContent]",
-											type: "submit",
-											disabled: aiLoading,
-											variant: "outline",
-											className: "w-full border-blue-500/20 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300",
-											children: aiLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-												"data-uid": "src/pages/Product.tsx:140:23",
-												"data-prohibitions": "[editContent]",
-												className: "w-4 h-4 mr-2 animate-spin"
-											}), " Analisando Dados..."] }) : "Consultar Agente"
-										})]
-									}),
-									aiResponse && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										"data-uid": "src/pages/Product.tsx:148:17",
-										"data-prohibitions": "[editContent]",
-										className: "mt-4 p-4 bg-background/50 rounded-lg border border-blue-500/10 text-sm text-blue-100 leading-relaxed font-mono",
-										children: aiResponse
+										className: "w-6 h-6 animate-spin text-primary"
 									})
-								]
-							})
+								}),
+								aiResponse && !aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									"data-uid": "src/pages/Product.tsx:170:15",
+									"data-prohibitions": "[editContent]",
+									className: "animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card border border-primary/20 rounded-xl p-5 shadow-sm flex flex-col gap-4",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											"data-uid": "src/pages/Product.tsx:171:17",
+											"data-prohibitions": "[editContent]",
+											className: "flex items-center gap-3",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+												"data-uid": "src/pages/Product.tsx:172:19",
+												"data-prohibitions": "[editContent]",
+												className: "bg-primary/10 p-2 rounded-full",
+												children: bi.i
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+												"data-uid": "src/pages/Product.tsx:173:19",
+												"data-prohibitions": "[editContent]",
+												className: "font-semibold flex items-center gap-2",
+												children: ["My Way Video AI", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+													"data-uid": "src/pages/Product.tsx:175:21",
+													"data-prohibitions": "[editContent]",
+													className: "text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase",
+													children: bi.b
+												})]
+											})]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											"data-uid": "src/pages/Product.tsx:180:17",
+											"data-prohibitions": "[editContent]",
+											className: "text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed",
+											children: aiResponse.message
+										}),
+										aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+											"data-uid": "src/pages/Product.tsx:184:19",
+											"data-prohibitions": "[]",
+											size: "sm",
+											className: "bg-[#25D366] hover:bg-[#1DA851] text-white mt-2 w-max",
+											onClick: () => window.open(`https://wa.me/17867161170?text=${encodeURIComponent(`Olá! Quero saber mais sobre: ${product.name}`)}`, "_blank"),
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
+												"data-uid": "src/pages/Product.tsx:194:21",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4 mr-2"
+											}), " Falar no WhatsApp"]
+										}),
+										related.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											"data-uid": "src/pages/Product.tsx:198:19",
+											"data-prohibitions": "[editContent]",
+											className: "mt-2 pt-4 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-4",
+											children: related.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
+												"data-uid": "src/pages/Product.tsx:200:23",
+												"data-prohibitions": "[editContent]",
+												product: p
+											}, p.id))
+										})
+									]
+								})
+							]
 						})
 					]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:157:7",
+				"data-uid": "src/pages/Product.tsx:209:7",
 				"data-prohibitions": "[editContent]",
 				className: "mt-24 max-w-4xl",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-					"data-uid": "src/pages/Product.tsx:158:9",
+					"data-uid": "src/pages/Product.tsx:210:9",
 					"data-prohibitions": "[]",
 					className: "text-2xl font-bold mb-6 tracking-tight",
 					children: "Especificações Técnicas"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:159:9",
+					"data-uid": "src/pages/Product.tsx:211:9",
 					"data-prohibitions": "[editContent]",
 					className: "bg-card/30 border border-white/5 rounded-2xl overflow-hidden",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:160:11",
+							"data-uid": "src/pages/Product.tsx:212:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6 bg-white/5",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:161:13",
+								"data-uid": "src/pages/Product.tsx:213:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "SKU"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:162:13",
+								"data-uid": "src/pages/Product.tsx:214:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.sku || "N/A"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:164:11",
+							"data-uid": "src/pages/Product.tsx:216:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:165:13",
+								"data-uid": "src/pages/Product.tsx:217:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "NCM"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:166:13",
+								"data-uid": "src/pages/Product.tsx:218:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.ncm || "N/A"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:168:11",
+							"data-uid": "src/pages/Product.tsx:220:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6 bg-white/5",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:169:13",
+								"data-uid": "src/pages/Product.tsx:221:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "Peso"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:170:13",
+								"data-uid": "src/pages/Product.tsx:222:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.weight ? `${product.weight} kg` : "N/A"
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:174:11",
+							"data-uid": "src/pages/Product.tsx:226:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col sm:flex-row py-4 px-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:175:13",
+								"data-uid": "src/pages/Product.tsx:227:13",
 								"data-prohibitions": "[]",
 								className: "w-48 text-muted-foreground font-medium",
 								children: "Dimensões"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:176:13",
+								"data-uid": "src/pages/Product.tsx:228:13",
 								"data-prohibitions": "[editContent]",
 								className: "font-mono text-foreground",
 								children: product.dimensions || "N/A"
@@ -42755,4 +42832,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-Cr5IZBsW.js.map
+//# sourceMappingURL=index-B0YV8pXn.js.map
