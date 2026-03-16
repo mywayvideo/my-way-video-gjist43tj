@@ -40639,7 +40639,7 @@ function Search() {
 								"data-uid": "src/pages/Search.tsx:109:17",
 								"data-prohibitions": "[]",
 								className: "text-sm text-muted-foreground mb-4",
-								children: "Não conseguimos encontrar uma resposta completa no nosso banco de dados interno ou nas fontes externas. Nossa equipe de especialistas pode te ajudar com essa especificação detalhada."
+								children: "Fizemos uma busca rápida em nossa base e fontes externas, mas não encontramos todos os detalhes técnicos exatos. Nossa equipe de especialistas está pronta para te ajudar com essa especificação diretamente."
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
 								"data-uid": "src/pages/Search.tsx:114:17",
 								"data-prohibitions": "[]",
@@ -42832,4 +42832,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-B0YV8pXn.js.map
+//# sourceMappingURL=index-EemS4GUS.js.map

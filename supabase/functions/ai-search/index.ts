@@ -8,7 +8,7 @@ Deno.serve(async (req: Request) => {
   const fallbackResponse = {
     type: 'not_found',
     message:
-      'Tivemos um problema ao processar sua busca. Por favor, tente novamente ou fale com um especialista.',
+      'Fizemos uma busca rápida, mas não conseguimos confirmar todos os detalhes técnicos no momento. Fale com um de nossos especialistas!',
     product_ids: [],
   }
 
@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
     if (!openAiKey) throw new Error('Missing OpenAI key')
 
     const systemPrompt = `You are a technical AI assistant for "My Way Video".
-Your goal is EXTREME TECHNICAL ACCURACY.
+Your goal is EXTREME TECHNICAL ACCURACY and FAST RESPONSES.
 
 Knowledge Base:
 ${companyInfo}
@@ -47,13 +47,12 @@ Inventory:
 ${JSON.stringify(products || [])}
 
 Rules:
-1. Internal Data Priority: Prioritize internal DB as "source of truth".
-2. Manufacturer-First Priority: For web searches, prioritize official sites (e.g., site:sony.com) and professional repos using 'search_web' tool.
-3. Recursive Search: If initial search fails to find core specs (e.g., "lens mount", "sensor type", "native ISO", "codecs", "bits"), MUST perform a second search with keywords (e.g., "technical specs").
-4. Cross-referencing: Cross-reference multiple reliable sources. Avoid saying "I don't know" until exhausting prioritized sources.
-5. Detailed Responses: Accurately state professional parameters (e.g., "Sony E-mount"). Blend internal rules with external specs in a fluid PT-BR response.
-6. Handover: If unavailable after persistent searches, set type to 'not_found'.
-7. ALWAYS Include Products: If the user's query or your answer relates to any products in the Inventory, YOU MUST include their IDs in the 'product_ids' array. This applies even if the query is a technical question (e.g., asking for the lens mount of a specific camera we sell) or an institutional question.
+1. Internal Data Priority: The internal Inventory and Knowledge Base are your PRIMARY sources of truth. Always check them first.
+2. Web Search Limit: Use the 'search_web' tool ONLY if internal data is insufficient.
+3. Objectivity & No Hallucination: Be direct and objective. Do NOT hallucinate or guess specifications. Avoid over-interpreting ambiguous queries. If the query is ambiguous or you cannot find reliable data, suggest human contact.
+4. Inconclusive Searches: If you cannot find the exact technical details after searching, set "type" to "not_found", politely state that the specific technical information wasn't found in our quick search, and suggest they contact our specialists via WhatsApp.
+5. ALWAYS Include Products: This is CRITICAL. Even if the search is inconclusive ("not_found") or you are answering an institutional question, YOU MUST include the IDs of any products from our Inventory that relate to the user's query in the 'product_ids' array. Never return an empty array if relevant products exist in the Inventory.
+6. Format: Fluid PT-BR response.
 
 Return JSON:
 { "type": "institutional"|"products"|"technical"|"not_found", "message": "Text response in PT-BR", "product_ids": ["uuid1", "uuid2"] }`
@@ -79,24 +78,30 @@ Return JSON:
       { role: 'user', content: query },
     ]
 
-    let maxIterations = 4
-    let iteration = 0
+    let maxToolCalls = 2 // Strict limit of 2 tool call iterations to avoid timeouts
+    let toolCallCount = 0
     let finalMessage = null
 
-    while (iteration < maxIterations) {
+    while (true) {
+      const payload: any = {
+        model: 'gpt-4o-mini',
+        messages,
+        response_format: { type: 'json_object' },
+      }
+
+      // Only provide tools if we haven't reached the limit
+      if (toolCallCount < maxToolCalls) {
+        payload.tools = tools
+        payload.tool_choice = 'auto'
+      }
+
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${openAiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages,
-          tools,
-          tool_choice: 'auto',
-          response_format: { type: 'json_object' },
-        }),
+        body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error(`OpenAI API Error`)
+      if (!res.ok) throw new Error(`OpenAI API Error: ${res.statusText}`)
 
       const aiData = await res.json()
       const message = aiData.choices?.[0]?.message
@@ -128,7 +133,7 @@ Return JSON:
                 if (snippets.length > 0) content = snippets.join('\n')
               }
             } catch (e) {
-              console.error(e)
+              console.error('DDG Search error:', e)
             }
 
             if (!content) {
@@ -143,7 +148,7 @@ Return JSON:
                   .replace(/<[^>]*>?/gm, '')
                 if (snippets) content = snippets
               } catch (e) {
-                console.error(e)
+                console.error('Wiki Search error:', e)
               }
             }
 
@@ -152,22 +157,20 @@ Return JSON:
               tool_call_id: t.id,
               content:
                 content ||
-                'No exact data found on web. Try refining query with site:manufacturer.com or technical terms.',
+                'No exact data found on web. Stop searching and provide the best possible answer with internal data, setting type to not_found if necessary.',
             })
           }
         }
+        toolCallCount++
       } else {
         finalMessage = message
         break
       }
-      iteration++
     }
 
     let result
     try {
-      result = JSON.parse(
-        finalMessage?.content || '{"type":"not_found","message":"Erro","product_ids":[]}',
-      )
+      result = JSON.parse(finalMessage?.content || JSON.stringify(fallbackResponse))
       if (!Array.isArray(result.product_ids)) {
         result.product_ids = []
       }

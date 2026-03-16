@@ -107,9 +107,9 @@ export default function Search() {
             {aiResponse.type === 'not_found' && (
               <div className="pt-6 mt-6 border-t border-border/50">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Não conseguimos encontrar uma resposta completa no nosso banco de dados interno ou
-                  nas fontes externas. Nossa equipe de especialistas pode te ajudar com essa
-                  especificação detalhada.
+                  Fizemos uma busca rápida em nossa base e fontes externas, mas não encontramos
+                  todos os detalhes técnicos exatos. Nossa equipe de especialistas está pronta para
+                  te ajudar com essa especificação diretamente.
                 </p>
                 <Button
                   size="lg"
