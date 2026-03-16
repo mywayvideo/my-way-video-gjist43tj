@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { Product } from '@/types'
+import { Product, Manufacturer } from '@/types'
 import { supabase } from '@/lib/supabase/client'
 import {
   Table,
@@ -15,18 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Box,
-  Package,
-  ArrowLeft,
-  Database,
-  Search,
-  Upload,
-  Star,
-} from 'lucide-react'
+import { Plus, Edit, Trash2, Box, Package, ArrowLeft, Search, ImageIcon } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
 import {
@@ -35,25 +24,28 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
 } from '@/components/ui/dialog'
 import { AdminProductForm } from '@/components/AdminProductForm'
+import { AdminCSVUploader } from '@/components/AdminCSVUploader'
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [companyInfo, setCompanyInfo] = useState<any>(null)
   const [footerInfo, setFooterInfo] = useState<any>(null)
   const [search, setSearch] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const [savingInfo, setSavingInfo] = useState(false)
 
   const fetchData = async () => {
+    const { data: mData } = await supabase.from('manufacturers').select('*').order('name')
+    if (mData) setManufacturers(mData)
+
     const { data: pData } = await supabase
       .from('products')
-      .select('*')
+      .select('*, manufacturer:manufacturers(*)')
       .order('created_at', { ascending: false })
     if (pData) setProducts(pData)
 
@@ -85,90 +77,25 @@ export default function Admin() {
     if (!confirm('Excluir produto?')) return
     const { error } = await supabase.from('products').delete().eq('id', id)
     if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-    else {
-      toast({ title: 'Sucesso', description: 'Produto removido.' })
-      fetchData()
-    }
-  }
-
-  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setIsUploading(true)
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result as string
-        const lines = text
-          .split('\n')
-          .map((l) => l.trim())
-          .filter(Boolean)
-        if (lines.length < 2) throw new Error('CSV inválido')
-        const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
-        const validProducts = lines
-          .slice(1)
-          .map((line) => {
-            const values = line.split(',')
-            const prod: any = {}
-            headers.forEach((h, i) => {
-              let val = values[i]?.trim() || null
-              if (['price_brl', 'stock', 'weight'].includes(h)) prod[h] = val ? parseFloat(val) : 0
-              else if (h === 'is_special')
-                prod[h] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
-              else prod[h] = val
-            })
-            return prod
-          })
-          .filter((p) => p.name)
-
-        const { error } = await supabase
-          .from('products')
-          .upsert(validProducts, { onConflict: 'sku' })
-        if (error) throw error
-        toast({ title: 'Sucesso', description: `Produtos importados.` })
-        fetchData()
-      } catch (err: any) {
-        toast({ title: 'Erro', description: err.message, variant: 'destructive' })
-      } finally {
-        setIsUploading(false)
-      }
-    }
-    reader.readAsText(file)
+    else fetchData()
   }
 
   const handleSaveCompanyInfo = async () => {
     setSavingInfo(true)
-    try {
-      if (companyInfo) {
-        if (companyInfo.id) {
-          await supabase
-            .from('company_info')
-            .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
-            .eq('id', companyInfo.id)
-        } else if (companyInfo.content) {
-          await supabase
-            .from('company_info')
-            .insert([{ type: 'ai_knowledge', content: companyInfo.content }])
-        }
-      }
-      if (footerInfo) {
-        if (footerInfo.id) {
-          await supabase
-            .from('company_info')
-            .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
-            .eq('id', footerInfo.id)
-        } else if (footerInfo.content) {
-          await supabase
-            .from('company_info')
-            .insert([{ type: 'footer_about', content: footerInfo.content }])
-        }
-      }
-      toast({ title: 'Salvo', description: 'Configurações atualizadas.' })
-      fetchData()
-    } catch (e: any) {
-      toast({ title: 'Erro', description: 'Falha ao salvar configurações', variant: 'destructive' })
+    const saveObj = async (obj: any) => {
+      if (obj.id)
+        await supabase
+          .from('company_info')
+          .update({ content: obj.content, updated_at: new Date().toISOString() })
+          .eq('id', obj.id)
+      else if (obj.content)
+        await supabase.from('company_info').insert([{ type: obj.type, content: obj.content }])
     }
+    await saveObj(companyInfo)
+    await saveObj(footerInfo)
     setSavingInfo(false)
+    toast({ title: 'Salvo', description: 'Configurações atualizadas.' })
+    fetchData()
   }
 
   return (
@@ -177,35 +104,22 @@ export default function Admin() {
         <div className="flex items-center gap-4">
           <Link
             to="/"
-            className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              Admin Dashboard{' '}
-              <Badge className="bg-accent/20 text-accent hover:bg-accent/30 border-none">PRO</Badge>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              Gestão de Catálogo <Badge className="bg-accent/20 text-accent">PRO</Badge>
             </h1>
-            <p className="text-muted-foreground flex items-center gap-2 mt-1">
-              <Database className="w-3 h-3" /> Supabase Real-time DB
-            </p>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          <div className="relative overflow-hidden inline-block">
-            <Button variant="secondary" disabled={isUploading}>
-              <Upload className="w-4 h-4 mr-2" />
-              {isUploading ? 'Processando...' : 'Importar CSV'}
-            </Button>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleCSVUpload}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-          </div>
-
+        <div className="flex gap-4">
+          <AdminCSVUploader
+            manufacturers={manufacturers}
+            onSuccess={fetchData}
+            onAddManufacturer={fetchData}
+          />
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -214,25 +128,24 @@ export default function Admin() {
             }}
           >
             <DialogTrigger asChild>
-              <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-                <Plus className="w-5 h-5 mr-2" /> Novo Produto
+              <Button className="bg-accent text-accent-foreground">
+                <Plus className="w-4 h-4 mr-2" /> Novo Produto
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-card border-white/10 shadow-elevation">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-card border-white/10">
               <DialogHeader>
-                <DialogTitle className="text-2xl">
-                  {editingProduct ? 'Editar Equipamento' : 'Adicionar ao Inventário'}
+                <DialogTitle>
+                  {editingProduct ? 'Editar Equipamento' : 'Novo Equipamento'}
                 </DialogTitle>
-                <DialogDescription>
-                  Salva diretamente no Supabase e atualiza o Agente de IA.
-                </DialogDescription>
               </DialogHeader>
               <AdminProductForm
                 initialData={editingProduct}
+                manufacturers={manufacturers}
                 onSuccess={() => {
                   setIsDialogOpen(false)
                   fetchData()
                 }}
+                onAddManufacturer={fetchData}
               />
             </DialogContent>
           </Dialog>
@@ -240,134 +153,118 @@ export default function Admin() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-card border border-white/5 rounded-xl p-6 flex flex-col shadow-subtle space-y-4">
-          <div>
-            <h2 className="font-semibold text-lg mb-4 text-accent">Configurações (IA & Site)</h2>
-            <Label className="mb-2 text-muted-foreground">Contexto Institucional (IA)</Label>
-            <Textarea
-              className="min-h-[100px] bg-background/50 border-white/10 font-mono text-xs mb-4"
-              value={companyInfo?.content || ''}
-              onChange={(e) => setCompanyInfo((p: any) => ({ ...p, content: e.target.value }))}
-            />
-            <Label className="mb-2 text-muted-foreground">Sobre a My Way (Texto do Footer)</Label>
-            <Textarea
-              className="min-h-[80px] bg-background/50 border-white/10 text-xs"
-              value={footerInfo?.content || ''}
-              onChange={(e) => setFooterInfo((p: any) => ({ ...p, content: e.target.value }))}
-            />
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button
-              onClick={handleSaveCompanyInfo}
-              disabled={savingInfo}
-              variant="outline"
-              className="border-accent text-accent hover:bg-accent/10"
-            >
-              {savingInfo ? 'Salvando...' : 'Salvar Configurações'}
-            </Button>
-          </div>
+        <div className="bg-card border border-white/5 rounded-xl p-6 flex flex-col shadow-sm space-y-4">
+          <h2 className="font-semibold text-lg text-accent">Treinamento da IA & Footer</h2>
+          <Label className="text-muted-foreground">Contexto Institucional (IA)</Label>
+          <Textarea
+            className="min-h-[80px] bg-background/50 font-mono text-xs"
+            value={companyInfo?.content || ''}
+            onChange={(e) => setCompanyInfo((p: any) => ({ ...p, content: e.target.value }))}
+          />
+          <Label className="text-muted-foreground mt-2">Sobre a Empresa (Footer)</Label>
+          <Textarea
+            className="min-h-[60px] bg-background/50 text-xs"
+            value={footerInfo?.content || ''}
+            onChange={(e) => setFooterInfo((p: any) => ({ ...p, content: e.target.value }))}
+          />
+          <Button
+            onClick={handleSaveCompanyInfo}
+            disabled={savingInfo}
+            variant="outline"
+            className="self-end mt-2"
+          >
+            {savingInfo ? 'Salvando...' : 'Atualizar Dados'}
+          </Button>
         </div>
-
         <div className="flex flex-col gap-4">
-          <div className="bg-card border border-white/5 rounded-xl p-6 flex items-center gap-5 shadow-subtle">
-            <div className="p-4 bg-accent/10 text-accent rounded-xl border border-accent/20">
+          <div className="bg-card border border-white/5 rounded-xl p-6 flex items-center gap-5">
+            <div className="p-4 bg-accent/10 text-accent rounded-xl">
               <Box className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total de Produtos</p>
+              <p className="text-sm text-muted-foreground">Produtos Cadastrados</p>
               <p className="text-3xl font-bold font-mono">{products.length}</p>
             </div>
           </div>
-          <div className="bg-card border border-white/5 rounded-xl p-6 flex items-center gap-5 shadow-subtle">
-            <div className="p-4 bg-blue-500/10 text-blue-500 rounded-xl border border-blue-500/20">
+          <div className="bg-card border border-white/5 rounded-xl p-6 flex items-center gap-5">
+            <div className="p-4 bg-blue-500/10 text-blue-500 rounded-xl">
               <Package className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Itens em Estoque</p>
-              <p className="text-3xl font-bold font-mono">
-                {products.filter((p) => p.stock > 0).length}
-              </p>
+              <p className="text-sm text-muted-foreground">Fabricantes / Marcas</p>
+              <p className="text-3xl font-bold font-mono">{manufacturers.length}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-card border border-white/5 rounded-xl overflow-hidden shadow-subtle flex flex-col">
-        <div className="p-4 border-b border-white/5 bg-muted/20 flex flex-col sm:flex-row gap-4 justify-between items-center">
-          <h2 className="font-semibold text-lg">Catálogo Supabase</h2>
-          <div className="relative w-full sm:w-auto">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <div className="bg-card border border-white/5 rounded-xl overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-white/5 bg-muted/20 flex justify-between items-center">
+          <h2 className="font-semibold">Inventário ({filteredProducts.length})</h2>
+          <div className="relative w-64">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
               placeholder="Buscar..."
-              className="pl-9 w-full sm:w-[300px] bg-background border-white/10"
+              className="pl-9 bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow className="border-white/10">
-                <TableHead className="w-[300px]">Equipamento</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Preço BRL</TableHead>
-                <TableHead>Estoque</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map((product) => (
-                <TableRow key={product.id} className="border-white/5 hover:bg-white/5">
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <p className="line-clamp-1 text-foreground" title={product.name}>
-                        {product.name}
-                      </p>
-                      {product.is_special && (
-                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-                      )}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-16">Img</TableHead>
+              <TableHead>Produto</TableHead>
+              <TableHead>Fabricante</TableHead>
+              <TableHead>SKU</TableHead>
+              <TableHead>Preço (USD / BRL)</TableHead>
+              <TableHead className="text-amber-500">Custo (BRL)</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredProducts.map((p) => (
+              <TableRow key={p.id}>
+                <TableCell>
+                  {p.image_url ? (
+                    <img
+                      src={p.image_url}
+                      alt="thumb"
+                      className="w-10 h-10 object-cover rounded bg-white/5"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded">
+                      <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{product.category}</p>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{product.sku}</TableCell>
-                  <TableCell className="font-mono font-medium text-foreground">
-                    R$ {product.price_brl.toLocaleString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    {product.stock > 0 ? (
-                      <span className="text-green-500 font-medium">{product.stock} un.</span>
-                    ) : (
-                      <span className="text-destructive font-medium">Esgotado</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditingProduct(product)
-                        setIsDialogOpen(true)
-                      }}
-                      className="text-muted-foreground hover:text-accent"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(product.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">{p.name}</TableCell>
+                <TableCell className="text-xs">{p.manufacturer?.name || '-'}</TableCell>
+                <TableCell className="font-mono text-xs">{p.sku}</TableCell>
+                <TableCell className="font-mono text-sm">
+                  ${p.price_usd} / R${p.price_brl}
+                </TableCell>
+                <TableCell className="font-mono text-sm text-amber-500">R${p.price_cost}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setEditingProduct(p)
+                      setIsDialogOpen(true)
+                    }}
+                  >
+                    <Edit className="w-4 h-4 text-muted-foreground hover:text-white" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                    <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
