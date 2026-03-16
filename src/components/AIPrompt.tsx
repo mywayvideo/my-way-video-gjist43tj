@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-export function AIPrompt() {
-  const [query, setQuery] = useState('')
+export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    setQuery(initialQuery)
+  }, [initialQuery])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +36,11 @@ export function AIPrompt() {
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="pr-2 md:pr-3">
-          <Button type="submit" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-full">
+          <Button
+            type="submit"
+            size="icon"
+            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
             <Search className="w-4 h-4 md:w-5 md:h-5" />
           </Button>
         </div>

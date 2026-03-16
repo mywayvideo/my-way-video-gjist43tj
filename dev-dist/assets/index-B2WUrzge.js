@@ -40152,35 +40152,38 @@ function Layout() {
 }
 //#endregion
 //#region src/components/AIPrompt.tsx
-function AIPrompt() {
-	const [query, setQuery] = (0, import_react.useState)("");
+function AIPrompt({ initialQuery = "" }) {
+	const [query, setQuery] = (0, import_react.useState)(initialQuery);
 	const navigate = useNavigate();
+	(0, import_react.useEffect)(() => {
+		setQuery(initialQuery);
+	}, [initialQuery]);
 	const handleSearch = (e) => {
 		e.preventDefault();
 		if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/components/AIPrompt.tsx:19:5",
+		"data-uid": "src/components/AIPrompt.tsx:23:5",
 		"data-prohibitions": "[]",
 		className: "w-full max-w-3xl mx-auto",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-			"data-uid": "src/components/AIPrompt.tsx:20:7",
+			"data-uid": "src/components/AIPrompt.tsx:24:7",
 			"data-prohibitions": "[]",
 			onSubmit: handleSearch,
 			className: "relative group flex items-center shadow-lg rounded-full overflow-hidden border border-border/50 bg-background/50 backdrop-blur-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/components/AIPrompt.tsx:24:9",
+					"data-uid": "src/components/AIPrompt.tsx:28:9",
 					"data-prohibitions": "[]",
 					className: "pl-6 pr-2 py-4",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-						"data-uid": "src/components/AIPrompt.tsx:25:11",
+						"data-uid": "src/components/AIPrompt.tsx:29:11",
 						"data-prohibitions": "[editContent]",
 						className: "w-6 h-6 text-primary animate-pulse"
 					})
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-					"data-uid": "src/components/AIPrompt.tsx:27:9",
+					"data-uid": "src/components/AIPrompt.tsx:31:9",
 					"data-prohibitions": "[editContent]",
 					type: "text",
 					placeholder: "O que você precisa? Ex: Horários de funcionamento, ou Câmera 4K...",
@@ -40189,17 +40192,17 @@ function AIPrompt() {
 					onChange: (e) => setQuery(e.target.value)
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/components/AIPrompt.tsx:34:9",
+					"data-uid": "src/components/AIPrompt.tsx:38:9",
 					"data-prohibitions": "[]",
 					className: "pr-2 md:pr-3",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-						"data-uid": "src/components/AIPrompt.tsx:35:11",
+						"data-uid": "src/components/AIPrompt.tsx:39:11",
 						"data-prohibitions": "[]",
 						type: "submit",
 						size: "icon",
-						className: "h-10 w-10 md:h-12 md:w-12 rounded-full",
+						className: "h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-							"data-uid": "src/components/AIPrompt.tsx:36:13",
+							"data-uid": "src/components/AIPrompt.tsx:44:13",
 							"data-prohibitions": "[editContent]",
 							className: "w-4 h-4 md:w-5 md:h-5"
 						})
@@ -40578,72 +40581,77 @@ function Search() {
 		};
 		const getIcon = () => {
 			if (aiResponse.type === "technical") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Video, {
-				"data-uid": "src/pages/Search.tsx:77:51",
+				"data-uid": "src/pages/Search.tsx:85:51",
 				"data-prohibitions": "[editContent]",
 				className: "w-6 h-6 text-primary"
 			});
 			if (aiResponse.type === "not_found") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleAlert, {
-				"data-uid": "src/pages/Search.tsx:78:51",
+				"data-uid": "src/pages/Search.tsx:86:51",
 				"data-prohibitions": "[editContent]",
 				className: "w-6 h-6 text-primary"
 			});
 			return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-				"data-uid": "src/pages/Search.tsx:79:14",
+				"data-uid": "src/pages/Search.tsx:87:14",
 				"data-prohibitions": "[editContent]",
 				className: "w-6 h-6 text-primary"
 			});
 		};
 		return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			"data-uid": "src/pages/Search.tsx:83:7",
+			"data-uid": "src/pages/Search.tsx:91:7",
 			"data-prohibitions": "[editContent]",
 			className: "animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:84:9",
+				"data-uid": "src/pages/Search.tsx:92:9",
 				"data-prohibitions": "[editContent]",
-				className: "bg-muted/30 border border-primary/20 rounded-xl p-6 md:p-8 flex gap-4 md:gap-6 items-start shadow-sm",
+				className: "bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:85:11",
+					"data-uid": "src/pages/Search.tsx:93:11",
 					"data-prohibitions": "[editContent]",
-					className: "bg-primary/10 p-3 rounded-full shrink-0",
+					className: "bg-primary/10 p-4 rounded-full shrink-0 flex items-center justify-center",
 					children: getIcon()
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:86:11",
+					"data-uid": "src/pages/Search.tsx:96:11",
 					"data-prohibitions": "[editContent]",
-					className: "flex-1 space-y-4",
+					className: "flex-1 space-y-4 w-full",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-							"data-uid": "src/pages/Search.tsx:87:13",
+							"data-uid": "src/pages/Search.tsx:97:13",
 							"data-prohibitions": "[editContent]",
-							className: "font-semibold text-lg flex items-center gap-2",
+							className: "font-semibold text-xl flex items-center gap-3",
 							children: ["My Way Video AI", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Search.tsx:89:15",
+								"data-uid": "src/pages/Search.tsx:99:15",
 								"data-prohibitions": "[editContent]",
-								className: "text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium",
+								className: "text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium tracking-wide uppercase",
 								children: getBadge()
 							})]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Search.tsx:93:13",
+							"data-uid": "src/pages/Search.tsx:103:13",
 							"data-prohibitions": "[editContent]",
-							className: "text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none font-medium",
+							className: "text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none text-base md:text-lg",
 							children: aiResponse.message
 						}),
-						aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Search.tsx:98:15",
+						aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							"data-uid": "src/pages/Search.tsx:108:15",
 							"data-prohibitions": "[]",
-							className: "pt-2",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-								"data-uid": "src/pages/Search.tsx:99:17",
+							className: "pt-6 mt-6 border-t border-border/50",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								"data-uid": "src/pages/Search.tsx:109:17",
+								"data-prohibitions": "[]",
+								className: "text-sm text-muted-foreground mb-4",
+								children: "Não conseguimos encontrar uma resposta completa no nosso banco de dados interno ou nas fontes externas. Nossa equipe de especialistas pode te ajudar com essa especificação detalhada."
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+								"data-uid": "src/pages/Search.tsx:114:17",
 								"data-prohibitions": "[]",
 								size: "lg",
-								className: "bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105",
+								className: "bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105 w-full sm:w-auto",
 								onClick: () => window.open(`https://wa.me/17867161170?text=${encodeURIComponent(`Olá! Gostaria de falar com um especialista sobre: "${query}"`)}`, "_blank"),
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
-									"data-uid": "src/pages/Search.tsx:109:19",
+									"data-uid": "src/pages/Search.tsx:124:19",
 									"data-prohibitions": "[editContent]",
 									className: "w-5 h-5"
-								}), "Falar com um especialista pelo WhatsApp"]
-							})
+								}), "Falar com um especialista no WhatsApp"]
+							})]
 						})
 					]
 				})]
@@ -40651,29 +40659,30 @@ function Search() {
 		});
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Search.tsx:121:5",
+		"data-uid": "src/pages/Search.tsx:136:5",
 		"data-prohibitions": "[editContent]",
-		className: "container mx-auto px-4 py-12 max-w-6xl min-h-[70vh]",
+		className: "container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]",
 		children: [
-			!query && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:123:9",
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				"data-uid": "src/pages/Search.tsx:137:7",
 				"data-prohibitions": "[]",
-				className: "mb-12",
+				className: "mb-8 md:mb-12",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AIPrompt, {
-					"data-uid": "src/pages/Search.tsx:124:11",
-					"data-prohibitions": "[editContent]"
+					"data-uid": "src/pages/Search.tsx:138:9",
+					"data-prohibitions": "[editContent]",
+					initialQuery: query
 				})
 			}),
 			query && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:129:9",
+				"data-uid": "src/pages/Search.tsx:142:9",
 				"data-prohibitions": "[editContent]",
 				className: "flex items-center gap-3 mb-8 pb-4 border-b",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-					"data-uid": "src/pages/Search.tsx:130:11",
+					"data-uid": "src/pages/Search.tsx:143:11",
 					"data-prohibitions": "[editContent]",
 					className: "w-6 h-6 text-primary"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
-					"data-uid": "src/pages/Search.tsx:131:11",
+					"data-uid": "src/pages/Search.tsx:144:11",
 					"data-prohibitions": "[editContent]",
 					className: "text-2xl font-bold",
 					children: [
@@ -40684,35 +40693,63 @@ function Search() {
 				})]
 			}),
 			loading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:136:9",
+				"data-uid": "src/pages/Search.tsx:149:9",
 				"data-prohibitions": "[]",
-				className: "flex flex-col justify-center items-center py-20 space-y-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-					"data-uid": "src/pages/Search.tsx:137:11",
-					"data-prohibitions": "[editContent]",
-					className: "w-10 h-10 animate-spin text-primary"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					"data-uid": "src/pages/Search.tsx:138:11",
+				className: "flex flex-col justify-center items-center py-24 space-y-6",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/pages/Search.tsx:150:11",
 					"data-prohibitions": "[]",
-					className: "text-muted-foreground animate-pulse font-medium",
-					children: "A inteligência artificial está processando sua busca..."
+					className: "relative",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
+						"data-uid": "src/pages/Search.tsx:151:13",
+						"data-prohibitions": "[editContent]",
+						className: "w-14 h-14 animate-spin text-primary"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
+						"data-uid": "src/pages/Search.tsx:152:13",
+						"data-prohibitions": "[editContent]",
+						className: "w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse"
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/pages/Search.tsx:154:11",
+					"data-prohibitions": "[]",
+					className: "text-center space-y-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						"data-uid": "src/pages/Search.tsx:155:13",
+						"data-prohibitions": "[]",
+						className: "text-xl font-semibold",
+						children: "Pesquisa Híbrida em Andamento..."
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						"data-uid": "src/pages/Search.tsx:156:13",
+						"data-prohibitions": "[]",
+						className: "text-muted-foreground animate-pulse font-medium max-w-md mx-auto",
+						children: "Analisando banco de dados interno e consultando a web para especificações técnicas detalhadas."
+					})]
 				})]
 			}),
 			!loading && renderAIResponse(),
-			!loading && aiResponse?.type === "products" && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:147:9",
+			!loading && aiResponse?.type === "products" && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				"data-uid": "src/pages/Search.tsx:167:9",
 				"data-prohibitions": "[editContent]",
-				className: "animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:148:11",
+				className: "animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+					"data-uid": "src/pages/Search.tsx:168:11",
+					"data-prohibitions": "[]",
+					className: "text-xl font-semibold mb-6 flex items-center gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
+						"data-uid": "src/pages/Search.tsx:169:13",
+						"data-prohibitions": "[editContent]",
+						className: "w-5 h-5 text-accent"
+					}), " Equipamentos Encontrados no Inventário"]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/pages/Search.tsx:171:11",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6",
 					children: products.map((product) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-						"data-uid": "src/pages/Search.tsx:150:15",
+						"data-uid": "src/pages/Search.tsx:173:15",
 						"data-prohibitions": "[editContent]",
 						product
 					}, product.id))
-				})
+				})]
 			})
 		]
 	});
@@ -42718,4 +42755,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-vmimtVUr.js.map
+//# sourceMappingURL=index-B2WUrzge.js.map

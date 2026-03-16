@@ -3,7 +3,15 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/ProductCard'
 import { Button } from '@/components/ui/button'
-import { Loader2, MessageCircle, Bot, Search as SearchIcon, Video, AlertCircle } from 'lucide-react'
+import {
+  Loader2,
+  MessageCircle,
+  Bot,
+  Search as SearchIcon,
+  Video,
+  AlertCircle,
+  Sparkles,
+} from 'lucide-react'
 import { AIPrompt } from '@/components/AIPrompt'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 
@@ -81,24 +89,31 @@ export default function Search() {
 
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8">
-        <div className="bg-muted/30 border border-primary/20 rounded-xl p-6 md:p-8 flex gap-4 md:gap-6 items-start shadow-sm">
-          <div className="bg-primary/10 p-3 rounded-full shrink-0">{getIcon()}</div>
-          <div className="flex-1 space-y-4">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
+        <div className="bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm">
+          <div className="bg-primary/10 p-4 rounded-full shrink-0 flex items-center justify-center">
+            {getIcon()}
+          </div>
+          <div className="flex-1 space-y-4 w-full">
+            <h3 className="font-semibold text-xl flex items-center gap-3">
               My Way Video AI
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium tracking-wide uppercase">
                 {getBadge()}
               </span>
             </h3>
-            <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none font-medium">
+            <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none text-base md:text-lg">
               {aiResponse.message}
             </div>
 
             {aiResponse.type === 'not_found' && (
-              <div className="pt-2">
+              <div className="pt-6 mt-6 border-t border-border/50">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Não conseguimos encontrar uma resposta completa no nosso banco de dados interno ou
+                  nas fontes externas. Nossa equipe de especialistas pode te ajudar com essa
+                  especificação detalhada.
+                </p>
                 <Button
                   size="lg"
-                  className="bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105"
+                  className="bg-[#25D366] hover:bg-[#1DA851] text-white gap-2 font-medium shadow-md transition-transform hover:scale-105 w-full sm:w-auto"
                   onClick={() =>
                     window.open(
                       `https://wa.me/17867161170?text=${encodeURIComponent(`Olá! Gostaria de falar com um especialista sobre: "${query}"`)}`,
@@ -107,7 +122,7 @@ export default function Search() {
                   }
                 >
                   <MessageCircle className="w-5 h-5" />
-                  Falar com um especialista pelo WhatsApp
+                  Falar com um especialista no WhatsApp
                 </Button>
               </div>
             )}
@@ -118,12 +133,10 @@ export default function Search() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-6xl min-h-[70vh]">
-      {!query && (
-        <div className="mb-12">
-          <AIPrompt />
-        </div>
-      )}
+    <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]">
+      <div className="mb-8 md:mb-12">
+        <AIPrompt initialQuery={query} />
+      </div>
 
       {query && (
         <div className="flex items-center gap-3 mb-8 pb-4 border-b">
@@ -133,18 +146,28 @@ export default function Search() {
       )}
 
       {loading && (
-        <div className="flex flex-col justify-center items-center py-20 space-y-4">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-muted-foreground animate-pulse font-medium">
-            A inteligência artificial está processando sua busca...
-          </p>
+        <div className="flex flex-col justify-center items-center py-24 space-y-6">
+          <div className="relative">
+            <Loader2 className="w-14 h-14 animate-spin text-primary" />
+            <Sparkles className="w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse" />
+          </div>
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-semibold">Pesquisa Híbrida em Andamento...</h3>
+            <p className="text-muted-foreground animate-pulse font-medium max-w-md mx-auto">
+              Analisando banco de dados interno e consultando a web para especificações técnicas
+              detalhadas.
+            </p>
+          </div>
         </div>
       )}
 
       {!loading && renderAIResponse()}
 
       {!loading && aiResponse?.type === 'products' && products.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 mt-12">
+          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Encontrados no Inventário
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />

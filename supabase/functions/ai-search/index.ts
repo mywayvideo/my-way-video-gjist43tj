@@ -8,7 +8,7 @@ Deno.serve(async (req: Request) => {
   const fallbackResponse = {
     type: 'not_found',
     message:
-      "I'm having trouble connecting right now, please try again in a moment or contact our support.",
+      'Tivemos um problema ao processar sua busca. Por favor, tente novamente ou fale com um especialista.',
     product_ids: [],
   }
 
@@ -27,16 +27,16 @@ Deno.serve(async (req: Request) => {
     const { query } = await req.json()
     if (!query) throw new Error('Query is required')
 
-    const { data: cData } = await supabase.from('company_info').select('*')
-    const companyInfo =
-      cData
-        ?.filter((c: any) => c.type === 'ai_knowledge' || !c.type)
-        .map((c: any) => c.content)
-        .join('\n') || ''
+    // 1. Fetch Internal Company Data
+    const { data: cData } = await supabase.from('company_info').select('content, type')
+    const companyInfo = cData?.map((c: any) => `[${c.type}]: ${c.content}`).join('\n') || ''
 
+    // 2. Fetch Internal Products Data (Adhering to requested schema columns)
     const { data: products } = await supabase
       .from('products')
-      .select('id, name, description, sku, category, is_special')
+      .select(
+        'id, name, sku, description, price_brl, stock, ncm, weight, dimensions, category, is_special',
+      )
 
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
 
@@ -48,22 +48,26 @@ Deno.serve(async (req: Request) => {
 
     const systemPrompt = `
 You are an expert technical AI assistant for "My Way Video", an e-commerce for professional audiovisual equipment. 
-Focus on EXTREME TECHNICAL ACCURACY. Provide precise specifications.
-DO NOT use generic marketing fluff. Be highly concise.
+Your goal is to provide EXTREME TECHNICAL ACCURACY and synthesize internal business data with external specs.
 
 Knowledge Base (Institutional & Delivery Info):
 ${companyInfo}
 
-Inventory:
+Inventory (Internal DB):
 ${JSON.stringify(products || [])}
 
-Priority:
-1. Institutional: ALWAYS use the exact info from the Knowledge Base above to answer questions about delivery, locations, shipping to Brazil, business hours, etc.
-2. Inventory Search: Match user query to inventory and return relevant product IDs.
-3. Technical Specs: Act as an expert. Provide precise technical numbers. If you do not know the exact specs, you MUST use 'search_web' tool to find real-time data.
+Priority Rules:
+1. Internal Data Priority: First, look for answers within the Inventory and Knowledge Base. Use available fields like price_brl, stock, ncm, weight, dimensions, category, and is_special to provide rich context.
+2. Web Search Fallback: If the user asks for a product not in the Inventory or asks for technical specs missing from the product description, you MUST use the 'search_web' tool to find real-time data.
+3. Cohesive Response Synthesis: Blend internal business rules (like shipping, stock levels, and pricing) with external technical specs into a single, fluid text response in PT-BR.
+4. Human Support Handover: If you cannot find a satisfactory answer internally OR externally, set type to 'not_found' to gracefully hand over to human support via WhatsApp.
 
 Return ONLY a JSON object with this strict format:
-{ "type": "institutional"|"products"|"technical"|"not_found", "message": "Concise tech response in PT-BR", "product_ids": ["uuid1"] }`
+{ 
+  "type": "institutional"|"products"|"technical"|"not_found", 
+  "message": "Fluid text response synthesizing internal business rules and external specs in PT-BR.", 
+  "product_ids": ["uuid1", "uuid2"] 
+}`
 
     const tools = [
       {
@@ -71,7 +75,7 @@ Return ONLY a JSON object with this strict format:
         function: {
           name: 'search_web',
           description:
-            'Search web for real-time technical specs (resolution, framerates, etc) and missing info',
+            'Search web for real-time technical specs (resolution, framerates, etc) and missing info when internal DB is insufficient.',
           parameters: {
             type: 'object',
             properties: { search_query: { type: 'string' } },
@@ -111,6 +115,7 @@ Return ONLY a JSON object with this strict format:
         if (t.function.name === 'search_web') {
           try {
             const args = JSON.parse(t.function.arguments)
+            // Wikipedia API fallback search
             const w = await fetch(
               `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(args.search_query)}&utf8=&format=json`,
             )
@@ -122,7 +127,7 @@ Return ONLY a JSON object with this strict format:
             messages.push({
               role: 'tool',
               tool_call_id: t.id,
-              content: snippets || 'No exact data found.',
+              content: snippets || 'No exact data found on web.',
             })
           } catch (e) {
             messages.push({
