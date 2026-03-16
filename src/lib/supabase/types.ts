@@ -13,16 +13,19 @@ export type Database = {
         Row: {
           content: string
           id: string
+          type: string
           updated_at: string
         }
         Insert: {
           content: string
           id?: string
+          type?: string
           updated_at?: string
         }
         Update: {
           content?: string
           id?: string
+          type?: string
           updated_at?: string
         }
         Relationships: []
@@ -226,6 +229,7 @@ export const Constants = {
 //   id: uuid (not null, default: gen_random_uuid())
 //   content: text (not null)
 //   updated_at: timestamp with time zone (not null, default: now())
+//   type: text (not null, default: 'ai_knowledge'::text)
 // Table: products
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)

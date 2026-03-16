@@ -17,7 +17,7 @@ export function Footer() {
       .limit(1)
       .single()
       .then(({ data }) => {
-        if (data) setAboutText(data.content)
+        if (data && data.content) setAboutText(data.content)
       })
   }, [])
 
@@ -29,7 +29,9 @@ export function Footer() {
             <Link to="/" className="flex items-center space-x-2 mb-6">
               <img src={logoUrl} alt="My Way Video" className="h-8 md:h-10 w-auto" />
             </Link>
-            <p className="text-muted-foreground mb-6 text-sm leading-relaxed">{aboutText}</p>
+            <p className="text-muted-foreground mb-6 text-sm leading-relaxed whitespace-pre-wrap">
+              {aboutText}
+            </p>
             <div className="flex space-x-4">
               <a
                 href="#"

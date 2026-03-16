@@ -59,8 +59,12 @@ export default function Admin() {
 
     const { data: cData } = await supabase.from('company_info').select('*')
     if (cData) {
-      setCompanyInfo(cData.find((c: any) => c.type === 'ai_knowledge') || cData[0])
-      setFooterInfo(cData.find((c: any) => c.type === 'footer_about'))
+      setCompanyInfo(
+        cData.find((c: any) => c.type === 'ai_knowledge') || { type: 'ai_knowledge', content: '' },
+      )
+      setFooterInfo(
+        cData.find((c: any) => c.type === 'footer_about') || { type: 'footer_about', content: '' },
+      )
     }
   }
 
@@ -134,18 +138,37 @@ export default function Admin() {
 
   const handleSaveCompanyInfo = async () => {
     setSavingInfo(true)
-    if (companyInfo)
-      await supabase
-        .from('company_info')
-        .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
-        .eq('id', companyInfo.id)
-    if (footerInfo)
-      await supabase
-        .from('company_info')
-        .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
-        .eq('id', footerInfo.id)
+    try {
+      if (companyInfo) {
+        if (companyInfo.id) {
+          await supabase
+            .from('company_info')
+            .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
+            .eq('id', companyInfo.id)
+        } else if (companyInfo.content) {
+          await supabase
+            .from('company_info')
+            .insert([{ type: 'ai_knowledge', content: companyInfo.content }])
+        }
+      }
+      if (footerInfo) {
+        if (footerInfo.id) {
+          await supabase
+            .from('company_info')
+            .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
+            .eq('id', footerInfo.id)
+        } else if (footerInfo.content) {
+          await supabase
+            .from('company_info')
+            .insert([{ type: 'footer_about', content: footerInfo.content }])
+        }
+      }
+      toast({ title: 'Salvo', description: 'Configurações atualizadas.' })
+      fetchData()
+    } catch (e: any) {
+      toast({ title: 'Erro', description: 'Falha ao salvar configurações', variant: 'destructive' })
+    }
     setSavingInfo(false)
-    toast({ title: 'Salvo', description: 'Configurações atualizadas.' })
   }
 
   return (
@@ -224,17 +247,13 @@ export default function Admin() {
             <Textarea
               className="min-h-[100px] bg-background/50 border-white/10 font-mono text-xs mb-4"
               value={companyInfo?.content || ''}
-              onChange={(e) =>
-                setCompanyInfo((p: any) => (p ? { ...p, content: e.target.value } : null))
-              }
+              onChange={(e) => setCompanyInfo((p: any) => ({ ...p, content: e.target.value }))}
             />
             <Label className="mb-2 text-muted-foreground">Sobre a My Way (Texto do Footer)</Label>
             <Textarea
               className="min-h-[80px] bg-background/50 border-white/10 text-xs"
               value={footerInfo?.content || ''}
-              onChange={(e) =>
-                setFooterInfo((p: any) => (p ? { ...p, content: e.target.value } : null))
-              }
+              onChange={(e) => setFooterInfo((p: any) => ({ ...p, content: e.target.value }))}
             />
           </div>
           <div className="mt-4 flex justify-end">
