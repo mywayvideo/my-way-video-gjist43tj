@@ -27,11 +27,6 @@ export function ProductCard({ product }: { product: any }) {
             </div>
           )}
         </Link>
-        {product.stock === 0 && (
-          <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-md">
-            Esgotado
-          </div>
-        )}
       </CardHeader>
       <CardContent className="flex-1 p-5">
         <Link to={`/product/${product.id}`}>
@@ -40,9 +35,11 @@ export function ProductCard({ product }: { product: any }) {
           </h3>
         </Link>
         <p className="text-xl font-bold text-foreground mt-3">
-          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-            product.price || 0,
-          )}
+          US${' '}
+          {(product.price_usd || 0).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
         </p>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">
@@ -52,15 +49,14 @@ export function ProductCard({ product }: { product: any }) {
             addItem({
               id: product.id,
               name: product.name,
-              price: product.price,
+              price: product.price_usd || 0,
               image_url: product.image_url,
               quantity: 1,
             })
           }
-          disabled={product.stock === 0}
         >
           <ShoppingCart className="w-4 h-4" />
-          {product.stock === 0 ? 'Indisponível' : 'Adicionar'}
+          Adicionar
         </Button>
       </CardFooter>
     </Card>

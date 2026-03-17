@@ -30,7 +30,7 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
         </div>
         <Input
           type="text"
-          placeholder="O que você precisa? Ex: Horários de funcionamento, ou Câmera 4K..."
+          placeholder="O que você precisa? Pesquise produtos ou pergunte a IA."
           className="flex-1 border-0 bg-transparent text-sm md:text-lg focus-visible:ring-0 shadow-none px-2 py-5 md:py-6 h-auto"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

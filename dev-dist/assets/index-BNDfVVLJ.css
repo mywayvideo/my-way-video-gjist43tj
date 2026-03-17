@@ -1815,14 +1815,6 @@ section[aria-label='Notifications alt+T'] {
   border-color: var(--color-border);
 }
 
-.border-accent\/20{
-  border-color: hsl(var(--accent) / 0.2);
-}
-
-.border-accent\/50{
-  border-color: hsl(var(--accent) / 0.5);
-}
-
 .border-amber-500\/20{
   border-color: rgb(245 158 11 / 0.2);
 }
@@ -1902,10 +1894,6 @@ section[aria-label='Notifications alt+T'] {
 
 .bg-accent\/20{
   background-color: hsl(var(--accent) / 0.2);
-}
-
-.bg-accent\/5{
-  background-color: hsl(var(--accent) / 0.05);
 }
 
 .bg-background{
@@ -2494,11 +2482,6 @@ section[aria-label='Notifications alt+T'] {
   color: rgb(75 85 99 / var(--tw-text-opacity, 1));
 }
 
-.text-green-500{
-  --tw-text-opacity: 1;
-  color: rgb(34 197 94 / var(--tw-text-opacity, 1));
-}
-
 .text-muted-foreground{
   color: hsl(var(--muted-foreground));
 }
@@ -2972,10 +2955,6 @@ section[aria-label='Notifications alt+T'] {
 
 .hover\:bg-accent:hover{
   background-color: hsl(var(--accent));
-}
-
-.hover\:bg-accent\/10:hover{
-  background-color: hsl(var(--accent) / 0.1);
 }
 
 .hover\:bg-accent\/90:hover{

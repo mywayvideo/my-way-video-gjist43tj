@@ -7,17 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { useCartStore } from '@/stores/useCartStore'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
-import { fetchUSDRate } from '@/services/awesome-api'
-import {
-  ShoppingCart,
-  Check,
-  ShieldAlert,
-  Bot,
-  MapPin,
-  Loader2,
-  Sparkles,
-  Globe,
-} from 'lucide-react'
+import { ShoppingCart, Bot, Globe, Loader2, Sparkles } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 
 export default function Product() {
@@ -27,8 +17,6 @@ export default function Product() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<AISearchResponse | null>(null)
   const [question, setQuestion] = useState('')
-  const [usdRate, setUsdRate] = useState<number | null>(null)
-  const [loadingRate, setLoadingRate] = useState(false)
   const [isMetric, setIsMetric] = useState(false)
 
   useEffect(() => {
@@ -40,23 +28,6 @@ export default function Product() {
       .single()
       .then(({ data }) => data && setProduct(data))
   }, [id])
-
-  const handleCalculateDelivery = async () => {
-    if (usdRate) return
-    setLoadingRate(true)
-    try {
-      const rate = await fetchUSDRate()
-      setUsdRate(rate)
-    } catch {
-      toast({
-        title: 'Erro de Conversão',
-        description: 'Não foi possível obter a cotação do dólar atual.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoadingRate(false)
-    }
-  }
 
   const handleAskAI = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,9 +71,6 @@ export default function Product() {
       </div>
     )
 
-  const spreadRate = usdRate ? usdRate + 0.2 : 0
-  const finalBrlPrice = product.price_usd * spreadRate
-
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
       <div className="text-sm text-muted-foreground mb-8 font-mono">
@@ -131,67 +99,32 @@ export default function Product() {
             <div className="bg-card border border-white/10 rounded-xl p-5 shadow-sm max-w-md">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-sm font-medium uppercase">Estoque Local (BRL)</span>
+                  <Globe className="w-4 h-4" />
+                  <span className="text-sm font-medium uppercase">Preço (FOB Miami)</span>
                 </div>
               </div>
               <p className="text-4xl font-mono font-bold text-foreground">
-                R$ {product.price_brl?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-muted-foreground mt-3 flex items-center gap-2">
-                {product.stock > 0 ? (
-                  <>
-                    <Check className="w-4 h-4 text-green-500" /> Disponível ({product.stock} un.)
-                  </>
-                ) : (
-                  <>
-                    <ShieldAlert className="w-4 h-4 text-amber-500" /> Sem estoque local
-                  </>
-                )}
+                US${' '}
+                {(product.price_usd || 0).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
             </div>
-
-            {product.price_usd > 0 && (
-              <div className="bg-accent/5 border border-accent/20 rounded-xl p-5 shadow-sm max-w-md">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-accent">
-                    <Globe className="w-4 h-4" />
-                    <span className="text-sm font-medium uppercase">Importação Direta</span>
-                  </div>
-                  <span className="font-mono text-sm text-muted-foreground">
-                    US$ {product.price_usd}
-                  </span>
-                </div>
-                {!usdRate ? (
-                  <Button
-                    variant="outline"
-                    className="w-full border-accent/50 text-accent hover:bg-accent/10"
-                    onClick={handleCalculateDelivery}
-                    disabled={loadingRate}
-                  >
-                    {loadingRate ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Ver
-                    preço para entrega no Brasil
-                  </Button>
-                ) : (
-                  <div className="animate-fade-in-up">
-                    <p className="text-3xl font-mono font-bold text-accent">
-                      R$ {finalBrlPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      Os preços em reais variam de acordo com o câmbio. Taxas bancárias também podem
-                      alterar.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <p className="text-lg text-foreground/80 leading-relaxed mb-8">{product.description}</p>
           <Button
             size="lg"
-            onClick={() => addItem(product)}
-            disabled={product.stock <= 0}
+            onClick={() =>
+              addItem({
+                id: product.id,
+                name: product.name,
+                price: product.price_usd || 0,
+                image_url: product.image_url || undefined,
+                quantity: 1,
+              })
+            }
             className="w-full sm:w-auto h-14"
           >
             <ShoppingCart className="w-5 h-5 mr-2" /> Adicionar ao Projeto

@@ -19326,20 +19326,6 @@ var Search$1 = createLucideIcon("search", [["path", {
 	r: "8",
 	key: "4ej97u"
 }]]);
-var ShieldAlert = createLucideIcon("shield-alert", [
-	["path", {
-		d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
-		key: "oel41y"
-	}],
-	["path", {
-		d: "M12 8v4",
-		key: "1got3b"
-	}],
-	["path", {
-		d: "M12 16h.01",
-		key: "1drbdi"
-	}]
-]);
 var ShoppingCart = createLucideIcon("shopping-cart", [
 	["circle", {
 		cx: "8",
@@ -40210,7 +40196,7 @@ function AIPrompt({ initialQuery = "" }) {
 					"data-uid": "src/components/AIPrompt.tsx:31:9",
 					"data-prohibitions": "[editContent]",
 					type: "text",
-					placeholder: "O que você precisa? Ex: Horários de funcionamento, ou Câmera 4K...",
+					placeholder: "O que você precisa? Pesquise produtos ou pergunte a IA.",
 					className: "flex-1 border-0 bg-transparent text-sm md:text-lg focus-visible:ring-0 shadow-none px-2 py-5 md:py-6 h-auto",
 					value: query,
 					onChange: (e) => setQuery(e.target.value)
@@ -40314,11 +40300,11 @@ function ProductCard({ product }) {
 		"data-prohibitions": "[editContent]",
 		className: "flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardHeader, {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
 				"data-uid": "src/components/ProductCard.tsx:12:7",
 				"data-prohibitions": "[editContent]",
 				className: "p-0 relative",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
 					"data-uid": "src/components/ProductCard.tsx:13:9",
 					"data-prohibitions": "[editContent]",
 					to: `/product/${product.id}`,
@@ -40344,58 +40330,56 @@ function ProductCard({ product }) {
 							children: "Sem imagem"
 						})]
 					})
-				}), product.stock === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/components/ProductCard.tsx:31:11",
-					"data-prohibitions": "[]",
-					className: "absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-md",
-					children: "Esgotado"
-				})]
+				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
-				"data-uid": "src/components/ProductCard.tsx:36:7",
+				"data-uid": "src/components/ProductCard.tsx:31:7",
 				"data-prohibitions": "[editContent]",
 				className: "flex-1 p-5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-					"data-uid": "src/components/ProductCard.tsx:37:9",
+					"data-uid": "src/components/ProductCard.tsx:32:9",
 					"data-prohibitions": "[editContent]",
 					to: `/product/${product.id}`,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/components/ProductCard.tsx:38:11",
+						"data-uid": "src/components/ProductCard.tsx:33:11",
 						"data-prohibitions": "[editContent]",
 						className: "font-semibold text-sm md:text-base line-clamp-2 mb-2 group-hover:text-primary transition-colors",
 						children: product.name
 					})
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					"data-uid": "src/components/ProductCard.tsx:42:9",
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					"data-uid": "src/components/ProductCard.tsx:37:9",
 					"data-prohibitions": "[editContent]",
 					className: "text-xl font-bold text-foreground mt-3",
-					children: new Intl.NumberFormat("pt-BR", {
-						style: "currency",
-						currency: "BRL"
-					}).format(product.price || 0)
+					children: [
+						"US$",
+						" ",
+						(product.price_usd || 0).toLocaleString("en-US", {
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2
+						})
+					]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardFooter, {
-				"data-uid": "src/components/ProductCard.tsx:48:7",
-				"data-prohibitions": "[editContent]",
+				"data-uid": "src/components/ProductCard.tsx:45:7",
+				"data-prohibitions": "[]",
 				className: "p-5 pt-0 mt-auto",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-					"data-uid": "src/components/ProductCard.tsx:49:9",
-					"data-prohibitions": "[editContent]",
+					"data-uid": "src/components/ProductCard.tsx:46:9",
+					"data-prohibitions": "[]",
 					className: "w-full gap-2 transition-all hover:scale-[1.02]",
 					onClick: () => addItem({
 						id: product.id,
 						name: product.name,
-						price: product.price,
+						price: product.price_usd || 0,
 						image_url: product.image_url,
 						quantity: 1
 					}),
-					disabled: product.stock === 0,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-						"data-uid": "src/components/ProductCard.tsx:62:11",
+						"data-uid": "src/components/ProductCard.tsx:58:11",
 						"data-prohibitions": "[editContent]",
 						className: "w-4 h-4"
-					}), product.stock === 0 ? "Indisponível" : "Adicionar"]
+					}), "Adicionar"]
 				})
 			})
 		]
@@ -40893,17 +40877,6 @@ var Switch = import_react.forwardRef(({ className, ...props }, ref) => /* @__PUR
 }));
 Switch.displayName = Root$1.displayName;
 //#endregion
-//#region src/services/awesome-api.ts
-var fetchUSDRate = async () => {
-	try {
-		const data = await (await fetch("https://economia.awesomeapi.com.br/last/USD-BRL")).json();
-		return parseFloat(data.USDBRL.bid);
-	} catch (error) {
-		console.error("Failed to fetch USD rate:", error);
-		throw error;
-	}
-};
-//#endregion
 //#region src/pages/Product.tsx
 function Product() {
 	const { id } = useParams();
@@ -40912,28 +40885,11 @@ function Product() {
 	const [aiLoading, setAiLoading] = (0, import_react.useState)(false);
 	const [aiResponse, setAiResponse] = (0, import_react.useState)(null);
 	const [question, setQuestion] = (0, import_react.useState)("");
-	const [usdRate, setUsdRate] = (0, import_react.useState)(null);
-	const [loadingRate, setLoadingRate] = (0, import_react.useState)(false);
 	const [isMetric, setIsMetric] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
 		if (!id) return;
 		supabase.from("products").select("*, manufacturer:manufacturers(*)").eq("id", id).single().then(({ data }) => data && setProduct(data));
 	}, [id]);
-	const handleCalculateDelivery = async () => {
-		if (usdRate) return;
-		setLoadingRate(true);
-		try {
-			setUsdRate(await fetchUSDRate());
-		} catch {
-			toast$1({
-				title: "Erro de Conversão",
-				description: "Não foi possível obter a cotação do dólar atual.",
-				variant: "destructive"
-			});
-		} finally {
-			setLoadingRate(false);
-		}
-	};
 	const handleAskAI = async (e) => {
 		e.preventDefault();
 		if (!question.trim() || !product) return;
@@ -40965,29 +40921,27 @@ function Product() {
 		return `${d} in`;
 	};
 	if (!product) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/pages/Product.tsx:98:7",
+		"data-uid": "src/pages/Product.tsx:69:7",
 		"data-prohibitions": "[]",
 		className: "p-12 text-center text-muted-foreground flex items-center justify-center min-h-[60vh]",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-			"data-uid": "src/pages/Product.tsx:99:9",
+			"data-uid": "src/pages/Product.tsx:70:9",
 			"data-prohibitions": "[editContent]",
 			className: "w-6 h-6 animate-spin"
 		})
 	});
-	const spreadRate = usdRate ? usdRate + .2 : 0;
-	const finalBrlPrice = product.price_usd * spreadRate;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Product.tsx:107:5",
+		"data-uid": "src/pages/Product.tsx:75:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 animate-fade-in",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:108:7",
+				"data-uid": "src/pages/Product.tsx:76:7",
 				"data-prohibitions": "[editContent]",
 				className: "text-sm text-muted-foreground mb-8 font-mono",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/pages/Product.tsx:109:9",
+						"data-uid": "src/pages/Product.tsx:77:9",
 						"data-prohibitions": "[]",
 						to: "/",
 						className: "hover:text-foreground",
@@ -40996,7 +40950,7 @@ function Product() {
 					" ",
 					"/ ",
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"data-uid": "src/pages/Product.tsx:112:11",
+						"data-uid": "src/pages/Product.tsx:80:11",
 						"data-prohibitions": "[editContent]",
 						className: "text-foreground ml-2",
 						children: product.name
@@ -41004,191 +40958,125 @@ function Product() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:114:7",
+				"data-uid": "src/pages/Product.tsx:82:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:115:9",
+					"data-uid": "src/pages/Product.tsx:83:9",
 					"data-prohibitions": "[]",
 					className: "aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						"data-uid": "src/pages/Product.tsx:116:11",
+						"data-uid": "src/pages/Product.tsx:84:11",
 						"data-prohibitions": "[editContent]",
 						src: product.image_url || "https://img.usecurling.com/p/600/600?q=camera",
 						alt: product.name,
 						className: "w-full h-full object-contain hover:scale-110 transition-transform duration-500"
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:122:9",
+					"data-uid": "src/pages/Product.tsx:90:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:123:11",
+							"data-uid": "src/pages/Product.tsx:91:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-accent font-mono uppercase tracking-widest text-sm font-semibold",
 							children: product.manufacturer?.name || product.category
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-							"data-uid": "src/pages/Product.tsx:126:11",
+							"data-uid": "src/pages/Product.tsx:94:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-3xl md:text-4xl font-bold tracking-tight mt-2 mb-6",
 							children: product.name
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:130:11",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							"data-uid": "src/pages/Product.tsx:98:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col gap-4 mb-6",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:131:13",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/pages/Product.tsx:99:13",
 								"data-prohibitions": "[editContent]",
 								className: "bg-card border border-white/10 rounded-xl p-5 shadow-sm max-w-md",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										"data-uid": "src/pages/Product.tsx:132:15",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									"data-uid": "src/pages/Product.tsx:100:15",
+									"data-prohibitions": "[]",
+									className: "flex items-center justify-between mb-2",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										"data-uid": "src/pages/Product.tsx:101:17",
 										"data-prohibitions": "[]",
-										className: "flex items-center justify-between mb-2",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											"data-uid": "src/pages/Product.tsx:133:17",
-											"data-prohibitions": "[]",
-											className: "flex items-center gap-2 text-muted-foreground",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPin, {
-												"data-uid": "src/pages/Product.tsx:134:19",
-												"data-prohibitions": "[editContent]",
-												className: "w-4 h-4"
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												"data-uid": "src/pages/Product.tsx:135:19",
-												"data-prohibitions": "[]",
-												className: "text-sm font-medium uppercase",
-												children: "Estoque Local (BRL)"
-											})]
-										})
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-										"data-uid": "src/pages/Product.tsx:138:15",
-										"data-prohibitions": "[editContent]",
-										className: "text-4xl font-mono font-bold text-foreground",
-										children: ["R$ ", product.price_brl?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })]
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										"data-uid": "src/pages/Product.tsx:141:15",
-										"data-prohibitions": "[editContent]",
-										className: "text-sm text-muted-foreground mt-3 flex items-center gap-2",
-										children: product.stock > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-											/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, {
-												"data-uid": "src/pages/Product.tsx:144:21",
-												"data-prohibitions": "[editContent]",
-												className: "w-4 h-4 text-green-500"
-											}),
-											" Disponível (",
-											product.stock,
-											" un.)"
-										] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, {
-											"data-uid": "src/pages/Product.tsx:148:21",
-											"data-prohibitions": "[editContent]",
-											className: "w-4 h-4 text-amber-500"
-										}), " Sem estoque local"] })
-									})
-								]
-							}), product.price_usd > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:155:15",
-								"data-prohibitions": "[editContent]",
-								className: "bg-accent/5 border border-accent/20 rounded-xl p-5 shadow-sm max-w-md",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:156:17",
-									"data-prohibitions": "[editContent]",
-									className: "flex items-center justify-between mb-3",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										"data-uid": "src/pages/Product.tsx:157:19",
-										"data-prohibitions": "[]",
-										className: "flex items-center gap-2 text-accent",
+										className: "flex items-center gap-2 text-muted-foreground",
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Globe, {
-											"data-uid": "src/pages/Product.tsx:158:21",
+											"data-uid": "src/pages/Product.tsx:102:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-4 h-4"
 										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"data-uid": "src/pages/Product.tsx:159:21",
+											"data-uid": "src/pages/Product.tsx:103:19",
 											"data-prohibitions": "[]",
 											className: "text-sm font-medium uppercase",
-											children: "Importação Direta"
+											children: "Preço (FOB Miami)"
 										})]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										"data-uid": "src/pages/Product.tsx:161:19",
-										"data-prohibitions": "[editContent]",
-										className: "font-mono text-sm text-muted-foreground",
-										children: ["US$ ", product.price_usd]
-									})]
-								}), !usdRate ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-									"data-uid": "src/pages/Product.tsx:166:19",
+									})
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									"data-uid": "src/pages/Product.tsx:106:15",
 									"data-prohibitions": "[editContent]",
-									variant: "outline",
-									className: "w-full border-accent/50 text-accent hover:bg-accent/10",
-									onClick: handleCalculateDelivery,
-									disabled: loadingRate,
-									children: [loadingRate ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-										"data-uid": "src/pages/Product.tsx:172:36",
-										"data-prohibitions": "[editContent]",
-										className: "w-4 h-4 animate-spin mr-2"
-									}) : null, " Ver preço para entrega no Brasil"]
-								}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:176:19",
-									"data-prohibitions": "[editContent]",
-									className: "animate-fade-in-up",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-										"data-uid": "src/pages/Product.tsx:177:21",
-										"data-prohibitions": "[editContent]",
-										className: "text-3xl font-mono font-bold text-accent",
-										children: ["R$ ", finalBrlPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										"data-uid": "src/pages/Product.tsx:180:21",
-										"data-prohibitions": "[]",
-										className: "text-xs text-muted-foreground mt-2 leading-relaxed",
-										children: "Os preços em reais variam de acordo com o câmbio. Taxas bancárias também podem alterar."
-									})]
+									className: "text-4xl font-mono font-bold text-foreground",
+									children: [
+										"US$",
+										" ",
+										(product.price_usd || 0).toLocaleString("en-US", {
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2
+										})
+									]
 								})]
-							})]
+							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/pages/Product.tsx:190:11",
+							"data-uid": "src/pages/Product.tsx:116:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-lg text-foreground/80 leading-relaxed mb-8",
 							children: product.description
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/pages/Product.tsx:191:11",
+							"data-uid": "src/pages/Product.tsx:117:11",
 							"data-prohibitions": "[]",
 							size: "lg",
-							onClick: () => addItem(product),
-							disabled: product.stock <= 0,
+							onClick: () => addItem({
+								id: product.id,
+								name: product.name,
+								price: product.price_usd || 0,
+								image_url: product.image_url || void 0,
+								quantity: 1
+							}),
 							className: "w-full sm:w-auto h-14",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-								"data-uid": "src/pages/Product.tsx:197:13",
+								"data-uid": "src/pages/Product.tsx:130:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5 mr-2"
 							}), " Adicionar ao Projeto"]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:200:11",
+							"data-uid": "src/pages/Product.tsx:133:11",
 							"data-prohibitions": "[editContent]",
 							className: "mt-10 border-t border-border/50 pt-8",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-									"data-uid": "src/pages/Product.tsx:201:13",
+									"data-uid": "src/pages/Product.tsx:134:13",
 									"data-prohibitions": "[]",
 									className: "text-lg font-semibold flex items-center gap-2 mb-4",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-										"data-uid": "src/pages/Product.tsx:202:15",
+										"data-uid": "src/pages/Product.tsx:135:15",
 										"data-prohibitions": "[editContent]",
 										className: "w-5 h-5 text-primary"
 									}), " Consultor IA Técnico"]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-									"data-uid": "src/pages/Product.tsx:204:13",
+									"data-uid": "src/pages/Product.tsx:137:13",
 									"data-prohibitions": "[editContent]",
 									onSubmit: handleAskAI,
 									className: "flex items-center shadow-sm rounded-full border border-border/50 bg-background/50 focus-within:ring-2 focus-within:ring-primary transition-all mb-6",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										"data-uid": "src/pages/Product.tsx:208:15",
+										"data-uid": "src/pages/Product.tsx:141:15",
 										"data-prohibitions": "[editContent]",
 										disabled: aiLoading,
 										value: question,
@@ -41196,58 +41084,58 @@ function Product() {
 										placeholder: "Pergunte sobre as especificações...",
 										className: "flex-1 border-0 bg-transparent px-6 py-6 shadow-none focus-visible:ring-0"
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										"data-uid": "src/pages/Product.tsx:215:15",
+										"data-uid": "src/pages/Product.tsx:148:15",
 										"data-prohibitions": "[editContent]",
 										type: "submit",
 										disabled: aiLoading,
 										size: "icon",
 										className: "h-12 w-12 rounded-full bg-primary mr-2",
 										children: aiLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-											"data-uid": "src/pages/Product.tsx:222:19",
+											"data-uid": "src/pages/Product.tsx:155:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5 animate-spin"
 										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-											"data-uid": "src/pages/Product.tsx:224:19",
+											"data-uid": "src/pages/Product.tsx:157:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5"
 										})
 									})]
 								}),
 								aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:229:15",
+									"data-uid": "src/pages/Product.tsx:162:15",
 									"data-prohibitions": "[]",
 									className: "text-center py-4 text-sm text-primary flex justify-center items-center gap-2",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-										"data-uid": "src/pages/Product.tsx:230:17",
+										"data-uid": "src/pages/Product.tsx:163:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4 animate-spin"
 									}), " Buscando informações técnicas detalhadas..."]
 								}),
 								aiResponse && !aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:235:15",
+									"data-uid": "src/pages/Product.tsx:168:15",
 									"data-prohibitions": "[editContent]",
 									className: "animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card border border-primary/20 rounded-xl p-5 shadow-sm flex flex-col gap-4",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										"data-uid": "src/pages/Product.tsx:236:17",
+										"data-uid": "src/pages/Product.tsx:169:17",
 										"data-prohibitions": "[]",
 										className: "flex items-center gap-3",
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											"data-uid": "src/pages/Product.tsx:237:19",
+											"data-uid": "src/pages/Product.tsx:170:19",
 											"data-prohibitions": "[]",
 											className: "bg-primary/10 p-2 rounded-full",
 											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-												"data-uid": "src/pages/Product.tsx:238:21",
+												"data-uid": "src/pages/Product.tsx:171:21",
 												"data-prohibitions": "[editContent]",
 												className: "w-5 h-5 text-primary"
 											})
 										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-											"data-uid": "src/pages/Product.tsx:240:19",
+											"data-uid": "src/pages/Product.tsx:173:19",
 											"data-prohibitions": "[]",
 											className: "font-semibold flex items-center gap-2",
 											children: "My Way Video AI"
 										})]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										"data-uid": "src/pages/Product.tsx:242:17",
+										"data-uid": "src/pages/Product.tsx:175:17",
 										"data-prohibitions": "[editContent]",
 										className: "text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed",
 										children: aiResponse.message
@@ -41259,37 +41147,37 @@ function Product() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:250:7",
+				"data-uid": "src/pages/Product.tsx:183:7",
 				"data-prohibitions": "[editContent]",
 				className: "mt-24 max-w-4xl",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:251:9",
+					"data-uid": "src/pages/Product.tsx:184:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						"data-uid": "src/pages/Product.tsx:252:11",
+						"data-uid": "src/pages/Product.tsx:185:11",
 						"data-prohibitions": "[]",
 						className: "text-2xl font-bold tracking-tight",
 						children: "Especificações Técnicas"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Product.tsx:253:11",
+						"data-uid": "src/pages/Product.tsx:186:11",
 						"data-prohibitions": "[editContent]",
 						className: "flex items-center gap-3 text-sm bg-muted/50 px-4 py-2 rounded-full border border-border",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:254:13",
+								"data-uid": "src/pages/Product.tsx:187:13",
 								"data-prohibitions": "[editContent]",
 								className: !isMetric ? "font-semibold text-primary" : "text-muted-foreground",
 								children: "Imperial"
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Switch, {
-								"data-uid": "src/pages/Product.tsx:257:13",
+								"data-uid": "src/pages/Product.tsx:190:13",
 								"data-prohibitions": "[editContent]",
 								checked: isMetric,
 								onCheckedChange: setIsMetric
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:258:13",
+								"data-uid": "src/pages/Product.tsx:191:13",
 								"data-prohibitions": "[editContent]",
 								className: isMetric ? "font-semibold text-primary" : "text-muted-foreground",
 								children: "Métrico"
@@ -41297,7 +41185,7 @@ function Product() {
 						]
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:263:9",
+					"data-uid": "src/pages/Product.tsx:196:9",
 					"data-prohibitions": "[editContent]",
 					className: "bg-card/30 border border-white/5 rounded-2xl overflow-hidden text-sm",
 					children: [
@@ -41322,16 +41210,16 @@ function Product() {
 							v: displayDimensions(product.dimensions)
 						}
 					].map((s, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Product.tsx:271:13",
+						"data-uid": "src/pages/Product.tsx:204:13",
 						"data-prohibitions": "[editContent]",
 						className: `flex flex-col sm:flex-row py-3 px-6 ${i % 2 === 0 ? "bg-white/5" : ""}`,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:275:15",
+							"data-uid": "src/pages/Product.tsx:208:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-48 text-muted-foreground font-medium",
 							children: s.l
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:276:15",
+							"data-uid": "src/pages/Product.tsx:209:15",
 							"data-prohibitions": "[editContent]",
 							className: "font-mono text-foreground",
 							children: s.v || "N/A"
@@ -43290,15 +43178,16 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 					headers.forEach((h, i) => {
 						let val = values[i] || null;
 						if (h === "sku" && val) val = val.replace(/[-/]/g, "");
+						const targetKey = h === "price_usa" ? "price_usd" : h;
 						if ([
 							"price_brl",
 							"price_usd",
 							"price_cost",
 							"stock",
 							"weight"
-						].includes(h)) prod[h] = val ? parseFloat(val) : 0;
-						else if (h === "is_special") prod[h] = val === "true" || val === "1" || val?.toLowerCase() === "sim";
-						else prod[h] = val;
+						].includes(targetKey)) prod[targetKey] = val ? parseFloat(val) : 0;
+						else if (targetKey === "is_special") prod[targetKey] = val === "true" || val === "1" || val?.toLowerCase() === "sim";
+						else prod[targetKey] = val;
 					});
 					return prod;
 				}).filter((p) => p.name && p.sku);
@@ -43332,6 +43221,7 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 						};
 					});
 				} else validProducts = parsedLines;
+				if (validProducts.length === 0) throw new Error("Nenhum produto válido encontrado. Certifique-se de que \"name\" e \"sku\" estão preenchidos.");
 				const { error } = await supabase.from("products").upsert(validProducts, { onConflict: "manufacturer_id,sku" });
 				if (error) throw error;
 				toast$1({
@@ -43353,26 +43243,26 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 		reader.readAsText(file);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/components/AdminCSVUploader.tsx:117:5",
+		"data-uid": "src/components/AdminCSVUploader.tsx:126:5",
 		"data-prohibitions": "[editContent]",
 		className: "flex items-center gap-2",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AdminCSVUploader.tsx:118:7",
+			"data-uid": "src/components/AdminCSVUploader.tsx:127:7",
 			"data-prohibitions": "[editContent]",
 			className: "relative overflow-hidden inline-block ml-2",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-				"data-uid": "src/components/AdminCSVUploader.tsx:119:9",
+				"data-uid": "src/components/AdminCSVUploader.tsx:128:9",
 				"data-prohibitions": "[editContent]",
 				variant: "secondary",
 				disabled: isUploading,
 				onClick: () => fileInputRef.current?.click(),
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Upload, {
-					"data-uid": "src/components/AdminCSVUploader.tsx:124:11",
+					"data-uid": "src/components/AdminCSVUploader.tsx:133:11",
 					"data-prohibitions": "[editContent]",
 					className: "w-4 h-4 mr-2"
 				}), isUploading ? "Processando..." : "Importar CSV"]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-				"data-uid": "src/components/AdminCSVUploader.tsx:127:9",
+				"data-uid": "src/components/AdminCSVUploader.tsx:136:9",
 				"data-prohibitions": "[editContent]",
 				ref: fileInputRef,
 				type: "file",
@@ -44326,4 +44216,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-BRNDsKKH.js.map
+//# sourceMappingURL=index-ByEE6mh9.js.map

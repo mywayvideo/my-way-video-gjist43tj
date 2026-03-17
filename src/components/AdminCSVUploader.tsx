@@ -46,12 +46,15 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             headers.forEach((h, i) => {
               let val = values[i] || null
               if (h === 'sku' && val) val = val.replace(/[-/]/g, '')
-              if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(h)) {
-                prod[h] = val ? parseFloat(val) : 0
-              } else if (h === 'is_special') {
-                prod[h] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
+
+              const targetKey = h === 'price_usa' ? 'price_usd' : h
+
+              if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)) {
+                prod[targetKey] = val ? parseFloat(val) : 0
+              } else if (targetKey === 'is_special') {
+                prod[targetKey] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
               } else {
-                prod[h] = val
+                prod[targetKey] = val
               }
             })
             return prod
@@ -94,6 +97,12 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           })
         } else {
           validProducts = parsedLines
+        }
+
+        if (validProducts.length === 0) {
+          throw new Error(
+            'Nenhum produto válido encontrado. Certifique-se de que "name" e "sku" estão preenchidos.',
+          )
         }
 
         const { error } = await supabase
