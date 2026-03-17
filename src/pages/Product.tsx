@@ -7,8 +7,17 @@ import { Switch } from '@/components/ui/switch'
 import { useCartStore } from '@/stores/useCartStore'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
-import { ShoppingCart, Bot, Globe, Loader2, Sparkles } from 'lucide-react'
+import {
+  ShoppingCart,
+  Bot,
+  Globe,
+  Loader2,
+  Sparkles,
+  PackageSearch,
+  MessageCircle,
+} from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
+import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 
 export default function Product() {
   const { id } = useParams()
@@ -18,6 +27,7 @@ export default function Product() {
   const [aiResponse, setAiResponse] = useState<AISearchResponse | null>(null)
   const [question, setQuestion] = useState('')
   const [isMetric, setIsMetric] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -81,11 +91,19 @@ export default function Product() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16">
         <div className="aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center">
-          <img
-            src={product.image_url || 'https://img.usecurling.com/p/600/600?q=camera'}
-            alt={product.name}
-            className="w-full h-full object-contain hover:scale-110 transition-transform duration-500"
-          />
+          {product.image_url && !imgError ? (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              onError={() => setImgError(true)}
+              className="w-full h-full object-contain hover:scale-110 transition-transform duration-500"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full">
+              <PackageSearch className="w-16 h-16 mb-4 opacity-50" />
+              <span className="text-sm font-medium">Imagem Indisponível</span>
+            </div>
+          )}
         </div>
         <div className="flex flex-col">
           <span className="text-accent font-mono uppercase tracking-widest text-sm font-semibold">
@@ -100,7 +118,7 @@ export default function Product() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Globe className="w-4 h-4" />
-                  <span className="text-sm font-medium uppercase">Preço (FOB Miami)</span>
+                  <span className="text-sm font-medium uppercase">FOB Miami (USD)</span>
                 </div>
               </div>
               <p className="text-4xl font-mono font-bold text-foreground">
@@ -110,10 +128,29 @@ export default function Product() {
                   maximumFractionDigits: 2,
                 })}
               </p>
+
+              {(product.price_brl || 0) > 0 && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Preço entregue no Brasil:</span>
+                    <span className="font-mono font-bold text-primary">
+                      US${' '}
+                      {product.price_brl?.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <p className="text-lg text-foreground/80 leading-relaxed mb-8">{product.description}</p>
+          <MarkdownRenderer
+            content={product.description || ''}
+            className="text-lg text-foreground/80 mb-8"
+          />
+
           <Button
             size="lg"
             onClick={() =>
@@ -160,8 +197,7 @@ export default function Product() {
             </form>
             {aiLoading && (
               <div className="text-center py-4 text-sm text-primary flex justify-center items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Buscando informações técnicas
-                detalhadas...
+                <Loader2 className="w-4 h-4 animate-spin" /> Buscando informações técnicas...
               </div>
             )}
             {aiResponse && !aiLoading && (
@@ -175,6 +211,23 @@ export default function Product() {
                 <div className="text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed">
                   {aiResponse.message}
                 </div>
+                {aiResponse.type === 'not_found' && (
+                  <div className="pt-4 mt-2 border-t border-border/50">
+                    <Button
+                      onClick={() =>
+                        window.open(
+                          `https://wa.me/17867161170?text=${encodeURIComponent(
+                            `Dúvida técnica sobre o produto ${product.name} (SKU: ${product.sku}): ${question}`,
+                          )}`,
+                          '_blank',
+                        )
+                      }
+                      className="w-full sm:w-auto bg-[#25D366] hover:bg-[#1DA851] text-white"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" /> Consultar Especialista via WhatsApp
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

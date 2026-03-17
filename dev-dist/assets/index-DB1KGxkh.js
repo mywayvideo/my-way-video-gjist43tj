@@ -19155,6 +19155,15 @@ var CloudUpload = createLucideIcon("cloud-upload", [
 		key: "1quai1"
 	}]
 ]);
+var Eye = createLucideIcon("eye", [["path", {
+	d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0",
+	key: "1nclc0"
+}], ["circle", {
+	cx: "12",
+	cy: "12",
+	r: "3",
+	key: "1v7zrd"
+}]]);
 var Facebook = createLucideIcon("facebook", [["path", {
 	d: "M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z",
 	key: "1jg4f8"
@@ -39820,7 +39829,7 @@ function Header() {
 								"data-uid": "src/components/Header.tsx:58:13",
 								"data-prohibitions": "[editContent]",
 								type: "text",
-								placeholder: "Pesquise produtos ou pergunte à IA...",
+								placeholder: "O que você precisa? Pesquise produtos ou pergunte a IA.",
 								className: "w-full pl-10 pr-10 rounded-full bg-muted/50 border-transparent focus-visible:bg-background transition-all",
 								value: searchQuery,
 								onChange: (e) => setSearchQuery(e.target.value)
@@ -40295,59 +40304,61 @@ CardFooter.displayName = "CardFooter";
 //#region src/components/ProductCard.tsx
 function ProductCard({ product }) {
 	const { addItem } = useCartStore();
+	const [imgError, setImgError] = (0, import_react.useState)(false);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-		"data-uid": "src/components/ProductCard.tsx:11:5",
+		"data-uid": "src/components/ProductCard.tsx:13:5",
 		"data-prohibitions": "[editContent]",
 		className: "flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardHeader, {
-				"data-uid": "src/components/ProductCard.tsx:12:7",
+				"data-uid": "src/components/ProductCard.tsx:14:7",
 				"data-prohibitions": "[editContent]",
 				className: "p-0 relative",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-					"data-uid": "src/components/ProductCard.tsx:13:9",
+					"data-uid": "src/components/ProductCard.tsx:15:9",
 					"data-prohibitions": "[editContent]",
 					to: `/product/${product.id}`,
 					className: "aspect-square overflow-hidden bg-muted/30 flex items-center justify-center",
-					children: product.image_url ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						"data-uid": "src/components/ProductCard.tsx:18:13",
+					children: product.image_url && !imgError ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						"data-uid": "src/components/ProductCard.tsx:20:13",
 						"data-prohibitions": "[editContent]",
 						src: product.image_url,
 						alt: product.name,
+						onError: () => setImgError(true),
 						className: "w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
 					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/components/ProductCard.tsx:24:13",
+						"data-uid": "src/components/ProductCard.tsx:27:13",
 						"data-prohibitions": "[]",
 						className: "flex flex-col items-center justify-center text-muted-foreground/50 h-full w-full bg-muted/20",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PackageSearch, {
-							"data-uid": "src/components/ProductCard.tsx:25:15",
+							"data-uid": "src/components/ProductCard.tsx:28:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-12 h-12 mb-2"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/components/ProductCard.tsx:26:15",
+							"data-uid": "src/components/ProductCard.tsx:29:15",
 							"data-prohibitions": "[]",
 							className: "text-xs font-medium",
-							children: "Sem imagem"
+							children: "Imagem Indisponível"
 						})]
 					})
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(CardContent, {
-				"data-uid": "src/components/ProductCard.tsx:31:7",
+				"data-uid": "src/components/ProductCard.tsx:34:7",
 				"data-prohibitions": "[editContent]",
 				className: "flex-1 p-5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-					"data-uid": "src/components/ProductCard.tsx:32:9",
+					"data-uid": "src/components/ProductCard.tsx:35:9",
 					"data-prohibitions": "[editContent]",
 					to: `/product/${product.id}`,
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/components/ProductCard.tsx:33:11",
+						"data-uid": "src/components/ProductCard.tsx:36:11",
 						"data-prohibitions": "[editContent]",
 						className: "font-semibold text-sm md:text-base line-clamp-2 mb-2 group-hover:text-primary transition-colors",
 						children: product.name
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					"data-uid": "src/components/ProductCard.tsx:37:9",
+					"data-uid": "src/components/ProductCard.tsx:40:9",
 					"data-prohibitions": "[editContent]",
 					className: "text-xl font-bold text-foreground mt-3",
 					children: [
@@ -40361,11 +40372,11 @@ function ProductCard({ product }) {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CardFooter, {
-				"data-uid": "src/components/ProductCard.tsx:45:7",
+				"data-uid": "src/components/ProductCard.tsx:48:7",
 				"data-prohibitions": "[]",
 				className: "p-5 pt-0 mt-auto",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-					"data-uid": "src/components/ProductCard.tsx:46:9",
+					"data-uid": "src/components/ProductCard.tsx:49:9",
 					"data-prohibitions": "[]",
 					className: "w-full gap-2 transition-all hover:scale-[1.02]",
 					onClick: () => addItem({
@@ -40376,7 +40387,7 @@ function ProductCard({ product }) {
 						quantity: 1
 					}),
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-						"data-uid": "src/components/ProductCard.tsx:58:11",
+						"data-uid": "src/components/ProductCard.tsx:61:11",
 						"data-prohibitions": "[editContent]",
 						className: "w-4 h-4"
 					}), "Adicionar"]
@@ -40579,30 +40590,30 @@ function Search() {
 		doSearch();
 	}, [query]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Search.tsx:58:5",
+		"data-uid": "src/pages/Search.tsx:50:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:59:7",
+				"data-uid": "src/pages/Search.tsx:51:7",
 				"data-prohibitions": "[]",
 				className: "mb-8",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AIPrompt, {
-					"data-uid": "src/pages/Search.tsx:60:9",
+					"data-uid": "src/pages/Search.tsx:52:9",
 					"data-prohibitions": "[editContent]",
 					initialQuery: query
 				})
 			}),
 			query && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:63:9",
+				"data-uid": "src/pages/Search.tsx:55:9",
 				"data-prohibitions": "[editContent]",
 				className: "flex items-center gap-3 mb-8 pb-4 border-b",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search$1, {
-					"data-uid": "src/pages/Search.tsx:64:11",
+					"data-uid": "src/pages/Search.tsx:56:11",
 					"data-prohibitions": "[editContent]",
 					className: "w-6 h-6 text-primary"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
-					"data-uid": "src/pages/Search.tsx:65:11",
+					"data-uid": "src/pages/Search.tsx:57:11",
 					"data-prohibitions": "[editContent]",
 					className: "text-2xl font-bold",
 					children: [
@@ -40613,70 +40624,65 @@ function Search() {
 				})]
 			}),
 			loading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:70:9",
+				"data-uid": "src/pages/Search.tsx:62:9",
 				"data-prohibitions": "[]",
 				className: "flex flex-col justify-center items-center py-24 space-y-6",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:71:11",
+					"data-uid": "src/pages/Search.tsx:63:11",
 					"data-prohibitions": "[]",
 					className: "relative",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-						"data-uid": "src/pages/Search.tsx:72:13",
+						"data-uid": "src/pages/Search.tsx:64:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-14 h-14 animate-spin text-primary"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-						"data-uid": "src/pages/Search.tsx:73:13",
+						"data-uid": "src/pages/Search.tsx:65:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse"
 					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:75:11",
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"data-uid": "src/pages/Search.tsx:67:11",
 					"data-prohibitions": "[]",
 					className: "text-center space-y-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						"data-uid": "src/pages/Search.tsx:76:13",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						"data-uid": "src/pages/Search.tsx:68:13",
 						"data-prohibitions": "[]",
 						className: "text-xl font-semibold text-primary animate-pulse",
 						children: "O Agente de IA está pesquisando para fornecer a melhor resposta possível..."
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						"data-uid": "src/pages/Search.tsx:79:13",
-						"data-prohibitions": "[]",
-						className: "text-muted-foreground max-w-md mx-auto",
-						children: "Analisando especificações de hardware, base B&H Photo Video e catálogo interno."
-					})]
+					})
 				})]
 			}),
 			!loading && aiResponse && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				"data-uid": "src/pages/Search.tsx:87:9",
+				"data-uid": "src/pages/Search.tsx:76:9",
 				"data-prohibitions": "[editContent]",
 				className: "animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Search.tsx:88:11",
+					"data-uid": "src/pages/Search.tsx:77:11",
 					"data-prohibitions": "[editContent]",
 					className: "bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						"data-uid": "src/pages/Search.tsx:89:13",
+						"data-uid": "src/pages/Search.tsx:78:13",
 						"data-prohibitions": "[]",
 						className: "bg-primary/10 p-4 rounded-full shrink-0",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-							"data-uid": "src/pages/Search.tsx:90:15",
+							"data-uid": "src/pages/Search.tsx:79:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-6 h-6 text-primary"
 						})
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Search.tsx:92:13",
+						"data-uid": "src/pages/Search.tsx:81:13",
 						"data-prohibitions": "[editContent]",
 						className: "flex-1 space-y-4 w-full",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-								"data-uid": "src/pages/Search.tsx:93:15",
+								"data-uid": "src/pages/Search.tsx:82:15",
 								"data-prohibitions": "[editContent]",
 								className: "font-semibold text-xl flex items-center gap-3",
 								children: [
 									"Consultor Técnico IA",
 									" ",
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"data-uid": "src/pages/Search.tsx:95:17",
+										"data-uid": "src/pages/Search.tsx:84:17",
 										"data-prohibitions": "[editContent]",
 										className: "text-xs bg-primary/10 text-primary px-3 py-1 rounded-full uppercase",
 										children: aiResponse.type
@@ -40684,23 +40690,23 @@ function Search() {
 								]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Search.tsx:99:15",
+								"data-uid": "src/pages/Search.tsx:88:15",
 								"data-prohibitions": "[editContent]",
 								className: "text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none",
 								children: aiResponse.message
 							}),
 							aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								"data-uid": "src/pages/Search.tsx:103:17",
+								"data-uid": "src/pages/Search.tsx:92:17",
 								"data-prohibitions": "[]",
 								className: "pt-6 mt-6 border-t border-border/50",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-									"data-uid": "src/pages/Search.tsx:104:19",
+									"data-uid": "src/pages/Search.tsx:93:19",
 									"data-prohibitions": "[]",
 									size: "lg",
 									className: "bg-[#25D366] hover:bg-[#1DA851] text-white",
-									onClick: () => window.open(`https://wa.me/17867161170?text=${encodeURIComponent(`Dúvida: "${query}"`)}`, "_blank"),
+									onClick: () => window.open(`https://wa.me/17867161170?text=${encodeURIComponent(`Dúvida técnica: "${query}"`)}`, "_blank"),
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
-										"data-uid": "src/pages/Search.tsx:114:21",
+										"data-uid": "src/pages/Search.tsx:103:21",
 										"data-prohibitions": "[editContent]",
 										className: "w-5 h-5 mr-2"
 									}), " Falar com Especialista"]
@@ -40711,24 +40717,24 @@ function Search() {
 				})
 			}),
 			!loading && products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Search.tsx:124:9",
+				"data-uid": "src/pages/Search.tsx:113:9",
 				"data-prohibitions": "[editContent]",
 				className: "animate-in fade-in slide-in-from-bottom-4 mt-12",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-					"data-uid": "src/pages/Search.tsx:125:11",
+					"data-uid": "src/pages/Search.tsx:114:11",
 					"data-prohibitions": "[]",
 					className: "text-xl font-semibold mb-6 flex items-center gap-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-						"data-uid": "src/pages/Search.tsx:126:13",
+						"data-uid": "src/pages/Search.tsx:115:13",
 						"data-prohibitions": "[editContent]",
 						className: "w-5 h-5 text-accent"
 					}), " Equipamentos Relacionados"]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Search.tsx:128:11",
+					"data-uid": "src/pages/Search.tsx:117:11",
 					"data-prohibitions": "[editContent]",
 					className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6",
 					children: products.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
-						"data-uid": "src/pages/Search.tsx:130:15",
+						"data-uid": "src/pages/Search.tsx:119:15",
 						"data-prohibitions": "[editContent]",
 						product: p
 					}, p.id))
@@ -40877,6 +40883,64 @@ var Switch = import_react.forwardRef(({ className, ...props }, ref) => /* @__PUR
 }));
 Switch.displayName = Root$1.displayName;
 //#endregion
+//#region src/components/MarkdownRenderer.tsx
+function MarkdownRenderer({ content, className = "" }) {
+	if (!content) return null;
+	const lines = content.split("\n");
+	const elements = [];
+	let listItems = [];
+	const pushList = () => {
+		if (listItems.length > 0) {
+			elements.push(/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				"data-uid": "src/components/MarkdownRenderer.tsx:18:9",
+				"data-prohibitions": "[editContent]",
+				className: "list-disc pl-5 mb-4 space-y-1",
+				children: listItems
+			}, `ul-${elements.length}`));
+			listItems = [];
+		}
+	};
+	const parseInline = (text) => {
+		return text.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+			if (part.startsWith("**") && part.endsWith("**")) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+				"data-uid": "src/components/MarkdownRenderer.tsx:31:11",
+				"data-prohibitions": "[editContent]",
+				className: "font-semibold text-foreground",
+				children: part.slice(2, -2)
+			}, i);
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				"data-uid": "src/components/MarkdownRenderer.tsx:36:14",
+				"data-prohibitions": "[editContent]",
+				children: part
+			}, i);
+		});
+	};
+	lines.forEach((line, i) => {
+		const trimmed = line.trim();
+		if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) listItems.push(/* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+			"data-uid": "src/components/MarkdownRenderer.tsx:43:22",
+			"data-prohibitions": "[editContent]",
+			children: parseInline(trimmed.substring(2))
+		}, `li-${i}`));
+		else {
+			pushList();
+			if (trimmed) elements.push(/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				"data-uid": "src/components/MarkdownRenderer.tsx:48:11",
+				"data-prohibitions": "[editContent]",
+				className: "mb-4",
+				children: parseInline(trimmed)
+			}, `p-${i}`));
+		}
+	});
+	pushList();
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		"data-uid": "src/components/MarkdownRenderer.tsx:57:10",
+		"data-prohibitions": "[editContent]",
+		className: `leading-relaxed ${className}`,
+		children: elements
+	});
+}
+//#endregion
 //#region src/pages/Product.tsx
 function Product() {
 	const { id } = useParams();
@@ -40886,6 +40950,7 @@ function Product() {
 	const [aiResponse, setAiResponse] = (0, import_react.useState)(null);
 	const [question, setQuestion] = (0, import_react.useState)("");
 	const [isMetric, setIsMetric] = (0, import_react.useState)(false);
+	const [imgError, setImgError] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
 		if (!id) return;
 		supabase.from("products").select("*, manufacturer:manufacturers(*)").eq("id", id).single().then(({ data }) => data && setProduct(data));
@@ -40921,27 +40986,27 @@ function Product() {
 		return `${d} in`;
 	};
 	if (!product) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/pages/Product.tsx:69:7",
+		"data-uid": "src/pages/Product.tsx:79:7",
 		"data-prohibitions": "[]",
 		className: "p-12 text-center text-muted-foreground flex items-center justify-center min-h-[60vh]",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-			"data-uid": "src/pages/Product.tsx:70:9",
+			"data-uid": "src/pages/Product.tsx:80:9",
 			"data-prohibitions": "[editContent]",
 			className: "w-6 h-6 animate-spin"
 		})
 	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		"data-uid": "src/pages/Product.tsx:75:5",
+		"data-uid": "src/pages/Product.tsx:85:5",
 		"data-prohibitions": "[editContent]",
 		className: "container mx-auto px-4 py-8 animate-fade-in",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:76:7",
+				"data-uid": "src/pages/Product.tsx:86:7",
 				"data-prohibitions": "[editContent]",
 				className: "text-sm text-muted-foreground mb-8 font-mono",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
-						"data-uid": "src/pages/Product.tsx:77:9",
+						"data-uid": "src/pages/Product.tsx:87:9",
 						"data-prohibitions": "[]",
 						to: "/",
 						className: "hover:text-foreground",
@@ -40950,7 +41015,7 @@ function Product() {
 					" ",
 					"/ ",
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"data-uid": "src/pages/Product.tsx:80:11",
+						"data-uid": "src/pages/Product.tsx:90:11",
 						"data-prohibitions": "[editContent]",
 						className: "text-foreground ml-2",
 						children: product.name
@@ -40958,87 +41023,133 @@ function Product() {
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:82:7",
+				"data-uid": "src/pages/Product.tsx:92:7",
 				"data-prohibitions": "[editContent]",
 				className: "grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:83:9",
-					"data-prohibitions": "[]",
+					"data-uid": "src/pages/Product.tsx:93:9",
+					"data-prohibitions": "[editContent]",
 					className: "aspect-square bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-8 flex items-center justify-center",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						"data-uid": "src/pages/Product.tsx:84:11",
+					children: product.image_url && !imgError ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						"data-uid": "src/pages/Product.tsx:95:13",
 						"data-prohibitions": "[editContent]",
-						src: product.image_url || "https://img.usecurling.com/p/600/600?q=camera",
+						src: product.image_url,
 						alt: product.name,
+						onError: () => setImgError(true),
 						className: "w-full h-full object-contain hover:scale-110 transition-transform duration-500"
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/pages/Product.tsx:102:13",
+						"data-prohibitions": "[]",
+						className: "flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PackageSearch, {
+							"data-uid": "src/pages/Product.tsx:103:15",
+							"data-prohibitions": "[editContent]",
+							className: "w-16 h-16 mb-4 opacity-50"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"data-uid": "src/pages/Product.tsx:104:15",
+							"data-prohibitions": "[]",
+							className: "text-sm font-medium",
+							children: "Imagem Indisponível"
+						})]
 					})
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:90:9",
+					"data-uid": "src/pages/Product.tsx:108:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:91:11",
+							"data-uid": "src/pages/Product.tsx:109:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-accent font-mono uppercase tracking-widest text-sm font-semibold",
 							children: product.manufacturer?.name || product.category
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-							"data-uid": "src/pages/Product.tsx:94:11",
+							"data-uid": "src/pages/Product.tsx:112:11",
 							"data-prohibitions": "[editContent]",
 							className: "text-3xl md:text-4xl font-bold tracking-tight mt-2 mb-6",
 							children: product.name
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							"data-uid": "src/pages/Product.tsx:98:11",
+							"data-uid": "src/pages/Product.tsx:116:11",
 							"data-prohibitions": "[editContent]",
 							className: "flex flex-col gap-4 mb-6",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								"data-uid": "src/pages/Product.tsx:99:13",
+								"data-uid": "src/pages/Product.tsx:117:13",
 								"data-prohibitions": "[editContent]",
 								className: "bg-card border border-white/10 rounded-xl p-5 shadow-sm max-w-md",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									"data-uid": "src/pages/Product.tsx:100:15",
-									"data-prohibitions": "[]",
-									className: "flex items-center justify-between mb-2",
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										"data-uid": "src/pages/Product.tsx:101:17",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										"data-uid": "src/pages/Product.tsx:118:15",
 										"data-prohibitions": "[]",
-										className: "flex items-center gap-2 text-muted-foreground",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Globe, {
-											"data-uid": "src/pages/Product.tsx:102:19",
-											"data-prohibitions": "[editContent]",
-											className: "w-4 h-4"
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"data-uid": "src/pages/Product.tsx:103:19",
+										className: "flex items-center justify-between mb-2",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											"data-uid": "src/pages/Product.tsx:119:17",
 											"data-prohibitions": "[]",
-											className: "text-sm font-medium uppercase",
-											children: "Preço (FOB Miami)"
-										})]
-									})
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-									"data-uid": "src/pages/Product.tsx:106:15",
-									"data-prohibitions": "[editContent]",
-									className: "text-4xl font-mono font-bold text-foreground",
-									children: [
-										"US$",
-										" ",
-										(product.price_usd || 0).toLocaleString("en-US", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2
+											className: "flex items-center gap-2 text-muted-foreground",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Globe, {
+												"data-uid": "src/pages/Product.tsx:120:19",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4"
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												"data-uid": "src/pages/Product.tsx:121:19",
+												"data-prohibitions": "[]",
+												className: "text-sm font-medium uppercase",
+												children: "FOB Miami (USD)"
+											})]
 										})
-									]
-								})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										"data-uid": "src/pages/Product.tsx:124:15",
+										"data-prohibitions": "[editContent]",
+										className: "text-4xl font-mono font-bold text-foreground",
+										children: [
+											"US$",
+											" ",
+											(product.price_usd || 0).toLocaleString("en-US", {
+												minimumFractionDigits: 2,
+												maximumFractionDigits: 2
+											})
+										]
+									}),
+									(product.price_brl || 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										"data-uid": "src/pages/Product.tsx:133:17",
+										"data-prohibitions": "[editContent]",
+										className: "mt-4 pt-4 border-t border-border/50",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											"data-uid": "src/pages/Product.tsx:134:19",
+											"data-prohibitions": "[editContent]",
+											className: "flex items-center justify-between text-sm",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												"data-uid": "src/pages/Product.tsx:135:21",
+												"data-prohibitions": "[]",
+												className: "text-muted-foreground",
+												children: "Preço entregue no Brasil:"
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+												"data-uid": "src/pages/Product.tsx:136:21",
+												"data-prohibitions": "[editContent]",
+												className: "font-mono font-bold text-primary",
+												children: [
+													"US$",
+													" ",
+													product.price_brl?.toLocaleString("en-US", {
+														minimumFractionDigits: 2,
+														maximumFractionDigits: 2
+													})
+												]
+											})]
+										})
+									})
+								]
 							})
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							"data-uid": "src/pages/Product.tsx:116:11",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarkdownRenderer, {
+							"data-uid": "src/pages/Product.tsx:149:11",
 							"data-prohibitions": "[editContent]",
-							className: "text-lg text-foreground/80 leading-relaxed mb-8",
-							children: product.description
+							content: product.description || "",
+							className: "text-lg text-foreground/80 mb-8"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-							"data-uid": "src/pages/Product.tsx:117:11",
+							"data-uid": "src/pages/Product.tsx:154:11",
 							"data-prohibitions": "[]",
 							size: "lg",
 							onClick: () => addItem({
@@ -41050,33 +41161,33 @@ function Product() {
 							}),
 							className: "w-full sm:w-auto h-14",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShoppingCart, {
-								"data-uid": "src/pages/Product.tsx:130:13",
+								"data-uid": "src/pages/Product.tsx:167:13",
 								"data-prohibitions": "[editContent]",
 								className: "w-5 h-5 mr-2"
 							}), " Adicionar ao Projeto"]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							"data-uid": "src/pages/Product.tsx:133:11",
+							"data-uid": "src/pages/Product.tsx:170:11",
 							"data-prohibitions": "[editContent]",
 							className: "mt-10 border-t border-border/50 pt-8",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-									"data-uid": "src/pages/Product.tsx:134:13",
+									"data-uid": "src/pages/Product.tsx:171:13",
 									"data-prohibitions": "[]",
 									className: "text-lg font-semibold flex items-center gap-2 mb-4",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sparkles, {
-										"data-uid": "src/pages/Product.tsx:135:15",
+										"data-uid": "src/pages/Product.tsx:172:15",
 										"data-prohibitions": "[editContent]",
 										className: "w-5 h-5 text-primary"
 									}), " Consultor IA Técnico"]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
-									"data-uid": "src/pages/Product.tsx:137:13",
+									"data-uid": "src/pages/Product.tsx:174:13",
 									"data-prohibitions": "[editContent]",
 									onSubmit: handleAskAI,
 									className: "flex items-center shadow-sm rounded-full border border-border/50 bg-background/50 focus-within:ring-2 focus-within:ring-primary transition-all mb-6",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
-										"data-uid": "src/pages/Product.tsx:141:15",
+										"data-uid": "src/pages/Product.tsx:178:15",
 										"data-prohibitions": "[editContent]",
 										disabled: aiLoading,
 										value: question,
@@ -41084,62 +41195,81 @@ function Product() {
 										placeholder: "Pergunte sobre as especificações...",
 										className: "flex-1 border-0 bg-transparent px-6 py-6 shadow-none focus-visible:ring-0"
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										"data-uid": "src/pages/Product.tsx:148:15",
+										"data-uid": "src/pages/Product.tsx:185:15",
 										"data-prohibitions": "[editContent]",
 										type: "submit",
 										disabled: aiLoading,
 										size: "icon",
 										className: "h-12 w-12 rounded-full bg-primary mr-2",
 										children: aiLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-											"data-uid": "src/pages/Product.tsx:155:19",
+											"data-uid": "src/pages/Product.tsx:192:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5 animate-spin"
 										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-											"data-uid": "src/pages/Product.tsx:157:19",
+											"data-uid": "src/pages/Product.tsx:194:19",
 											"data-prohibitions": "[editContent]",
 											className: "w-5 h-5"
 										})
 									})]
 								}),
 								aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:162:15",
+									"data-uid": "src/pages/Product.tsx:199:15",
 									"data-prohibitions": "[]",
 									className: "text-center py-4 text-sm text-primary flex justify-center items-center gap-2",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoaderCircle, {
-										"data-uid": "src/pages/Product.tsx:163:17",
+										"data-uid": "src/pages/Product.tsx:200:17",
 										"data-prohibitions": "[editContent]",
 										className: "w-4 h-4 animate-spin"
-									}), " Buscando informações técnicas detalhadas..."]
+									}), " Buscando informações técnicas..."]
 								}),
 								aiResponse && !aiLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									"data-uid": "src/pages/Product.tsx:168:15",
+									"data-uid": "src/pages/Product.tsx:204:15",
 									"data-prohibitions": "[editContent]",
 									className: "animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card border border-primary/20 rounded-xl p-5 shadow-sm flex flex-col gap-4",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										"data-uid": "src/pages/Product.tsx:169:17",
-										"data-prohibitions": "[]",
-										className: "flex items-center gap-3",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											"data-uid": "src/pages/Product.tsx:170:19",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											"data-uid": "src/pages/Product.tsx:205:17",
 											"data-prohibitions": "[]",
-											className: "bg-primary/10 p-2 rounded-full",
-											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
-												"data-uid": "src/pages/Product.tsx:171:21",
-												"data-prohibitions": "[editContent]",
-												className: "w-5 h-5 text-primary"
+											className: "flex items-center gap-3",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+												"data-uid": "src/pages/Product.tsx:206:19",
+												"data-prohibitions": "[]",
+												className: "bg-primary/10 p-2 rounded-full",
+												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bot, {
+													"data-uid": "src/pages/Product.tsx:207:21",
+													"data-prohibitions": "[editContent]",
+													className: "w-5 h-5 text-primary"
+												})
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+												"data-uid": "src/pages/Product.tsx:209:19",
+												"data-prohibitions": "[]",
+												className: "font-semibold flex items-center gap-2",
+												children: "My Way Video AI"
+											})]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											"data-uid": "src/pages/Product.tsx:211:17",
+											"data-prohibitions": "[editContent]",
+											className: "text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed",
+											children: aiResponse.message
+										}),
+										aiResponse.type === "not_found" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											"data-uid": "src/pages/Product.tsx:215:19",
+											"data-prohibitions": "[]",
+											className: "pt-4 mt-2 border-t border-border/50",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+												"data-uid": "src/pages/Product.tsx:216:21",
+												"data-prohibitions": "[]",
+												onClick: () => window.open(`https://wa.me/17867161170?text=${encodeURIComponent(`Dúvida técnica sobre o produto ${product.name} (SKU: ${product.sku}): ${question}`)}`, "_blank"),
+												className: "w-full sm:w-auto bg-[#25D366] hover:bg-[#1DA851] text-white",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MessageCircle, {
+													"data-uid": "src/pages/Product.tsx:227:23",
+													"data-prohibitions": "[editContent]",
+													className: "w-4 h-4 mr-2"
+												}), " Consultar Especialista via WhatsApp"]
 											})
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-											"data-uid": "src/pages/Product.tsx:173:19",
-											"data-prohibitions": "[]",
-											className: "font-semibold flex items-center gap-2",
-											children: "My Way Video AI"
-										})]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										"data-uid": "src/pages/Product.tsx:175:17",
-										"data-prohibitions": "[editContent]",
-										className: "text-foreground/90 whitespace-pre-wrap text-sm leading-relaxed",
-										children: aiResponse.message
-									})]
+										})
+									]
 								})
 							]
 						})
@@ -41147,37 +41277,37 @@ function Product() {
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				"data-uid": "src/pages/Product.tsx:183:7",
+				"data-uid": "src/pages/Product.tsx:236:7",
 				"data-prohibitions": "[editContent]",
 				className: "mt-24 max-w-4xl",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					"data-uid": "src/pages/Product.tsx:184:9",
+					"data-uid": "src/pages/Product.tsx:237:9",
 					"data-prohibitions": "[editContent]",
 					className: "flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						"data-uid": "src/pages/Product.tsx:185:11",
+						"data-uid": "src/pages/Product.tsx:238:11",
 						"data-prohibitions": "[]",
 						className: "text-2xl font-bold tracking-tight",
 						children: "Especificações Técnicas"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Product.tsx:186:11",
+						"data-uid": "src/pages/Product.tsx:239:11",
 						"data-prohibitions": "[editContent]",
 						className: "flex items-center gap-3 text-sm bg-muted/50 px-4 py-2 rounded-full border border-border",
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:187:13",
+								"data-uid": "src/pages/Product.tsx:240:13",
 								"data-prohibitions": "[editContent]",
 								className: !isMetric ? "font-semibold text-primary" : "text-muted-foreground",
 								children: "Imperial"
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Switch, {
-								"data-uid": "src/pages/Product.tsx:190:13",
+								"data-uid": "src/pages/Product.tsx:243:13",
 								"data-prohibitions": "[editContent]",
 								checked: isMetric,
 								onCheckedChange: setIsMetric
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"data-uid": "src/pages/Product.tsx:191:13",
+								"data-uid": "src/pages/Product.tsx:244:13",
 								"data-prohibitions": "[editContent]",
 								className: isMetric ? "font-semibold text-primary" : "text-muted-foreground",
 								children: "Métrico"
@@ -41185,7 +41315,7 @@ function Product() {
 						]
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					"data-uid": "src/pages/Product.tsx:196:9",
+					"data-uid": "src/pages/Product.tsx:249:9",
 					"data-prohibitions": "[editContent]",
 					className: "bg-card/30 border border-white/5 rounded-2xl overflow-hidden text-sm",
 					children: [
@@ -41210,16 +41340,16 @@ function Product() {
 							v: displayDimensions(product.dimensions)
 						}
 					].map((s, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						"data-uid": "src/pages/Product.tsx:204:13",
+						"data-uid": "src/pages/Product.tsx:257:13",
 						"data-prohibitions": "[editContent]",
 						className: `flex flex-col sm:flex-row py-3 px-6 ${i % 2 === 0 ? "bg-white/5" : ""}`,
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:208:15",
+							"data-uid": "src/pages/Product.tsx:261:15",
 							"data-prohibitions": "[editContent]",
 							className: "w-48 text-muted-foreground font-medium",
 							children: s.l
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"data-uid": "src/pages/Product.tsx:209:15",
+							"data-uid": "src/pages/Product.tsx:262:15",
 							"data-prohibitions": "[editContent]",
 							className: "font-mono text-foreground",
 							children: s.v || "N/A"
@@ -43157,11 +43287,13 @@ function AdminProductForm({ initialData, manufacturers, onSuccess, onAddManufact
 //#endregion
 //#region src/components/AdminCSVUploader.tsx
 function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
+	const [open, setOpen] = (0, import_react.useState)(false);
 	const [isUploading, setIsUploading] = (0, import_react.useState)(false);
-	const fileInputRef = (0, import_react.useRef)(null);
-	const handleCSVUpload = async (event) => {
-		const file = event.target.files?.[0];
-		if (!file) return;
+	const [mfgId, setMfgId] = (0, import_react.useState)("");
+	const [showMfgDialog, setShowMfgDialog] = (0, import_react.useState)(false);
+	const [file, setFile] = (0, import_react.useState)(null);
+	const processUpload = async () => {
+		if (!file || !mfgId) return;
 		setIsUploading(true);
 		const reader = new FileReader();
 		reader.onload = async (e) => {
@@ -43169,10 +43301,7 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 				const lines = (e.target?.result).split("\n").map((l) => l.trim()).filter(Boolean);
 				if (lines.length < 2) throw new Error("CSV inválido");
 				const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-				const mfgIndex = headers.indexOf("manufacturer");
-				let validProducts = [];
-				let missingManufacturers = /* @__PURE__ */ new Set();
-				const parsedLines = lines.slice(1).map((line) => {
+				const validProducts = lines.slice(1).map((line) => {
 					const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) => v.replace(/^"|"$/g, "").trim());
 					const prod = {};
 					headers.forEach((h, i) => {
@@ -43190,45 +43319,23 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 						else prod[targetKey] = val;
 					});
 					return prod;
-				}).filter((p) => p.name && p.sku);
-				if (mfgIndex !== -1) {
-					const existingMfgNames = new Map(manufacturers.map((m) => [m.name.toLowerCase(), m.id]));
-					parsedLines.forEach((p) => {
-						const mfgName = p.manufacturer;
-						if (mfgName && !existingMfgNames.has(mfgName.toLowerCase())) missingManufacturers.add(mfgName);
-					});
-					const newMfgMap = /* @__PURE__ */ new Map();
-					if (missingManufacturers.size > 0) {
-						const newMfgsToInsert = Array.from(missingManufacturers).map((name) => ({ name }));
-						const { data: insertedMfgs, error: mfgError } = await supabase.from("manufacturers").insert(newMfgsToInsert).select();
-						if (mfgError) throw new Error(`Erro ao criar fabricantes: ${mfgError.message}`);
-						if (insertedMfgs) {
-							insertedMfgs.forEach((m) => newMfgMap.set(m.name.toLowerCase(), m.id));
-							onAddManufacturer();
-						}
-					}
-					validProducts = parsedLines.map((p) => {
-						const mfgName = p.manufacturer;
-						let mfgId = null;
-						if (mfgName) {
-							const lowerName = mfgName.toLowerCase();
-							mfgId = existingMfgNames.get(lowerName) || newMfgMap.get(lowerName);
-						}
-						const { manufacturer, ...rest } = p;
-						return {
-							...rest,
-							manufacturer_id: mfgId
-						};
-					});
-				} else validProducts = parsedLines;
-				if (validProducts.length === 0) throw new Error("Nenhum produto válido encontrado. Certifique-se de que \"name\" e \"sku\" estão preenchidos.");
+				}).filter((p) => p.name && p.sku).map((p) => {
+					const { manufacturer, manufacturer_id, ...rest } = p;
+					return {
+						...rest,
+						manufacturer_id: mfgId
+					};
+				});
+				if (validProducts.length === 0) throw new Error("Nenhum produto válido encontrado. Preencha \"name\" e \"sku\".");
 				const { error } = await supabase.from("products").upsert(validProducts, { onConflict: "manufacturer_id,sku" });
 				if (error) throw error;
 				toast$1({
 					title: "Sucesso",
 					description: `${validProducts.length} produtos importados.`
 				});
-				if (fileInputRef.current) fileInputRef.current.value = "";
+				setFile(null);
+				setMfgId("");
+				setOpen(false);
 				onSuccess();
 			} catch (err) {
 				toast$1({
@@ -43242,36 +43349,152 @@ function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }) {
 		};
 		reader.readAsText(file);
 	};
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"data-uid": "src/components/AdminCSVUploader.tsx:126:5",
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dialog, {
+		"data-uid": "src/components/AdminCSVUploader.tsx:110:7",
 		"data-prohibitions": "[editContent]",
-		className: "flex items-center gap-2",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			"data-uid": "src/components/AdminCSVUploader.tsx:127:7",
-			"data-prohibitions": "[editContent]",
-			className: "relative overflow-hidden inline-block ml-2",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
-				"data-uid": "src/components/AdminCSVUploader.tsx:128:9",
-				"data-prohibitions": "[editContent]",
+		open,
+		onOpenChange: setOpen,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTrigger, {
+			"data-uid": "src/components/AdminCSVUploader.tsx:111:9",
+			"data-prohibitions": "[]",
+			asChild: true,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+				"data-uid": "src/components/AdminCSVUploader.tsx:112:11",
+				"data-prohibitions": "[]",
 				variant: "secondary",
-				disabled: isUploading,
-				onClick: () => fileInputRef.current?.click(),
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Upload, {
-					"data-uid": "src/components/AdminCSVUploader.tsx:133:11",
+					"data-uid": "src/components/AdminCSVUploader.tsx:113:13",
 					"data-prohibitions": "[editContent]",
 					className: "w-4 h-4 mr-2"
-				}), isUploading ? "Processando..." : "Importar CSV"]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-				"data-uid": "src/components/AdminCSVUploader.tsx:136:9",
-				"data-prohibitions": "[editContent]",
-				ref: fileInputRef,
-				type: "file",
-				accept: ".csv",
-				onChange: handleCSVUpload,
-				className: "hidden"
-			})]
-		})
-	});
+				}), "Importar CSV"]
+			})
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(DialogContent, {
+			"data-uid": "src/components/AdminCSVUploader.tsx:117:9",
+			"data-prohibitions": "[editContent]",
+			className: "sm:max-w-md bg-card border-white/10",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogHeader, {
+					"data-uid": "src/components/AdminCSVUploader.tsx:118:11",
+					"data-prohibitions": "[]",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DialogTitle, {
+						"data-uid": "src/components/AdminCSVUploader.tsx:119:13",
+						"data-prohibitions": "[]",
+						children: "Importar Catálogo"
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/AdminCSVUploader.tsx:121:11",
+					"data-prohibitions": "[editContent]",
+					className: "space-y-6 py-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/AdminCSVUploader.tsx:122:13",
+						"data-prohibitions": "[editContent]",
+						className: "space-y-2",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$1, {
+								"data-uid": "src/components/AdminCSVUploader.tsx:123:15",
+								"data-prohibitions": "[]",
+								children: "1. Selecione o Fabricante"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								"data-uid": "src/components/AdminCSVUploader.tsx:124:15",
+								"data-prohibitions": "[editContent]",
+								className: "flex gap-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Select, {
+									"data-uid": "src/components/AdminCSVUploader.tsx:125:17",
+									"data-prohibitions": "[editContent]",
+									value: mfgId,
+									onValueChange: setMfgId,
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectTrigger, {
+										"data-uid": "src/components/AdminCSVUploader.tsx:126:19",
+										"data-prohibitions": "[]",
+										className: "bg-background/50 border-white/10 flex-1",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectValue, {
+											"data-uid": "src/components/AdminCSVUploader.tsx:127:21",
+											"data-prohibitions": "[editContent]",
+											placeholder: "Escolha um fabricante..."
+										})
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectContent, {
+										"data-uid": "src/components/AdminCSVUploader.tsx:129:19",
+										"data-prohibitions": "[editContent]",
+										children: manufacturers.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SelectItem, {
+											"data-uid": "src/components/AdminCSVUploader.tsx:131:23",
+											"data-prohibitions": "[editContent]",
+											value: m.id,
+											children: m.name
+										}, m.id))
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+									"data-uid": "src/components/AdminCSVUploader.tsx:137:17",
+									"data-prohibitions": "[]",
+									type: "button",
+									variant: "outline",
+									size: "icon",
+									onClick: () => setShowMfgDialog(true),
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {
+										"data-uid": "src/components/AdminCSVUploader.tsx:143:19",
+										"data-prohibitions": "[editContent]",
+										className: "w-4 h-4"
+									})
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								"data-uid": "src/components/AdminCSVUploader.tsx:146:15",
+								"data-prohibitions": "[]",
+								className: "text-xs text-muted-foreground",
+								children: "Todos os produtos deste CSV serão vinculados a esta marca."
+							})
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						"data-uid": "src/components/AdminCSVUploader.tsx:151:13",
+						"data-prohibitions": "[]",
+						className: "space-y-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label$1, {
+							"data-uid": "src/components/AdminCSVUploader.tsx:152:15",
+							"data-prohibitions": "[]",
+							children: "2. Selecione o Arquivo CSV"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
+							"data-uid": "src/components/AdminCSVUploader.tsx:153:15",
+							"data-prohibitions": "[editContent]",
+							type: "file",
+							accept: ".csv",
+							onChange: (e) => setFile(e.target.files?.[0] || null),
+							className: "bg-background/50 cursor-pointer file:cursor-pointer"
+						})]
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					"data-uid": "src/components/AdminCSVUploader.tsx:161:11",
+					"data-prohibitions": "[editContent]",
+					className: "flex justify-end gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						"data-uid": "src/components/AdminCSVUploader.tsx:162:13",
+						"data-prohibitions": "[]",
+						variant: "ghost",
+						onClick: () => setOpen(false),
+						disabled: isUploading,
+						children: "Cancelar"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+						"data-uid": "src/components/AdminCSVUploader.tsx:165:13",
+						"data-prohibitions": "[editContent]",
+						onClick: processUpload,
+						disabled: isUploading || !file || !mfgId,
+						children: isUploading ? "Processando..." : "Importar Produtos"
+					})]
+				})
+			]
+		})]
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminManufacturerDialog, {
+		"data-uid": "src/components/AdminCSVUploader.tsx:172:7",
+		"data-prohibitions": "[editContent]",
+		open: showMfgDialog,
+		onOpenChange: setShowMfgDialog,
+		onSuccess: (id) => {
+			onAddManufacturer();
+			setMfgId(id);
+			setShowMfgDialog(false);
+		}
+	})] });
 }
 //#endregion
 //#region src/pages/Admin.tsx
@@ -43715,33 +43938,54 @@ function Admin() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TableCell, {
 									"data-uid": "src/pages/Admin.tsx:249:17",
 									"data-prohibitions": "[]",
-									className: "text-right",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										"data-uid": "src/pages/Admin.tsx:250:19",
-										"data-prohibitions": "[]",
-										variant: "ghost",
-										size: "icon",
-										onClick: () => {
-											setEditingProduct(p);
-											setIsDialogOpen(true);
-										},
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SquarePen, {
-											"data-uid": "src/pages/Admin.tsx:258:21",
-											"data-prohibitions": "[editContent]",
-											className: "w-4 h-4 text-muted-foreground hover:text-white"
+									className: "text-right whitespace-nowrap",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+											"data-uid": "src/pages/Admin.tsx:250:19",
+											"data-prohibitions": "[]",
+											to: `/product/${p.id}`,
+											target: "_blank",
+											title: "Ver Página Pública",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+												"data-uid": "src/pages/Admin.tsx:251:21",
+												"data-prohibitions": "[]",
+												variant: "ghost",
+												size: "icon",
+												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, {
+													"data-uid": "src/pages/Admin.tsx:252:23",
+													"data-prohibitions": "[editContent]",
+													className: "w-4 h-4 text-muted-foreground hover:text-white"
+												})
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											"data-uid": "src/pages/Admin.tsx:255:19",
+											"data-prohibitions": "[]",
+											variant: "ghost",
+											size: "icon",
+											onClick: () => {
+												setEditingProduct(p);
+												setIsDialogOpen(true);
+											},
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SquarePen, {
+												"data-uid": "src/pages/Admin.tsx:263:21",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4 text-muted-foreground hover:text-white"
+											})
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+											"data-uid": "src/pages/Admin.tsx:265:19",
+											"data-prohibitions": "[]",
+											variant: "ghost",
+											size: "icon",
+											onClick: () => handleDelete(p.id),
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
+												"data-uid": "src/pages/Admin.tsx:266:21",
+												"data-prohibitions": "[editContent]",
+												className: "w-4 h-4 text-muted-foreground hover:text-destructive"
+											})
 										})
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-										"data-uid": "src/pages/Admin.tsx:260:19",
-										"data-prohibitions": "[]",
-										variant: "ghost",
-										size: "icon",
-										onClick: () => handleDelete(p.id),
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {
-											"data-uid": "src/pages/Admin.tsx:261:21",
-											"data-prohibitions": "[editContent]",
-											className: "w-4 h-4 text-muted-foreground hover:text-destructive"
-										})
-									})]
+									]
 								})
 							]
 						}, p.id))
@@ -44216,4 +44460,4 @@ var App = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AuthProvider, {
 }));
 //#endregion
 
-//# sourceMappingURL=index-ByEE6mh9.js.map
+//# sourceMappingURL=index-DB1KGxkh.js.map

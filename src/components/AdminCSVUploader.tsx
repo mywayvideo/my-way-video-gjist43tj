@@ -1,9 +1,26 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Upload } from 'lucide-react'
+import { Upload, Plus } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { Manufacturer } from '@/types'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { AdminManufacturerDialog } from './AdminManufacturerDialog'
 
 interface Props {
   manufacturers: Manufacturer[]
@@ -12,12 +29,14 @@ interface Props {
 }
 
 export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }: Props) {
+  const [open, setOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [mfgId, setMfgId] = useState<string>('')
+  const [showMfgDialog, setShowMfgDialog] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
 
-  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const processUpload = async () => {
+    if (!file || !mfgId) return
 
     setIsUploading(true)
     const reader = new FileReader()
@@ -31,10 +50,6 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         if (lines.length < 2) throw new Error('CSV inválido')
 
         const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
-        const mfgIndex = headers.indexOf('manufacturer')
-
-        let validProducts: any[] = []
-        let missingManufacturers = new Set<string>()
 
         const parsedLines = lines
           .slice(1)
@@ -61,48 +76,14 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           })
           .filter((p) => p.name && p.sku)
 
-        if (mfgIndex !== -1) {
-          const existingMfgNames = new Map(manufacturers.map((m) => [m.name.toLowerCase(), m.id]))
-          parsedLines.forEach((p) => {
-            const mfgName = p.manufacturer
-            if (mfgName && !existingMfgNames.has(mfgName.toLowerCase())) {
-              missingManufacturers.add(mfgName)
-            }
-          })
-
-          const newMfgMap = new Map<string, string>()
-          if (missingManufacturers.size > 0) {
-            const newMfgsToInsert = Array.from(missingManufacturers).map((name) => ({ name }))
-            const { data: insertedMfgs, error: mfgError } = await supabase
-              .from('manufacturers')
-              .insert(newMfgsToInsert)
-              .select()
-
-            if (mfgError) throw new Error(`Erro ao criar fabricantes: ${mfgError.message}`)
-            if (insertedMfgs) {
-              insertedMfgs.forEach((m) => newMfgMap.set(m.name.toLowerCase(), m.id))
-              onAddManufacturer()
-            }
-          }
-
-          validProducts = parsedLines.map((p) => {
-            const mfgName = p.manufacturer
-            let mfgId = null
-            if (mfgName) {
-              const lowerName = mfgName.toLowerCase()
-              mfgId = existingMfgNames.get(lowerName) || newMfgMap.get(lowerName)
-            }
-            const { manufacturer, ...rest } = p
-            return { ...rest, manufacturer_id: mfgId }
-          })
-        } else {
-          validProducts = parsedLines
-        }
+        // Assign the selected manufacturer to ALL products in the CSV
+        const validProducts = parsedLines.map((p) => {
+          const { manufacturer, manufacturer_id, ...rest } = p
+          return { ...rest, manufacturer_id: mfgId }
+        })
 
         if (validProducts.length === 0) {
-          throw new Error(
-            'Nenhum produto válido encontrado. Certifique-se de que "name" e "sku" estão preenchidos.',
-          )
+          throw new Error('Nenhum produto válido encontrado. Preencha "name" e "sku".')
         }
 
         const { error } = await supabase
@@ -111,7 +92,9 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         if (error) throw error
 
         toast({ title: 'Sucesso', description: `${validProducts.length} produtos importados.` })
-        if (fileInputRef.current) fileInputRef.current.value = ''
+        setFile(null)
+        setMfgId('')
+        setOpen(false)
         onSuccess()
       } catch (err: any) {
         toast({ title: 'Erro de Importação', description: err.message, variant: 'destructive' })
@@ -123,24 +106,78 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative overflow-hidden inline-block ml-2">
-        <Button
-          variant="secondary"
-          disabled={isUploading}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          {isUploading ? 'Processando...' : 'Importar CSV'}
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleCSVUpload}
-          className="hidden"
-        />
-      </div>
-    </div>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="secondary">
+            <Upload className="w-4 h-4 mr-2" />
+            Importar CSV
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>Importar Catálogo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label>1. Selecione o Fabricante</Label>
+              <div className="flex gap-2">
+                <Select value={mfgId} onValueChange={setMfgId}>
+                  <SelectTrigger className="bg-background/50 border-white/10 flex-1">
+                    <SelectValue placeholder="Escolha um fabricante..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {manufacturers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowMfgDialog(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Todos os produtos deste CSV serão vinculados a esta marca.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>2. Selecione o Arquivo CSV</Label>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="bg-background/50 cursor-pointer file:cursor-pointer"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)} disabled={isUploading}>
+              Cancelar
+            </Button>
+            <Button onClick={processUpload} disabled={isUploading || !file || !mfgId}>
+              {isUploading ? 'Processando...' : 'Importar Produtos'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AdminManufacturerDialog
+        open={showMfgDialog}
+        onOpenChange={setShowMfgDialog}
+        onSuccess={(id) => {
+          onAddManufacturer()
+          setMfgId(id)
+          setShowMfgDialog(false)
+        }}
+      />
+    </>
   )
 }

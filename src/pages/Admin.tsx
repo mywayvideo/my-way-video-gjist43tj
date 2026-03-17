@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Box, Package, ArrowLeft, Search, ImageIcon } from 'lucide-react'
+import { Plus, Edit, Trash2, Box, Package, ArrowLeft, Search, ImageIcon, Eye } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
 import {
@@ -246,7 +246,12 @@ export default function Admin() {
                   ${p.price_usd} / ${p.price_brl}
                 </TableCell>
                 <TableCell className="font-mono text-sm text-amber-500">${p.price_cost}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right whitespace-nowrap">
+                  <Link to={`/product/${p.id}`} target="_blank" title="Ver Página Pública">
+                    <Button variant="ghost" size="icon">
+                      <Eye className="w-4 h-4 text-muted-foreground hover:text-white" />
+                    </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="icon"

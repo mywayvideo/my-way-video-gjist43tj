@@ -984,10 +984,6 @@ section[aria-label='Notifications alt+T'] {
   display: block;
 }
 
-.inline-block{
-  display: inline-block;
-}
-
 .flex{
   display: flex;
 }
@@ -1533,6 +1529,10 @@ section[aria-label='Notifications alt+T'] {
           user-select: none;
 }
 
+.list-disc{
+  list-style-type: disc;
+}
+
 .list-none{
   list-style-type: none;
 }
@@ -1647,6 +1647,12 @@ section[aria-label='Notifications alt+T'] {
   --tw-space-x-reverse: 0;
   margin-right: calc(1.5rem * var(--tw-space-x-reverse));
   margin-left: calc(1.5rem * calc(1 - var(--tw-space-x-reverse)));
+}
+
+.space-y-1 > :not([hidden]) ~ :not([hidden]){
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.25rem * var(--tw-space-y-reverse));
 }
 
 .space-y-1\.5 > :not([hidden]) ~ :not([hidden]){
@@ -2241,6 +2247,10 @@ section[aria-label='Notifications alt+T'] {
   padding-left: 1rem;
 }
 
+.pl-5{
+  padding-left: 1.25rem;
+}
+
 .pl-6{
   padding-left: 1.5rem;
 }
@@ -2832,6 +2842,10 @@ section[aria-label='Notifications alt+T'] {
 
 .\[--cell-size\:2rem\]{
   --cell-size: 2rem;
+}
+
+.file\:cursor-pointer::file-selector-button{
+  cursor: pointer;
 }
 
 .file\:border-0::file-selector-button{

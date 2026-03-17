@@ -3,9 +3,11 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, PackageSearch } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
+import { useState } from 'react'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
+  const [imgError, setImgError] = useState(false)
 
   return (
     <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
@@ -14,16 +16,17 @@ export function ProductCard({ product }: { product: any }) {
           to={`/product/${product.id}`}
           className="aspect-square overflow-hidden bg-muted/30 flex items-center justify-center"
         >
-          {product.image_url ? (
+          {product.image_url && !imgError ? (
             <img
               src={product.image_url}
               alt={product.name}
+              onError={() => setImgError(true)}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-muted-foreground/50 h-full w-full bg-muted/20">
               <PackageSearch className="w-12 h-12 mb-2" />
-              <span className="text-xs font-medium">Sem imagem</span>
+              <span className="text-xs font-medium">Imagem Indisponível</span>
             </div>
           )}
         </Link>

@@ -57,7 +57,7 @@ export function Header() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
               type="text"
-              placeholder="Pesquise produtos ou pergunte à IA..."
+              placeholder="O que você precisa? Pesquise produtos ou pergunte a IA."
               className="w-full pl-10 pr-10 rounded-full bg-muted/50 border-transparent focus-visible:bg-background transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

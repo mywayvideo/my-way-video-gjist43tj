@@ -3,15 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/ProductCard'
 import { Button } from '@/components/ui/button'
-import {
-  Loader2,
-  MessageCircle,
-  Bot,
-  Search as SearchIcon,
-  Video,
-  AlertCircle,
-  Sparkles,
-} from 'lucide-react'
+import { Loader2, MessageCircle, Bot, Search as SearchIcon, Sparkles } from 'lucide-react'
 import { AIPrompt } from '@/components/AIPrompt'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 
@@ -76,9 +68,6 @@ export default function Search() {
             <h3 className="text-xl font-semibold text-primary animate-pulse">
               O Agente de IA está pesquisando para fornecer a melhor resposta possível...
             </h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Analisando especificações de hardware, base B&H Photo Video e catálogo interno.
-            </p>
           </div>
         </div>
       )}
@@ -106,7 +95,7 @@ export default function Search() {
                     className="bg-[#25D366] hover:bg-[#1DA851] text-white"
                     onClick={() =>
                       window.open(
-                        `https://wa.me/17867161170?text=${encodeURIComponent(`Dúvida: "${query}"`)}`,
+                        `https://wa.me/17867161170?text=${encodeURIComponent(`Dúvida técnica: "${query}"`)}`,
                         '_blank',
                       )
                     }
