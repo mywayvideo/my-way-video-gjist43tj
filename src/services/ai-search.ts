@@ -1,9 +1,14 @@
 import { supabase } from '@/lib/supabase/client'
 
 export type AISearchResponse = {
-  type: 'institutional' | 'products' | 'technical' | 'not_found'
   message: string
-  related_product_ids: string[]
+  referenced_internal_products: string[]
+  should_show_whatsapp_button: boolean
+  whatsapp_reason?: string
+  price_context: string
+  used_web_search: boolean
+  confidence_level: 'high' | 'medium' | 'low'
+  type?: 'institutional' | 'products' | 'technical' | 'not_found'
 }
 
 export const performAISearch = async (
