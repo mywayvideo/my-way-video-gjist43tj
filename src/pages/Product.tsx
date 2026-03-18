@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +35,7 @@ type Message = {
 
 export default function Product() {
   const { id } = useParams()
+  const location = useLocation()
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<ProductType | null>(null)
 
@@ -59,7 +60,7 @@ export default function Product() {
   useEffect(() => {
     if (!id) return
 
-    // Dynamic Chat Context Management: Reset state on product change
+    // Dynamic Chat Context Management: Reset state on product change (or URL change)
     setProduct(null)
     setQuestion('')
     setMessages([])
@@ -83,7 +84,7 @@ export default function Product() {
         abortControllerRef.current.abort()
       }
     }
-  }, [id])
+  }, [id, location.pathname, location.search])
 
   const handleAskAI = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -187,6 +188,40 @@ export default function Product() {
     return `${d} in`
   }
 
+  const checkWhatsAppTrigger = (msg: Message, currentProduct: ProductType) => {
+    if (!msg.aiData) return false
+    const d = msg.aiData
+
+    if (d.should_show_whatsapp_button) return true
+    if (d.confidence_level === 'low') return true
+
+    if (
+      d.used_web_search &&
+      (!d.referenced_internal_products || d.referenced_internal_products.length === 0)
+    )
+      return true
+
+    const contentLower = msg.content.toLowerCase()
+    if (
+      contentLower.includes('não encontrei') ||
+      contentLower.includes('consulte o fabricante') ||
+      contentLower.includes('não foi possível confirmar')
+    ) {
+      return true
+    }
+
+    const catLower = (currentProduct.category || '').toLowerCase()
+    if (
+      catLower.includes('cinema') ||
+      catLower.includes('broadcast') ||
+      catLower.includes('workflow')
+    ) {
+      return true
+    }
+
+    return false
+  }
+
   if (!product)
     return (
       <div className="p-12 text-center text-muted-foreground flex items-center justify-center min-h-[60vh]">
@@ -204,7 +239,6 @@ export default function Product() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-        {/* Left Column: Image & Specs */}
         <div className="space-y-8">
           <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
             {product.image_url && !imgError ? (
@@ -255,7 +289,6 @@ export default function Product() {
           </div>
         </div>
 
-        {/* Right Column: Pricing, Cart & Chat */}
         <div className="flex flex-col">
           <span className="text-primary font-mono uppercase tracking-widest text-xs font-bold mb-2">
             {product.manufacturer?.name || product.category || 'Equipamento Profissional'}
@@ -320,7 +353,11 @@ export default function Product() {
                       })}
                     </p>
                     <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
-                      Referencial dinâmico sujeito a variação cambial.
+                      Referencial dinâmico sujeito a variação cambial. (Base:{' '}
+                      {brlData.type === 'percentage'
+                        ? `${(brlData.val * 100).toFixed(0)}%`
+                        : `+${brlData.val} BRL`}{' '}
+                      spread)
                     </p>
                   </div>
                 )}
@@ -344,7 +381,6 @@ export default function Product() {
             <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
           </Button>
 
-          {/* AI Chat Section */}
           <div className="border border-border/50 rounded-2xl bg-card shadow-sm flex flex-col flex-1 min-h-[400px]">
             <div className="p-5 border-b border-border/50 flex items-center gap-3 bg-muted/20 rounded-t-2xl">
               <div className="bg-primary/10 p-2 rounded-full ring-1 ring-primary/20">
@@ -368,78 +404,80 @@ export default function Product() {
                 </div>
               )}
 
-              {messages.map((msg, idx) => (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                >
-                  {msg.role === 'ai' && (
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
-                      Assistente
-                    </span>
-                  )}
-                  <div
-                    className={`p-4 rounded-2xl text-sm leading-relaxed max-w-[90%] sm:max-w-[85%] shadow-sm ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                        : 'bg-background border border-border/60 rounded-tl-sm'
-                    }`}
-                  >
-                    {msg.isLoading ? (
-                      <div className="flex items-center gap-3 opacity-70 font-mono text-xs">
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" /> Pesquisando
-                        datasheets...
-                      </div>
-                    ) : (
-                      <>
-                        {msg.role === 'user' ? (
-                          <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
-                        ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
-                            <MarkdownRenderer content={msg.content} />
+              {messages.map((msg, idx) => {
+                const showWhatsApp = checkWhatsAppTrigger(msg, product)
 
-                            {/* Render referenced internal products inside chat context */}
-                            {msg.aiData?.referenced_internal_products &&
-                              msg.aiData.referenced_internal_products.length > 0 && (
-                                <div className="mt-5 border-t border-border/50 pt-4">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-                                    Soluções Mencionadas:
-                                  </span>
-                                  <ReferencedProducts
-                                    ids={msg.aiData.referenced_internal_products}
-                                  />
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                  >
+                    {msg.role === 'ai' && (
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
+                        Assistente
+                      </span>
+                    )}
+                    <div
+                      className={`p-4 rounded-2xl text-sm leading-relaxed max-w-[90%] sm:max-w-[85%] shadow-sm ${
+                        msg.role === 'user'
+                          ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                          : 'bg-background border border-border/60 rounded-tl-sm'
+                      }`}
+                    >
+                      {msg.isLoading ? (
+                        <div className="flex items-center gap-3 opacity-70 font-mono text-xs">
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" /> Pesquisando
+                          datasheets...
+                        </div>
+                      ) : (
+                        <>
+                          {msg.role === 'user' ? (
+                            <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
+                          ) : (
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
+                              <MarkdownRenderer content={msg.content} />
+
+                              {msg.aiData?.referenced_internal_products &&
+                                msg.aiData.referenced_internal_products.length > 0 && (
+                                  <div className="mt-5 border-t border-border/50 pt-4">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+                                      Soluções Mencionadas:
+                                    </span>
+                                    <ReferencedProducts
+                                      ids={msg.aiData.referenced_internal_products}
+                                    />
+                                  </div>
+                                )}
+
+                              {showWhatsApp && (
+                                <div className="mt-5 pt-4 border-t border-border/50">
+                                  {msg.aiData?.whatsapp_reason && (
+                                    <p className="text-xs text-muted-foreground mb-3 font-medium border-l-2 border-primary/40 pl-2">
+                                      {msg.aiData.whatsapp_reason}
+                                    </p>
+                                  )}
+                                  <Button
+                                    onClick={() =>
+                                      window.open(
+                                        `https://wa.me/17867161170?text=${encodeURIComponent(`[Engenharia] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${messages[idx - 1]?.content || ''}`)}`,
+                                        '_blank',
+                                      )
+                                    }
+                                    className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-10"
+                                  >
+                                    <MessageCircle className="w-4 h-4 mr-2" /> Validar com
+                                    Engenheiro Humano
+                                  </Button>
                                 </div>
                               )}
-
-                            {/* Conditional WhatsApp Trigger */}
-                            {msg.aiData?.should_show_whatsapp_button && (
-                              <div className="mt-5 pt-4 border-t border-border/50">
-                                {msg.aiData.whatsapp_reason && (
-                                  <p className="text-xs text-muted-foreground mb-3 font-medium border-l-2 border-primary/40 pl-2">
-                                    {msg.aiData.whatsapp_reason}
-                                  </p>
-                                )}
-                                <Button
-                                  onClick={() =>
-                                    window.open(
-                                      `https://wa.me/17867161170?text=${encodeURIComponent(`[Engenharia] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${messages[idx - 1]?.content || ''}`)}`,
-                                      '_blank',
-                                    )
-                                  }
-                                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-10"
-                                >
-                                  <MessageCircle className="w-4 h-4 mr-2" /> Validar com Engenheiro
-                                  Humano
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="p-4 border-t border-border/50 bg-muted/10 rounded-b-2xl">
