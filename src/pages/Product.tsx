@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -19,17 +19,31 @@ import {
   Calculator,
   ChevronRight,
   X,
+  Send,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { ReferencedProducts } from '@/components/ReferencedProducts'
+
+type Message = {
+  id: string
+  role: 'user' | 'ai'
+  content: string
+  aiData?: AISearchResponse
+  isLoading?: boolean
+}
 
 export default function Product() {
   const { id } = useParams()
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<ProductType | null>(null)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiResponse, setAiResponse] = useState<AISearchResponse | null>(null)
+
+  // Chat State
+  const [messages, setMessages] = useState<Message[]>([])
   const [question, setQuestion] = useState('')
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   const [isMetric, setIsMetric] = useState(false)
   const [imgError, setImgError] = useState(false)
 
@@ -44,12 +58,18 @@ export default function Product() {
 
   useEffect(() => {
     if (!id) return
+
+    // Dynamic Chat Context Management: Reset state on product change
     setProduct(null)
     setQuestion('')
-    setAiResponse(null)
-    setAiLoading(false)
+    setMessages([])
+    setIsAiLoading(false)
     setBrlData(null)
     setImgError(false)
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
 
     supabase
       .from('products')
@@ -57,27 +77,73 @@ export default function Product() {
       .eq('id', id)
       .single()
       .then(({ data }) => data && setProduct(data))
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
   }, [id])
 
   const handleAskAI = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!question.trim() || !product) return
-    setAiLoading(true)
-    setAiResponse(null)
+    if (!question.trim() || !product || isAiLoading) return
+
+    const userQ = question.trim()
+    setQuestion('')
+    setIsAiLoading(true)
+
+    const newMessageId = Date.now().toString()
+    const aiMessageId = `ai-${newMessageId}`
+
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${newMessageId}`, role: 'user', content: userQ },
+      { id: aiMessageId, role: 'ai', content: '', isLoading: true },
+    ])
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+
     try {
       const { data, error } = await performAISearch(
-        `[Contexto do Produto: ${product.name} - SKU: ${product.sku}] ${question}`,
+        `[Contexto do Produto Atual: ${product.name} - SKU: ${product.sku}] Pergunta: ${userQ}`,
+        abortControllerRef.current.signal,
       )
+
       if (error) throw error
-      if (data) setAiResponse(data)
-    } catch {
+
+      if (data) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId
+              ? { ...m, content: data.message, aiData: data, isLoading: false }
+              : m,
+          ),
+        )
+      }
+    } catch (err: any) {
+      if (err.message === 'Aborted') return
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiMessageId
+            ? {
+                ...m,
+                content: 'Ocorreu um erro ao consultar o especialista. Tente novamente.',
+                isLoading: false,
+              }
+            : m,
+        ),
+      )
       toast({
         title: 'Erro',
-        description: 'Falha ao consultar o Especialista IA.',
+        description: 'Falha ao comunicar com o Assistente.',
         variant: 'destructive',
       })
     } finally {
-      setAiLoading(false)
+      setIsAiLoading(false)
     }
   }
 
@@ -129,7 +195,7 @@ export default function Product() {
     )
 
   return (
-    <div className="container mx-auto px-4 py-8 animate-fade-in">
+    <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
       <div className="text-sm text-muted-foreground mb-8 font-mono">
         <Link to="/" className="hover:text-primary transition-colors">
           Catálogo
@@ -137,37 +203,68 @@ export default function Product() {
         / <span className="text-foreground ml-2">{product.name}</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16">
-        <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
-          {product.image_url && !imgError ? (
-            <img
-              src={product.image_url}
-              alt={product.name}
-              onError={() => setImgError(true)}
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full bg-white/5 rounded-xl border border-white/5 border-dashed">
-              <PackageSearch className="w-20 h-20 mb-6 opacity-30 drop-shadow-md" />
-              <span className="text-sm font-semibold tracking-widest uppercase opacity-70">
-                Imagem Indisponível
-              </span>
-              <span className="text-xs mt-2 opacity-50 text-center max-w-[220px]">
-                A foto oficial deste equipamento não foi carregada no sistema.
-              </span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+        {/* Left Column: Image & Specs */}
+        <div className="space-y-8">
+          <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
+            {product.image_url && !imgError ? (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                onError={() => setImgError(true)}
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full bg-white/5 rounded-xl border border-white/5 border-dashed">
+                <PackageSearch className="w-20 h-20 mb-6 opacity-30 drop-shadow-md" />
+                <span className="text-sm font-semibold tracking-widest uppercase opacity-70">
+                  Imagem Indisponível
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden text-sm shadow-sm">
+            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
+              <h3 className="font-bold text-foreground">Especificações Base</h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className={!isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                  IMP
+                </span>
+                <Switch checked={isMetric} onCheckedChange={setIsMetric} className="scale-75" />
+                <span className={isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                  MET
+                </span>
+              </div>
             </div>
-          )}
+            {[
+              { l: 'Marca', v: product.manufacturer?.name },
+              { l: 'Código (SKU)', v: product.sku },
+              { l: 'Categoria', v: product.category },
+              { l: 'Peso', v: displayWeight(product.weight) },
+              { l: 'Dimensões', v: displayDimensions(product.dimensions) },
+            ].map((s, i) => (
+              <div
+                key={s.l}
+                className={`flex justify-between py-3 px-4 hover:bg-muted/30 transition-colors ${i !== 0 ? 'border-t border-border/30' : ''}`}
+              >
+                <span className="text-muted-foreground font-medium">{s.l}</span>
+                <span className="font-mono text-foreground">{s.v || '-'}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* Right Column: Pricing, Cart & Chat */}
         <div className="flex flex-col">
           <span className="text-primary font-mono uppercase tracking-widest text-xs font-bold mb-2">
-            {product.manufacturer?.name || product.category || 'Geral'}
+            {product.manufacturer?.name || product.category || 'Equipamento Profissional'}
           </span>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-8 leading-tight">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 leading-tight">
             {product.name}
           </h1>
 
-          <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-8 relative overflow-hidden">
+          <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
             <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
               <Globe className="w-32 h-32" />
             </div>
@@ -206,7 +303,7 @@ export default function Product() {
                   <div className="animate-in fade-in slide-in-from-top-2 bg-gradient-to-r from-green-500/10 to-transparent rounded-xl p-5 border border-green-500/20">
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
-                        Estimativa Brasil (BRL)
+                        Estimativa BRL
                       </span>
                       <button
                         onClick={() => setBrlData(null)}
@@ -222,31 +319,13 @@ export default function Product() {
                         maximumFractionDigits: 2,
                       })}
                     </p>
-                    <div className="text-[10px] text-muted-foreground/80 space-y-1 font-mono leading-relaxed">
-                      <p>
-                        Cotação Comercial: R$ {brlData.rate.toFixed(3)} | Regra Fiscal:{' '}
-                        {brlData.type === 'fixed'
-                          ? `+ R$ ${brlData.val.toFixed(2)}`
-                          : `+ ${(brlData.val * 100).toFixed(1)}%`}
-                      </p>
-                      <p className="text-foreground/60 font-sans mt-2 leading-snug border-l-2 border-green-500/50 pl-2">
-                        * Referencial dinâmico. Variações cambiais e tributárias aplicam-se no
-                        momento do fechamento.
-                      </p>
-                    </div>
+                    <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
+                      Referencial dinâmico sujeito a variação cambial.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="prose prose-sm dark:prose-invert mb-8 text-foreground/80">
-            <MarkdownRenderer
-              content={
-                product.description ||
-                '*Nenhuma descrição detalhada disponível para este equipamento.*'
-              }
-            />
           </div>
 
           <Button
@@ -260,134 +339,132 @@ export default function Product() {
                 quantity: 1,
               })
             }
-            className="w-full sm:w-auto h-14 text-base font-semibold shadow-lg hover:shadow-primary/20 transition-all hover:-translate-y-0.5"
+            className="w-full h-14 text-base font-semibold shadow-lg hover:shadow-primary/20 transition-all hover:-translate-y-0.5 mb-10"
           >
             <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
           </Button>
 
-          <div className="mt-12 border-t border-border/50 pt-10">
-            <h3 className="text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
-              <Sparkles className="w-5 h-5 text-primary animate-pulse" /> Consultor IA Técnico
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Dúvidas sobre compatibilidade, carga, conectividade ou fluxo de trabalho? Pergunte ao
-              nosso especialista.
-            </p>
-
-            <form
-              onSubmit={handleAskAI}
-              className="flex items-center shadow-sm rounded-full border border-primary/20 bg-background/50 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all mb-6 group"
-            >
-              <Input
-                disabled={aiLoading}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ex: Quais codecs suportados? Qual a carga máxima?"
-                className="flex-1 border-0 bg-transparent px-6 py-6 shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
-              />
-              <Button
-                type="submit"
-                disabled={aiLoading || !question.trim()}
-                size="icon"
-                className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground mr-1.5 md:mr-2 shrink-0"
-              >
-                {aiLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Bot className="w-5 h-5 group-focus-within:scale-110 transition-transform" />
-                )}
-              </Button>
-            </form>
-
-            {aiLoading && (
-              <div className="text-center py-8 text-sm text-primary flex flex-col justify-center items-center gap-3 animate-pulse">
-                <Bot className="w-8 h-8 opacity-50" />
-                <span>Analisando especificações e manuais técnicos...</span>
+          {/* AI Chat Section */}
+          <div className="border border-border/50 rounded-2xl bg-card shadow-sm flex flex-col flex-1 min-h-[400px]">
+            <div className="p-5 border-b border-border/50 flex items-center gap-3 bg-muted/20 rounded-t-2xl">
+              <div className="bg-primary/10 p-2 rounded-full ring-1 ring-primary/20">
+                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
               </div>
-            )}
-
-            {aiResponse && !aiLoading && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card border border-primary/20 rounded-2xl p-6 shadow-lg flex flex-col gap-5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full pointer-events-none" />
-                <div className="flex items-center gap-3 relative z-10">
-                  <div className="bg-primary/10 p-2.5 rounded-full ring-1 ring-primary/20">
-                    <Bot className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold flex items-center gap-2">Especialista My Way Video</h3>
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-                      IA Assistiva
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-foreground/90 text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none relative z-10">
-                  <MarkdownRenderer content={aiResponse.message} />
-                </div>
-
-                {aiResponse.should_show_whatsapp_button && (
-                  <div className="pt-5 mt-3 border-t border-border/50 relative z-10">
-                    {aiResponse.whatsapp_reason && (
-                      <p className="text-xs text-muted-foreground mb-3 font-medium border-l-2 border-primary/30 pl-2">
-                        {aiResponse.whatsapp_reason}
-                      </p>
-                    )}
-                    <Button
-                      onClick={() =>
-                        window.open(
-                          `https://wa.me/17867161170?text=${encodeURIComponent(`[IA Ref] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${question}`)}`,
-                          '_blank',
-                        )
-                      }
-                      className="w-full sm:w-auto bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-xl hover:shadow-[#25D366]/20 transition-all"
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" /> Encaminhar para Engenharia
-                    </Button>
-                  </div>
-                )}
+              <div>
+                <h3 className="font-bold text-foreground leading-tight">Engenharia IA</h3>
+                <p className="text-xs text-muted-foreground">
+                  Consulte fluxos, manuais e compatibilidade
+                </p>
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-24 max-w-4xl pb-16">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <h2 className="text-2xl font-bold tracking-tight">Especificações Técnicas</h2>
-          <div className="flex items-center gap-3 text-sm bg-muted/50 px-5 py-2.5 rounded-full border border-border shadow-inner">
-            <span className={!isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
-              Imperial
-            </span>
-            <Switch
-              checked={isMetric}
-              onCheckedChange={setIsMetric}
-              className="data-[state=checked]:bg-primary"
-            />
-            <span className={isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
-              Métrico
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden text-sm shadow-sm">
-          {[
-            { l: 'Marca / Fabricante', v: product.manufacturer?.name },
-            { l: 'Código (SKU)', v: product.sku },
-            { l: 'Categoria Base', v: product.category },
-            { l: 'Classificação NCM', v: product.ncm },
-            { l: 'Peso do Equipamento', v: displayWeight(product.weight) },
-            { l: 'Dimensões Físicas', v: displayDimensions(product.dimensions) },
-          ].map((s, i) => (
-            <div
-              key={s.l}
-              className={`flex flex-col sm:flex-row py-4 px-6 hover:bg-muted/30 transition-colors ${i !== 0 ? 'border-t border-border/30' : ''} ${i % 2 === 0 ? 'bg-background/30' : ''}`}
-            >
-              <span className="w-64 text-muted-foreground font-medium">{s.l}</span>
-              <span className="font-mono text-foreground font-medium mt-1 sm:mt-0">
-                {s.v || 'Não Especificado'}
-              </span>
             </div>
-          ))}
+
+            <div className="flex-1 p-5 overflow-y-auto space-y-6 flex flex-col">
+              {messages.length === 0 && (
+                <div className="m-auto text-center max-w-xs text-muted-foreground opacity-60">
+                  <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">
+                    Faça perguntas técnicas avançadas sobre as especificações do {product.name}.
+                  </p>
+                </div>
+              )}
+
+              {messages.map((msg, idx) => (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                >
+                  {msg.role === 'ai' && (
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
+                      Assistente
+                    </span>
+                  )}
+                  <div
+                    className={`p-4 rounded-2xl text-sm leading-relaxed max-w-[90%] sm:max-w-[85%] shadow-sm ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                        : 'bg-background border border-border/60 rounded-tl-sm'
+                    }`}
+                  >
+                    {msg.isLoading ? (
+                      <div className="flex items-center gap-3 opacity-70 font-mono text-xs">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" /> Pesquisando
+                        datasheets...
+                      </div>
+                    ) : (
+                      <>
+                        {msg.role === 'user' ? (
+                          <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
+                            <MarkdownRenderer content={msg.content} />
+
+                            {/* Render referenced internal products inside chat context */}
+                            {msg.aiData?.referenced_internal_products &&
+                              msg.aiData.referenced_internal_products.length > 0 && (
+                                <div className="mt-5 border-t border-border/50 pt-4">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+                                    Soluções Mencionadas:
+                                  </span>
+                                  <ReferencedProducts
+                                    ids={msg.aiData.referenced_internal_products}
+                                  />
+                                </div>
+                              )}
+
+                            {/* Conditional WhatsApp Trigger */}
+                            {msg.aiData?.should_show_whatsapp_button && (
+                              <div className="mt-5 pt-4 border-t border-border/50">
+                                {msg.aiData.whatsapp_reason && (
+                                  <p className="text-xs text-muted-foreground mb-3 font-medium border-l-2 border-primary/40 pl-2">
+                                    {msg.aiData.whatsapp_reason}
+                                  </p>
+                                )}
+                                <Button
+                                  onClick={() =>
+                                    window.open(
+                                      `https://wa.me/17867161170?text=${encodeURIComponent(`[Engenharia] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${messages[idx - 1]?.content || ''}`)}`,
+                                      '_blank',
+                                    )
+                                  }
+                                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-10"
+                                >
+                                  <MessageCircle className="w-4 h-4 mr-2" /> Validar com Engenheiro
+                                  Humano
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-border/50 bg-muted/10 rounded-b-2xl">
+              <form
+                onSubmit={handleAskAI}
+                className="relative group flex items-center shadow-inner rounded-xl overflow-hidden border border-border/50 bg-background focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all"
+              >
+                <Input
+                  disabled={isAiLoading}
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="Ex: Quais resoluções RAW suportadas? Suporta Lemo 2-pin?"
+                  className="flex-1 border-0 bg-transparent px-4 py-4 md:py-5 shadow-none focus-visible:ring-0 text-sm placeholder:text-muted-foreground/50"
+                />
+                <Button
+                  type="submit"
+                  disabled={isAiLoading || !question.trim()}
+                  size="icon"
+                  className="mr-2 h-9 w-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 transition-transform active:scale-95"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </div>
