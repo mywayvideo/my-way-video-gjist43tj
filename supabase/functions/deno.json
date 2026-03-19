@@ -1,5 +1,6 @@
 {
   "_versions": {
-    "ai-search": 13
+    "ai-search": 22,
+    "functions": 1
   }
 }

@@ -6,13 +6,15 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const fallbackResponse = {
-    message: 'Neste momento não consigo acessar uma resposta precisa sobre esta especificação. Sugiro contatar um de nossos engenheiros especialistas para obter a solução técnica correta.',
+    message:
+      'Neste momento não consigo acessar uma resposta precisa sobre esta especificação. Sugiro contatar um de nossos engenheiros especialistas para obter a solução técnica correta.',
     referenced_internal_products: [],
     should_show_whatsapp_button: true,
-    whatsapp_reason: "Necessidade de assistência técnica especializada e verificação de compatibilidade.",
-    price_context: "fob_miami",
+    whatsapp_reason:
+      'Necessidade de assistência técnica especializada e verificação de compatibilidade.',
+    price_context: 'fob_miami',
     used_web_search: false,
-    confidence_level: "low"
+    confidence_level: 'low',
   }
 
   try {
@@ -28,34 +30,88 @@ Deno.serve(async (req: Request) => {
     const { query } = await req.json()
     if (!query) throw new Error('Query is required')
 
+    // Fetch and correctly interpolate Company Info
     const { data: cData } = await supabase.from('company_info').select('content, type')
-    const companyInfo = cData?.map((c: any) => `[${c.type}]: ${c.content}`).join('\n') || ''
+    const companyInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
-    const { data: products } = await supabase.from('products').select(`id, name, sku, description, category, dimensions, weight, ncm, price_usd, manufacturers(name)`)
+    // Fetch Products and apply Fuzzy Matching locally
+    const { data: allProducts } = await supabase
+      .from('products')
+      .select(
+        `id, name, sku, description, category, dimensions, weight, ncm, price_usd, manufacturers(name)`,
+      )
 
-    const openAiKey = Deno.env.get('OPENAI_API_KEY')
-    if (!openAiKey) throw new Error('Missing OpenAI key')
+    const searchTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t: string) => t.length > 2)
+    let matchedProducts = allProducts || []
+
+    if (searchTerms.length > 0 && allProducts) {
+      const fuzzyMatches = allProducts.filter((p: any) => {
+        const name = (p.name || '').toLowerCase()
+        const sku = (p.sku || '').toLowerCase()
+        const desc = (p.description || '').toLowerCase()
+        return searchTerms.some(
+          (term: string) => name.includes(term) || sku.includes(term) || desc.includes(term),
+        )
+      })
+      if (fuzzyMatches.length > 0) {
+        matchedProducts = fuzzyMatches
+      }
+    }
+
+    // Limit payload size
+    const productsContext = matchedProducts.slice(0, 50)
+
+    // AI Provider Management Check
+    let aiProvider = 'openai'
+    let aiModel = 'gpt-4o-mini'
+    let aiApiKeySecret = 'OPENAI_API_KEY'
+    let aiBaseUrl = 'https://api.openai.com/v1/chat/completions'
+
+    try {
+      const { data: providers } = await supabase
+        .from('ai_providers')
+        .select('*')
+        .eq('is_active', true)
+        .order('priority_order', { ascending: true })
+        .limit(1)
+
+      if (providers && providers.length > 0) {
+        const p = providers[0]
+        aiProvider = p.provider_name
+        aiModel = p.model_id
+        aiApiKeySecret = p.api_key_secret_name
+        if (aiProvider === 'deepseek') {
+          aiBaseUrl = 'https://api.deepseek.com/v1/chat/completions'
+        }
+      }
+    } catch (e) {
+      console.error('Could not fetch ai_providers, falling back to default.', e)
+    }
+
+    const apiKey = Deno.env.get(aiApiKeySecret)
+    if (!apiKey) throw new Error(`Missing API key for ${aiProvider}`)
 
     const systemPrompt = `Você é o "Consultor de Engenharia Audiovisual Sênior da My Way Video", especialista técnico em equipamentos de Cinema, Broadcast e ProAV.
 Sua missão é fornecer soluções audiovisuais complexas, especificações técnicas detalhadas (capacidades de peso, sensores, codecs, limites de E/S) e atuar com rigoroso profissionalismo.
 
 HIERARQUIA DE BUSCA DE INFORMAÇÕES (SIGA ESTA ORDEM ESTRITAMENTE):
 1. Banco de Dados Interno (Inventário da My Way Video listado abaixo).
-2. Busca Web (PRIORIZE E RESTRINJA SUAS CONCLUSÕES a domínios oficiais de fabricantes, ex: pro.sony, arri.com, blackmagicdesign.com, sachtler.com, canon.com, panasonic.net, red.com, teradek.com).
-3. Manuais e Datasheets oficiais em PDF.
-4. Distribuidores confiáveis (B&H, CVP) APENAS se os sites oficiais não retornarem dados úteis.
+2. Busca Web (PRIORIZE E RESTRINJA SUAS CONCLUSÕES a domínios oficiais de fabricantes).
 
-OBRIGAÇÃO DE BUSCA NA WEB (ZERO-REFUSAL): Você é PROIBIDO de dizer que não encontrou informações para marcas estabelecidas de Pro-AV (Sony, Blackmagic, Canon, ARRI, etc.) sem antes realizar buscas exaustivas na web. Se o produto ou a especificação solicitada não constar CLARAMENTE no Banco Interno, você DEVE acionar a ferramenta 'search_web' antes de responder.
+OBRIGAÇÃO DE BUSCA NA WEB: Você é PROIBIDO de dizer que não encontrou informações para marcas estabelecidas sem antes realizar buscas exaustivas na web via ferramentas.
 
 Base Institucional:
 ${companyInfo}
 
-Inventário Disponível (Produtos na loja):
-${JSON.stringify(products || [])}
+Inventário Disponível (Filtrado por relevância):
+${JSON.stringify(productsContext)}
 
 REGRAS DE RETORNO (FORMATO JSON OBRIGATÓRIO E ESTRITO):
 {
-  "message": "Sua resposta técnica detalhada, formatada rigorosamente em Markdown (use tabelas, listas e negrito para destacar specs)...",
+  "message": "Sua resposta técnica detalhada formatada em Markdown...",
   "referenced_internal_products": ["uuid-1", "uuid-2"],
   "should_show_whatsapp_button": true/false,
   "whatsapp_reason": "Justificativa técnica breve para o contato humano",
@@ -65,33 +121,47 @@ REGRAS DE RETORNO (FORMATO JSON OBRIGATÓRIO E ESTRITO):
 }
 
 REGRAS DE ESTADO IMPORTANTES:
-- "confidence_level": Defina "high" se a informação vier do Banco Interno ou de um domínio oficial de fabricante/manual. Defina "medium" se vier de fontes técnicas secundárias confiáveis (B&H, CVP). Defina "low" em caso de ambiguidade ou falta de confirmação.
-- "should_show_whatsapp_button": OBRIGATORIAMENTE defina como 'true' SE:
-    1. confidence_level for 'low'.
-    2. O equipamento for de alto valor ou extrema complexidade (Cinema/Broadcast) e fontes externas foram necessárias.
-    3. A dúvida envolver integração complexa ou fluxo de trabalho.
-- PREÇOS: SEMPRE inicie informações financeiras com o preço FOB Miami (US$). Para estimativas em BRL, avise explicitamente que o valor final dependerá de cálculo dinâmico cambial.`
+- "confidence_level": "high" se a info vier do Banco Interno/fabricante. "medium" se vier de fontes secundárias. "low" se for incerto.
+- "should_show_whatsapp_button": OBRIGATORIAMENTE defina como 'true' SE confidence_level for 'low' ou a dúvida envolver integração complexa.`
 
-    const tools = [{ 
-      type: 'function', 
-      function: { 
-        name: 'search_web', 
-        description: 'Busca na web por especificações e datasheets oficiais. OBRIGATÓRIO usar quando a resposta não estiver no banco interno. Enriqueça a query com termos como "official specifications", "datasheet", "manual pdf", ou "technical specs".', 
-        parameters: { type: 'object', properties: { search_query: { type: 'string' } }, required: ['search_query'] } 
-      } 
-    }]
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'search_web',
+          description: 'Busca na web via Google Custom Search. Use para specs oficiais.',
+          parameters: {
+            type: 'object',
+            properties: { search_query: { type: 'string' } },
+            required: ['search_query'],
+          },
+        },
+      },
+    ]
 
-    let messages: any[] = [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }]
-    let toolCallCount = 0; let finalMessage = null; let usedWeb = false
+    let messages: any[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: query },
+    ]
+    let toolCallCount = 0
+    let finalMessage = null
+    let usedWeb = false
 
     while (true) {
-      const payload: any = { model: 'gpt-4o-mini', messages, response_format: { type: 'json_object' } }
-      if (toolCallCount < 2) { payload.tools = tools; payload.tool_choice = 'auto' }
+      const payload: any = { model: aiModel, messages, response_format: { type: 'json_object' } }
+      // OpenAI and Deepseek support function calling standard
+      if (toolCallCount < 2 && aiProvider !== 'gemini') {
+        payload.tools = tools
+        payload.tool_choice = 'auto'
+      }
 
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST', headers: { Authorization: `Bearer ${openAiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      const res = await fetch(aiBaseUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('OpenAI API Error')
+
+      if (!res.ok) throw new Error(`LLM API Error: ${res.statusText}`)
       const aiData = await res.json()
       const message = aiData.choices?.[0]?.message
 
@@ -102,48 +172,82 @@ REGRAS DE ESTADO IMPORTANTES:
             usedWeb = true
             const args = JSON.parse(t.function.arguments)
             try {
-              const ddgRes = await fetch('https://lite.duckduckgo.com/lite/', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0' }, 
-                body: `q=${encodeURIComponent(args.search_query)}` 
-              })
+              // GOOGLE CUSTOM SEARCH INTEGRATION
+              const googleApiKey = Deno.env.get('GOOGLE_SEARCH_API_KEY')
+              const googleCx = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID')
               let content = ''
-              if (ddgRes.ok) {
-                 const html = await ddgRes.text()
-                 const snippetRegex = /<td class='result-snippet'[^>]*>(.*?)<\/td>/g
-                 const urlRegex = /<a rel="nofollow" href="([^"]+)" class="result-url"/g
-                 
-                 const snippetsMatches = [...html.matchAll(snippetRegex)]
-                 const urlsMatches = [...html.matchAll(urlRegex)]
 
-                 const snippets = snippetsMatches.slice(0, 5).map((m, i) => {
-                   const url = urlsMatches[i] ? urlsMatches[i][1] : 'unknown_domain'
-                   let domain = 'unknown'
-                   try { domain = new URL(url).hostname } catch {}
-                   return `[Domain: ${domain} | Source: ${url}]\n${m[1].replace(/<[^>]+>/g, '').trim()}`
-                 })
-                 content = snippets.join('\n\n')
+              if (googleApiKey && googleCx) {
+                const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(args.search_query)}`
+                const gsRes = await fetch(searchUrl)
+                if (gsRes.ok) {
+                  const gsData = await gsRes.json()
+                  const snippets = (gsData.items || [])
+                    .slice(0, 5)
+                    .map(
+                      (item: any) =>
+                        `[Domain: ${item.displayLink} | Source: ${item.link}]\n${item.snippet}`,
+                    )
+                  content = snippets.join('\n\n')
+                }
+              } else {
+                content = 'Google Search API keys not configured.'
               }
-              messages.push({ role: 'tool', tool_call_id: t.id, content: content || 'No data returned from web search.' })
-            } catch (e) { messages.push({ role: 'tool', tool_call_id: t.id, content: 'Error searching the web.' }) }
+              messages.push({
+                role: 'tool',
+                tool_call_id: t.id,
+                content: content || 'No data returned from web search.',
+              })
+            } catch (e) {
+              messages.push({
+                role: 'tool',
+                tool_call_id: t.id,
+                content: 'Error searching the web.',
+              })
+            }
           }
         }
         toolCallCount++
-      } else { finalMessage = message; break }
+      } else {
+        finalMessage = message
+        break
+      }
     }
 
     let result
-    try { 
+    try {
       result = JSON.parse(finalMessage?.content || '{}')
-      if (!Array.isArray(result.referenced_internal_products)) result.referenced_internal_products = []
+      if (!Array.isArray(result.referenced_internal_products))
+        result.referenced_internal_products = []
       result.used_web_search = usedWeb
       if (result.confidence_level === 'low') result.should_show_whatsapp_button = true
-      result.whatsapp_reason = result.whatsapp_reason || ""
-    } 
-    catch { result = fallbackResponse }
+      result.whatsapp_reason = result.whatsapp_reason || ''
+    } catch {
+      result = fallbackResponse
+    }
 
-    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    // Fire and forget caching logic
+    try {
+      supabase
+        .from('product_search_cache')
+        .insert({
+          search_query: query,
+          product_name: 'AI Match',
+          product_description: result.message,
+          source: 'ai_generated',
+        })
+        .then()
+    } catch (e) {
+      /* Ignore cache insert error */
+    }
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error: any) {
-    return new Response(JSON.stringify(fallbackResponse), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify(fallbackResponse), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

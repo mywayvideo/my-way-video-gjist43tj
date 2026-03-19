@@ -3,7 +3,14 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/ProductCard'
 import { Button } from '@/components/ui/button'
-import { Loader2, MessageCircle, Bot, Search as SearchIcon, Sparkles } from 'lucide-react'
+import {
+  Loader2,
+  MessageCircle,
+  Bot,
+  Search as SearchIcon,
+  Sparkles,
+  AlertTriangle,
+} from 'lucide-react'
 import { AIPrompt } from '@/components/AIPrompt'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 
@@ -29,11 +36,11 @@ export default function Search() {
         if (error) throw error
         if (data) {
           setAiResponse(data)
-          if (data.related_product_ids?.length) {
-            const { data: pData } = await supabase
-              .from('products')
-              .select('*')
-              .in('id', data.related_product_ids)
+          // Handle both cases where the backend might send related_product_ids or referenced_internal_products
+          const relatedIds =
+            (data as any).related_product_ids || data.referenced_internal_products || []
+          if (relatedIds.length > 0) {
+            const { data: pData } = await supabase.from('products').select('*').in('id', relatedIds)
             if (pData) setProducts(pData)
           }
         }
@@ -45,6 +52,11 @@ export default function Search() {
     }
     doSearch()
   }, [query])
+
+  const showWhatsAppButton =
+    aiResponse?.should_show_whatsapp_button ||
+    aiResponse?.confidence_level === 'low' ||
+    aiResponse?.type === 'not_found'
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]">
@@ -66,7 +78,7 @@ export default function Search() {
           </div>
           <div className="text-center space-y-2">
             <h3 className="text-xl font-semibold text-primary animate-pulse">
-              O Agente de IA está pesquisando para fornecer a melhor resposta possível...
+              A IA está analisando especificações e integrando dados...
             </h3>
           </div>
         </div>
@@ -78,21 +90,41 @@ export default function Search() {
             <div className="bg-primary/10 p-4 rounded-full shrink-0">
               <Bot className="w-6 h-6 text-primary" />
             </div>
-            <div className="flex-1 space-y-4 w-full">
-              <h3 className="font-semibold text-xl flex items-center gap-3">
-                Consultor Técnico IA{' '}
-                <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full uppercase">
-                  {aiResponse.type}
-                </span>
-              </h3>
-              <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none">
+            <div className="flex-1 w-full">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <h3 className="font-semibold text-xl">Consultor Técnico IA</h3>
+                {aiResponse.confidence_level && (
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full uppercase font-semibold flex items-center gap-1 ${
+                      aiResponse.confidence_level === 'high'
+                        ? 'bg-green-100 text-green-700'
+                        : aiResponse.confidence_level === 'medium'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-red-100 text-red-700'
+                    }`}
+                  >
+                    {aiResponse.confidence_level === 'low' && <AlertTriangle className="w-3 h-3" />}
+                    Confiança: {aiResponse.confidence_level}
+                  </span>
+                )}
+              </div>
+
+              <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none prose dark:prose-invert">
                 {aiResponse.message}
               </div>
-              {aiResponse.type === 'not_found' && (
+
+              {showWhatsAppButton && (
                 <div className="pt-6 mt-6 border-t border-border/50">
+                  <div className="mb-4 text-sm text-muted-foreground bg-secondary/30 p-4 rounded-lg border border-border/50 flex items-start gap-3">
+                    <MessageCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <span>
+                      {aiResponse.whatsapp_reason ||
+                        'Recomendamos o contato direto com um especialista humano para validar as especificações complexas deste projeto e garantir total compatibilidade.'}
+                    </span>
+                  </div>
                   <Button
                     size="lg"
-                    className="bg-[#25D366] hover:bg-[#1DA851] text-white"
+                    className="bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-lg transition-all"
                     onClick={() =>
                       window.open(
                         `https://wa.me/17867161170?text=${encodeURIComponent(`Dúvida técnica: "${query}"`)}`,
@@ -112,7 +144,7 @@ export default function Search() {
       {!loading && products.length > 0 && (
         <div className="animate-in fade-in slide-in-from-bottom-4 mt-12">
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Relacionados
+            <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Recomendados
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((p) => (
