@@ -1,14 +1,62 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.4'
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
+      ai_providers: {
+        Row: {
+          api_key_secret_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_validated_at: string | null
+          model_id: string
+          priority_order: number | null
+          provider_name: string
+          updated_at: string | null
+          validation_error: string | null
+          validation_status: string | null
+        }
+        Insert: {
+          api_key_secret_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_validated_at?: string | null
+          model_id: string
+          priority_order?: number | null
+          provider_name: string
+          updated_at?: string | null
+          validation_error?: string | null
+          validation_status?: string | null
+        }
+        Update: {
+          api_key_secret_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_validated_at?: string | null
+          model_id?: string
+          priority_order?: number | null
+          provider_name?: string
+          updated_at?: string | null
+          validation_error?: string | null
+          validation_status?: string | null
+        }
+        Relationships: []
+      }
       company_info: {
         Row: {
           content: string
@@ -69,6 +117,51 @@ export type Database = {
         }
         Relationships: []
       }
+      product_search_cache: {
+        Row: {
+          created_at: string | null
+          created_by_admin: boolean | null
+          id: string
+          product_currency: string | null
+          product_description: string | null
+          product_image_url: string | null
+          product_name: string
+          product_price: number | null
+          product_specs: Json | null
+          search_query: string
+          source: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_admin?: boolean | null
+          id?: string
+          product_currency?: string | null
+          product_description?: string | null
+          product_image_url?: string | null
+          product_name: string
+          product_price?: number | null
+          product_specs?: Json | null
+          search_query: string
+          source: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_admin?: boolean | null
+          id?: string
+          product_currency?: string | null
+          product_description?: string | null
+          product_image_url?: string | null
+          product_name?: string
+          product_price?: number | null
+          product_specs?: Json | null
+          search_query?: string
+          source?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
@@ -126,11 +219,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'products_manufacturer_id_fkey'
-            columns: ['manufacturer_id']
+            foreignKeyName: "products_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
             isOneToOne: false
-            referencedRelation: 'manufacturers'
-            referencedColumns: ['id']
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -150,31 +243,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -183,23 +278,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -208,23 +303,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -233,36 +328,36 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema['Enums']
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
@@ -270,6 +365,7 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -281,6 +377,18 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: ai_providers
+//   id: uuid (not null, default: gen_random_uuid())
+//   provider_name: text (not null)
+//   api_key_secret_name: text (not null)
+//   model_id: text (not null)
+//   is_active: boolean (nullable, default: false)
+//   priority_order: integer (nullable, default: 999)
+//   last_validated_at: timestamp with time zone (nullable)
+//   validation_status: text (nullable, default: 'pending'::text)
+//   validation_error: text (nullable)
+//   created_at: timestamp with time zone (nullable, default: now())
+//   updated_at: timestamp with time zone (nullable, default: now())
 // Table: company_info
 //   id: uuid (not null, default: gen_random_uuid())
 //   content: text (not null)
@@ -295,6 +403,19 @@ export const Constants = {
 //   spread_type: text (not null, default: 'percentage'::text)
 //   spread_value: numeric (not null, default: 0.10)
 //   updated_at: timestamp with time zone (not null, default: now())
+// Table: product_search_cache
+//   id: uuid (not null, default: gen_random_uuid())
+//   search_query: text (not null)
+//   product_name: text (not null)
+//   product_description: text (nullable)
+//   product_price: numeric (nullable)
+//   product_currency: text (nullable, default: 'USD'::text)
+//   product_image_url: text (nullable)
+//   product_specs: jsonb (nullable)
+//   source: text (not null)
+//   created_by_admin: boolean (nullable, default: false)
+//   created_at: timestamp with time zone (nullable, default: now())
+//   updated_at: timestamp with time zone (nullable, default: now())
 // Table: products
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
@@ -314,6 +435,11 @@ export const Constants = {
 //   price_cost: numeric (nullable, default: 0)
 
 // --- CONSTRAINTS ---
+// Table: ai_providers
+//   PRIMARY KEY ai_providers_pkey: PRIMARY KEY (id)
+//   CHECK ai_providers_provider_name_check: CHECK ((provider_name = ANY (ARRAY['openai'::text, 'gemini'::text, 'deepseek'::text])))
+//   UNIQUE ai_providers_provider_name_key: UNIQUE (provider_name)
+//   CHECK ai_providers_validation_status_check: CHECK ((validation_status = ANY (ARRAY['pending'::text, 'valid'::text, 'invalid'::text, 'error'::text])))
 // Table: company_info
 //   PRIMARY KEY company_info_pkey: PRIMARY KEY (id)
 // Table: manufacturers
@@ -321,11 +447,17 @@ export const Constants = {
 //   PRIMARY KEY manufacturers_pkey: PRIMARY KEY (id)
 // Table: pricing_settings
 //   PRIMARY KEY pricing_settings_pkey: PRIMARY KEY (id)
+// Table: product_search_cache
+//   PRIMARY KEY product_search_cache_pkey: PRIMARY KEY (id)
+//   CHECK product_search_cache_source_check: CHECK ((source = ANY (ARRAY['ai_generated'::text, 'manual_entry'::text, 'web_search'::text])))
 // Table: products
 //   FOREIGN KEY products_manufacturer_id_fkey: FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE SET NULL
 //   PRIMARY KEY products_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: ai_providers
+//   Policy "Admin full access ai_providers" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text))
 // Table: manufacturers
 //   Policy "Allow anon read on manufacturers" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
@@ -352,10 +484,22 @@ export const Constants = {
 //   Policy "Allow authenticated update on pricing_settings" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
+// Table: product_search_cache
+//   Policy "Admin write cache" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text))
+//   Policy "Auth read cache" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
 
 // --- INDEXES ---
+// Table: ai_providers
+//   CREATE INDEX ai_providers_priority_active_idx ON public.ai_providers USING btree (priority_order, is_active)
+//   CREATE UNIQUE INDEX ai_providers_provider_name_key ON public.ai_providers USING btree (provider_name)
 // Table: manufacturers
 //   CREATE UNIQUE INDEX manufacturers_name_key ON public.manufacturers USING btree (name)
+// Table: product_search_cache
+//   CREATE INDEX product_search_cache_created_idx ON public.product_search_cache USING btree (created_at DESC)
+//   CREATE INDEX product_search_cache_query_idx ON public.product_search_cache USING btree (search_query)
 // Table: products
 //   CREATE INDEX products_is_special_idx ON public.products USING btree (is_special)
 //   CREATE UNIQUE INDEX products_manufacturer_sku_key ON public.products USING btree (manufacturer_id, sku)
+

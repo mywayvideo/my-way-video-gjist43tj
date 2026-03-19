@@ -1,6 +1,7 @@
 {
   "_versions": {
     "ai-search": 22,
-    "functions": 1
+    "functions": 1,
+    "validate-ai-provider": 1
   }
 }
