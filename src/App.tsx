@@ -7,6 +7,7 @@ import Index from './pages/Index'
 import Search from './pages/Search'
 import Product from './pages/Product'
 import Admin from './pages/Admin'
+import AdminAIProviders from './pages/AdminAIProviders'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/search" element={<Search />} />
             <Route path="/product/:id" element={<Product />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Route>

@@ -29,66 +29,93 @@ Deno.serve(async (req: Request) => {
 
     const apiKey = Deno.env.get(provider.api_key_secret_name)
     if (!apiKey) {
-      await updateProviderStatus(supabase, provider.id, 'error', 'API Key missing in environment variables')
-      return new Response(JSON.stringify({ success: false, error: 'Secret not found in environment' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      await updateProviderStatus(
+        supabase,
+        provider.id,
+        'error',
+        'API Key missing in environment variables',
+      )
+      return new Response(
+        JSON.stringify({ success: false, error: 'Secret not found in environment' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
     }
 
-    let isValid = false;
-    let errorMessage = '';
+    let isValid = false
+    let errorMessage = ''
 
     try {
       if (provider_name === 'openai' || provider_name === 'deepseek') {
-        const baseUrl = provider_name === 'deepseek' ? 'https://api.deepseek.com/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions'
+        const baseUrl =
+          provider_name === 'deepseek'
+            ? 'https://api.deepseek.com/v1/chat/completions'
+            : 'https://api.openai.com/v1/chat/completions'
         const res = await fetch(baseUrl, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: provider.model_id,
             messages: [{ role: 'user', content: 'test connection' }],
-            max_tokens: 1
-          })
+            max_tokens: 1,
+          }),
         })
         if (!res.ok) {
           const errText = await res.text()
           throw new Error(`API Error: ${res.status} ${errText}`)
         }
-        isValid = true;
+        isValid = true
       } else if (provider_name === 'gemini') {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${provider.model_id}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: "test connection" }] }],
-            generationConfig: { maxOutputTokens: 1 }
-          })
-        })
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${provider.model_id}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: 'test connection' }] }],
+              generationConfig: { maxOutputTokens: 1 },
+            }),
+          },
+        )
         if (!res.ok) {
-           const errText = await res.text()
-           throw new Error(`API Error: ${res.status} ${errText}`)
+          const errText = await res.text()
+          throw new Error(`API Error: ${res.status} ${errText}`)
         }
-        isValid = true;
+        isValid = true
       } else {
         throw new Error('Unknown AI provider')
       }
     } catch (e: any) {
-      isValid = false;
-      errorMessage = e.message;
+      isValid = false
+      errorMessage = e.message
     }
 
-    const status = isValid ? 'valid' : 'invalid';
+    const status = isValid ? 'valid' : 'invalid'
     await updateProviderStatus(supabase, provider.id, status, isValid ? null : errorMessage)
 
-    return new Response(JSON.stringify({ success: isValid, error: isValid ? null : errorMessage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-
+    return new Response(
+      JSON.stringify({ success: isValid, error: isValid ? null : errorMessage }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })
 
-async function updateProviderStatus(supabase: any, id: string, status: string, error: string | null) {
-  await supabase.from('ai_providers').update({
-    validation_status: status,
-    validation_error: error,
-    last_validated_at: new Date().toISOString()
-  }).eq('id', id)
+async function updateProviderStatus(
+  supabase: any,
+  id: string,
+  status: string,
+  error: string | null,
+) {
+  await supabase
+    .from('ai_providers')
+    .update({
+      validation_status: status,
+      validation_error: error,
+      last_validated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
 }

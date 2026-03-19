@@ -28,6 +28,7 @@ import {
   Eye,
   DollarSign,
   Calculator,
+  Bot,
 } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -198,6 +199,11 @@ export default function Admin() {
           </div>
         </div>
         <div className="flex gap-4">
+          <Link to="/admin/ai-providers">
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+              <Bot className="w-4 h-4 mr-2" /> IA Providers
+            </Button>
+          </Link>
           <AdminCSVUploader
             manufacturers={manufacturers}
             onSuccess={fetchData}
