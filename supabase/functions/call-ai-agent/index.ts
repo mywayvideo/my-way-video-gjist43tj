@@ -6,41 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-// Helper function to calculate Levenshtein distance based string similarity
-function stringSimilarity(str1: string, str2: string) {
-  if (str1.length === 0) return 0
-  if (str2.length === 0) return 0
-
-  const matrix = []
-  for (let i = 0; i <= str2.length; i++) {
-    matrix[i] = [i]
-  }
-  for (let j = 0; j <= str1.length; j++) {
-    matrix[0][j] = j
-  }
-
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1]
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1),
-        )
-      }
-    }
-  }
-
-  const distance = matrix[str2.length][str1.length]
-  const maxLength = Math.max(str1.length, str2.length)
-  return (maxLength - distance) / maxLength
-}
-
 Deno.serve(async (req) => {
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
@@ -189,7 +154,7 @@ Deno.serve(async (req) => {
       console.error('History fetch error:', e)
     }
 
-    // 5. Fetch Products and Build Intelligent Lookup Map with Aliases
+    // 5. Fetch Products and Build Strict Lookup Map
     let allProducts: any[] = []
     try {
       const { data: prodData, error: prodErr } = await supabaseAdmin
@@ -205,62 +170,46 @@ Deno.serve(async (req) => {
 
     const productMap = allProducts.map((p) => {
       const aliases = new Set<string>()
-      const n = (p.name || '').toLowerCase()
-      aliases.add(n)
+      const n = (p.name || '').toLowerCase().trim()
+
+      if (n) {
+        aliases.add(n)
+        if (n.includes('-')) {
+          aliases.add(n.replace(/-/g, ''))
+          aliases.add(n.replace(/-/g, ' '))
+        }
+      }
 
       let skuLower = null
       if (p.sku) {
-        skuLower = p.sku.toLowerCase()
-        aliases.add(skuLower)
-        if (skuLower.includes('-')) {
-          aliases.add(skuLower.replace(/-/g, ''))
+        skuLower = p.sku.toLowerCase().trim()
+        if (skuLower) {
+          aliases.add(skuLower)
+          if (skuLower.includes('-')) {
+            aliases.add(skuLower.replace(/-/g, ''))
+          }
         }
       }
 
-      if (n.includes('-')) {
-        aliases.add(n.replace(/-/g, ''))
-        aliases.add(n.replace(/-/g, ' '))
-      }
-
-      const parts = n.split(/[\s-]+/)
-      parts.forEach((part) => {
-        if (
-          part.length >= 3 &&
-          ![
-            'com',
-            'para',
-            'dos',
-            'das',
-            'kit',
-            'pro',
-            'the',
-            'and',
-            'for',
-            'uma',
-            'um',
-            'camera',
-            'câmera',
-            'lente',
-            'lenses',
-          ].includes(part)
-        ) {
-          aliases.add(part)
+      // Add specific model identifiers (words with numbers) to prevent generic matches like "camera" or "monitor"
+      const words = n.split(/[\s-]+/)
+      words.forEach((word) => {
+        if (word.length >= 3 && /\d/.test(word)) {
+          aliases.add(word)
         }
       })
 
-      // Add bigrams to aliases for composite names (e.g. "sony fx3")
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (parts[i].length > 2 && parts[i + 1].length > 2) {
-          aliases.add(`${parts[i]} ${parts[i + 1]}`)
+      // Add bigrams that contain numbers
+      for (let i = 0; i < words.length - 1; i++) {
+        const bigram = `${words[i]} ${words[i + 1]}`
+        if (/\d/.test(words[i]) || /\d/.test(words[i + 1])) {
+          aliases.add(bigram)
         }
       }
 
       return {
         id: p.id,
         name: p.name,
-        nameLower: n,
-        skuLower: skuLower,
-        category: p.category,
         aliases: Array.from(aliases),
       }
     })
@@ -417,53 +366,25 @@ Example response structure:
       if (success) {
         console.log('Response status: success')
 
-        // Run Intelligent Product Matching Algorithm with Aliases and Fuzzy Match
+        // STRICT Product Matching Algorithm
         let referenced_internal_products: string[] = []
         try {
-          const stopWords = new Set([
-            'com',
-            'para',
-            'dos',
-            'das',
-            'kit',
-            'pro',
-            'the',
-            'and',
-            'for',
-            'uma',
-            'um',
-            'que',
-            'qual',
-            'quais',
-            'sobre',
-            'este',
-            'esta',
-            'esse',
-            'essa',
-            'como',
-            'quando',
-            'onde',
-            'porque',
-            'por que',
-            'tem',
-          ])
-
-          const createNgrams = (words: string[], n: number) => {
-            const ngrams = []
-            for (let i = 0; i <= words.length - n; i++) {
-              ngrams.push(words.slice(i, i + n).join(' '))
+          const createNgrams = (words: string[], maxN: number) => {
+            const ngrams = new Set<string>()
+            for (let n = 1; n <= maxN; n++) {
+              for (let i = 0; i <= words.length - n; i++) {
+                ngrams.add(words.slice(i, i + n).join(' '))
+              }
             }
-            return ngrams
+            return Array.from(ngrams)
           }
 
           const extractPhrases = (text: string) => {
             const words = text
               .toLowerCase()
               .split(/[\s,.;:!?'"()\[\]{}]+/)
-              .filter((w) => w.length > 1 && !stopWords.has(w))
-            return Array.from(
-              new Set([...words, ...createNgrams(words, 2), ...createNgrams(words, 3)]),
-            )
+              .filter((w) => w.length > 0)
+            return createNgrams(words, 6)
           }
 
           const queryPhrases = extractPhrases(query)
@@ -472,45 +393,40 @@ Example response structure:
           const queryMatchedNames = new Set<string>()
           const responseMatchedNames = new Set<string>()
           const matchedIds = new Set<string>()
+          const unmatchedWords = new Set<string>()
 
           const matchPhrases = (phrases: string[], matchedNames: Set<string>) => {
             for (const phrase of phrases) {
               if (phrase.length < 2) continue
 
+              let matched = false
               for (const prod of productMap) {
-                // Strategy A & B: Exact match on alias, name or SKU
+                // Strategy A & B: Exact alias or SKU match ONLY
+                if (prod.aliases.includes(phrase)) {
+                  matchedIds.add(prod.id)
+                  matchedNames.add(prod.name)
+                  matched = true
+                  break
+                }
+              }
+
+              // Log unmatched single words to avoid huge arrays of phrases
+              if (!matched && !phrase.includes(' ')) {
                 if (
-                  prod.aliases.includes(phrase) ||
-                  prod.nameLower === phrase ||
-                  prod.skuLower === phrase
+                  phrase.length > 3 &&
+                  ![
+                    'como',
+                    'para',
+                    'este',
+                    'esta',
+                    'esse',
+                    'essa',
+                    'qual',
+                    'quais',
+                    'sobre',
+                  ].includes(phrase)
                 ) {
-                  matchedIds.add(prod.id)
-                  matchedNames.add(prod.name)
-                  continue
-                }
-
-                // Strategy C: Partial match
-                if (phrase.length > 4 && prod.nameLower.includes(phrase)) {
-                  matchedIds.add(prod.id)
-                  matchedNames.add(prod.name)
-                  continue
-                }
-
-                // Strategy D: Fuzzy match (only for single words to avoid high false positive rates)
-                if (!phrase.includes(' ') && phrase.length >= 3) {
-                  let isFuzzyMatched = false
-                  for (const alias of prod.aliases) {
-                    if (!alias.includes(' ') && alias.length >= 3) {
-                      const sim = stringSimilarity(phrase, alias)
-                      if (sim > 0.7) {
-                        matchedIds.add(prod.id)
-                        matchedNames.add(prod.name)
-                        isFuzzyMatched = true
-                        break
-                      }
-                    }
-                  }
-                  if (isFuzzyMatched) continue
+                  unmatchedWords.add(phrase)
                 }
               }
             }
@@ -526,6 +442,7 @@ Example response structure:
             `Products mentioned in response: [${Array.from(responseMatchedNames).join(', ')}]`,
           )
           console.log(`Matched UUIDs: [${referenced_internal_products.join(', ')}]`)
+          console.log(`Unmatched words: [${Array.from(unmatchedWords).slice(0, 20).join(', ')}]`)
         } catch (err) {
           console.error('Product matching failed:', err)
         }
