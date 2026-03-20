@@ -9,6 +9,7 @@ import Product from './pages/Product'
 import Admin from './pages/Admin'
 import AdminAIProviders from './pages/AdminAIProviders'
 import AdminProductCache from './pages/AdminProductCache'
+import AdminAISettings from './pages/AdminAISettings'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
             <Route path="/admin/product-cache" element={<AdminProductCache />} />
+            <Route path="/admin/ai-settings" element={<AdminAISettings />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Route>
