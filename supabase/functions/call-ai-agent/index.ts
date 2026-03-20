@@ -1,5 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
-import { corsHeaders } from '../_shared/cors.ts'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight request
@@ -7,60 +12,78 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] Request received`)
+
   try {
-    // 1. Authentication Check
+    // 1. Optional Authentication Check
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Não autorizado. Token ausente.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const hasAuthHeader = !!authHeader
+    console.log(`Auth header present: ${hasAuthHeader ? 'yes' : 'no'}`)
+
+    let isTokenValid = false
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 
-    // Client for auth check (user context)
-    const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    if (hasAuthHeader) {
+      const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      })
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAuthClient.auth.getUser()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuthClient.auth.getUser()
 
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Não autorizado. Token inválido ou expirado.' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
+      if (authError || !user) {
+        console.error('Auth verification failed:', authError?.message || 'No user found')
+      } else {
+        isTokenValid = true
+      }
     }
+
+    console.log(`Token valid: ${isTokenValid ? 'yes' : 'no'}`)
 
     // 2. Payload Validation
     let body
     try {
       body = await req.json()
     } catch (e) {
-      return new Response(JSON.stringify({ error: 'Corpo da requisição inválido.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      console.log('Response status: error')
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Corpo da requisição inválido.',
+          error_code: 'INVALID_REQUEST_BODY',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const query = body.query
     const includeCache = body.include_cache !== undefined ? Boolean(body.include_cache) : true
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
-      return new Response(JSON.stringify({ error: 'A consulta (query) é obrigatória.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      console.log('Response status: error')
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'A consulta (query) é obrigatória.',
+          error_code: 'MISSING_QUERY',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
+
+    console.log(`Query received: ${query.trim()}`)
 
     // Admin client to bypass RLS for reading cache and providers
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
@@ -75,6 +98,7 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (!cacheError && cacheHit) {
+        console.log('Response status: success')
         return new Response(
           JSON.stringify({
             status: 'cache_hit',
@@ -101,15 +125,17 @@ Deno.serve(async (req) => {
       .order('priority_order', { ascending: true })
 
     if (provError || !providers || providers.length === 0) {
+      console.log('Response status: error')
       return new Response(
         JSON.stringify({
           status: 'error',
-          error_message:
+          message:
             'Nenhum provedor de IA disponível no momento. Tente novamente em alguns instantes.',
+          error_code: 'NO_PROVIDERS_AVAILABLE',
           attempted_providers: [],
         }),
         {
-          status: 503,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
       )
@@ -126,6 +152,8 @@ Deno.serve(async (req) => {
         console.warn(`API Key ausente para o provedor: ${provider.provider_name}`)
         continue
       }
+
+      console.log(`AI provider selected: ${provider.provider_name}`)
 
       let attempt = 0
       const maxAttempts = 3
@@ -170,6 +198,7 @@ Deno.serve(async (req) => {
 
       // If provider was successful, return immediately without caching
       if (success) {
+        console.log('Response status: success')
         return new Response(
           JSON.stringify({
             status: 'success',
@@ -186,27 +215,31 @@ Deno.serve(async (req) => {
     }
 
     // 5. All Providers Failed
+    console.log('Response status: error')
     return new Response(
       JSON.stringify({
         status: 'error',
-        error_message:
+        message:
           'Nenhum provedor de IA disponível no momento. Tente novamente em alguns instantes.',
+        error_code: 'ALL_PROVIDERS_FAILED',
         attempted_providers: attemptedProviders,
       }),
       {
-        status: 503,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     )
   } catch (error) {
     console.error('Erro interno na função call-ai-agent:', error)
+    console.log('Response status: error')
     return new Response(
       JSON.stringify({
         status: 'error',
-        error_message: 'Erro interno do servidor ao processar a sua requisição. Tente novamente.',
+        message: 'Erro interno do servidor ao processar a sua requisição. Tente novamente.',
+        error_code: 'INTERNAL_SERVER_ERROR',
       }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     )
