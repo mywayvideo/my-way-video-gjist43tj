@@ -23,10 +23,7 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     })
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -53,9 +50,9 @@ Deno.serve(async (req: Request) => {
           error_message: 'Provedor de IA inválido ou não fornecido',
           validation_error: 'Missing or invalid provider_name',
           success: false,
-          error: 'Provedor de IA inválido ou não fornecido',
+          error: 'Provedor de IA inválido ou não fornecido'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -77,12 +74,7 @@ Deno.serve(async (req: Request) => {
     const apiKey = Deno.env.get(secretName)
     if (!apiKey) {
       if (provider) {
-        await updateProviderStatus(
-          supabase,
-          provider.id,
-          'error',
-          `Chave de API ${secretName} não encontrada`,
-        )
+        await updateProviderStatus(supabase, provider.id, 'error', `Chave de API ${secretName} não encontrada`)
       }
       return new Response(
         JSON.stringify({
@@ -91,9 +83,9 @@ Deno.serve(async (req: Request) => {
           error_message: `Chave de API não configurada para ${provider_name}`,
           validation_error: `Secret ${secretName} not found`,
           success: false,
-          error: `Chave de API não configurada para ${provider_name}`,
+          error: `Chave de API não configurada para ${provider_name}`
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -110,7 +102,7 @@ Deno.serve(async (req: Request) => {
         if (res.status === 503) {
           if (i < attempts - 1) {
             const delay = Math.pow(2, i + 1) * 1000 // 2s, 4s, 8s
-            await new Promise((r) => setTimeout(r, delay))
+            await new Promise(r => setTimeout(r, delay))
             continue
           }
         }
@@ -121,30 +113,27 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-      let result
+      let result;
       if (provider_name === 'openai') {
         result = await fetchWithRetry('https://api.openai.com/v1/models', {
           method: 'GET',
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { 'Authorization': `Bearer ${apiKey}` }
         })
       } else if (provider_name === 'deepseek') {
         result = await fetchWithRetry('https://api.deepseek.com/models', {
           method: 'GET',
-          headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' }
         })
       } else if (provider_name === 'gemini') {
         const model = provider?.model_id || 'gemini-1.5-flash'
-        result = await fetchWithRetry(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: 'test connection' }] }],
-              generationConfig: { maxOutputTokens: 1 },
-            }),
-          },
-        )
+        result = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "test connection" }] }],
+            generationConfig: { maxOutputTokens: 1 }
+          })
+        })
       }
 
       if (result?.ok) {
@@ -162,12 +151,7 @@ Deno.serve(async (req: Request) => {
 
     const status = isValid ? 'valid' : 'invalid'
     if (provider) {
-      await updateProviderStatus(
-        supabase,
-        provider.id,
-        isValid ? 'valid' : 'error',
-        isValid ? null : validationError,
-      )
+      await updateProviderStatus(supabase, provider.id, isValid ? 'valid' : 'error', isValid ? null : validationError)
     }
 
     if (isValid) {
@@ -177,9 +161,9 @@ Deno.serve(async (req: Request) => {
           provider_name,
           validated_at: new Date().toISOString(),
           message: 'API válida e operacional',
-          success: true,
+          success: true
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
       return new Response(
@@ -189,11 +173,12 @@ Deno.serve(async (req: Request) => {
           error_message: errorMessage,
           validation_error: validationError,
           success: false,
-          error: errorMessage,
+          error: errorMessage
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
   } catch (error: any) {
     return new Response(
       JSON.stringify({
@@ -202,25 +187,17 @@ Deno.serve(async (req: Request) => {
         error_message: 'Erro interno do servidor',
         validation_error: error.message,
         success: false,
-        error: 'Erro interno do servidor',
+        error: 'Erro interno do servidor'
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
 
-async function updateProviderStatus(
-  supabase: any,
-  id: string,
-  status: string,
-  error: string | null,
-) {
-  await supabase
-    .from('ai_providers')
-    .update({
-      validation_status: status,
-      validation_error: error,
-      last_validated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
+async function updateProviderStatus(supabase: any, id: string, status: string, error: string | null) {
+  await supabase.from('ai_providers').update({
+    validation_status: status,
+    validation_error: error,
+    last_validated_at: new Date().toISOString()
+  }).eq('id', id)
 }
