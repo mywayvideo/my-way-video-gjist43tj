@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     console.log(`Auth header present: ${hasAuthHeader ? 'yes' : 'no'}`)
 
     let isTokenValid = false
+    let authUser: any = null
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
@@ -41,6 +42,7 @@ Deno.serve(async (req) => {
         console.error('Auth verification failed:', authError?.message || 'No user found')
       } else {
         isTokenValid = true
+        authUser = user
       }
     }
 
@@ -67,6 +69,7 @@ Deno.serve(async (req) => {
 
     const query = body.query
     const includeCache = body.include_cache !== undefined ? Boolean(body.include_cache) : true
+    const sessionId = body.session_id || crypto.randomUUID()
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
       console.log('Response status: error')
@@ -85,7 +88,7 @@ Deno.serve(async (req) => {
 
     console.log(`Query received: ${query.trim()}`)
 
-    // Admin client to bypass RLS for reading cache and providers
+    // Admin client to bypass RLS for reading cache and providers, and inserting history
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     // 3. Cache Logic (Step 1)
@@ -99,6 +102,18 @@ Deno.serve(async (req) => {
 
       if (!cacheError && cacheHit) {
         console.log('Response status: success')
+
+        // Background history insert for cache
+        supabaseAdmin
+          .from('conversation_history')
+          .insert({
+            user_id: authUser?.id || null,
+            session_id: sessionId,
+            query: query.trim(),
+            response: `Cache Hit: ${cacheHit.product_name}`,
+          })
+          .then()
+
         return new Response(
           JSON.stringify({
             status: 'cache_hit',
@@ -108,6 +123,7 @@ Deno.serve(async (req) => {
             product_price: cacheHit.product_price,
             product_currency: cacheHit.product_currency,
             product_specs: cacheHit.product_specs || {},
+            session_id: sessionId,
           }),
           {
             status: 200,
@@ -117,7 +133,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Multi-Provider Fallback Logic (Steps 2 & 3)
+    // 4. Fetch Conversation History for Context
+    let historyContext = ''
+    try {
+      const { data: historyData, error: historyError } = await supabaseAdmin
+        .from('conversation_history')
+        .select('query, response')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (!historyError && historyData && historyData.length > 0) {
+        const chronological = historyData.reverse()
+        historyContext =
+          '\n\nPrevious conversation:\n' +
+          chronological.map((h: any) => `[User: ${h.query}] [Assistant: ${h.response}]`).join('\n')
+      }
+    } catch (e) {
+      console.error('History fetch error:', e)
+    }
+
+    // 5. Multi-Provider Fallback Logic
     const { data: providers, error: provError } = await supabaseAdmin
       .from('ai_providers')
       .select('*')
@@ -141,7 +177,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const systemPrompt = 'You are an expert in professional audiovisual equipment'
+    const systemPrompt = 'You are an expert in professional audiovisual equipment' + historyContext
     const attemptedProviders: string[] = []
 
     for (const provider of providers) {
@@ -179,12 +215,10 @@ Deno.serve(async (req) => {
             `Falha no provedor ${provider.provider_name} (Tentativa ${attempt}/${maxAttempts}): HTTP ${status}`,
           )
 
-          // Do not retry on client/auth errors
           if (status === 400 || status === 401 || status === 404) {
             break
           }
 
-          // Retry on 503 or other server/rate-limit errors
           if (status === 503 || status === 429 || status >= 500) {
             if (attempt < maxAttempts) {
               const delayMs = backoffDelays[attempt - 1] || 2000
@@ -196,15 +230,32 @@ Deno.serve(async (req) => {
         }
       }
 
-      // If provider was successful, return immediately without caching
       if (success) {
         console.log('Response status: success')
+
+        // Insert conversation history
+        try {
+          await supabaseAdmin.from('conversation_history').insert({
+            user_id: authUser?.id || null,
+            session_id: sessionId,
+            query: query.trim(),
+            response: responseText,
+          })
+
+          // Cleanup old history (fire and forget)
+          const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+          supabaseAdmin.from('conversation_history').delete().lt('created_at', yesterday).then()
+        } catch (e) {
+          console.error('Failed to insert history:', e)
+        }
+
         return new Response(
           JSON.stringify({
             status: 'success',
             provider_name: provider.provider_name,
             response: responseText,
             query: query.trim(),
+            session_id: sessionId,
           }),
           {
             status: 200,
@@ -214,7 +265,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. All Providers Failed
+    // 6. All Providers Failed
     console.log('Response status: error')
     return new Response(
       JSON.stringify({
@@ -246,7 +297,6 @@ Deno.serve(async (req) => {
   }
 })
 
-// Helper function to call the specific AI Provider APIs
 async function callAIProvider(
   providerName: string,
   modelId: string,

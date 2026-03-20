@@ -25,27 +25,37 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
     setResult(null)
 
     try {
+      let sessionId = localStorage.getItem('ai-session-id')
+      if (!sessionId) {
+        sessionId = crypto.randomUUID
+          ? crypto.randomUUID()
+          : 'session-' + Math.random().toString(36).substring(2, 15)
+        localStorage.setItem('ai-session-id', sessionId)
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession()
       const token = session?.access_token
 
-      if (!token) {
-        throw new Error('Você precisa estar logado para pesquisar.')
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      }
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
       }
 
       const res = await fetch(
         'https://okpxxlpvqotwijisksui.supabase.co/functions/v1/call-ai-agent',
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({
             query: query.trim(),
             include_cache: true,
+            session_id: sessionId,
           }),
         },
       )
@@ -54,6 +64,10 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
 
       if (!res.ok || data.status === 'error') {
         throw new Error(data.error_message || data.error || 'Erro ao processar sua pesquisa')
+      }
+
+      if (data.session_id) {
+        localStorage.setItem('ai-session-id', data.session_id)
       }
 
       setResult(data)
