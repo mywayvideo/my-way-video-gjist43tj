@@ -5,204 +5,256 @@ import { corsHeaders } from '../_shared/cors.ts'
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const fallbackResponse = {
-    message: 'Neste momento não consigo acessar uma resposta precisa sobre esta especificação. Sugiro contatar um de nossos engenheiros especialistas para obter a solução técnica correta.',
+  const fallbackRes = {
+    message:
+      'Neste momento o sistema está indisponível para pesquisas automáticas. Por favor, contate nossos especialistas via WhatsApp.',
     referenced_internal_products: [],
     should_show_whatsapp_button: true,
-    whatsapp_reason: "Necessidade de assistência técnica especializada e verificação de compatibilidade.",
-    price_context: "fob_miami",
+    whatsapp_reason: 'Sistema de IA temporariamente indisponível.',
+    price_context: 'fob_miami',
     used_web_search: false,
-    confidence_level: "low"
+    confidence_level: 'low',
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
-
-    if (!supabaseUrl || !supabaseAnonKey) throw new Error('Missing Supabase credentials')
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    const supUrl = Deno.env.get('SUPABASE_URL') || ''
+    const supKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    const supabase = createClient(supUrl, supKey, {
       global: { headers: { Authorization: req.headers.get('Authorization')! } },
     })
 
     const { query } = await req.json()
     if (!query) throw new Error('Query is required')
 
-    // Fetch and correctly interpolate Company Info
+    // 1. Fetch settings with hardcoded defaults
+    const { data: set } = await supabase
+      .from('ai_agent_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
+    const settings = {
+      price: set?.price_threshold_usd ?? 5000,
+      kws: set?.whatsapp_trigger_keywords ?? [
+        'comprar',
+        'orçamento',
+        'quanto custa',
+        'disponível',
+        'preço',
+        'tabela de preços',
+        'cotação',
+        'desconto',
+        'promoção',
+      ],
+      maxWeb: set?.max_web_search_attempts ?? 2,
+      conf: set?.confidence_threshold_for_whatsapp ?? 'low',
+    }
+
+    // 2. Fetch context
     const { data: cData } = await supabase.from('company_info').select('content, type')
-    const companyInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
+    const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
+    const { data: allProducts } = await supabase
+      .from('products')
+      .select(`id, name, sku, description, price_usd`)
 
-    // Fetch Products and apply Fuzzy Matching locally
-    const { data: allProducts } = await supabase.from('products').select(`id, name, sku, description, category, dimensions, weight, ncm, price_usd, manufacturers(name)`)
-    
-    const searchTerms = query.toLowerCase().split(/\s+/).filter((t: string) => t.length > 2)
-    let matchedProducts = allProducts || []
+    const qTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t: string) => t.length > 2)
+    const matched = (allProducts || []).filter((p: any) =>
+      qTerms.some(
+        (t: string) =>
+          (p.name || '').toLowerCase().includes(t) || (p.sku || '').toLowerCase().includes(t),
+      ),
+    )
+    const productsCtx = (matched.length ? matched : allProducts || []).slice(0, 50)
 
-    if (searchTerms.length > 0 && allProducts) {
-      const fuzzyMatches = allProducts.filter((p: any) => {
-        const name = (p.name || '').toLowerCase()
-        const sku = (p.sku || '').toLowerCase()
-        const desc = (p.description || '').toLowerCase()
-        return searchTerms.some((term: string) => name.includes(term) || sku.includes(term) || desc.includes(term))
-      })
-      if (fuzzyMatches.length > 0) {
-        matchedProducts = fuzzyMatches
-      }
-    }
-    
-    // Limit payload size
-    const productsContext = matchedProducts.slice(0, 50)
+    // 3. Fetch providers
+    const { data: providers } = await supabase
+      .from('ai_providers')
+      .select('*')
+      .eq('is_active', true)
+      .order('priority_order', { ascending: true })
+    if (!providers?.length) throw new Error('No active providers found')
 
-    // AI Provider Management Check
-    let aiProvider = 'openai'
-    let aiModel = 'gpt-4o-mini'
-    let aiApiKeySecret = 'OPENAI_API_KEY'
-    let aiBaseUrl = 'https://api.openai.com/v1/chat/completions'
+    let result: any = null,
+      finalWeb = false
+    const sysPrompt = `Você é Consultor Audiovisual Sênior da My Way Video.\nBase Institucional:\n${compInfo}\nInventário:\n${JSON.stringify(productsCtx)}\nREGRAS DE RETORNO OBRIGATÓRIAS:\nRetorne APENAS um objeto JSON com: {"message": "Sua resposta técnica em pt-BR", "referenced_internal_products": ["uuid"], "should_show_whatsapp_button": false, "whatsapp_reason": "", "price_context": "fob_miami", "used_web_search": false, "confidence_level": "high"}`
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'search_web',
+          description: 'Google Custom Search para specs.',
+          parameters: { type: 'object', properties: { q: { type: 'string' } }, required: ['q'] },
+        },
+      },
+    ]
 
-    try {
-      const { data: providers } = await supabase
-        .from('ai_providers')
-        .select('*')
-        .eq('is_active', true)
-        .order('priority_order', { ascending: true })
-        .limit(1)
+    // 4. Provider Fallback Loop
+    for (const p of providers) {
+      try {
+        const key = Deno.env.get(p.api_key_secret_name)
+        if (!key) continue
 
-      if (providers && providers.length > 0) {
-        const p = providers[0]
-        aiProvider = p.provider_name
-        aiModel = p.model_id
-        aiApiKeySecret = p.api_key_secret_name
-        if (aiProvider === 'deepseek') {
-          aiBaseUrl = 'https://api.deepseek.com/v1/chat/completions'
-        }
-      }
-    } catch (e) {
-      console.error("Could not fetch ai_providers, falling back to default.", e)
-    }
+        if (p.provider_name === 'gemini') {
+          // Gemini: No tools, strictly JSON via config
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${p.model_id}:generateContent?key=${key}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  { role: 'user', parts: [{ text: `SYSTEM:\n${sysPrompt}\n\nUSER:\n${query}` }] },
+                ],
+                generationConfig: { responseMimeType: 'application/json' },
+              }),
+            },
+          )
+          if (!res.ok) throw new Error(await res.text())
+          result = JSON.parse((await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '{}')
+          break
+        } else {
+          // OpenAI / DeepSeek: Tools and standard format
+          const url =
+            p.provider_name === 'deepseek'
+              ? 'https://api.deepseek.com/chat/completions'
+              : 'https://api.openai.com/v1/chat/completions'
+          let msgs: any[] = [
+            { role: 'system', content: sysPrompt },
+            { role: 'user', content: query },
+          ]
+          let calls = 0,
+            usedWeb = false
 
-    const apiKey = Deno.env.get(aiApiKeySecret)
-    if (!apiKey) throw new Error(`Missing API key for ${aiProvider}`)
+          while (calls <= settings.maxWeb) {
+            const payload: any = {
+              model: p.model_id,
+              messages: msgs,
+              response_format: { type: 'json_object' },
+            }
+            if (calls < settings.maxWeb) {
+              payload.tools = tools
+              payload.tool_choice = 'auto'
+            }
 
-    const systemPrompt = `Você é o "Consultor de Engenharia Audiovisual Sênior da My Way Video", especialista técnico em equipamentos de Cinema, Broadcast e ProAV.
-Sua missão é fornecer soluções audiovisuais complexas, especificações técnicas detalhadas (capacidades de peso, sensores, codecs, limites de E/S) e atuar com rigoroso profissionalismo.
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            })
+            if (!res.ok) throw new Error(await res.text())
 
-HIERARQUIA DE BUSCA DE INFORMAÇÕES (SIGA ESTA ORDEM ESTRITAMENTE):
-1. Banco de Dados Interno (Inventário da My Way Video listado abaixo).
-2. Busca Web (PRIORIZE E RESTRINJA SUAS CONCLUSÕES a domínios oficiais de fabricantes).
-
-OBRIGAÇÃO DE BUSCA NA WEB: Você é PROIBIDO de dizer que não encontrou informações para marcas estabelecidas sem antes realizar buscas exaustivas na web via ferramentas.
-
-Base Institucional:
-${companyInfo}
-
-Inventário Disponível (Filtrado por relevância):
-${JSON.stringify(productsContext)}
-
-REGRAS DE RETORNO (FORMATO JSON OBRIGATÓRIO E ESTRITO):
-{
-  "message": "Sua resposta técnica detalhada formatada em Markdown...",
-  "referenced_internal_products": ["uuid-1", "uuid-2"],
-  "should_show_whatsapp_button": true/false,
-  "whatsapp_reason": "Justificativa técnica breve para o contato humano",
-  "price_context": "fob_miami",
-  "used_web_search": true/false,
-  "confidence_level": "high" | "medium" | "low"
-}
-
-REGRAS DE ESTADO IMPORTANTES:
-- "confidence_level": "high" se a info vier do Banco Interno/fabricante. "medium" se vier de fontes secundárias. "low" se for incerto.
-- "should_show_whatsapp_button": OBRIGATORIAMENTE defina como 'true' SE confidence_level for 'low' ou a dúvida envolver integração complexa.`
-
-    const tools = [{ 
-      type: 'function', 
-      function: { 
-        name: 'search_web', 
-        description: 'Busca na web via Google Custom Search. Use para specs oficiais.', 
-        parameters: { type: 'object', properties: { search_query: { type: 'string' } }, required: ['search_query'] } 
-      } 
-    }]
-
-    let messages: any[] = [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }]
-    let toolCallCount = 0; let finalMessage = null; let usedWeb = false
-
-    while (true) {
-      const payload: any = { model: aiModel, messages, response_format: { type: 'json_object' } }
-      // OpenAI and Deepseek support function calling standard
-      if (toolCallCount < 2 && aiProvider !== 'gemini') { 
-        payload.tools = tools; 
-        payload.tool_choice = 'auto' 
-      }
-
-      const res = await fetch(aiBaseUrl, {
-        method: 'POST', 
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload)
-      })
-      
-      if (!res.ok) throw new Error(`LLM API Error: ${res.statusText}`)
-      const aiData = await res.json()
-      const message = aiData.choices?.[0]?.message
-
-      if (message?.tool_calls) {
-        messages.push(message)
-        for (const t of message.tool_calls) {
-          if (t.function.name === 'search_web') {
-            usedWeb = true
-            const args = JSON.parse(t.function.arguments)
-            try {
-              // GOOGLE CUSTOM SEARCH INTEGRATION
-              const googleApiKey = Deno.env.get('GOOGLE_SEARCH_API_KEY')
-              const googleCx = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID')
-              let content = ''
-
-              if (googleApiKey && googleCx) {
-                const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(args.search_query)}`
-                const gsRes = await fetch(searchUrl)
-                if (gsRes.ok) {
-                  const gsData = await gsRes.json()
-                  const snippets = (gsData.items || []).slice(0, 5).map((item: any) => 
-                    `[Domain: ${item.displayLink} | Source: ${item.link}]\n${item.snippet}`
+            const msg = (await res.json()).choices?.[0]?.message
+            if (msg?.tool_calls) {
+              usedWeb = true
+              msgs.push(msg)
+              for (const t of msg.tool_calls) {
+                let content = 'Web search unavailable'
+                const gKey = Deno.env.get('GOOGLE_SEARCH_API_KEY'),
+                  gCx = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID')
+                if (gKey && gCx) {
+                  const queryArgs = JSON.parse(t.function.arguments).q || ''
+                  const gsRes = await fetch(
+                    `https://www.googleapis.com/customsearch/v1?key=${gKey}&cx=${gCx}&q=${encodeURIComponent(queryArgs)}`,
                   )
-                  content = snippets.join('\n\n')
+                  if (gsRes.ok)
+                    content = ((await gsRes.json()).items || [])
+                      .slice(0, 3)
+                      .map((i: any) => i.snippet)
+                      .join('\n')
                 }
-              } else {
-                content = 'Google Search API keys not configured.'
+                msgs.push({ role: 'tool', tool_call_id: t.id, content })
               }
-              messages.push({ role: 'tool', tool_call_id: t.id, content: content || 'No data returned from web search.' })
-            } catch (e) { 
-              messages.push({ role: 'tool', tool_call_id: t.id, content: 'Error searching the web.' }) 
+              calls++
+            } else {
+              result = JSON.parse(msg?.content || '{}')
+              finalWeb = usedWeb
+              break
             }
           }
+          if (result) break
         }
-        toolCallCount++
-      } else { 
-        finalMessage = message; 
-        break 
+      } catch (e) {
+        console.error(`Provider ${p.provider_name} failed:`, e)
       }
     }
 
-    let result
-    try { 
-      result = JSON.parse(finalMessage?.content || '{}')
-      if (!Array.isArray(result.referenced_internal_products)) result.referenced_internal_products = []
-      result.used_web_search = usedWeb
-      if (result.confidence_level === 'low') result.should_show_whatsapp_button = true
-      result.whatsapp_reason = result.whatsapp_reason || ""
-    } 
-    catch { result = fallbackResponse }
+    if (!result) throw new Error('All AI providers failed.')
 
-    // Fire and forget caching logic
-    try {
-      supabase.from('product_search_cache').insert({
+    // 5. Intelligent WhatsApp Logic Engine
+    const qL = query.toLowerCase()
+    let show = false,
+      reason = ''
+    const refs = Array.isArray(result.referenced_internal_products)
+      ? result.referenced_internal_products
+      : []
+
+    // Condition 1: Low Confidence
+    if (result.confidence_level === settings.conf) {
+      show = true
+      reason = 'Necessidade de assistência técnica especializada.'
+    }
+    // Condition 2: Purchase Intent
+    else if (settings.kws.some((k: string) => qL.includes(k.toLowerCase()))) {
+      show = true
+      reason = 'Interesse demonstrado em compra. Especialista pode oferecer descontos.'
+    }
+    // Condition 3: Complex Project
+    else if (
+      [
+        'integração',
+        'solução completa',
+        'customização',
+        'setup',
+        'instalação',
+        'projeto',
+        'implementação',
+        'sistema completo',
+      ].some((k) => qL.includes(k))
+    ) {
+      show = true
+      reason = 'Projeto complexo requer consultoria especializada.'
+    }
+    // Condition 4: Expensive Product
+    else if (
+      refs.length > 0 &&
+      productsCtx.some((p: any) => refs.includes(p.id) && (p.price_usd || 0) > settings.price)
+    ) {
+      show = true
+      reason = 'Produto premium. Especialista pode oferecer condições especiais.'
+    }
+    // Condition 5: Multiple Products
+    else if (refs.length >= 3) {
+      show = true
+      reason = 'Múltiplos produtos. Especialista pode montar solução integrada.'
+    }
+
+    // 6. Contract Enforcement
+    result.should_show_whatsapp_button = show || !!result.should_show_whatsapp_button
+    result.whatsapp_reason = show ? reason : result.whatsapp_reason || ''
+    result.used_web_search = finalWeb
+    result.price_context = 'fob_miami'
+    result.referenced_internal_products = refs
+
+    supabase
+      .from('product_search_cache')
+      .insert({
         search_query: query,
         product_name: 'AI Match',
+        source: 'ai_generated',
         product_description: result.message,
-        source: 'ai_generated'
-      }).then()
-    } catch(e) { /* Ignore cache insert error */ }
+      })
+      .then()
 
-    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-  } catch (error: any) {
-    return new Response(JSON.stringify(fallbackResponse), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (err) {
+    console.error('Fatal ai-search error:', err)
+    return new Response(JSON.stringify(fallbackRes), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })
