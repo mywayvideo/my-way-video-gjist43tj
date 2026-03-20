@@ -6,13 +6,15 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const fallbackResponse = {
-    message: 'Neste momento não consigo acessar uma resposta precisa sobre esta especificação. Sugiro contatar um de nossos engenheiros especialistas para obter a solução técnica correta.',
+    message:
+      'Neste momento não consigo acessar uma resposta precisa sobre esta especificação. Sugiro contatar um de nossos engenheiros especialistas para obter a solução técnica correta.',
     referenced_internal_products: [],
     should_show_whatsapp_button: true,
-    whatsapp_reason: "Necessidade de assistência técnica especializada e verificação de compatibilidade.",
-    price_context: "fob_miami",
+    whatsapp_reason:
+      'Necessidade de assistência técnica especializada e verificação de compatibilidade.',
+    price_context: 'fob_miami',
     used_web_search: false,
-    confidence_level: "low"
+    confidence_level: 'low',
   }
 
   try {
@@ -33,9 +35,16 @@ Deno.serve(async (req: Request) => {
     const companyInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
     // Fetch Products and apply Fuzzy Matching locally
-    const { data: allProducts } = await supabase.from('products').select(`id, name, sku, description, category, dimensions, weight, ncm, price_usd, manufacturers(name)`)
-    
-    const searchTerms = query.toLowerCase().split(/\s+/).filter((t: string) => t.length > 2)
+    const { data: allProducts } = await supabase
+      .from('products')
+      .select(
+        `id, name, sku, description, category, dimensions, weight, ncm, price_usd, manufacturers(name)`,
+      )
+
+    const searchTerms = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t: string) => t.length > 2)
     let matchedProducts = allProducts || []
 
     if (searchTerms.length > 0 && allProducts) {
@@ -43,13 +52,15 @@ Deno.serve(async (req: Request) => {
         const name = (p.name || '').toLowerCase()
         const sku = (p.sku || '').toLowerCase()
         const desc = (p.description || '').toLowerCase()
-        return searchTerms.some((term: string) => name.includes(term) || sku.includes(term) || desc.includes(term))
+        return searchTerms.some(
+          (term: string) => name.includes(term) || sku.includes(term) || desc.includes(term),
+        )
       })
       if (fuzzyMatches.length > 0) {
         matchedProducts = fuzzyMatches
       }
     }
-    
+
     // Limit payload size
     const productsContext = matchedProducts.slice(0, 50)
 
@@ -77,7 +88,7 @@ Deno.serve(async (req: Request) => {
         }
       }
     } catch (e) {
-      console.error("Could not fetch ai_providers, falling back to default.", e)
+      console.error('Could not fetch ai_providers, falling back to default.', e)
     }
 
     const apiKey = Deno.env.get(aiApiKeySecret)
@@ -113,32 +124,43 @@ REGRAS DE ESTADO IMPORTANTES:
 - "confidence_level": "high" se a info vier do Banco Interno/fabricante. "medium" se vier de fontes secundárias. "low" se for incerto.
 - "should_show_whatsapp_button": OBRIGATORIAMENTE defina como 'true' SE confidence_level for 'low' ou a dúvida envolver integração complexa.`
 
-    const tools = [{ 
-      type: 'function', 
-      function: { 
-        name: 'search_web', 
-        description: 'Busca na web via Google Custom Search. Use para specs oficiais.', 
-        parameters: { type: 'object', properties: { search_query: { type: 'string' } }, required: ['search_query'] } 
-      } 
-    }]
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'search_web',
+          description: 'Busca na web via Google Custom Search. Use para specs oficiais.',
+          parameters: {
+            type: 'object',
+            properties: { search_query: { type: 'string' } },
+            required: ['search_query'],
+          },
+        },
+      },
+    ]
 
-    let messages: any[] = [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }]
-    let toolCallCount = 0; let finalMessage = null; let usedWeb = false
+    let messages: any[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: query },
+    ]
+    let toolCallCount = 0
+    let finalMessage = null
+    let usedWeb = false
 
     while (true) {
       const payload: any = { model: aiModel, messages, response_format: { type: 'json_object' } }
       // OpenAI and Deepseek support function calling standard
-      if (toolCallCount < 2 && aiProvider !== 'gemini') { 
-        payload.tools = tools; 
-        payload.tool_choice = 'auto' 
+      if (toolCallCount < 2 && aiProvider !== 'gemini') {
+        payload.tools = tools
+        payload.tool_choice = 'auto'
       }
 
       const res = await fetch(aiBaseUrl, {
-        method: 'POST', 
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload)
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      
+
       if (!res.ok) throw new Error(`LLM API Error: ${res.statusText}`)
       const aiData = await res.json()
       const message = aiData.choices?.[0]?.message
@@ -160,49 +182,72 @@ REGRAS DE ESTADO IMPORTANTES:
                 const gsRes = await fetch(searchUrl)
                 if (gsRes.ok) {
                   const gsData = await gsRes.json()
-                  const snippets = (gsData.items || []).slice(0, 5).map((item: any) => 
-                    `[Domain: ${item.displayLink} | Source: ${item.link}]\n${item.snippet}`
-                  )
+                  const snippets = (gsData.items || [])
+                    .slice(0, 5)
+                    .map(
+                      (item: any) =>
+                        `[Domain: ${item.displayLink} | Source: ${item.link}]\n${item.snippet}`,
+                    )
                   content = snippets.join('\n\n')
                 }
               } else {
                 content = 'Google Search API keys not configured.'
               }
-              messages.push({ role: 'tool', tool_call_id: t.id, content: content || 'No data returned from web search.' })
-            } catch (e) { 
-              messages.push({ role: 'tool', tool_call_id: t.id, content: 'Error searching the web.' }) 
+              messages.push({
+                role: 'tool',
+                tool_call_id: t.id,
+                content: content || 'No data returned from web search.',
+              })
+            } catch (e) {
+              messages.push({
+                role: 'tool',
+                tool_call_id: t.id,
+                content: 'Error searching the web.',
+              })
             }
           }
         }
         toolCallCount++
-      } else { 
-        finalMessage = message; 
-        break 
+      } else {
+        finalMessage = message
+        break
       }
     }
 
     let result
-    try { 
+    try {
       result = JSON.parse(finalMessage?.content || '{}')
-      if (!Array.isArray(result.referenced_internal_products)) result.referenced_internal_products = []
+      if (!Array.isArray(result.referenced_internal_products))
+        result.referenced_internal_products = []
       result.used_web_search = usedWeb
       if (result.confidence_level === 'low') result.should_show_whatsapp_button = true
-      result.whatsapp_reason = result.whatsapp_reason || ""
-    } 
-    catch { result = fallbackResponse }
+      result.whatsapp_reason = result.whatsapp_reason || ''
+    } catch {
+      result = fallbackResponse
+    }
 
     // Fire and forget caching logic
     try {
-      supabase.from('product_search_cache').insert({
-        search_query: query,
-        product_name: 'AI Match',
-        product_description: result.message,
-        source: 'ai_generated'
-      }).then()
-    } catch(e) { /* Ignore cache insert error */ }
+      supabase
+        .from('product_search_cache')
+        .insert({
+          search_query: query,
+          product_name: 'AI Match',
+          product_description: result.message,
+          source: 'ai_generated',
+        })
+        .then()
+    } catch (e) {
+      /* Ignore cache insert error */
+    }
 
-    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error: any) {
-    return new Response(JSON.stringify(fallbackResponse), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify(fallbackResponse), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })
