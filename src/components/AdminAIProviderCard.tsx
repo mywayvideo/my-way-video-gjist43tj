@@ -87,13 +87,13 @@ export function AdminAIProviderCard({ provider, allProviders, onRefresh }: Props
       body: { provider_name: provider.provider_name },
     })
     setTesting(false)
-    if (error || !data?.success)
+    if (error || data?.status === 'invalid' || !data?.success)
       toast({
         title: 'Erro na Validação',
-        description: data?.error || error?.message || 'Erro desconhecido',
+        description: data?.error_message || data?.error || error?.message || 'Erro desconhecido',
         variant: 'destructive',
       })
-    else toast({ title: 'Sucesso', description: 'Conexão validada com sucesso!' })
+    else toast({ title: 'Sucesso', description: data?.message || 'Conexão validada com sucesso!' })
     onRefresh()
   }
 
