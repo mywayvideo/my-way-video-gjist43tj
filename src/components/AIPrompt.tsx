@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
+import { ReferencedProducts } from '@/components/ReferencedProducts'
 
 export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery)
@@ -151,6 +152,12 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
       {result?.status === 'success' && !isLoading && (
         <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
           <ResponseFormatter content={result.response} />
+          {result.referenced_internal_products &&
+            result.referenced_internal_products.length > 0 && (
+              <div className="mt-6">
+                <ReferencedProducts ids={result.referenced_internal_products} />
+              </div>
+            )}
         </div>
       )}
 
