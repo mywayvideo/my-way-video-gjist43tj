@@ -29,6 +29,7 @@ import {
   Calculator,
   Bot,
   HardDrive,
+  Settings,
 } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -207,6 +208,11 @@ export default function Admin() {
           <Link to="/admin/ai-providers">
             <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
               <Bot className="w-4 h-4 mr-2" /> IA Providers
+            </Button>
+          </Link>
+          <Link to="/admin/ai-settings">
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+              <Settings className="w-4 h-4 mr-2" /> Configurações de IA
             </Button>
           </Link>
           <AdminCSVUploader
