@@ -30,10 +30,13 @@ Deno.serve(async (req) => {
 
     if (hasAuthHeader) {
       const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } }
+        global: { headers: { Authorization: authHeader } },
       })
 
-      const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAuthClient.auth.getUser()
 
       if (authError || !user) {
         console.error('Auth verification failed:', authError?.message || 'No user found')
@@ -46,19 +49,22 @@ Deno.serve(async (req) => {
     console.log(`Token valid: ${isTokenValid ? 'yes' : 'no'}`)
 
     // 2. Payload Validation
-    let body;
+    let body
     try {
       body = await req.json()
     } catch (e) {
       console.log('Response status: error')
-      return new Response(JSON.stringify({ 
-        status: 'error', 
-        message: 'Corpo da requisição inválido.',
-        error_code: 'INVALID_REQUEST_BODY'
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Corpo da requisição inválido.',
+          error_code: 'INVALID_REQUEST_BODY',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const query = body.query
@@ -67,14 +73,17 @@ Deno.serve(async (req) => {
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
       console.log('Response status: error')
-      return new Response(JSON.stringify({ 
-        status: 'error', 
-        message: 'A consulta (query) é obrigatória.',
-        error_code: 'MISSING_QUERY'
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'A consulta (query) é obrigatória.',
+          error_code: 'MISSING_QUERY',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     console.log(`Query received: ${query.trim()}`)
@@ -93,33 +102,39 @@ Deno.serve(async (req) => {
 
       if (!cacheError && cacheHit) {
         console.log('Response status: success')
-        
-        // Background history insert for cache
-        supabaseAdmin.from('conversation_history').insert({
-          user_id: authUser?.id || null,
-          session_id: sessionId,
-          query: query.trim(),
-          response: `Cache Hit: ${cacheHit.product_name}`
-        }).then()
 
-        return new Response(JSON.stringify({
-          status: "cache_hit",
-          source: "product_search_cache",
-          product_name: cacheHit.product_name,
-          product_description: cacheHit.product_description,
-          product_price: cacheHit.product_price,
-          product_currency: cacheHit.product_currency,
-          product_specs: cacheHit.product_specs || {},
-          session_id: sessionId
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        // Background history insert for cache
+        supabaseAdmin
+          .from('conversation_history')
+          .insert({
+            user_id: authUser?.id || null,
+            session_id: sessionId,
+            query: query.trim(),
+            response: `Cache Hit: ${cacheHit.product_name}`,
+          })
+          .then()
+
+        return new Response(
+          JSON.stringify({
+            status: 'cache_hit',
+            source: 'product_search_cache',
+            product_name: cacheHit.product_name,
+            product_description: cacheHit.product_description,
+            product_price: cacheHit.product_price,
+            product_currency: cacheHit.product_currency,
+            product_specs: cacheHit.product_specs || {},
+            session_id: sessionId,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
       }
     }
 
     // 4. Fetch Conversation History for Context
-    let historyContext = ""
+    let historyContext = ''
     try {
       const { data: historyData, error: historyError } = await supabaseAdmin
         .from('conversation_history')
@@ -130,10 +145,12 @@ Deno.serve(async (req) => {
 
       if (!historyError && historyData && historyData.length > 0) {
         const chronological = historyData.reverse()
-        historyContext = "\n\nPrevious conversation:\n" + chronological.map((h: any) => `[User: ${h.query}] [Assistant: ${h.response}]`).join('\n')
+        historyContext =
+          '\n\nPrevious conversation:\n' +
+          chronological.map((h: any) => `[User: ${h.query}] [Assistant: ${h.response}]`).join('\n')
       }
     } catch (e) {
-      console.error("History fetch error:", e)
+      console.error('History fetch error:', e)
     }
 
     // 5. Multi-Provider Fallback Logic
@@ -145,24 +162,76 @@ Deno.serve(async (req) => {
 
     if (provError || !providers || providers.length === 0) {
       console.log('Response status: error')
-      return new Response(JSON.stringify({
-        status: "error",
-        message: "Nenhum provedor de IA disponível no momento. Tente novamente em alguns instantes.",
-        error_code: "NO_PROVIDERS_AVAILABLE",
-        attempted_providers: []
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message:
+            'Nenhum provedor de IA disponível no momento. Tente novamente em alguns instantes.',
+          error_code: 'NO_PROVIDERS_AVAILABLE',
+          attempted_providers: [],
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    const systemPrompt = "You are an expert in professional audiovisual equipment" + historyContext
+    const formattingRules = `\n\nRESPONSE FORMAT RULES (MANDATORY):
+You MUST format every response with MAXIMUM clarity and visual hierarchy.
+Use this exact structure:
+
+1. DIRECT ANSWER (first line, bold key terms):
+   Start with 1-2 sentences answering the question directly.
+   Bold critical information using **text** format.
+
+2. NUMBERED SECTIONS (if multiple topics):
+   Use format: **1. Section Title**
+   Then bullet points (max 3-4 per section).
+   Separate sections with blank line.
+
+3. CRITICAL REQUIREMENTS (if applicable):
+   Use format: **Requisitos Críticos:**
+   Then bullet points.
+
+4. RECOMMENDED BRANDS (if applicable):
+   Use format: **Marcas Recomendadas:**
+   Then bullet points with brief explanation.
+
+5. FINAL RECOMMENDATION (always end with this):
+   Use format: **Recomendação Final:**
+   Then 1-2 sentences summarizing the best option.
+
+FORMATTING RULES:
+- NEVER write paragraphs longer than 2 lines.
+- ALWAYS break long text into bullets.
+- ALWAYS bold critical information (capacities, specs, safety items).
+- ALWAYS separate sections with blank lines.
+- NEVER use markdown headers (###). Use bold titles instead.
+- NEVER mix bullets with paragraphs in same section.
+
+Example response structure:
+**Direct Answer:** The Sachtler 1018AM is adequate for Sony Burano with specific conditions.
+
+**1. Capacity Assessment**
+- Payload capacity: 18kg (meets Burano 8-12kg requirement)
+- Includes safety margin of 1.5x
+
+**2. Critical Requirements for Burano**
+- Fluid head with independent drag control
+- Counterbalance system
+- Scale markings for pan/tilt
+
+**Recomendação Final:** The Sachtler 1018AM is an excellent choice for Burano. Ensure drag and counterbalance are properly calibrated.`
+
+    const baseSystemPrompt =
+      'You are an expert in professional audiovisual equipment' + historyContext + formattingRules
     const attemptedProviders: string[] = []
 
     for (const provider of providers) {
       attemptedProviders.push(provider.provider_name)
       const apiKey = Deno.env.get(provider.api_key_secret_name)
-      
+
       if (!apiKey) {
         console.warn(`API Key ausente para o provedor: ${provider.provider_name}`)
         continue
@@ -174,26 +243,58 @@ Deno.serve(async (req) => {
       const maxAttempts = 3
       const backoffDelays = [2000, 4000, 8000] // 2s, 4s, 8s
       let success = false
-      let responseText = ""
+      let responseText = ''
+      let lastResponseText = ''
 
       while (attempt < maxAttempts && !success) {
         try {
-          responseText = await callAIProvider(provider.provider_name, provider.model_id, apiKey, systemPrompt, query.trim())
+          let currentPrompt = baseSystemPrompt
+          if (attempt > 0 && lastResponseText) {
+            currentPrompt +=
+              '\n\nCRITICAL WARNING: Your last response failed to follow the STRICT formatting rules. You MUST use **bold titles**, bullet points (-), and keep paragraphs under 2 lines. Please rewrite your previous answer with the correct formatting.'
+          }
+
+          responseText = await callAIProvider(
+            provider.provider_name,
+            provider.model_id,
+            apiKey,
+            currentPrompt,
+            query.trim(),
+          )
+          lastResponseText = responseText
+
+          // Validate basic formatting heuristically
+          const hasBolds = responseText.includes('**')
+          const hasBullets = responseText.includes('- ')
+          const hasLineBreaks = responseText.includes('\n\n')
+
+          if (!hasBolds || (!hasBullets && !hasLineBreaks && responseText.length > 200)) {
+            throw { status: 422, message: 'Response formatting validation failed' }
+          }
+
           success = true
         } catch (error: any) {
           attempt++
           const status = error?.status || 500
-          
-          console.error(`Falha no provedor ${provider.provider_name} (Tentativa ${attempt}/${maxAttempts}): HTTP ${status}`)
+
+          console.error(
+            `Falha no provedor ${provider.provider_name} (Tentativa ${attempt}/${maxAttempts}): HTTP ${status}`,
+          )
 
           if (status === 400 || status === 401 || status === 404) {
-            break
+            break // Fatal errors, don't retry on same provider
           }
 
-          if (status === 503 || status === 429 || status >= 500) {
+          if (status === 503 || status === 429 || status >= 500 || status === 422) {
             if (attempt < maxAttempts) {
               const delayMs = backoffDelays[attempt - 1] || 2000
-              await new Promise(resolve => setTimeout(resolve, delayMs))
+              await new Promise((resolve) => setTimeout(resolve, delayMs))
+            } else {
+              // If it's just a formatting issue and we ran out of attempts, accept it to avoid full failure
+              if (status === 422 && lastResponseText) {
+                responseText = lastResponseText
+                success = true
+              }
             }
           } else {
             break
@@ -210,76 +311,85 @@ Deno.serve(async (req) => {
             user_id: authUser?.id || null,
             session_id: sessionId,
             query: query.trim(),
-            response: responseText
+            response: responseText,
           })
-          
+
           // Cleanup old history (fire and forget)
           const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
           supabaseAdmin.from('conversation_history').delete().lt('created_at', yesterday).then()
         } catch (e) {
-          console.error("Failed to insert history:", e)
+          console.error('Failed to insert history:', e)
         }
 
-        return new Response(JSON.stringify({
-          status: "success",
-          provider_name: provider.provider_name,
-          response: responseText,
-          query: query.trim(),
-          session_id: sessionId
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        return new Response(
+          JSON.stringify({
+            status: 'success',
+            provider_name: provider.provider_name,
+            response: responseText,
+            query: query.trim(),
+            session_id: sessionId,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
       }
     }
 
     // 6. All Providers Failed
     console.log('Response status: error')
-    return new Response(JSON.stringify({
-      status: "error",
-      message: "Nenhum provedor de IA disponível no momento. Tente novamente em alguns instantes.",
-      error_code: "ALL_PROVIDERS_FAILED",
-      attempted_providers: attemptedProviders
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-
+    return new Response(
+      JSON.stringify({
+        status: 'error',
+        message:
+          'Nenhum provedor de IA disponível no momento. Tente novamente em alguns instantes.',
+        error_code: 'ALL_PROVIDERS_FAILED',
+        attempted_providers: attemptedProviders,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   } catch (error) {
-    console.error("Erro interno na função call-ai-agent:", error)
+    console.error('Erro interno na função call-ai-agent:', error)
     console.log('Response status: error')
-    return new Response(JSON.stringify({
-      status: "error",
-      message: "Erro interno do servidor ao processar a sua requisição. Tente novamente.",
-      error_code: "INTERNAL_SERVER_ERROR"
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    return new Response(
+      JSON.stringify({
+        status: 'error',
+        message: 'Erro interno do servidor ao processar a sua requisição. Tente novamente.',
+        error_code: 'INTERNAL_SERVER_ERROR',
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   }
 })
 
 async function callAIProvider(
-  providerName: string, 
-  modelId: string, 
-  apiKey: string, 
-  systemPrompt: string, 
-  userPrompt: string
+  providerName: string,
+  modelId: string,
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string,
 ): Promise<string> {
   if (providerName === 'openai') {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: modelId,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
+          { role: 'user', content: userPrompt },
+        ],
+      }),
     })
     if (!res.ok) throw { status: res.status, message: await res.text() }
     const data = await res.json()
@@ -287,18 +397,25 @@ async function callAIProvider(
   }
 
   if (providerName === 'gemini') {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { 
-            role: 'user', 
-            parts: [{ text: `Instruções de Sistema:\n${systemPrompt}\n\nConsulta do Usuário:\n${userPrompt}` }] 
-          }
-        ]
-      })
-    })
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `Instruções de Sistema:\n${systemPrompt}\n\nConsulta do Usuário:\n${userPrompt}`,
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    )
     if (!res.ok) throw { status: res.status, message: await res.text() }
     const data = await res.json()
     return data.candidates?.[0]?.content?.parts?.[0]?.text || ''
@@ -308,16 +425,16 @@ async function callAIProvider(
     const res = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: modelId,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ]
-      })
+          { role: 'user', content: userPrompt },
+        ],
+      }),
     })
     if (!res.ok) throw { status: res.status, message: await res.text() }
     const data = await res.json()

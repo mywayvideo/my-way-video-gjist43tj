@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
+import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery)
@@ -107,7 +108,7 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              className="h-11 w-11 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setQuery('')}
             >
               <X className="w-5 h-5" />
@@ -119,7 +120,7 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
             type="submit"
             size="icon"
             disabled={isLoading}
-            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
+            className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
@@ -140,7 +141,7 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
       {error && !isLoading && (
         <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up">
           <p className="text-destructive font-medium">{error}</p>
-          <Button onClick={() => handleSearch()} variant="outline" className="gap-2">
+          <Button onClick={() => handleSearch()} variant="outline" className="gap-2 h-11 px-6">
             <RefreshCcw className="w-4 h-4" />
             Tentar novamente
           </Button>
@@ -148,10 +149,8 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
       )}
 
       {result?.status === 'success' && !isLoading && (
-        <div className="p-6 bg-card border rounded-2xl shadow-sm text-card-foreground animate-fade-in-up">
-          <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none whitespace-pre-wrap">
-            {result.response}
-          </div>
+        <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
+          <ResponseFormatter content={result.response} />
         </div>
       )}
 
