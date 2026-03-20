@@ -21,7 +21,6 @@ import {
   Edit,
   Trash2,
   Box,
-  Package,
   ArrowLeft,
   Search,
   ImageIcon,
@@ -29,6 +28,7 @@ import {
   DollarSign,
   Calculator,
   Bot,
+  HardDrive,
 } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -198,7 +198,12 @@ export default function Admin() {
             </h1>
           </div>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-3">
+          <Link to="/admin/product-cache">
+            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+              <HardDrive className="w-4 h-4 mr-2" /> Cache de IA
+            </Button>
+          </Link>
           <Link to="/admin/ai-providers">
             <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
               <Bot className="w-4 h-4 mr-2" /> IA Providers
