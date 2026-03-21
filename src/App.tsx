@@ -10,6 +10,7 @@ import Admin from './pages/Admin'
 import AdminAIProviders from './pages/AdminAIProviders'
 import AdminProductCache from './pages/AdminProductCache'
 import AdminAISettings from './pages/AdminAISettings'
+import AdminAISystemPrompt from './pages/AdminAISystemPrompt'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
             <Route path="/admin/product-cache" element={<AdminProductCache />} />
             <Route path="/admin/ai-settings" element={<AdminAISettings />} />
+            <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Route>
