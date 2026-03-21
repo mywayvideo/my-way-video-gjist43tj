@@ -188,4 +188,8 @@ export default function AdminAISystemPrompt() {
               Salvar Instruções
             </Button>
           </div>
-        </CardCont
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
