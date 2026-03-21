@@ -282,16 +282,30 @@ export default function AdminAIProviders() {
     }
   }
 
-  const testConnection = async (providerName: string) => {
+  const testConnection = async (values: ProviderFormValues) => {
     setTestLoading(true)
     try {
+      let endpoint = values.custom_endpoint || ''
+      if (values.provider_type === 'openai') endpoint = 'https://api.openai.com/v1/chat/completions'
+      else if (values.provider_type === 'deepseek')
+        endpoint = 'https://api.deepseek.com/chat/completions'
+      else if (values.provider_type === 'gemini')
+        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${values.model_id}:generateContent`
+
       const { data, error } = await supabase.functions.invoke('validate-ai-provider', {
-        body: { provider_name: providerName },
+        body: {
+          model_id: values.model_id || '',
+          api_key_secret_name: values.api_key_secret_name || '',
+          endpoint: endpoint || 'invalid-endpoint',
+          provider_type: values.provider_type || 'openai',
+        },
       })
-      if (error || data?.status === 'invalid' || !data?.success) {
+
+      if (error || data?.status === 'error') {
         toast({
           title: 'Falha ao conectar ao provedor',
-          description: data?.error_message || error?.message || 'Verifique as credenciais.',
+          description:
+            data?.error_details || data?.message || error?.message || 'Verifique as credenciais.',
           variant: 'destructive',
         })
       } else {
@@ -656,8 +670,8 @@ export default function AdminAIProviders() {
                     <Button
                       type="button"
                       variant="secondary"
-                      onClick={() => testConnection(addForm.getValues('provider_name'))}
-                      disabled={testLoading || !addForm.getValues('provider_name')}
+                      onClick={() => testConnection(addForm.getValues())}
+                      disabled={testLoading}
                       className="w-full"
                     >
                       {testLoading ? (
@@ -695,7 +709,7 @@ export default function AdminAIProviders() {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => testConnection(editForm.getValues('provider_name'))}
+                  onClick={() => testConnection(editForm.getValues())}
                   disabled={testLoading}
                 >
                   {testLoading ? (
