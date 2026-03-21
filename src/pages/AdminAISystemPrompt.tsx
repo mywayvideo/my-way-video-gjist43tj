@@ -161,7 +161,7 @@ export default function AdminAISystemPrompt() {
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={loading || saving}
                 maxLength={30000}
-                className="min-h-[400px] font-mono text-sm bg-white dark:bg-zinc-950 resize-y leading-relaxed"
+                className="min-h-[400px] font-mono text-sm bg-black text-gray-100 resize-y leading-relaxed"
                 placeholder="Insira as diretrizes para o agente de IA..."
               />
             )}
