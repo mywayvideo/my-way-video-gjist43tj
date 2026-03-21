@@ -7,7 +7,13 @@ import { supabase } from '@/lib/supabase/client'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 
-export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
+export function AIPrompt({
+  initialQuery = '',
+  productId,
+}: {
+  initialQuery?: string
+  productId?: string
+}) {
   const [query, setQuery] = useState(initialQuery)
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -49,32 +55,45 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
         headers['Authorization'] = `Bearer ${token}`
       }
 
+      const payload: Record<string, any> = {
+        query: query.trim(),
+      }
+
+      if (productId) {
+        payload.productId = productId
+      }
+
       const res = await fetch(
-        'https://okpxxlpvqotwijisksui.supabase.co/functions/v1/call-ai-agent',
+        `${import.meta.env.VITE_SUPABASE_URL || 'https://okpxxlpvqotwijisksui.supabase.co'}/functions/v1/ai-search`,
         {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            query: query.trim(),
-            include_cache: true,
-            session_id: sessionId,
-          }),
+          body: JSON.stringify(payload),
         },
       )
 
       const data = await res.json()
 
       if (!res.ok || data.status === 'error') {
-        throw new Error(data.error_message || data.error || 'Erro ao processar sua pesquisa')
+        throw new Error(
+          data.error_message ||
+            data.error ||
+            'Ocorreu um erro ao processar sua pesquisa. Por favor, tente novamente.',
+        )
       }
 
       if (data.session_id) {
         localStorage.setItem('ai-session-id', data.session_id)
       }
 
-      setResult(data)
+      setResult({
+        ...data,
+        response: data.response || data.message,
+        status: 'success',
+      })
     } catch (err: any) {
-      const errorMsg = err.message || 'Erro inesperado'
+      const errorMsg =
+        err.message || 'Ocorreu um erro ao processar sua pesquisa. Por favor, tente novamente.'
       setError(errorMsg)
       toast({
         variant: 'destructive',
