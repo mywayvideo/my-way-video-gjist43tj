@@ -107,7 +107,7 @@ export default function AdminAISystemPrompt() {
   if (!user) return <Navigate to="/login" replace />
 
   const charCount = prompt.length
-  const isInvalid = charCount < 50 || charCount > 5000
+  const isInvalid = charCount < 50 || charCount > 30000
   const isDirty = prompt !== initialPrompt
   const disableSave = isInvalid || !isDirty || saving || loading
 
@@ -150,7 +150,7 @@ export default function AdminAISystemPrompt() {
               <span
                 className={`text-xs font-mono ${isInvalid && isDirty ? 'text-destructive' : 'text-muted-foreground'}`}
               >
-                {charCount} / 5000
+                {charCount} / 30000
               </span>
             </div>
             {loading ? (
@@ -160,6 +160,7 @@ export default function AdminAISystemPrompt() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={loading || saving}
+                maxLength={30000}
                 className="min-h-[400px] font-mono text-sm bg-white dark:bg-zinc-950 resize-y leading-relaxed"
                 placeholder="Insira as diretrizes para o agente de IA..."
               />
