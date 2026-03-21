@@ -30,8 +30,9 @@ import {
   Bot,
   HardDrive,
   Settings,
+  Sparkles,
 } from 'lucide-react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
 import {
   Dialog,
@@ -49,9 +50,11 @@ import {
 } from '@/components/ui/select'
 import { AdminProductForm } from '@/components/AdminProductForm'
 import { AdminCSVUploader } from '@/components/AdminCSVUploader'
+import { cn } from '@/lib/utils'
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth()
+  const location = useLocation()
   const [products, setProducts] = useState<Product[]>([])
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [companyInfo, setCompanyInfo] = useState<any>(null)
@@ -180,6 +183,16 @@ export default function Admin() {
     }
   }
 
+  const navBtnClasses = (path: string) => {
+    const isActive = location.pathname === path
+    return cn(
+      'transition-all duration-200 border-primary/20 text-primary bg-transparent',
+      isActive
+        ? 'bg-primary/15 font-semibold border-l-4 border-l-primary'
+        : 'hover:bg-primary/15 hover:text-primary hover:border-l-2 hover:border-l-primary hover:scale-105',
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col gap-8 max-w-7xl animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -201,18 +214,23 @@ export default function Admin() {
         </div>
         <div className="flex flex-wrap gap-3">
           <Link to="/admin/product-cache">
-            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+            <Button variant="outline" className={navBtnClasses('/admin/product-cache')}>
               <HardDrive className="w-4 h-4 mr-2" /> Cache de IA
             </Button>
           </Link>
           <Link to="/admin/ai-providers">
-            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+            <Button variant="outline" className={navBtnClasses('/admin/ai-providers')}>
               <Bot className="w-4 h-4 mr-2" /> IA Providers
             </Button>
           </Link>
           <Link to="/admin/ai-settings">
-            <Button variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+            <Button variant="outline" className={navBtnClasses('/admin/ai-settings')}>
               <Settings className="w-4 h-4 mr-2" /> Configurações de IA
+            </Button>
+          </Link>
+          <Link to="/admin/ai-system-prompt">
+            <Button variant="outline" className={navBtnClasses('/admin/ai-system-prompt')}>
+              <Sparkles className="w-4 h-4 mr-2" /> Instruções da IA
             </Button>
           </Link>
           <AdminCSVUploader
