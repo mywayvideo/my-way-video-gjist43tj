@@ -1,8 +1,10 @@
 {
   "_versions": {
-    "ai-search": 27,
-    "functions": 5,
-    "validate-ai-provider": 9,
-    "call-ai-agent": 12
+    "ai-search": 13
+  }
+}
+functions": 6,
+    "validate-ai-provider": 10,
+    "call-ai-agent": 13
   }
 }
