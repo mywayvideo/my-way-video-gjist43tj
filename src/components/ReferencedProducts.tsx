@@ -2,26 +2,57 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/ProductCard'
 
-export function ReferencedProducts({ ids }: { ids: string[] }) {
+export function ReferencedProducts({ ids }: { ids: Array<string | Record<string, any>> }) {
   const [products, setProducts] = useState<any[]>([])
 
   useEffect(() => {
-    if (!ids || ids.length === 0) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
       setProducts([])
       return
     }
 
     let isMounted = true
 
-    supabase
-      .from('products')
-      .select('*, manufacturer:manufacturers(*)')
-      .in('id', ids)
-      .then(({ data }) => {
-        if (isMounted && data) {
-          setProducts(data)
-        }
-      })
+    const firstItem = ids[0]
+    const isObject = typeof firstItem === 'object' && firstItem !== null && 'id' in firstItem
+
+    if (isObject) {
+      const mixed = ids.some((item) => typeof item === 'string')
+      if (mixed) {
+        console.warn(
+          'ReferencedProducts: Mixed types detected in ids array. Filtering valid items.',
+        )
+      }
+
+      const validObjects = ids.filter(
+        (item) => typeof item === 'object' && item !== null && 'id' in item,
+      )
+      setProducts(validObjects)
+    } else {
+      const mixed = ids.some((item) => typeof item === 'object')
+      if (mixed) {
+        console.warn(
+          'ReferencedProducts: Mixed types detected in ids array. Filtering valid items.',
+        )
+      }
+
+      const validStrings = ids.filter((item) => typeof item === 'string') as string[]
+
+      if (validStrings.length === 0) {
+        setProducts([])
+        return
+      }
+
+      supabase
+        .from('products')
+        .select('*, manufacturer:manufacturers(*)')
+        .in('id', validStrings)
+        .then(({ data }) => {
+          if (isMounted && data) {
+            setProducts(data)
+          }
+        })
+    }
 
     return () => {
       isMounted = false
