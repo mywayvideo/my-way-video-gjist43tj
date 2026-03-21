@@ -1,5 +1,4 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req: Request) => {
@@ -7,200 +6,214 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const timestamp = new Date().toISOString()
+
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const token = authHeader.replace(/^Bearer\s+/i, '')
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
-    
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized', details: userError?.message }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const role = user.app_metadata?.role || user.user_metadata?.role || user.role
-    if (role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
     const body = await req.json().catch(() => ({}))
-    const { provider_name } = body
+    const { model_id, api_key_secret_name, endpoint, provider_type } = body
 
-    if (!provider_name || !['openai', 'gemini', 'deepseek'].includes(provider_name)) {
+    if (!model_id || !api_key_secret_name || !endpoint || !provider_type) {
+      console.log(
+        `[${timestamp}] provider_type: ${provider_type || 'unknown'}, model_id: ${model_id || 'unknown'}, endpoint: ${endpoint || 'unknown'}, request status: failed_validation, response status: 400`,
+      )
       return new Response(
         JSON.stringify({
-          status: 'invalid',
-          provider_name: provider_name || 'unknown',
-          error_message: 'Provedor de IA inválido ou não fornecido',
-          validation_error: 'Missing or invalid provider_name',
-          success: false,
-          error: 'Provedor de IA inválido ou não fornecido'
+          status: 'error',
+          message: 'Campos obrigatorios: model_id, api_key_secret_name, endpoint, provider_type.',
+          provider_type: provider_type || 'unknown',
+          error_details: 'Missing required fields in request body',
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
-    let secretName = ''
-    if (provider_name === 'openai') secretName = 'OPENAI_API_KEY'
-    if (provider_name === 'gemini') secretName = 'GEMINI_API_KEY'
-    if (provider_name === 'deepseek') secretName = 'DEEPSEEK_API_KEY'
+    const apiKey = Deno.env.get(api_key_secret_name)
 
-    const { data: provider } = await supabase
-      .from('ai_providers')
-      .select('*')
-      .eq('provider_name', provider_name)
-      .single()
-
-    if (provider && provider.api_key_secret_name) {
-      secretName = provider.api_key_secret_name
+    if (apiKey === undefined || apiKey === null) {
+      console.log(
+        `[${timestamp}] provider_type: ${provider_type}, model_id: ${model_id}, endpoint: ${endpoint}, request status: missing_secret, response status: 400`,
+      )
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Chave de API nao encontrada em Secrets.',
+          provider_type,
+          error_details: `Secret ${api_key_secret_name} not found`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
     }
 
-    const apiKey = Deno.env.get(secretName)
-    if (!apiKey) {
-      if (provider) {
-        await updateProviderStatus(supabase, provider.id, 'error', `Chave de API ${secretName} não encontrada`)
+    if (apiKey.trim() === '') {
+      console.log(
+        `[${timestamp}] provider_type: ${provider_type}, model_id: ${model_id}, endpoint: ${endpoint}, request status: empty_secret, response status: 400`,
+      )
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Chave de API esta vazia.',
+          provider_type,
+          error_details: `Secret ${api_key_secret_name} is empty`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    let headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    let fetchBody: any = {}
+
+    if (provider_type === 'gemini') {
+      headers['x-goog-api-key'] = apiKey
+      fetchBody = {
+        contents: [{ role: 'user', parts: [{ text: 'Teste de conexao. Responda com OK.' }] }],
       }
-      return new Response(
-        JSON.stringify({
-          status: 'invalid',
-          provider_name,
-          error_message: `Chave de API não configurada para ${provider_name}`,
-          validation_error: `Secret ${secretName} not found`,
-          success: false,
-          error: `Chave de API não configurada para ${provider_name}`
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    } else {
+      headers['Authorization'] = `Bearer ${apiKey}`
+      fetchBody = {
+        model: model_id,
+        messages: [{ role: 'user', content: 'Teste de conexao. Responda com OK.' }],
+      }
     }
 
-    let isValid = false
-    let errorMessage = ''
-    let validationError = ''
+    let attempt = 0
+    const maxAttempts = 3
+    const backoffDelays = [2000, 4000, 8000]
+    let finalResponse: Response | null = null
+    let fetchError: any = null
 
-    const fetchWithRetry = async (url: string, options: RequestInit, attempts = 3) => {
-      for (let i = 0; i < attempts; i++) {
-        const res = await fetch(url, options)
-        if (res.status >= 200 && res.status < 300) {
-          return { ok: true, res }
-        }
+    while (attempt < maxAttempts) {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(fetchBody),
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+        finalResponse = res
+
         if (res.status === 503) {
-          if (i < attempts - 1) {
-            const delay = Math.pow(2, i + 1) * 1000 // 2s, 4s, 8s
-            await new Promise(r => setTimeout(r, delay))
+          if (attempt < maxAttempts - 1) {
+            await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt]))
+            attempt++
             continue
           }
         }
-        const text = await res.text().catch(() => '')
-        return { ok: false, status: res.status, errorText: text }
+        break
+      } catch (e: any) {
+        clearTimeout(timeoutId)
+        fetchError = e
+        if (e.name === 'AbortError') {
+          break
+        }
+        break
       }
-      return { ok: false, status: 503, errorText: 'Service Unavailable after retries' }
     }
 
-    try {
-      let result;
-      if (provider_name === 'openai') {
-        result = await fetchWithRetry('https://api.openai.com/v1/models', {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${apiKey}` }
-        })
-      } else if (provider_name === 'deepseek') {
-        result = await fetchWithRetry('https://api.deepseek.com/models', {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' }
-        })
-      } else if (provider_name === 'gemini') {
-        const model = provider?.model_id || 'gemini-1.5-flash'
-        result = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: "test connection" }] }],
-            generationConfig: { maxOutputTokens: 1 }
-          })
-        })
-      }
+    const logTimestamp = new Date().toISOString()
 
-      if (result?.ok) {
-        isValid = true
-      } else {
-        isValid = false
-        errorMessage = 'Erro na comunicação com o provedor'
-        validationError = `HTTP ${result?.status}: ${result?.errorText}`
-      }
-    } catch (e: any) {
-      isValid = false
-      errorMessage = 'Erro interno ao validar a conexão'
-      validationError = e.message
-    }
-
-    const status = isValid ? 'valid' : 'invalid'
-    if (provider) {
-      await updateProviderStatus(supabase, provider.id, isValid ? 'valid' : 'error', isValid ? null : validationError)
-    }
-
-    if (isValid) {
-      return new Response(
-        JSON.stringify({
-          status: 'valid',
-          provider_name,
-          validated_at: new Date().toISOString(),
-          message: 'API válida e operacional',
-          success: true
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (fetchError && fetchError.name === 'AbortError') {
+      console.log(
+        `[${logTimestamp}] provider_type: ${provider_type}, model_id: ${model_id}, endpoint: ${endpoint}, request status: timeout, response status: 504`,
       )
-    } else {
       return new Response(
         JSON.stringify({
-          status: 'invalid',
-          provider_name,
-          error_message: errorMessage,
-          validation_error: validationError,
-          success: false,
-          error: errorMessage
+          status: 'error',
+          message: 'Timeout ao conectar ao provedor. Tente novamente.',
+          provider_type,
+          error_details: 'Request timed out after 10 seconds',
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
-  } catch (error: any) {
+    if (!finalResponse) {
+      console.log(
+        `[${logTimestamp}] provider_type: ${provider_type}, model_id: ${model_id}, endpoint: ${endpoint}, request status: fetch_error, response status: 500`,
+      )
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Erro interno ao tentar conectar com a API.',
+          provider_type,
+          error_details: fetchError?.message || 'Unknown network error',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const statusCode = finalResponse.status
+    console.log(
+      `[${logTimestamp}] provider_type: ${provider_type}, model_id: ${model_id}, endpoint: ${endpoint}, request status: completed, response status: ${statusCode}`,
+    )
+
+    if (statusCode === 401 || statusCode === 403) {
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Chave de API invalida ou expirada.',
+          provider_type,
+          error_details: `HTTP ${statusCode}`,
+        }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    if (statusCode === 400 || statusCode === 404) {
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          message: 'Endpoint ou modelo invalido.',
+          provider_type,
+          error_details: `HTTP ${statusCode}`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    if (statusCode === 200 || statusCode === 201) {
+      return new Response(
+        JSON.stringify({
+          status: 'success',
+          message: 'Conexao testada com sucesso',
+          provider_type,
+          model_id,
+          endpoint,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const errorText = await finalResponse.text().catch(() => 'No error text returned')
     return new Response(
       JSON.stringify({
-        status: 'invalid',
-        provider_name: 'unknown',
-        error_message: 'Erro interno do servidor',
-        validation_error: error.message,
-        success: false,
-        error: 'Erro interno do servidor'
+        status: 'error',
+        message: 'Falha inesperada na conexao com o provedor.',
+        provider_type,
+        error_details: `HTTP ${statusCode}: ${errorText.substring(0, 200)}`,
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: statusCode >= 500 ? 502 : 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
+  } catch (err: any) {
+    console.log(
+      `[${new Date().toISOString()}] provider_type: unknown, model_id: unknown, endpoint: unknown, request status: fatal_error, response status: 500`,
+    )
+    return new Response(
+      JSON.stringify({
+        status: 'error',
+        message: 'Erro interno do servidor.',
+        provider_type: 'unknown',
+        error_details: err.message,
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   }
 })
-
-async function updateProviderStatus(supabase: any, id: string, status: string, error: string | null) {
-  await supabase.from('ai_providers').update({
-    validation_status: status,
-    validation_error: error,
-    last_validated_at: new Date().toISOString()
-  }).eq('id', id)
-}

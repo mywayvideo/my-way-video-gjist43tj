@@ -2,7 +2,7 @@
   "_versions": {
     "ai-search": 27,
     "functions": 5,
-    "validate-ai-provider": 8,
+    "validate-ai-provider": 9,
     "call-ai-agent": 12
   }
 }
