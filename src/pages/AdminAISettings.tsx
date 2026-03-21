@@ -6,7 +6,8 @@ import { toast } from '@/hooks/use-toast'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Settings, Save, RotateCcw, Loader2 } from 'lucide-react'
+import { Settings, Save, Loader2 } from 'lucide-react'
+import { ToastAction } from '@/components/ui/toast'
 
 import {
   Breadcrumb,
@@ -16,14 +17,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Form,
   FormControl,
@@ -35,44 +29,33 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 
 const formSchema = z.object({
+  cache_expiration_days: z.coerce
+    .number()
+    .min(1, 'O valor deve ser de pelo menos 1')
+    .max(365, 'O valor máximo é 365'),
   price_threshold_usd: z.coerce
     .number()
-    .min(1000, 'O valor deve ser de pelo menos 1000')
+    .min(100, 'O valor deve ser de pelo menos 100')
     .max(100000, 'O valor máximo é 100000'),
-  max_web_search_attempts: z.coerce
-    .number()
-    .min(1, 'O mínimo é 1 tentativa')
-    .max(5, 'O máximo são 5 tentativas'),
-  confidence_threshold_for_whatsapp: z.enum(['low', 'medium', 'high']),
+  whatsapp_trigger_low_confidence: z.boolean(),
+  whatsapp_trigger_purchase_keywords: z.boolean(),
+  whatsapp_trigger_project_keywords: z.boolean(),
+  whatsapp_trigger_expensive_product: z.boolean(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 const defaultValues: FormValues = {
+  cache_expiration_days: 30,
   price_threshold_usd: 5000,
-  max_web_search_attempts: 2,
-  confidence_threshold_for_whatsapp: 'low',
+  whatsapp_trigger_low_confidence: true,
+  whatsapp_trigger_purchase_keywords: true,
+  whatsapp_trigger_project_keywords: true,
+  whatsapp_trigger_expensive_product: true,
 }
 
 export default function AdminAISettings() {
@@ -85,12 +68,6 @@ export default function AdminAISettings() {
     defaultValues,
     mode: 'onChange',
   })
-
-  useEffect(() => {
-    if (user) {
-      fetchSettings()
-    }
-  }, [user])
 
   const fetchSettings = async () => {
     try {
@@ -106,23 +83,36 @@ export default function AdminAISettings() {
       if (data) {
         setSettingsId(data.id)
         form.reset({
-          price_threshold_usd: data.price_threshold_usd || 5000,
-          max_web_search_attempts: data.max_web_search_attempts || 2,
-          confidence_threshold_for_whatsapp:
-            (data.confidence_threshold_for_whatsapp as any) || 'low',
+          cache_expiration_days: data.cache_expiration_days ?? 30,
+          price_threshold_usd: data.price_threshold_usd ?? 5000,
+          whatsapp_trigger_low_confidence: data.whatsapp_trigger_low_confidence ?? true,
+          whatsapp_trigger_purchase_keywords: data.whatsapp_trigger_purchase_keywords ?? true,
+          whatsapp_trigger_project_keywords: data.whatsapp_trigger_project_keywords ?? true,
+          whatsapp_trigger_expensive_product: data.whatsapp_trigger_expensive_product ?? true,
         })
       }
     } catch (error) {
       console.error(error)
       toast({
-        title: 'Erro',
-        description: 'Erro ao carregar configurações. Tente novamente.',
+        title: 'Erro de conexão',
+        description: 'Não foi possível carregar as configurações.',
         variant: 'destructive',
+        action: (
+          <ToastAction altText="Tentar novamente" onClick={fetchSettings}>
+            Tentar novamente
+          </ToastAction>
+        ),
       })
     } finally {
       setInitialLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (user) {
+      fetchSettings()
+    }
+  }, [user])
 
   const onSubmit = async (values: FormValues) => {
     if (!settingsId) return
@@ -131,9 +121,12 @@ export default function AdminAISettings() {
       const { error } = await supabase
         .from('ai_agent_settings')
         .update({
+          cache_expiration_days: values.cache_expiration_days,
           price_threshold_usd: values.price_threshold_usd,
-          max_web_search_attempts: values.max_web_search_attempts,
-          confidence_threshold_for_whatsapp: values.confidence_threshold_for_whatsapp,
+          whatsapp_trigger_low_confidence: values.whatsapp_trigger_low_confidence,
+          whatsapp_trigger_purchase_keywords: values.whatsapp_trigger_purchase_keywords,
+          whatsapp_trigger_project_keywords: values.whatsapp_trigger_project_keywords,
+          whatsapp_trigger_expensive_product: values.whatsapp_trigger_expensive_product,
           updated_at: new Date().toISOString(),
         })
         .eq('id', settingsId)
@@ -141,34 +134,10 @@ export default function AdminAISettings() {
       if (error) throw error
 
       form.reset(values)
-      toast({ title: 'Sucesso', description: 'Configurações salvas com sucesso!' })
+      toast({ title: 'Sucesso', description: 'Configuracoes salvas com sucesso!' })
     } catch (error) {
       console.error(error)
       toast({ title: 'Erro', description: 'Erro ao salvar configurações.', variant: 'destructive' })
-    }
-  }
-
-  const handleRestoreDefaults = async () => {
-    if (!settingsId) return
-
-    try {
-      const { error } = await supabase
-        .from('ai_agent_settings')
-        .update({
-          price_threshold_usd: defaultValues.price_threshold_usd,
-          max_web_search_attempts: defaultValues.max_web_search_attempts,
-          confidence_threshold_for_whatsapp: defaultValues.confidence_threshold_for_whatsapp,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', settingsId)
-
-      if (error) throw error
-
-      form.reset(defaultValues)
-      toast({ title: 'Sucesso', description: 'Valores padrão restaurados.' })
-    } catch (error) {
-      console.error(error)
-      toast({ title: 'Erro', description: 'Erro ao restaurar padrões.', variant: 'destructive' })
     }
   }
 
@@ -184,7 +153,7 @@ export default function AdminAISettings() {
   const isDirty = form.formState.isDirty
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in min-h-[70vh]">
+    <div className="container mx-auto px-4 py-8 max-w-4xl animate-fade-in min-h-[70vh]">
       <Breadcrumb className="mb-6">
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -204,163 +173,198 @@ export default function AdminAISettings() {
           <div className="bg-primary/10 p-2 rounded-lg text-primary">
             <Settings className="w-6 h-6" />
           </div>
-          Configurações do Agente de IA
+          Configuracoes de IA
         </h1>
-        <p className="text-muted-foreground mt-2 max-w-3xl">
-          Ajuste os parâmetros de comportamento do assistente de inteligência artificial.
-        </p>
+        <p className="text-muted-foreground mt-2">Ajuste limites, cache e triggers do WhatsApp</p>
       </div>
 
-      <div className="flex justify-center w-full">
-        <Card className="w-full max-w-md border-border/50 shadow-sm bg-card">
-          <CardHeader>
-            <CardTitle className="text-xl">Parâmetros de Decisão</CardTitle>
-            <CardDescription>Valores base para gatilhos automáticos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {initialLoading ? (
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                  id="settings-form"
-                >
-                  <FormField
-                    control={form.control}
-                    name="price_threshold_usd"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Limite de Preço para Produtos Caros (USD)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={1000}
-                            max={100000}
-                            step={100}
-                            disabled={isSaving}
-                            {...field}
-                            className="font-mono"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Produtos acima deste valor acionam contato com especialista
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="max_web_search_attempts"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Máximo de Tentativas de Busca Web</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={5}
-                            step={1}
-                            disabled={isSaving}
-                            {...field}
-                            className="font-mono"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Número máximo de buscas na web por resposta
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="confidence_threshold_for_whatsapp"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nível de Confiança para Mostrar WhatsApp</FormLabel>
-                        <Select
+      {initialLoading ? (
+        <div className="space-y-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-border/50 shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Section A - Cache Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="cache_expiration_days"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cache Expiration (days)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={365}
                           disabled={isSaving}
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione um nível" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="low">Baixo (low)</SelectItem>
-                            <SelectItem value="medium">Médio (medium)</SelectItem>
-                            <SelectItem value="high">Alto (high)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Mostrar botão WhatsApp quando confiança for menor que este nível
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </form>
-              </Form>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row gap-3 justify-between border-t border-border/50 px-6 py-4 bg-muted/20">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={initialLoading || isSaving}
-                  className="w-full sm:w-auto"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" /> Restaurar Padrões
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Restaurar valores padrão?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Isso redefinirá todos os parâmetros para as configurações recomendadas de
-                    fábrica.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRestoreDefaults}>Confirmar</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                          {...field}
+                          className="font-mono max-w-md"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Produtos nao cadastrados sao cacheados por X dias.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
-            <Button
-              type="submit"
-              form="settings-form"
-              disabled={initialLoading || isSaving || !isDirty}
-              className="w-full sm:w-auto"
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Salvar Configurações
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Section B - Price Threshold</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="price_threshold_usd"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price Threshold (USD)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={100}
+                          max={100000}
+                          disabled={isSaving}
+                          {...field}
+                          className="font-mono max-w-md"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Produtos acima deste valor ativam WhatsApp button.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Section C - WhatsApp Button Triggers</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="whatsapp_trigger_low_confidence"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                      <div className="space-y-0.5 pr-4">
+                        <FormLabel className="text-base">Low Confidence</FormLabel>
+                        <FormDescription>
+                          Mostrar botao quando agente nao consegue responder.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSaving}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="whatsapp_trigger_purchase_keywords"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                      <div className="space-y-0.5 pr-4">
+                        <FormLabel className="text-base">Purchase Keywords</FormLabel>
+                        <FormDescription>
+                          Mostrar botao quando usuario menciona compra. (Ex: comprar, orcamento,
+                          quanto custa)
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSaving}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="whatsapp_trigger_project_keywords"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                      <div className="space-y-0.5 pr-4">
+                        <FormLabel className="text-base">Project Keywords</FormLabel>
+                        <FormDescription>
+                          Mostrar botao quando usuario menciona projeto. (Ex: integracao,
+                          customizacao, setup)
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSaving}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="whatsapp_trigger_expensive_product"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                      <div className="space-y-0.5 pr-4">
+                        <FormLabel className="text-base">Expensive Product</FormLabel>
+                        <FormDescription>
+                          Mostrar botao quando produto custa acima do threshold.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isSaving}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end pt-4 pb-8">
+              <Button type="submit" disabled={!isDirty || isSaving} size="lg">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Salvar Configurações
+              </Button>
+            </div>
+          </form>
+        </Form>
+      )}
     </div>
   )
 }
