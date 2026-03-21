@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Sparkles, X, Loader2, RefreshCcw } from 'lucide-react'
+import { Search, Sparkles, X, Loader2, RefreshCcw, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
@@ -158,6 +158,21 @@ export function AIPrompt({ initialQuery = '' }: { initialQuery?: string }) {
                 <ReferencedProducts ids={result.referenced_internal_products} />
               </div>
             )}
+
+          {result.should_show_whatsapp_button && (
+            <Button
+              className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white rounded-lg p-4 h-auto"
+              onClick={() =>
+                window.open(
+                  'https://wa.me/5561981815050?text=Olá, gostaria de falar com um especialista sobre minha dúvida.',
+                  '_blank',
+                )
+              }
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Quer falar com um especialista? Clique aqui.
+            </Button>
+          )}
         </div>
       )}
 
