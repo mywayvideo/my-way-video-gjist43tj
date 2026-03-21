@@ -25,47 +25,4 @@ export function ReferencedProducts({ ids }: { ids: Array<string | Record<string,
       }
 
       const validObjects = ids.filter(
-        (item) => typeof item === 'object' && item !== null && 'id' in item,
-      )
-      setProducts(validObjects)
-    } else {
-      const mixed = ids.some((item) => typeof item === 'object')
-      if (mixed) {
-        console.warn(
-          'ReferencedProducts: Mixed types detected in ids array. Filtering valid items.',
-        )
-      }
-
-      const validStrings = ids.filter((item) => typeof item === 'string') as string[]
-
-      if (validStrings.length === 0) {
-        setProducts([])
-        return
-      }
-
-      supabase
-        .from('products')
-        .select('*, manufacturer:manufacturers(*)')
-        .in('id', validStrings)
-        .then(({ data }) => {
-          if (isMounted && data) {
-            setProducts(data)
-          }
-        })
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [ids])
-
-  if (products.length === 0) return null
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 not-prose mt-2">
-      {products.map((p) => (
-        <ProductCard key={p.id} product={p} />
-      ))}
-    </div>
-  )
-}
+        (item) => typeof item === 'object' && item !== null &
