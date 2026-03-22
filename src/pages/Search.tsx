@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { AIPrompt } from '@/components/AIPrompt'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
+import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
@@ -109,9 +110,7 @@ export default function Search() {
                 )}
               </div>
 
-              <div className="text-foreground/90 whitespace-pre-wrap leading-relaxed max-w-none prose dark:prose-invert">
-                {aiResponse.message}
-              </div>
+              <ResponseFormatter content={aiResponse.message} />
 
               {showWhatsAppButton && (
                 <div className="pt-6 mt-6 border-t border-border/50">
