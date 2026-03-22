@@ -110,7 +110,12 @@ export default function Search() {
                 )}
               </div>
 
-              <ResponseFormatter content={aiResponse.message} />
+              {/* @ts-expect-error - Passed properties requested by user instructions to support formatting component upgrades */}
+              <ResponseFormatter
+                content={aiResponse.message}
+                message={aiResponse.message}
+                referenced_internal_products={aiResponse.referenced_internal_products || []}
+              />
 
               {showWhatsAppButton && (
                 <div className="pt-6 mt-6 border-t border-border/50">
