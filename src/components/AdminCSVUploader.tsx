@@ -31,6 +31,7 @@ interface Props {
 export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }: Props) {
   const [open, setOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [progressMsg, setProgressMsg] = useState('')
   const [mfgId, setMfgId] = useState<string>('')
   const [showMfgDialog, setShowMfgDialog] = useState(false)
   const [file, setFile] = useState<File | null>(null)
@@ -39,6 +40,8 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
     if (!file || !mfgId) return
 
     setIsUploading(true)
+    setProgressMsg('Processando arquivo...')
+
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
@@ -50,6 +53,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         if (lines.length < 2) throw new Error('CSV inválido')
 
         const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
+        let hasTechInfoError = false
 
         const parsedLines = lines
           .slice(1)
@@ -57,19 +61,37 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             const values = line
               .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
               .map((v) => v.replace(/^"|"$/g, '').trim())
-            const prod: any = {}
+
+            // Set default technical_info to null for all rows
+            const prod: any = { technical_info: null }
+
             headers.forEach((h, i) => {
               let val = values[i] || null
               if (h === 'sku' && val) val = val.replace(/[-/]/g, '')
 
               const targetKey = h === 'price_usa' ? 'price_usd' : h
 
-              if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)) {
-                prod[targetKey] = val ? parseFloat(val) : 0
-              } else if (targetKey === 'is_special') {
-                prod[targetKey] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
-              } else {
-                prod[targetKey] = val
+              try {
+                if (
+                  ['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)
+                ) {
+                  prod[targetKey] = val ? parseFloat(val) : 0
+                } else if (targetKey === 'is_special') {
+                  prod[targetKey] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
+                } else if (targetKey === 'technical_info') {
+                  // Extract value, set to null if empty or missing
+                  prod[targetKey] = val && val.trim() !== '' ? String(val) : null
+                } else {
+                  prod[targetKey] = val
+                }
+              } catch (err) {
+                if (targetKey === 'technical_info') {
+                  console.error('Error parsing technical_info', err)
+                  hasTechInfoError = true
+                  prod[targetKey] = null
+                } else {
+                  throw err
+                }
               }
             })
             return prod
@@ -86,12 +108,28 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           throw new Error('Nenhum produto válido encontrado. Preencha "name" e "sku".')
         }
 
+        if (hasTechInfoError) {
+          toast({
+            title: 'Aviso',
+            description: 'Coluna technical_info nao reconhecida. Ignorando.',
+          })
+        }
+
+        const progressText = `Importando ${validProducts.length} produtos...`
+        setProgressMsg(progressText)
+        toast({ description: progressText })
+
         const { error } = await supabase
           .from('products')
           .upsert(validProducts, { onConflict: 'manufacturer_id,sku' })
+
         if (error) throw error
 
-        toast({ title: 'Sucesso', description: `${validProducts.length} produtos importados.` })
+        toast({
+          title: 'Sucesso',
+          description: `${validProducts.length} produtos importados com sucesso.`,
+        })
+
         setFile(null)
         setMfgId('')
         setOpen(false)
@@ -100,6 +138,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         toast({ title: 'Erro de Importação', description: err.message, variant: 'destructive' })
       } finally {
         setIsUploading(false)
+        setProgressMsg('')
       }
     }
     reader.readAsText(file)
@@ -163,7 +202,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
               Cancelar
             </Button>
             <Button onClick={processUpload} disabled={isUploading || !file || !mfgId}>
-              {isUploading ? 'Processando...' : 'Importar Produtos'}
+              {isUploading ? progressMsg || 'Processando...' : 'Importar Produtos'}
             </Button>
           </div>
         </DialogContent>
