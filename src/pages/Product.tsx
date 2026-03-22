@@ -445,6 +445,7 @@ export default function Product() {
                                     </span>
                                     <ReferencedProducts
                                       ids={msg.aiData.referenced_internal_products}
+                                      currentProductId={product.id}
                                     />
                                   </div>
                                 )}

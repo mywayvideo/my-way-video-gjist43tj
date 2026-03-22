@@ -50,7 +50,7 @@ export function ProductCard({ product }: { product: any }) {
       </CardHeader>
       <CardContent className="flex-1 p-5">
         <Link to={`/product/${product.id}`}>
-          <h3 className="font-semibold text-sm md:text-base line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+          <h3 className="font-semibold text-sm md:text-base mb-2 group-hover:text-primary transition-colors">
             {product.name}
           </h3>
         </Link>

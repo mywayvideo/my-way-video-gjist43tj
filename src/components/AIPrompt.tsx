@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { Search, Sparkles, X, Loader2, RefreshCcw, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,9 @@ export function AIPrompt({
   initialQuery?: string
   productId?: string
 }) {
+  const { id: routeId } = useParams()
+  const activeProductId = productId || routeId
+
   const [query, setQuery] = useState(initialQuery)
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -59,8 +63,8 @@ export function AIPrompt({
         query: query.trim(),
       }
 
-      if (productId) {
-        payload.productId = productId
+      if (activeProductId) {
+        payload.productId = activeProductId
       }
 
       const res = await fetch(
@@ -174,7 +178,10 @@ export function AIPrompt({
           {result.referenced_internal_products &&
             result.referenced_internal_products.length > 0 && (
               <div className="mt-6">
-                <ReferencedProducts ids={result.referenced_internal_products} />
+                <ReferencedProducts
+                  ids={result.referenced_internal_products}
+                  currentProductId={activeProductId}
+                />
               </div>
             )}
 

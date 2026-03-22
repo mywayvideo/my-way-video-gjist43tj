@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { ProductCard } from '@/components/ProductCard'
 
-export function ReferencedProducts({ ids }: { ids: Array<string | Record<string, any>> }) {
+export function ReferencedProducts({
+  ids,
+  currentProductId,
+}: {
+  ids: Array<string | Record<string, any>>
+  currentProductId?: string
+}) {
   const [products, setProducts] = useState<any[]>([])
 
   useEffect(() => {
@@ -25,7 +31,8 @@ export function ReferencedProducts({ ids }: { ids: Array<string | Record<string,
       }
 
       const validObjects = ids.filter(
-        (item) => typeof item === 'object' && item !== null && 'id' in item,
+        (item) =>
+          typeof item === 'object' && item !== null && 'id' in item && item.id !== currentProductId,
       )
       setProducts(validObjects)
     } else {
@@ -36,7 +43,9 @@ export function ReferencedProducts({ ids }: { ids: Array<string | Record<string,
         )
       }
 
-      const validStrings = ids.filter((item) => typeof item === 'string') as string[]
+      const validStrings = ids.filter(
+        (item) => typeof item === 'string' && item !== currentProductId,
+      ) as string[]
 
       if (validStrings.length === 0) {
         setProducts([])
@@ -49,7 +58,7 @@ export function ReferencedProducts({ ids }: { ids: Array<string | Record<string,
         .in('id', validStrings)
         .then(({ data }) => {
           if (isMounted && data) {
-            setProducts(data)
+            setProducts(data.filter((p) => p.id !== currentProductId))
           }
         })
     }
@@ -57,7 +66,7 @@ export function ReferencedProducts({ ids }: { ids: Array<string | Record<string,
     return () => {
       isMounted = false
     }
-  }, [ids])
+  }, [ids, currentProductId])
 
   if (products.length === 0) return null
 
