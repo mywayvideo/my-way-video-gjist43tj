@@ -100,6 +100,10 @@ export default function Product() {
   const [imgError, setImgError] = useState(false)
   const [isTechnicalInfoOpen, setIsTechnicalInfoOpen] = useState(false)
 
+  // Admin & Settings State
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showPriceCost, setShowPriceCost] = useState(false)
+
   // BRL Pricing State
   const [brlData, setBrlData] = useState<{
     finalBrl: number
@@ -108,6 +112,30 @@ export default function Product() {
     val: number
   } | null>(null)
   const [calculatingBrl, setCalculatingBrl] = useState(false)
+
+  useEffect(() => {
+    const fetchSettingsAndUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const role = user?.app_metadata?.role || user?.user_metadata?.role
+      setIsAdmin(role === 'admin')
+
+      const { data } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'show_price_cost')
+        .maybeSingle()
+
+      if (data && data.value === 'true') {
+        setShowPriceCost(true)
+      } else {
+        setShowPriceCost(false)
+      }
+    }
+
+    fetchSettingsAndUser()
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -387,6 +415,17 @@ export default function Product() {
                   maximumFractionDigits: 2,
                 })}
               </p>
+
+              {isAdmin && showPriceCost && !!product.price_cost && product.price_cost > 0 && (
+                <div className="mt-2 text-sm text-muted-foreground font-mono">
+                  <span className="font-medium mr-1">Preço de Custo (FOB Miami):</span>
+                  US${' '}
+                  {product.price_cost.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+              )}
 
               <div className="mt-6 pt-6 border-t border-border/50">
                 {!brlData ? (
