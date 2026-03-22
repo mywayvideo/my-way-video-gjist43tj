@@ -12,14 +12,14 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { AIPrompt } from '@/components/AIPrompt'
-import { performAISearch, AISearchResponse } from '@/services/ai-search'
+import { performAISearch } from '@/services/ai-search'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
   const [loading, setLoading] = useState(false)
-  const [aiResponse, setAiResponse] = useState<AISearchResponse | null>(null)
+  const [aiResponse, setAiResponse] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
 
   useEffect(() => {
@@ -36,13 +36,29 @@ export default function Search() {
         const { data, error } = await performAISearch(query)
         if (error) throw error
         if (data) {
-          setAiResponse(data)
-          // Handle both cases where the backend might send related_product_ids or referenced_internal_products
-          const relatedIds =
-            (data as any).related_product_ids || data.referenced_internal_products || []
-          if (relatedIds.length > 0) {
-            const { data: pData } = await supabase.from('products').select('*').in('id', relatedIds)
-            if (pData) setProducts(pData)
+          const message = data.message
+          const referenced_internal_products = (data as any).referenced_internal_products || []
+          const confidence_level = data.confidence_level
+
+          setAiResponse({
+            message,
+            referenced_internal_products,
+            confidence_level,
+            should_show_whatsapp_button: data.should_show_whatsapp_button,
+            whatsapp_reason: data.whatsapp_reason,
+            type: data.type,
+          })
+
+          if (referenced_internal_products.length > 0) {
+            if (typeof referenced_internal_products[0] === 'object') {
+              setProducts(referenced_internal_products)
+            } else {
+              const { data: pData } = await supabase
+                .from('products')
+                .select('*')
+                .in('id', referenced_internal_products)
+              if (pData) setProducts(pData)
+            }
           }
         }
       } catch (error) {
@@ -114,7 +130,7 @@ export default function Search() {
               <ResponseFormatter
                 content={aiResponse.message}
                 message={aiResponse.message}
-                referenced_internal_products={aiResponse.referenced_internal_products || []}
+                referenced_internal_products={aiResponse.referenced_internal_products}
               />
 
               {showWhatsAppButton && (
