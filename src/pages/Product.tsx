@@ -8,6 +8,9 @@ import { useCartStore } from '@/stores/useCartStore'
 import { supabase } from '@/lib/supabase/client'
 import { fetchUSDRate } from '@/services/awesome-api'
 import { toast } from '@/hooks/use-toast'
+import { cn } from '@/lib/utils'
+import ReactMarkdown from 'react-markdown'
+import { TechnicalInfoModal } from '@/components/TechnicalInfoModal'
 import {
   ShoppingCart,
   Bot,
@@ -20,6 +23,7 @@ import {
   ChevronRight,
   X,
   Send,
+  Info,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
@@ -33,11 +37,58 @@ type Message = {
   isLoading?: boolean
 }
 
+const markdownComponents = {
+  h2: ({ node, ...props }: any) => (
+    <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
+  ),
+  h3: ({ node, ...props }: any) => (
+    <h3 className="text-xl font-semibold mt-4 mb-3 text-primary" {...props} />
+  ),
+  strong: ({ node, ...props }: any) => <strong className="font-bold text-primary" {...props} />,
+  ul: ({ node, ...props }: any) => (
+    <ul className="ml-6 mt-2 mb-2 list-disc marker:text-primary/70" {...props} />
+  ),
+  ol: ({ node, ...props }: any) => (
+    <ol className="ml-6 mt-2 mb-2 list-decimal marker:text-primary/70" {...props} />
+  ),
+  li: ({ node, ...props }: any) => <li className="mb-2" {...props} />,
+  blockquote: ({ node, ...props }: any) => (
+    <blockquote
+      className="border-l-4 border-primary pl-4 ml-0 my-4 text-muted-foreground"
+      {...props}
+    />
+  ),
+  p: ({ node, ...props }: any) => <p className="mb-4 last:mb-0 whitespace-pre-wrap" {...props} />,
+  pre: ({ node, ...props }: any) => (
+    <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
+  ),
+  code: ({ node, className, children, ...props }: any) => {
+    const match = /language-(\w+)/.exec(className || '')
+    const isInline = !match && String(children).indexOf('\n') === -1
+
+    if (isInline) {
+      return (
+        <code className="bg-muted px-2 py-1 rounded font-mono text-sm" {...props}>
+          {children}
+        </code>
+      )
+    }
+
+    return (
+      <code className={cn('font-mono text-sm', className)} {...props}>
+        {children}
+      </code>
+    )
+  },
+}
+
 export default function Product() {
   const { id } = useParams()
   const location = useLocation()
   const { addItem } = useCartStore()
-  const [product, setProduct] = useState<ProductType | null>(null)
+  const [product, setProduct] = useState<(ProductType & { technical_info?: string | null }) | null>(
+    null,
+  )
 
   // Chat State
   const [messages, setMessages] = useState<Message[]>([])
@@ -47,6 +98,7 @@ export default function Product() {
 
   const [isMetric, setIsMetric] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [isTechnicalInfoOpen, setIsTechnicalInfoOpen] = useState(false)
 
   // BRL Pricing State
   const [brlData, setBrlData] = useState<{
@@ -67,6 +119,7 @@ export default function Product() {
     setIsAiLoading(false)
     setBrlData(null)
     setImgError(false)
+    setIsTechnicalInfoOpen(false)
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -77,7 +130,7 @@ export default function Product() {
       .select('*, manufacturer:manufacturers(*)')
       .eq('id', id)
       .single()
-      .then(({ data }) => data && setProduct(data))
+      .then(({ data }) => data && setProduct(data as any))
 
     return () => {
       if (abortControllerRef.current) {
@@ -297,6 +350,27 @@ export default function Product() {
             {product.name}
           </h1>
 
+          <div className="mb-8">
+            <div className="text-foreground/90 text-sm md:text-base leading-relaxed">
+              {product.description ? (
+                <ReactMarkdown components={markdownComponents}>{product.description}</ReactMarkdown>
+              ) : (
+                <p className="text-muted-foreground italic">Descrição não disponível.</p>
+              )}
+            </div>
+
+            {product.technical_info && product.technical_info.trim() !== '' && (
+              <Button
+                variant="outline"
+                onClick={() => setIsTechnicalInfoOpen(true)}
+                className="mt-6"
+              >
+                <Info className="w-4 h-4 mr-2" />
+                Mais Informações
+              </Button>
+            )}
+          </div>
+
           <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
             <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
               <Globe className="w-32 h-32" />
@@ -506,6 +580,11 @@ export default function Product() {
           </div>
         </div>
       </div>
+      <TechnicalInfoModal
+        isOpen={isTechnicalInfoOpen}
+        onClose={() => setIsTechnicalInfoOpen(false)}
+        technicalInfo={product.technical_info || ''}
+      />
     </div>
   )
 }
