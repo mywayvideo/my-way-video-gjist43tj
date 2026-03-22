@@ -3,40 +3,27 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, PackageSearch } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
   const [imgError, setImgError] = useState(false)
-  const [imageSrc, setImageSrc] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!product.image_url) {
-      setImageSrc(null)
-      return
-    }
-
-    // Proxy the image to avoid CORS restrictions during html-to-image capture
-    const url = product.image_url
-    if (url.startsWith('http') && !url.includes('images.weserv.nl')) {
-      setImageSrc(`https://images.weserv.nl/?url=${encodeURIComponent(url)}`)
-    } else {
-      setImageSrc(url)
-    }
-  }, [product.image_url])
+  const hasImage =
+    product.image_url && typeof product.image_url === 'string' && product.image_url.trim() !== ''
 
   return (
     <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
       <CardHeader className="p-0 relative">
         <Link
           to={`/product/${product.id}`}
-          className="aspect-square overflow-hidden bg-muted/30 flex items-center justify-center"
+          className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
         >
-          {imageSrc && !imgError ? (
+          {hasImage && !imgError ? (
             <img
-              src={imageSrc}
+              src={product.image_url}
               alt={product.name}
-              crossOrigin="anonymous"
+              loading="lazy"
               onError={() => setImgError(true)}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
