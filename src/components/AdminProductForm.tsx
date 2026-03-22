@@ -16,6 +16,7 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { UploadCloud, Plus } from 'lucide-react'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
+import ReactMarkdown from 'react-markdown'
 
 interface Props {
   initialData: Product | null
@@ -45,6 +46,7 @@ export function AdminProductForm({
       stock: 0,
       image_url: '',
       description: '',
+      technical_info: '',
       ncm: '',
       weight: 0,
       dimensions: '',
@@ -99,16 +101,22 @@ export function AdminProductForm({
     delete payload.created_at
     delete payload.manufacturer
 
-    const req = initialData?.id
+    const isUpdate = !!initialData?.id
+
+    const req = isUpdate
       ? supabase.from('products').update(payload).eq('id', initialData.id)
       : supabase.from('products').insert([payload])
 
     const { error } = await req
     setLoading(false)
 
-    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
-    else {
-      toast({ title: 'Sucesso', description: 'Produto salvo no inventário.' })
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+    } else {
+      toast({
+        title: 'Sucesso',
+        description: isUpdate ? 'Produto atualizado com sucesso.' : 'Produto salvo no inventário.',
+      })
       onSuccess()
     }
   }
@@ -317,7 +325,30 @@ export function AdminProductForm({
             className="bg-background/50 min-h-[100px]"
           />
         </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="technical_info">Informacoes Tecnicas (Markdown/HTML)</Label>
+          <Textarea
+            id="technical_info"
+            name="technical_info"
+            value={formData.technical_info || ''}
+            onChange={handleChange}
+            placeholder={`## Especificacoes Avancadas\n\n**Recurso 1:** Descricao...`}
+            className="bg-background/50 min-h-[200px]"
+            rows={10}
+          />
+        </div>
+
+        {formData.technical_info && (
+          <div className="space-y-2 md:col-span-2">
+            <Label>Preview</Label>
+            <div className="p-4 border border-border/50 rounded-md bg-background/50 text-sm [&_h2]:text-[1.5rem] [&_h2]:font-[700] [&_h2]:mt-[1.5rem] [&_h2]:mb-[1rem] [&_h3]:text-[1.25rem] [&_h3]:font-[600] [&_h3]:mt-[1rem] [&_h3]:mb-[0.75rem] [&_strong]:font-[700] [&_strong]:text-primary [&_ul]:ml-[1.5rem] [&_ul]:mt-[0.5rem] [&_ul]:mb-[0.5rem] [&_ul]:list-disc [&_ol]:ml-[1.5rem] [&_ol]:mt-[0.5rem] [&_ol]:mb-[0.5rem] [&_ol]:list-decimal [&_li]:mb-[0.5rem] [&_blockquote]:border-l-[4px] [&_blockquote]:border-primary [&_blockquote]:pl-[1rem] [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_code]:bg-muted [&_code]:py-[0.25rem] [&_code]:px-[0.5rem] [&_code]:rounded-[0.25rem] [&_code]:font-mono [&_pre]:bg-muted [&_pre]:p-[1rem] [&_pre]:rounded-[0.5rem] [&_pre]:overflow-x-auto [&_pre]:font-mono">
+              <ReactMarkdown>{formData.technical_info}</ReactMarkdown>
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
         <Button type="button" variant="ghost" onClick={onSuccess}>
           Cancelar
