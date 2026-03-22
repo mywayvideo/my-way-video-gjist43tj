@@ -1,5 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
+import ReactMarkdown from 'react-markdown'
 
 interface ResponseFormatterProps {
   content: string
@@ -9,87 +10,66 @@ interface ResponseFormatterProps {
 export function ResponseFormatter({ content, className }: ResponseFormatterProps) {
   if (!content) return null
 
-  const lines = content.split('\n')
-  const blocks: React.ReactNode[] = []
-  let currentList: React.ReactNode[] = []
-  let blockKey = 0
+  return (
+    <div
+      className={cn(
+        'flex flex-col w-full text-foreground/90 leading-[1.625] text-sm md:text-base',
+        className,
+      )}
+    >
+      <ReactMarkdown
+        components={{
+          h2: ({ node, ...props }) => (
+            <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
+          ),
+          h3: ({ node, ...props }) => (
+            <h3 className="text-xl font-semibold mt-4 mb-3 text-primary" {...props} />
+          ),
+          strong: ({ node, ...props }) => <strong className="font-bold text-primary" {...props} />,
+          ul: ({ node, ...props }) => (
+            <ul className="ml-6 mt-2 mb-2 list-disc marker:text-primary/70" {...props} />
+          ),
+          ol: ({ node, ...props }) => (
+            <ol className="ml-6 mt-2 mb-2 list-decimal marker:text-primary/70" {...props} />
+          ),
+          li: ({ node, ...props }) => <li className="mb-2" {...props} />,
+          blockquote: ({ node, ...props }) => (
+            <blockquote
+              className="border-l-4 border-primary pl-4 ml-0 my-4 text-muted-foreground"
+              {...props}
+            />
+          ),
+          p: ({ node, ...props }) => (
+            <p className="mb-4 last:mb-0 whitespace-pre-wrap" {...props} />
+          ),
+          pre: ({ node, ...props }) => (
+            <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
+          ),
+          code: ({ node, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '')
+            const isInline = !match && String(children).indexOf('\n') === -1
 
-  const parseInlineText = (text: string) => {
-    // Split by **text** to extract bold segments
-    const parts = text.split(/(\*\*.*?\*\*)/g)
-    return parts.map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return (
-          <strong key={i} className="font-bold text-foreground">
-            {part.slice(2, -2)}
-          </strong>
-        )
-      }
-      return <span key={i}>{part}</span>
-    })
-  }
+            if (isInline) {
+              return (
+                <code className="bg-muted px-2 py-1 rounded font-mono text-sm" {...props}>
+                  {children}
+                </code>
+              )
+            }
 
-  const flushList = () => {
-    if (currentList.length > 0) {
-      blocks.push(
-        <ul
-          key={`list-${blockKey++}`}
-          className="ml-6 space-y-2 list-disc marker:text-primary/70 mb-4 text-base"
-        >
-          {currentList}
-        </ul>,
-      )
-      currentList = []
-    }
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-
-    if (line === '') {
-      flushList()
-      continue
-    }
-
-    if (line.startsWith('-')) {
-      const listItemContent = line.replace(/^-+\s*/, '')
-      currentList.push(
-        <li key={`li-${i}`} className="leading-relaxed pl-1 text-foreground/90">
-          {parseInlineText(listItemContent)}
-        </li>,
-      )
-    } else {
-      flushList()
-
-      // Detect section title: Starts with ** and ends with ** or **:
-      const isTitle =
-        line.startsWith('**') &&
-        (line.endsWith('**') || line.endsWith('**:') || line.endsWith('** :'))
-
-      if (isTitle) {
-        blocks.push(
-          <h3
-            key={`h-${blockKey++}`}
-            className="text-base md:text-lg font-semibold text-primary mt-6 mb-3 first:mt-0"
-          >
-            {parseInlineText(line.replace(/:$/, '').trim())}
-          </h3>,
-        )
-      } else {
-        blocks.push(
-          <div
-            key={`p-${blockKey++}`}
-            className="text-sm md:text-base text-foreground/90 leading-[1.625] mb-4 last:mb-0"
-          >
-            {parseInlineText(line)}
-          </div>,
-        )
-      }
-    }
-  }
-
-  // Flush any remaining list items
-  flushList()
-
-  return <div className={cn('flex flex-col w-full', className)}>{blocks}</div>
+            return (
+              <code className={cn('font-mono text-sm', className)} {...props}>
+                {children}
+              </code>
+            )
+          },
+          a: ({ node, ...props }) => (
+            <a className="text-primary underline underline-offset-4" {...props} />
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  )
 }
