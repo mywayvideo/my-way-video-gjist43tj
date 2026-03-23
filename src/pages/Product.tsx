@@ -446,7 +446,7 @@ export default function Product() {
                         )}
                       >
                         {costPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
-                        {costPrice.text}
+                        {costPrice.isPlaceholder ? 'Indisponível' : costPrice.text}
                       </span>
                     )
                   })()}
