@@ -4,6 +4,13 @@ import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useCartStore } from '@/stores/useCartStore'
 import { supabase } from '@/lib/supabase/client'
 import { fetchUSDRate } from '@/services/awesome-api'
@@ -94,6 +101,7 @@ export default function Product() {
   const [messages, setMessages] = useState<Message[]>([])
   const [question, setQuestion] = useState('')
   const [isAiLoading, setIsAiLoading] = useState(false)
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const [isMetric, setIsMetric] = useState(false)
@@ -148,6 +156,7 @@ export default function Product() {
     setBrlData(null)
     setImgError(false)
     setIsTechnicalInfoOpen(false)
+    setIsAiChatOpen(false)
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -490,127 +499,153 @@ export default function Product() {
             <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
           </Button>
 
-          <div className="border border-border/50 rounded-xl bg-card shadow-sm flex flex-col w-full max-h-[200px] m-2 overflow-hidden text-[0.875rem] leading-[1.4]">
-            <div className="p-2 border-b border-border/50 flex items-center gap-2 bg-muted/20">
-              <div className="bg-primary/10 p-1 rounded-full ring-1 ring-primary/20">
-                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-              </div>
+          <div className="bg-secondary border border-border rounded-[1rem] p-6 min-h-[280px] w-full flex flex-col shadow-sm mb-6">
+            <div className="flex items-start gap-4">
+              <Sparkles className="w-12 h-12 text-primary shrink-0" />
               <div>
-                <h3 className="font-bold text-foreground text-sm">Engenharia IA</h3>
+                <h3 className="text-[1.25rem] font-semibold text-foreground">Engenharia de IA</h3>
+                <p className="text-[0.875rem] text-muted-foreground mt-1">
+                  Faça perguntas técnicas avançadas
+                </p>
               </div>
             </div>
 
-            <div className="flex-1 p-2 overflow-y-auto space-y-3 flex flex-col">
-              {messages.length === 0 && (
-                <div className="m-auto text-center max-w-xs text-muted-foreground opacity-60">
-                  <Bot className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">
-                    Faca perguntas tecnicas avancadas sobre as especificacoes do {product.name}
-                  </p>
-                </div>
-              )}
-
-              {messages.map((msg, idx) => {
-                const showWhatsApp = checkWhatsAppTrigger(msg, product)
-
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                  >
-                    {msg.role === 'ai' && (
-                      <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
-                        Assistente
-                      </span>
-                    )}
-                    <div
-                      className={`p-2 rounded-xl text-xs leading-[1.4] max-w-[90%] sm:max-w-[85%] shadow-sm ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                          : 'bg-background border border-border/60 rounded-tl-sm'
-                      }`}
-                    >
-                      {msg.isLoading ? (
-                        <div className="flex items-center gap-2 opacity-70 font-mono text-[10px]">
-                          <Loader2 className="w-3 h-3 animate-spin text-primary" /> Pesquisando...
-                        </div>
-                      ) : (
-                        <>
-                          {msg.role === 'user' ? (
-                            <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
-                          ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 text-xs">
-                              <MarkdownRenderer content={msg.content} />
-
-                              {msg.aiData?.referenced_internal_products &&
-                                msg.aiData.referenced_internal_products.length > 0 && (
-                                  <div className="mt-3 border-t border-border/50 pt-2">
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
-                                      Soluções Mencionadas:
-                                    </span>
-                                    <ReferencedProducts
-                                      ids={msg.aiData.referenced_internal_products}
-                                      currentProductId={product.id}
-                                    />
-                                  </div>
-                                )}
-
-                              {showWhatsApp && (
-                                <div className="mt-3 pt-2 border-t border-border/50">
-                                  {msg.aiData?.whatsapp_reason && (
-                                    <p className="text-[10px] text-muted-foreground mb-2 font-medium border-l-2 border-primary/40 pl-2">
-                                      {msg.aiData.whatsapp_reason}
-                                    </p>
-                                  )}
-                                  <Button
-                                    onClick={() =>
-                                      window.open(
-                                        `https://wa.me/17867161170?text=${encodeURIComponent(`[Engenharia] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${messages[idx - 1]?.content || ''}`)}`,
-                                        '_blank',
-                                      )
-                                    }
-                                    className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-8 text-xs"
-                                  >
-                                    <MessageCircle className="w-3 h-3 mr-2" /> Validar com
-                                    Engenheiro
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="mt-4 flex-1">
+              <p className="text-[0.95rem] leading-[1.6] text-foreground">
+                Utilize nosso assistente de IA para obter respostas detalhadas sobre especificações,
+                compatibilidade, integrações e fluxos de trabalho profissionais do {product.name}.
+              </p>
             </div>
 
-            <div className="p-2 border-t border-border/50 bg-muted/10">
-              <form
-                onSubmit={handleAskAI}
-                className="relative group flex items-center shadow-inner rounded-lg overflow-hidden border border-border/50 bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-all"
-              >
-                <Input
-                  disabled={isAiLoading}
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ex: Quais resoluções RAW suportadas?"
-                  className="flex-1 border-0 bg-transparent px-2 py-1 shadow-none focus-visible:ring-0 text-xs placeholder:text-muted-foreground/50 h-8"
-                />
-                <Button
-                  type="submit"
-                  disabled={isAiLoading || !question.trim()}
-                  size="icon"
-                  className="mr-1 h-6 w-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 transition-transform active:scale-95"
-                >
-                  <Send className="w-3 h-3" />
-                </Button>
-              </form>
-            </div>
+            <Button className="w-full mt-6" size="lg" onClick={() => setIsAiChatOpen(true)}>
+              Fazer Pergunta
+            </Button>
           </div>
         </div>
       </div>
+
+      <Dialog open={isAiChatOpen} onOpenChange={setIsAiChatOpen}>
+        <DialogContent className="max-w-3xl h-[85vh] flex flex-col sm:rounded-xl p-0 gap-0 overflow-hidden bg-background">
+          <DialogHeader className="p-4 border-b border-border/50 bg-muted/20 shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <div className="bg-primary/10 p-1.5 rounded-full ring-1 ring-primary/20">
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              </div>
+              Engenharia IA - {product.name}
+            </DialogTitle>
+            <DialogDescription className="sr-only">Chat de IA</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 p-4 overflow-y-auto space-y-4 flex flex-col">
+            {messages.length === 0 && (
+              <div className="m-auto text-center max-w-sm text-muted-foreground opacity-70">
+                <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-base">
+                  Faça perguntas técnicas avançadas sobre as especificações do {product.name}
+                </p>
+              </div>
+            )}
+
+            {messages.map((msg, idx) => {
+              const showWhatsApp = checkWhatsAppTrigger(msg, product)
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                >
+                  {msg.role === 'ai' && (
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
+                      Assistente
+                    </span>
+                  )}
+                  <div
+                    className={`p-3 rounded-2xl text-sm leading-[1.5] max-w-[90%] sm:max-w-[85%] shadow-sm ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                        : 'bg-background border border-border/60 rounded-tl-sm'
+                    }`}
+                  >
+                    {msg.isLoading ? (
+                      <div className="flex items-center gap-2 opacity-70 font-mono text-[11px]">
+                        <Loader2 className="w-3 h-3 animate-spin text-primary" /> Pesquisando...
+                      </div>
+                    ) : (
+                      <>
+                        {msg.role === 'user' ? (
+                          <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 text-sm">
+                            <MarkdownRenderer content={msg.content} />
+
+                            {msg.aiData?.referenced_internal_products &&
+                              msg.aiData.referenced_internal_products.length > 0 && (
+                                <div className="mt-4 border-t border-border/50 pt-3">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+                                    Soluções Mencionadas:
+                                  </span>
+                                  <ReferencedProducts
+                                    ids={msg.aiData.referenced_internal_products}
+                                    currentProductId={product.id}
+                                  />
+                                </div>
+                              )}
+
+                            {showWhatsApp && (
+                              <div className="mt-4 pt-3 border-t border-border/50">
+                                {msg.aiData?.whatsapp_reason && (
+                                  <p className="text-[11px] text-muted-foreground mb-3 font-medium border-l-2 border-primary/40 pl-2">
+                                    {msg.aiData.whatsapp_reason}
+                                  </p>
+                                )}
+                                <Button
+                                  onClick={() =>
+                                    window.open(
+                                      `https://wa.me/17867161170?text=${encodeURIComponent(`[Engenharia] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${messages[idx - 1]?.content || ''}`)}`,
+                                      '_blank',
+                                    )
+                                  }
+                                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-10 text-sm font-semibold"
+                                >
+                                  <MessageCircle className="w-4 h-4 mr-2" /> Validar com Engenheiro
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="p-4 border-t border-border/50 bg-muted/10 shrink-0">
+            <form
+              onSubmit={handleAskAI}
+              className="relative group flex items-center shadow-sm rounded-lg overflow-hidden border border-border/50 bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-all"
+            >
+              <Input
+                disabled={isAiLoading}
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ex: Quais resoluções RAW suportadas?"
+                className="flex-1 border-0 bg-transparent px-4 py-3 shadow-none focus-visible:ring-0 text-sm placeholder:text-muted-foreground/50 h-12"
+              />
+              <Button
+                type="submit"
+                disabled={isAiLoading || !question.trim()}
+                size="icon"
+                className="mr-2 h-8 w-8 rounded bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 transition-transform active:scale-95"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <TechnicalInfoModal
         isOpen={isTechnicalInfoOpen}
         onClose={() => setIsTechnicalInfoOpen(false)}

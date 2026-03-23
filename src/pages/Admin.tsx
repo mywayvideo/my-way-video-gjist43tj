@@ -203,16 +203,14 @@ export default function Admin() {
 
   const handleToggleShowPriceCost = async (checked: boolean) => {
     setShowPriceCost(checked)
-    const { error } = await supabase
-      .from('settings')
-      .upsert(
-        {
-          key: 'show_price_cost',
-          value: checked ? 'true' : 'false',
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'key' },
-      )
+    const { error } = await supabase.from('settings').upsert(
+      {
+        key: 'show_price_cost',
+        value: checked ? 'true' : 'false',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    )
     if (error) {
       toast({
         title: 'Erro',
