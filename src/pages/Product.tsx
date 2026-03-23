@@ -425,17 +425,31 @@ export default function Product() {
                 className={cn(
                   'text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm',
                   usdPrice.isPlaceholder &&
-                    'text-[0.875rem] lg:text-[0.875rem] font-medium text-muted-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                    'text-[0.875rem] lg:text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
                 )}
               >
                 {usdPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
                 {usdPrice.text}
               </p>
 
-              {isAdmin && showPriceCost && !!product.price_cost && product.price_cost > 0 && (
-                <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono">
-                  <span className="font-medium mr-1">Preco de Custo (FOB Miami):</span>
-                  {formatPrice(product.price_cost).text}
+              {isAdmin && showPriceCost && (
+                <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">
+                  <span className="font-medium mr-1">Preço de Custo (FOB Miami):</span>
+                  {(() => {
+                    const costPrice = formatPrice(product.price_cost)
+                    return (
+                      <span
+                        className={cn(
+                          costPrice.isPlaceholder
+                            ? 'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 flex items-center gap-1 font-sans'
+                            : 'text-foreground font-mono',
+                        )}
+                      >
+                        {costPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+                        {costPrice.text}
+                      </span>
+                    )
+                  })()}
                 </div>
               )}
 
@@ -477,7 +491,7 @@ export default function Product() {
                           className={cn(
                             'text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm',
                             brlPrice.isPlaceholder &&
-                              'text-[0.875rem] lg:text-[0.875rem] font-medium text-muted-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                              'text-[0.875rem] lg:text-[0.875rem] font-[600] text-green-500 italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
                           )}
                         >
                           {brlPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}

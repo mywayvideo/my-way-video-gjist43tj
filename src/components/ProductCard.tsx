@@ -49,7 +49,7 @@ export function ProductCard({ product }: { product: any }) {
           className={cn(
             'mt-3',
             displayPrice.isPlaceholder
-              ? 'text-[0.75rem] font-medium text-muted-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1'
+              ? 'text-[0.75rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1'
               : 'text-xl font-bold text-foreground',
           )}
         >
