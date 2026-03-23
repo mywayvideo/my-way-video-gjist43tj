@@ -332,219 +332,234 @@ export default function Product() {
         / <span className="text-foreground ml-2">{product.name}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-        <div className="space-y-8">
-          <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
-            {product.image_url && !imgError ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                onError={() => setImgError(true)}
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full bg-white/5 rounded-xl border border-white/5 border-dashed">
-                <PackageSearch className="w-20 h-20 mb-6 opacity-30 drop-shadow-md" />
-                <span className="text-sm font-semibold tracking-widest uppercase opacity-70">
-                  Imagem Indisponível
-                </span>
-              </div>
-            )}
+      <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16">
+        <div className="contents lg:block lg:space-y-8">
+          <div className="order-1 lg:order-none mb-8 lg:mb-0">
+            <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
+              {product.image_url && !imgError ? (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full bg-white/5 rounded-xl border border-white/5 border-dashed">
+                  <PackageSearch className="w-20 h-20 mb-6 opacity-30 drop-shadow-md" />
+                  <span className="text-sm font-semibold tracking-widest uppercase opacity-70">
+                    Imagem Indisponível
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden text-sm shadow-sm">
-            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
-              <h3 className="font-bold text-foreground">Especificações Base</h3>
-              <div className="flex items-center gap-2 text-xs">
-                <span className={!isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
-                  IMP
-                </span>
-                <Switch checked={isMetric} onCheckedChange={setIsMetric} className="scale-75" />
-                <span className={isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
-                  MET
-                </span>
+          <div className="order-4 lg:order-none mb-8 lg:mb-0">
+            <div className="bg-card border border-border/50 rounded-2xl overflow-hidden text-sm shadow-sm">
+              <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
+                <h3 className="font-bold text-foreground">Especificações Base</h3>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={!isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                    IMP
+                  </span>
+                  <Switch checked={isMetric} onCheckedChange={setIsMetric} className="scale-75" />
+                  <span className={isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                    MET
+                  </span>
+                </div>
               </div>
+              {[
+                { l: 'Marca', v: product.manufacturer?.name },
+                { l: 'Código (SKU)', v: product.sku },
+                { l: 'Categoria', v: product.category },
+                { l: 'Peso', v: displayWeight(product.weight) },
+                { l: 'Dimensões', v: displayDimensions(product.dimensions) },
+              ].map((s, i) => (
+                <div
+                  key={s.l}
+                  className={`flex justify-between py-3 px-4 hover:bg-muted/30 transition-colors ${i !== 0 ? 'border-t border-border/30' : ''}`}
+                >
+                  <span className="text-muted-foreground font-medium">{s.l}</span>
+                  <span className="font-mono text-foreground">{s.v || '-'}</span>
+                </div>
+              ))}
             </div>
-            {[
-              { l: 'Marca', v: product.manufacturer?.name },
-              { l: 'Código (SKU)', v: product.sku },
-              { l: 'Categoria', v: product.category },
-              { l: 'Peso', v: displayWeight(product.weight) },
-              { l: 'Dimensões', v: displayDimensions(product.dimensions) },
-            ].map((s, i) => (
-              <div
-                key={s.l}
-                className={`flex justify-between py-3 px-4 hover:bg-muted/30 transition-colors ${i !== 0 ? 'border-t border-border/30' : ''}`}
-              >
-                <span className="text-muted-foreground font-medium">{s.l}</span>
-                <span className="font-mono text-foreground">{s.v || '-'}</span>
-              </div>
-            ))}
           </div>
         </div>
 
-        <div className="flex flex-col">
-          <span className="text-primary font-mono uppercase tracking-widest text-xs font-bold mb-2">
-            {product.manufacturer?.name || product.category || 'Equipamento Profissional'}
-          </span>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 leading-tight">
-            {product.name}
-          </h1>
+        <div className="contents lg:flex lg:flex-col">
+          <div className="order-2 lg:order-none flex flex-col w-full">
+            <span className="text-primary font-mono uppercase tracking-widest text-xs font-bold mb-2">
+              {product.manufacturer?.name || product.category || 'Equipamento Profissional'}
+            </span>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 leading-tight">
+              {product.name}
+            </h1>
 
-          <div className="mb-8">
-            <div className="text-foreground/90 text-sm md:text-base leading-relaxed">
-              {product.description ? (
-                <ReactMarkdown components={markdownComponents}>{product.description}</ReactMarkdown>
-              ) : (
-                <p className="text-muted-foreground italic">Descrição não disponível.</p>
-              )}
-            </div>
-
-            {product.technical_info && product.technical_info.trim() !== '' && (
-              <Button
-                variant="outline"
-                onClick={() => setIsTechnicalInfoOpen(true)}
-                className="mt-6"
-              >
-                <Info className="w-4 h-4 mr-2" />
-                Mais Informações
-              </Button>
-            )}
-          </div>
-
-          <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
-            <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
-              <Globe className="w-32 h-32" />
-            </div>
-
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <span className="text-xs font-bold uppercase tracking-widest">Base FOB Miami</span>
-              </div>
-              <p
-                className={cn(
-                  'text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm',
-                  usdPrice.isPlaceholder &&
-                    'text-[0.875rem] lg:text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
-                )}
-              >
-                {usdPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
-                {usdPrice.text}
-              </p>
-
-              {isAdmin && showPriceCost && (
-                <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">
-                  <span className="font-medium mr-1">Preço de Custo (FOB Miami):</span>
-                  {(() => {
-                    const costPrice = formatPrice(product.price_cost)
-                    return (
-                      <span
-                        className={cn(
-                          costPrice.isPlaceholder
-                            ? 'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 flex items-center gap-1 font-sans'
-                            : 'text-foreground font-mono',
-                        )}
-                      >
-                        {costPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
-                        {costPrice.isPlaceholder ? 'Indisponível' : costPrice.text}
-                      </span>
-                    )
-                  })()}
-                </div>
-              )}
-
-              <div className="mt-6 pt-6 border-t border-border/50">
-                {!brlData ? (
-                  <Button
-                    variant="secondary"
-                    className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
-                    onClick={handleCalculateBrl}
-                    disabled={calculatingBrl}
-                  >
-                    <span className="flex items-center gap-2 text-foreground font-medium">
-                      {calculatingBrl ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Calculator className="w-4 h-4 text-green-500" />
-                      )}
-                      Estimar Preço Entregue no Brasil
-                    </span>
-                    <ChevronRight className="w-4 h-4 opacity-50" />
-                  </Button>
+            <div className="mb-8">
+              <div className="text-foreground/90 text-sm md:text-base leading-relaxed">
+                {product.description ? (
+                  <ReactMarkdown components={markdownComponents}>
+                    {product.description}
+                  </ReactMarkdown>
                 ) : (
-                  <div className="animate-in fade-in slide-in-from-top-2 bg-gradient-to-r from-green-500/10 to-transparent rounded-xl p-5 border border-green-500/20">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
-                        Estimativa BRL
-                      </span>
-                      <button
-                        onClick={() => setBrlData(null)}
-                        className="text-muted-foreground hover:text-foreground transition-colors bg-background/50 rounded-full p-1"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
+                  <p className="text-muted-foreground italic">Descrição não disponível.</p>
+                )}
+              </div>
+
+              {product.technical_info && product.technical_info.trim() !== '' && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTechnicalInfoOpen(true)}
+                  className="mt-6"
+                >
+                  <Info className="w-4 h-4 mr-2" />
+                  Mais Informações
+                </Button>
+              )}
+            </div>
+
+            <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
+              <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
+                <Globe className="w-32 h-32" />
+              </div>
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <span className="text-xs font-bold uppercase tracking-widest">
+                    Base FOB Miami
+                  </span>
+                </div>
+                <p
+                  className={cn(
+                    'text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm',
+                    usdPrice.isPlaceholder &&
+                      'text-[0.875rem] lg:text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                  )}
+                >
+                  {usdPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+                  {usdPrice.text}
+                </p>
+
+                {isAdmin && showPriceCost && (
+                  <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">
+                    <span className="font-medium mr-1">Preço de Custo (FOB Miami):</span>
                     {(() => {
-                      const brlPrice = formatPriceBRL(brlData.finalBrl)
+                      const costPrice = formatPrice(product.price_cost)
                       return (
-                        <p
+                        <span
                           className={cn(
-                            'text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm',
-                            brlPrice.isPlaceholder &&
-                              'text-[0.875rem] lg:text-[0.875rem] font-[600] text-green-500 italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                            costPrice.isPlaceholder
+                              ? 'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 flex items-center gap-1 font-sans'
+                              : 'text-foreground font-mono',
                           )}
                         >
-                          {brlPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
-                          {brlPrice.text}
-                        </p>
+                          {costPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+                          {costPrice.isPlaceholder ? 'Indisponível' : costPrice.text}
+                        </span>
                       )
                     })()}
-                    <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
-                      Referencial dinâmico sujeito a variação cambial.
-                    </p>
                   </div>
                 )}
+
+                <div className="mt-6 pt-6 border-t border-border/50">
+                  {!brlData ? (
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
+                      onClick={handleCalculateBrl}
+                      disabled={calculatingBrl}
+                    >
+                      <span className="flex items-center gap-2 text-foreground font-medium">
+                        {calculatingBrl ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Calculator className="w-4 h-4 text-green-500" />
+                        )}
+                        Estimar Preço Entregue no Brasil
+                      </span>
+                      <ChevronRight className="w-4 h-4 opacity-50" />
+                    </Button>
+                  ) : (
+                    <div className="animate-in fade-in slide-in-from-top-2 bg-gradient-to-r from-green-500/10 to-transparent rounded-xl p-5 border border-green-500/20">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
+                          Estimativa BRL
+                        </span>
+                        <button
+                          onClick={() => setBrlData(null)}
+                          className="text-muted-foreground hover:text-foreground transition-colors bg-background/50 rounded-full p-1"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                      {(() => {
+                        const brlPrice = formatPriceBRL(brlData.finalBrl)
+                        return (
+                          <p
+                            className={cn(
+                              'text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm',
+                              brlPrice.isPlaceholder &&
+                                'text-[0.875rem] lg:text-[0.875rem] font-[600] text-green-500 italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                            )}
+                          >
+                            {brlPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+                            {brlPrice.text}
+                          </p>
+                        )
+                      })()}
+                      <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
+                        Referencial dinâmico sujeito a variação cambial.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <Button
-            size="lg"
-            onClick={() =>
-              addItem({
-                id: product.id,
-                name: product.name,
-                price: product.price_usd || 0,
-                image_url: product.image_url || undefined,
-                quantity: 1,
-              })
-            }
-            className="w-full h-14 text-base font-semibold shadow-lg hover:shadow-primary/20 transition-all hover:-translate-y-0.5 mb-10"
-          >
-            <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
-          </Button>
+          <div className="order-3 lg:order-none w-full mb-10 lg:mb-0">
+            <Button
+              size="lg"
+              onClick={() =>
+                addItem({
+                  id: product.id,
+                  name: product.name,
+                  price: product.price_usd || 0,
+                  image_url: product.image_url || undefined,
+                  quantity: 1,
+                })
+              }
+              className="w-full h-14 text-base font-semibold shadow-lg hover:shadow-primary/20 transition-all hover:-translate-y-0.5"
+            >
+              <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
+            </Button>
+          </div>
 
-          <div className="bg-secondary border border-border rounded-[1rem] p-6 min-h-[280px] w-full flex flex-col shadow-sm mb-6">
-            <div className="flex items-start gap-4">
-              <Sparkles className="w-12 h-12 text-primary shrink-0" />
-              <div>
-                <h3 className="text-[1.25rem] font-semibold text-foreground">Engenharia de IA</h3>
-                <p className="text-[0.875rem] text-muted-foreground mt-1">
-                  Faça perguntas técnicas avançadas
+          <div className="order-5 lg:order-none w-full mt-0 lg:mt-6">
+            <div className="bg-secondary border border-border rounded-[1rem] p-6 min-h-[280px] w-full flex flex-col shadow-sm mb-6">
+              <div className="flex items-start gap-4">
+                <Sparkles className="w-12 h-12 text-primary shrink-0" />
+                <div>
+                  <h3 className="text-[1.25rem] font-semibold text-foreground">Engenharia de IA</h3>
+                  <p className="text-[0.875rem] text-muted-foreground mt-1">
+                    Faça perguntas técnicas avançadas
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex-1">
+                <p className="text-[0.95rem] leading-[1.6] text-foreground">
+                  Utilize nosso assistente de IA para obter respostas detalhadas sobre
+                  especificações, compatibilidade, integrações e fluxos de trabalho profissionais do{' '}
+                  {product.name}.
                 </p>
               </div>
-            </div>
 
-            <div className="mt-4 flex-1">
-              <p className="text-[0.95rem] leading-[1.6] text-foreground">
-                Utilize nosso assistente de IA para obter respostas detalhadas sobre especificações,
-                compatibilidade, integrações e fluxos de trabalho profissionais do {product.name}.
-              </p>
+              <Button className="w-full mt-6" size="lg" onClick={() => setIsAiChatOpen(true)}>
+                Fazer Pergunta
+              </Button>
             </div>
-
-            <Button className="w-full mt-6" size="lg" onClick={() => setIsAiChatOpen(true)}>
-              Fazer Pergunta
-            </Button>
           </div>
         </div>
       </div>
