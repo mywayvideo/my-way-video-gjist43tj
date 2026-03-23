@@ -1,15 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  Search,
-  ShoppingCart,
-  User,
-  Menu,
-  X,
-  Sparkles,
-  Settings,
-  Package,
-  Loader2,
-} from 'lucide-react'
+import { Search, ShoppingCart, User, Menu, X, Sparkles, Settings, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
@@ -91,12 +81,23 @@ export function Header() {
   return (
     <>
       <Dialog open={showMobileSearch} onOpenChange={setShowMobileSearch}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] rounded-xl overflow-visible p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold mb-2">Pesquisar</DialogTitle>
+        <DialogContent className="!top-0 !translate-y-0 sm:!top-[10%] sm:!translate-y-0 !max-w-full w-full sm:w-[95vw] sm:max-w-2xl !rounded-t-none sm:!rounded-xl !max-h-[65vh] flex flex-col p-4 overflow-hidden gap-0 shadow-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Pesquisar</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col sm:flex-row gap-4 mt-2">
-            <form onSubmit={handleMobileAISearch} className="w-full sm:w-1/2 relative group">
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 shrink-0 pt-6">
+            <form onSubmit={handleMobileDbSearch} className="relative w-full sm:w-1/2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
+              <Input
+                type="text"
+                placeholder="Pesquisar no catálogo..."
+                className="w-full pl-10 h-12 rounded-xl bg-blue-500/5 border-blue-500/20"
+                value={mobileDbQuery}
+                onChange={(e) => setMobileDbQuery(e.target.value)}
+              />
+            </form>
+            <form onSubmit={handleMobileAISearch} className="relative w-full sm:w-1/2">
               <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
               <Input
                 type="text"
@@ -106,73 +107,82 @@ export function Header() {
                 onChange={(e) => setMobileAiQuery(e.target.value)}
               />
             </form>
-            <div className="w-full sm:w-1/2 relative group">
-              <form onSubmit={handleMobileDbSearch} className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
-                <Input
-                  type="text"
-                  placeholder="Pesquisar no catalogo..."
-                  className="w-full pl-10 h-12 rounded-xl bg-blue-500/5 border-blue-500/20"
-                  value={mobileDbQuery}
-                  onChange={(e) => setMobileDbQuery(e.target.value)}
-                />
-              </form>
-              {mobileDbQuery.trim().length >= 2 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 max-h-[60vh] overflow-y-auto">
-                  {isSearchingDb ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground flex justify-center items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> Buscando...
+          </div>
+
+          {mobileDbQuery.trim().length >= 2 && (
+            <div className="flex-1 overflow-y-auto mt-4 scroll-smooth min-h-0 border border-border/20 rounded-xl bg-muted/10">
+              {isSearchingDb ? (
+                <div className="flex flex-col">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 p-3 border-b border-border/50 last:border-0"
+                    >
+                      <div className="w-10 h-10 rounded bg-muted animate-pulse shrink-0" />
+                      <div className="flex flex-col gap-2 flex-1">
+                        <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                        <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                      </div>
                     </div>
-                  ) : mobileDbResults.length > 0 ? (
-                    <>
-                      {mobileDbResults.slice(0, 6).map((p) => (
-                        <Link
-                          key={p.id}
-                          to={`/product/${p.id}`}
-                          onClick={() => {
-                            setShowMobileSearch(false)
-                            setMobileDbQuery('')
-                          }}
-                          className="flex items-center gap-3 p-3 hover:bg-muted/80 transition-colors border-b border-border/50 last:border-0"
-                        >
-                          {p.image_url ? (
-                            <img
-                              src={p.image_url}
-                              alt=""
-                              className="w-10 h-10 object-contain rounded bg-white/5"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded">
-                              <Package className="w-5 h-5 text-muted-foreground" />
-                            </div>
-                          )}
-                          <div className="flex flex-col flex-1 overflow-hidden">
-                            <span className="text-sm font-medium truncate">{p.name}</span>
-                            <span className="text-xs text-muted-foreground font-mono truncate">
-                              {p.sku} • {p.category || 'Geral'}
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
-                      <button
-                        onClick={() => {
-                          setShowMobileSearch(false)
-                          navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery)}`)
-                        }}
-                        className="w-full p-3 text-sm text-center text-blue-500 font-medium hover:bg-muted/50 transition-colors"
-                      >
-                        Ver todos os resultados
-                      </button>
-                    </>
-                  ) : (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      Nenhum equipamento encontrado.
-                    </div>
-                  )}
+                  ))}
+                </div>
+              ) : mobileDbResults.length > 0 ? (
+                <div className="flex flex-col">
+                  {mobileDbResults.slice(0, 10).map((p) => (
+                    <Link
+                      key={p.id}
+                      to={`/product/${p.id}`}
+                      onClick={() => {
+                        setShowMobileSearch(false)
+                        setMobileDbQuery('')
+                      }}
+                      className="flex items-center gap-3 p-3 hover:bg-muted/80 transition-colors border-b border-border/50 last:border-0"
+                    >
+                      {p.image_url ? (
+                        <img
+                          src={p.image_url}
+                          alt=""
+                          className="w-10 h-10 object-contain rounded bg-white/5 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded shrink-0">
+                          <Package className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex flex-col flex-1 overflow-hidden">
+                        <span className="text-sm font-medium truncate">{p.name}</span>
+                        <span className="text-xs text-muted-foreground font-mono truncate">
+                          {p.sku} • {p.category || 'Geral'}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center flex flex-col items-center justify-center gap-3 h-full">
+                  <Package className="w-8 h-8 text-muted-foreground/30" />
+                  <span className="font-medium text-base text-foreground">Nenhum resultado</span>
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum equipamento encontrado para "{mobileDbQuery}".
+                  </p>
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {mobileDbQuery.trim().length >= 2 && !isSearchingDb && mobileDbResults.length > 0 && (
+            <div className="shrink-0 pt-4 mt-auto">
+              <button
+                onClick={() => {
+                  setShowMobileSearch(false)
+                  navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery)}`)
+                }}
+                className="w-full p-4 text-sm text-center text-white bg-blue-500 font-medium hover:bg-blue-600 transition-colors rounded-xl shadow-sm"
+              >
+                Ver todos os resultados
+              </button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
