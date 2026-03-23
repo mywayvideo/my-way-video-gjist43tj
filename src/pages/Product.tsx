@@ -31,6 +31,7 @@ import {
   X,
   Send,
   Info,
+  HelpCircle,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
@@ -320,6 +321,8 @@ export default function Product() {
       </div>
     )
 
+  const usdPrice = formatPrice(product.price_usd)
+
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
       <div className="text-sm text-muted-foreground mb-8 font-mono">
@@ -418,14 +421,21 @@ export default function Product() {
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <span className="text-xs font-bold uppercase tracking-widest">Base FOB Miami</span>
               </div>
-              <p className="text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm">
-                {formatPrice(product.price_usd)}
+              <p
+                className={cn(
+                  'text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm',
+                  usdPrice.isPlaceholder &&
+                    'text-[0.875rem] lg:text-[0.875rem] font-medium text-muted-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                )}
+              >
+                {usdPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+                {usdPrice.text}
               </p>
 
               {isAdmin && showPriceCost && !!product.price_cost && product.price_cost > 0 && (
                 <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono">
                   <span className="font-medium mr-1">Preco de Custo (FOB Miami):</span>
-                  {formatPrice(product.price_cost)}
+                  {formatPrice(product.price_cost).text}
                 </div>
               )}
 
@@ -460,9 +470,21 @@ export default function Product() {
                         <X className="w-3 h-3" />
                       </button>
                     </div>
-                    <p className="text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm">
-                      {formatPriceBRL(brlData.finalBrl)}
-                    </p>
+                    {(() => {
+                      const brlPrice = formatPriceBRL(brlData.finalBrl)
+                      return (
+                        <p
+                          className={cn(
+                            'text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm',
+                            brlPrice.isPlaceholder &&
+                              'text-[0.875rem] lg:text-[0.875rem] font-medium text-muted-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
+                          )}
+                        >
+                          {brlPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+                          {brlPrice.text}
+                        </p>
+                      )
+                    })()}
                     <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
                       Referencial dinâmico sujeito a variação cambial.
                     </p>

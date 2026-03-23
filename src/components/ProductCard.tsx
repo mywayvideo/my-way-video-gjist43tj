@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, PackageSearch } from 'lucide-react'
+import { ShoppingCart, PackageSearch, HelpCircle } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
 import { useState } from 'react'
 import { formatPrice } from '@/utils/priceFormatter'
+import { cn } from '@/lib/utils'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
@@ -12,6 +13,8 @@ export function ProductCard({ product }: { product: any }) {
 
   const hasImage =
     product.image_url && typeof product.image_url === 'string' && product.image_url.trim() !== ''
+
+  const displayPrice = formatPrice(product.price_usd)
 
   return (
     <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
@@ -42,7 +45,17 @@ export function ProductCard({ product }: { product: any }) {
             {product.name}
           </h3>
         </Link>
-        <p className="text-xl font-bold text-foreground mt-3">{formatPrice(product.price_usd)}</p>
+        <p
+          className={cn(
+            'mt-3',
+            displayPrice.isPlaceholder
+              ? 'text-[0.75rem] font-medium text-muted-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1'
+              : 'text-xl font-bold text-foreground',
+          )}
+        >
+          {displayPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
+          {displayPrice.text}
+        </p>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">
         <Button
