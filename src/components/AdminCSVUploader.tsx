@@ -29,12 +29,11 @@ interface Props {
 }
 
 interface ReportData {
-  operation: 'CREATE' | 'UPDATE' | null
   totalRows: number
-  validRows: any[]
+  rowsToCreate: any[]
+  rowsToUpdate: any[]
   invalidRows: { row: number; sku: string; reason: string }[]
   duplicates: { row: number; incomingSku: string; dbSku: string }[]
-  dbIdsMap?: Record<string, string>
 }
 
 const normalizeSkuForComparison = (sku: string) => {
@@ -75,19 +74,14 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
         const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
         const hasSku = headers.includes('sku')
-        let operation: 'CREATE' | 'UPDATE' | null = null
 
-        if (hasSku && headers.includes('name') && headers.includes('description')) {
-          operation = 'CREATE'
-        } else if (hasSku && headers.length > 1) {
-          operation = 'UPDATE'
-        } else if (hasSku && headers.length === 1) {
+        if (!hasSku) {
+          throw new Error('Arquivo invalido. Coluna SKU obrigatoria.')
+        }
+
+        if (headers.length === 1) {
           throw new Error(
             'Arquivo invalido. SKU sozinho nao e permitido. Use criacao (SKU+nome+descricao) ou atualizacao (SKU+coluna)',
-          )
-        } else {
-          throw new Error(
-            'Arquivo invalido. Colunas obrigatorias para criacao: sku, name, description',
           )
         }
 
@@ -95,17 +89,19 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           .from('products')
           .select('id, sku')
           .eq('manufacturer_id', mfgId)
-        if (dbError) throw dbError
 
-        const skuMap = new Map<string, { id: string; sku: string }>()
+        if (dbError) throw new Error('Erro ao verificar SKUs. Tente novamente.')
+
+        const dbSkuMap = new Map<string, { id: string; sku: string }>()
         existingProducts.forEach((p) => {
-          if (p.sku) skuMap.set(normalizeSkuForComparison(p.sku), { id: p.id, sku: p.sku })
+          if (p.sku) dbSkuMap.set(normalizeSkuForComparison(p.sku), { id: p.id, sku: p.sku })
         })
 
-        const validRows: any[] = []
+        const rowsToCreate: any[] = []
+        const rowsToUpdate: any[] = []
         const invalidRows: { row: number; sku: string; reason: string }[] = []
         const duplicates: { row: number; incomingSku: string; dbSku: string }[] = []
-        const dbIdsMap: Record<string, string> = {}
+        const processedSkus = new Set<string>()
 
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i]
@@ -128,26 +124,40 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
           try {
             const normalizedSku = normalizeSkuForComparison(rowSku)
-            const existing = skuMap.get(normalizedSku)
 
-            if (operation === 'CREATE') {
+            if (processedSkus.has(normalizedSku)) {
+              duplicates.push({ row: i + 1, incomingSku: rowSku, dbSku: rowSku })
+              invalidRows.push({ row: i + 1, sku: rowSku, reason: 'SKU duplicado no CSV' })
+              continue
+            }
+            processedSkus.add(normalizedSku)
+
+            const existing = dbSkuMap.get(normalizedSku)
+
+            if (!existing) {
               if (!rowData.name || !rowData.description) {
-                invalidRows.push({ row: i + 1, sku: rowSku, reason: 'Nome ou descricao ausentes' })
+                invalidRows.push({
+                  row: i + 1,
+                  sku: rowSku,
+                  reason: 'Campos obrigatorios para criacao: sku, nome, descricao',
+                })
                 continue
               }
-              if (existing) {
-                duplicates.push({ row: i + 1, incomingSku: rowSku, dbSku: existing.sku })
-                invalidRows.push({ row: i + 1, sku: rowSku, reason: 'SKU ja existe' })
+              rowsToCreate.push(rowData)
+            } else {
+              const hasOtherColumns = Object.keys(rowData).some(
+                (k) => k !== 'sku' && rowData[k] !== null && rowData[k] !== '',
+              )
+              if (!hasOtherColumns) {
+                invalidRows.push({
+                  row: i + 1,
+                  sku: rowSku,
+                  reason: 'Inclua SKU e pelo menos uma coluna para atualizar',
+                })
                 continue
               }
-              validRows.push(rowData)
-            } else if (operation === 'UPDATE') {
-              if (!existing) {
-                invalidRows.push({ row: i + 1, sku: rowSku, reason: 'SKU nao encontrado' })
-                continue
-              }
-              dbIdsMap[rowSku] = existing.id
-              validRows.push(rowData)
+              rowData._dbId = existing.id
+              rowsToUpdate.push(rowData)
             }
           } catch (err) {
             invalidRows.push({ row: i + 1, sku: rowSku, reason: 'Erro ao normalizar SKU' })
@@ -155,20 +165,26 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         }
 
         setReport({
-          operation,
           totalRows: lines.length - 1,
-          validRows,
+          rowsToCreate,
+          rowsToUpdate,
           invalidRows,
           duplicates,
-          dbIdsMap,
         })
         setStep('REPORT')
       } catch (err: any) {
-        toast({
-          title: 'Erro na validacao. Verifique o arquivo.',
-          description: err.message,
-          variant: 'destructive',
-        })
+        if (err.message === 'Erro ao verificar SKUs. Tente novamente.') {
+          toast({
+            title: err.message,
+            variant: 'destructive',
+          })
+        } else {
+          toast({
+            title: 'Erro na validacao. Verifique o arquivo.',
+            description: err.message,
+            variant: 'destructive',
+          })
+        }
         setFile(null)
       } finally {
         setIsAnalyzing(false)
@@ -178,14 +194,15 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
   }
 
   const processImport = async () => {
-    if (!report || report.validRows.length === 0) return
+    if (!report || (report.rowsToCreate.length === 0 && report.rowsToUpdate.length === 0)) return
     setIsUploading(true)
     setProgressMsg('Importando produtos...')
 
     try {
-      const productsToUpsert = report.validRows.map((p) => {
+      const parseRow = (p: any) => {
         const prod: any = { manufacturer_id: mfgId }
         Object.entries(p).forEach(([h, val]: [string, any]) => {
+          if (h === '_dbId') return
           const targetKey = h === 'price_usa' ? 'price_usd' : h
           if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)) {
             prod[targetKey] = val ? parseFloat(val) : 0
@@ -198,24 +215,27 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           }
         })
         return prod
-      })
+      }
 
-      if (report.operation === 'UPDATE') {
-        for (const prod of productsToUpsert) {
+      if (report.rowsToCreate.length > 0) {
+        const productsToInsert = report.rowsToCreate.map(parseRow)
+        const { error } = await supabase.from('products').insert(productsToInsert)
+        if (error) throw error
+      }
+
+      if (report.rowsToUpdate.length > 0) {
+        for (const p of report.rowsToUpdate) {
+          const dbId = p._dbId
+          const prod = parseRow(p)
           const { sku, manufacturer_id, ...updates } = prod
-          const dbId = report.dbIdsMap?.[sku]
-          if (!dbId) continue
           const { error } = await supabase.from('products').update(updates).eq('id', dbId)
           if (error) throw error
         }
-      } else {
-        const { error } = await supabase.from('products').insert(productsToUpsert)
-        if (error) throw error
       }
 
       toast({
         title: 'Sucesso',
-        description: `${productsToUpsert.length} produtos importados com sucesso.`,
+        description: `Importação concluída: ${report.rowsToCreate.length} criados, ${report.rowsToUpdate.length} atualizados.`,
       })
       handleReset()
       onSuccess()
@@ -233,11 +253,11 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
   const downloadReport = () => {
     if (!report) return
-    const headers = ['Linha', 'SKU Recebido', 'SKU Banco', 'Status', 'Motivo']
-    const rows = report.validRows.map((r) => `"", "${r.sku}", "", "Valido", "Pronto"`)
+    const headers = ['Linha', 'SKU Recebido', 'Operacao', 'Status', 'Motivo']
+    const rows = report.rowsToCreate.map((r) => `"", "${r.sku}", "CREATE", "Valido", "Pronto"`)
+    rows.push(...report.rowsToUpdate.map((r) => `"", "${r.sku}", "UPDATE", "Valido", "Pronto"`))
     report.invalidRows.forEach((r) => {
-      const dup = report.duplicates.find((d) => d.row === r.row)
-      rows.push(`"${r.row}", "${r.sku}", "${dup ? dup.dbSku : ''}", "Invalido", "${r.reason}"`)
+      rows.push(`"${r.row}", "${r.sku}", "INVALID", "Invalido", "${r.reason}"`)
     })
     const blob = new Blob([[headers.join(','), ...rows].join('\n')], {
       type: 'text/csv;charset=utf-8;',
@@ -313,17 +333,22 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
                     <CheckCircle2 className="w-5 h-5 text-primary" /> Relatório de Validação
                   </h3>
                   <p className="text-sm">
-                    Operação:{' '}
-                    <strong>{report.operation === 'CREATE' ? 'Criação' : 'Atualização'}</strong>
+                    Operação: <strong>Auto-Detectada</strong>
                   </p>
                   <p className="text-sm">
-                    Total de linhas: <strong>{report.totalRows}</strong>
+                    Total de linhas processadas: <strong>{report.totalRows}</strong>
                   </p>
                   <p className="text-sm text-green-500">
-                    Linhas válidas: <strong>{report.validRows.length}</strong>
+                    Prontos para CRIAR: <strong>{report.rowsToCreate.length}</strong>
+                  </p>
+                  <p className="text-sm text-blue-500">
+                    Prontos para ATUALIZAR: <strong>{report.rowsToUpdate.length}</strong>
                   </p>
                   <p className="text-sm text-red-500">
                     Linhas inválidas: <strong>{report.invalidRows.length}</strong>
+                  </p>
+                  <p className="text-sm text-orange-500">
+                    SKUs duplicados no CSV: <strong>{report.duplicates.length}</strong>
                   </p>
                 </div>
 
@@ -332,7 +357,6 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
                     <h4 className="font-medium text-sm">Problemas Encontrados:</h4>
                     <div className="text-xs space-y-1 bg-destructive/10 p-3 rounded-md border border-destructive/20 max-h-40 overflow-y-auto">
                       {report.invalidRows.map((inv, idx) => {
-                        const dup = report.duplicates.find((d) => d.row === inv.row)
                         return (
                           <div key={idx} className="flex gap-2">
                             <span className="font-mono w-8 shrink-0">L{inv.row}</span>
@@ -343,9 +367,6 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
                               {inv.sku}
                             </span>
                             <span className="text-destructive font-medium">- {inv.reason}</span>
-                            {dup && (
-                              <span className="text-muted-foreground">(Conflito: {dup.dbSku})</span>
-                            )}
                           </div>
                         )
                       })}
@@ -371,7 +392,10 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             ) : (
               <Button
                 onClick={processImport}
-                disabled={isUploading || report?.validRows.length === 0}
+                disabled={
+                  isUploading ||
+                  (report?.rowsToCreate.length === 0 && report?.rowsToUpdate.length === 0)
+                }
               >
                 {isUploading ? progressMsg || 'Processando...' : 'Confirmar Importação'}
               </Button>

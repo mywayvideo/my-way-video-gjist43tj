@@ -63,6 +63,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { AdminProductForm } from '@/components/AdminProductForm'
 import { AdminCSVUploader } from '@/components/AdminCSVUploader'
+import { ScrollToTopButton } from '@/components/ScrollToTopButton'
 import { cn } from '@/lib/utils'
 
 const formatNCM = (ncm?: string | null) => {
@@ -729,6 +730,7 @@ export default function Admin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ScrollToTopButton />
     </div>
   )
 }
