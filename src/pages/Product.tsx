@@ -402,7 +402,7 @@ export default function Product() {
                 String(product.ncm).trim() !== ''
                   ? [{ l: 'NCM', v: formatNCM(product.ncm) }]
                   : []),
-                ...(product.weight !== null && product.weight !== undefined
+                ...(product.weight !== null && product.weight !== undefined && product.weight > 0
                   ? [{ l: 'Peso', v: displayWeight(product.weight) }]
                   : []),
                 ...(product.dimensions && product.dimensions.trim() !== ''
