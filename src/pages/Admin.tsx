@@ -32,6 +32,7 @@ import {
   HardDrive,
   Settings,
   Sparkles,
+  Download,
 } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -49,9 +50,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { AdminProductForm } from '@/components/AdminProductForm'
 import { AdminCSVUploader } from '@/components/AdminCSVUploader'
 import { cn } from '@/lib/utils'
+
+const formatNCM = (ncm?: string | null) => {
+  if (!ncm) return ''
+  const digits = ncm.replace(/\D/g, '')
+  if (digits.length >= 8) {
+    return digits.replace(/^(\d{4})(\d{2})(\d{2}).*/, '$1.$2.$3')
+  }
+  return ncm
+}
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth()
@@ -72,6 +93,11 @@ export default function Admin() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [savingInfo, setSavingInfo] = useState(false)
   const [savingPricing, setSavingPricing] = useState(false)
+
+  // Bulk Actions State
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const fetchData = async () => {
     const { data: mData } = await supabase.from('manufacturers').select('*').order('name')
@@ -142,6 +168,86 @@ export default function Admin() {
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())),
   )
+
+  const isAllVisibleSelected =
+    filteredProducts.length > 0 && filteredProducts.every((p) => selectedProductIds.includes(p.id))
+
+  const toggleSelectAll = () => {
+    const currentFilteredIds = filteredProducts.map((p) => p.id)
+    if (isAllVisibleSelected) {
+      setSelectedProductIds((prev) => prev.filter((id) => !currentFilteredIds.includes(id)))
+    } else {
+      const newIds = new Set([...selectedProductIds, ...currentFilteredIds])
+      setSelectedProductIds(Array.from(newIds))
+    }
+  }
+
+  const toggleProductSelection = (id: string) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id],
+    )
+  }
+
+  const clearSelection = () => setSelectedProductIds([])
+
+  const handleBulkDelete = async () => {
+    setIsDeletingBulk(true)
+    const { error } = await supabase.from('products').delete().in('id', selectedProductIds)
+    setIsDeletingBulk(false)
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir produtos. Tente novamente.',
+        variant: 'destructive',
+      })
+    } else {
+      toast({ title: 'Sucesso', description: 'Produtos excluidos com sucesso.' })
+      clearSelection()
+      setShowDeleteConfirm(false)
+      fetchData()
+    }
+  }
+
+  const handleExportCSV = () => {
+    const selectedProducts = products.filter((p) => selectedProductIds.includes(p.id))
+    const headers = ['id', 'name', 'category', 'price_usd', 'ncm', 'sku']
+
+    const escapeCsv = (val: any) => {
+      if (val === null || val === undefined) return '""'
+      const str = String(val)
+      return `"${str.replace(/"/g, '""')}"`
+    }
+
+    const csvRows = selectedProducts.map((p) => {
+      return [
+        escapeCsv(p.id),
+        escapeCsv(p.name),
+        escapeCsv(p.category),
+        p.price_usd || 0,
+        escapeCsv(formatNCM(p.ncm)),
+        escapeCsv(p.sku),
+      ].join(',')
+    })
+
+    const csvContent = [headers.join(','), ...csvRows].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    const now = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+
+    link.setAttribute('href', url)
+    link.setAttribute('download', `produtos-export-${timestamp}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast({ title: 'Sucesso', description: 'Exportacao concluida. Arquivo baixado.' })
+  }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Excluir equipamento do catálogo?')) return
@@ -448,7 +554,7 @@ export default function Admin() {
         </div>
       </div>
 
-      <div className="bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm relative">
         <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <h2 className="font-semibold text-foreground">
             Inventário ({filteredProducts.length} itens)
@@ -463,89 +569,166 @@ export default function Admin() {
             />
           </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-16">Mídia</TableHead>
-              <TableHead>Produto</TableHead>
-              <TableHead>Marca</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead className="text-right">FOB Miami</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProducts.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  {p.image_url ? (
-                    <img
-                      src={p.image_url}
-                      alt="thumb"
-                      className="w-10 h-10 object-contain rounded bg-white/5 border border-white/10"
+
+        {selectedProductIds.length > 0 && (
+          <div
+            className={cn(
+              'bg-background/95 backdrop-blur-sm border-b md:border-b md:border-t-0 border-t border-border/50 p-3 flex flex-col md:flex-row items-center justify-between gap-3 z-30 transition-all',
+              'fixed bottom-0 left-0 right-0 md:static md:bottom-auto md:left-auto md:right-auto shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none',
+            )}
+          >
+            <span className="text-sm font-medium md:ml-2">
+              {selectedProductIds.length} produtos selecionados
+            </span>
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={clearSelection}
+                className="text-muted-foreground"
+              >
+                Limpar
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleExportCSV}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" /> Exportar CSV
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+                <Trash2 className="w-4 h-4 mr-2" /> Excluir
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div
+          className={cn('overflow-x-auto', selectedProductIds.length > 0 ? 'pb-24 md:pb-0' : '')}
+        >
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-12 text-center px-4 align-middle">
+                  <Checkbox
+                    checked={isAllVisibleSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+                <TableHead className="w-16">Mídia</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead>Marca</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead className="text-right">FOB Miami</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="px-4 text-center align-middle">
+                    <Checkbox
+                      checked={selectedProductIds.includes(p.id)}
+                      onCheckedChange={() => toggleProductSelection(p.id)}
+                      aria-label={`Select ${p.name}`}
                     />
-                  ) : (
-                    <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded border border-white/10">
-                      <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium max-w-[200px] truncate" title={p.name}>
-                  {p.name}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {p.manufacturer?.name || '-'}
-                </TableCell>
-                <TableCell className="font-mono text-xs">{p.sku}</TableCell>
-                <TableCell className="text-right font-mono font-medium text-primary">
-                  US${' '}
-                  {(p.price_usd || 0).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  <Link to={`/product/${p.id}`} target="_blank" title="Visualizar Página">
+                  </TableCell>
+                  <TableCell>
+                    {p.image_url ? (
+                      <img
+                        src={p.image_url}
+                        alt="thumb"
+                        className="w-10 h-10 object-contain rounded bg-white/5 border border-white/10"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded border border-white/10">
+                        <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium max-w-[200px] truncate" title={p.name}>
+                    {p.name}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {p.manufacturer?.name || '-'}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{p.sku}</TableCell>
+                  <TableCell className="text-right font-mono font-medium text-primary">
+                    US${' '}
+                    {(p.price_usd || 0).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Link to={`/product/${p.id}`} target="_blank" title="Visualizar Página">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </Link>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hover:bg-primary/10 hover:text-primary transition-colors"
+                      onClick={() => {
+                        setEditingProduct(p)
+                        setIsDialogOpen(true)
+                      }}
+                      className="hover:bg-accent/10 hover:text-accent transition-colors"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Edit className="w-4 h-4" />
                     </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingProduct(p)
-                      setIsDialogOpen(true)
-                    }}
-                    className="hover:bg-accent/10 hover:text-accent transition-colors"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(p.id)}
-                    className="hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredProducts.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  Nenhum equipamento encontrado.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(p.id)}
+                      className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredProducts.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    Nenhum equipamento encontrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusao</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedProductIds.length} produtos? Esta acao nao
+              pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingBulk}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleBulkDelete()
+              }}
+              disabled={isDeletingBulk}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingBulk ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

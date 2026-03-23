@@ -46,6 +46,15 @@ type Message = {
   isLoading?: boolean
 }
 
+const formatNCM = (ncm?: string | null) => {
+  if (!ncm) return ''
+  const digits = ncm.replace(/\D/g, '')
+  if (digits.length >= 8) {
+    return digits.replace(/^(\d{4})(\d{2})(\d{2}).*/, '$1.$2.$3')
+  }
+  return ncm
+}
+
 const markdownComponents = {
   h2: ({ node, ...props }: any) => (
     <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
@@ -372,7 +381,9 @@ export default function Product() {
                 { l: 'Marca', v: product.manufacturer?.name },
                 { l: 'Código (SKU)', v: product.sku },
                 { l: 'Categoria', v: product.category },
-                ...(product.ncm && product.ncm.trim() !== '' ? [{ l: 'NCM', v: product.ncm }] : []),
+                ...(product.ncm && product.ncm.trim() !== ''
+                  ? [{ l: 'NCM', v: formatNCM(product.ncm) }]
+                  : []),
                 { l: 'Peso', v: displayWeight(product.weight) },
                 { l: 'Dimensões', v: displayDimensions(product.dimensions) },
               ].map((s, i) => (
