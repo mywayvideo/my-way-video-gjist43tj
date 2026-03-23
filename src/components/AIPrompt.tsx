@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
-import { Search, Sparkles, X, Loader2, RefreshCcw, MessageCircle, Database } from 'lucide-react'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
+import {
+  Search,
+  Sparkles,
+  X,
+  Loader2,
+  RefreshCcw,
+  MessageCircle,
+  Database,
+  PackageSearch,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
@@ -9,6 +18,7 @@ import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { searchProducts } from '@/services/database-search'
 import { useDebounce } from '@/hooks/use-debounce'
+import { formatPrice } from '@/utils/priceFormatter'
 
 export function AIPrompt({
   initialQuery = '',
@@ -266,12 +276,52 @@ export function AIPrompt({
       )}
 
       {result?.status === 'database_success' && !isLoading && (
-        <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
-          <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+        <div className="p-4 md:p-6 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 px-2">
             <Database className="w-5 h-5 text-blue-500" />
             Resultados no Catálogo
           </h3>
-          <ReferencedProducts ids={dbResults} currentProductId={activeProductId} />
+          <div className="flex flex-col gap-2 w-full">
+            {dbResults.map((product) => (
+              <Link
+                key={product.id}
+                to={`/product/${product.id}`}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50 group"
+              >
+                <div className="w-12 h-12 md:w-14 md:h-14 shrink-0 bg-muted/30 rounded-lg overflow-hidden flex items-center justify-center">
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <PackageSearch className="w-5 h-5 text-muted-foreground/50" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm md:text-base truncate group-hover:text-primary transition-colors">
+                    {product.name}
+                  </h4>
+                  {product.category && (
+                    <p className="text-xs text-muted-foreground truncate">{product.category}</p>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-semibold text-sm md:text-sm whitespace-nowrap">
+                    {formatPrice(product.price_usd).isPlaceholder ? (
+                      <span className="text-[10px] italic opacity-80 uppercase text-muted-foreground">
+                        Sob Consulta
+                      </span>
+                    ) : (
+                      formatPrice(product.price_usd).text
+                    )}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
