@@ -33,7 +33,11 @@ export function Header() {
     }
   }
 
-  const openSearchTypeDialog = () => setShowSearchTypeDialog(true)
+  const openSearchTypeDialog = () => {
+    window.dispatchEvent(new CustomEvent('clear-search-response'))
+    setShowSearchTypeDialog(true)
+  }
+
   const selectSearchType = (type: 'ai' | 'database') => {
     setSelectedSearchType(type)
     setShowSearchTypeDialog(false)

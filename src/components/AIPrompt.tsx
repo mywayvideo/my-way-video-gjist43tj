@@ -41,11 +41,29 @@ export function AIPrompt({
   const [result, setResult] = useState<any>(null)
   const [dbResults, setDbResults] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
+
+  const [responseMessage, setResponseMessage] = useState<string | null>(null)
+  const [referencedProducts, setReferencedProducts] = useState<any[]>([])
+
   const { toast } = useToast()
 
   const inputRef = useRef<HTMLInputElement>(null)
 
   const debouncedQuery = useDebounce(query, 300)
+
+  const clearResponse = () => {
+    setResponseMessage(null)
+    setReferencedProducts([])
+    setResult(null)
+    setDbResults([])
+    setQuery('')
+  }
+
+  useEffect(() => {
+    const handleClear = () => clearResponse()
+    window.addEventListener('clear-search-response', handleClear)
+    return () => window.removeEventListener('clear-search-response', handleClear)
+  }, [])
 
   useEffect(() => {
     setQuery(initialQuery)
@@ -111,6 +129,8 @@ export function AIPrompt({
     setError(null)
     setResult(null)
     setDbResults([])
+    setResponseMessage(null)
+    setReferencedProducts([])
 
     try {
       let sessionId = localStorage.getItem('ai-session-id')
@@ -171,6 +191,8 @@ export function AIPrompt({
         response: data.response || data.message,
         status: 'success',
       })
+      setResponseMessage(data.response || data.message)
+      setReferencedProducts(data.referenced_internal_products || [])
     } catch (err: any) {
       const errorMsg =
         err.message || 'Ocorreu um erro ao processar sua pesquisa. Por favor, tente novamente.'
@@ -265,18 +287,14 @@ export function AIPrompt({
         </div>
       )}
 
-      {result?.status === 'success' && !isLoading && (
+      {responseMessage && result?.status === 'success' && !isLoading && (
         <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
-          <ResponseFormatter content={result.response} />
-          {result.referenced_internal_products &&
-            result.referenced_internal_products.length > 0 && (
-              <div className="mt-6">
-                <ReferencedProducts
-                  ids={result.referenced_internal_products}
-                  currentProductId={activeProductId}
-                />
-              </div>
-            )}
+          <ResponseFormatter content={responseMessage} />
+          {referencedProducts && referencedProducts.length > 0 && (
+            <div className="mt-6">
+              <ReferencedProducts ids={referencedProducts} currentProductId={activeProductId} />
+            </div>
+          )}
 
           {result.should_show_whatsapp_button && (
             <Button

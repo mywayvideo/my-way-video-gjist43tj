@@ -23,6 +23,15 @@ export default function Search() {
   const [products, setProducts] = useState<any[]>([])
 
   useEffect(() => {
+    const handleClear = () => {
+      setAiResponse(null)
+      setProducts([])
+    }
+    window.addEventListener('clear-search-response', handleClear)
+    return () => window.removeEventListener('clear-search-response', handleClear)
+  }, [])
+
+  useEffect(() => {
     async function doSearch() {
       if (!query.trim()) {
         setAiResponse(null)
