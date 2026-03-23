@@ -26,6 +26,15 @@ const markdownComponents = {
   h3: ({ node, ...props }: any) => (
     <h4 className="text-[1rem] font-[600] mt-[0.75rem] mb-[0.5rem]" {...props} />
   ),
+  h4: ({ node, ...props }: any) => (
+    <h5 className="text-[0.875rem] font-[600] mt-[0.5rem] mb-[0.5rem]" {...props} />
+  ),
+  h5: ({ node, ...props }: any) => (
+    <h6 className="text-[0.875rem] font-[600] mt-[0.5rem] mb-[0.5rem]" {...props} />
+  ),
+  h6: ({ node, ...props }: any) => (
+    <h6 className="text-[0.875rem] font-[600] mt-[0.5rem] mb-[0.5rem]" {...props} />
+  ),
   p: ({ node, ...props }: any) => <p className="my-[0.5rem] leading-[1.6]" {...props} />,
   ul: ({ node, ...props }: any) => <ul className="pl-[1.5rem] my-[0.5rem] list-disc" {...props} />,
   ol: ({ node, ...props }: any) => (
@@ -69,11 +78,14 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
         >
           <ReactMarkdown
             components={markdownComponents}
+            skipHtml={false}
             allowedElements={[
               'h1',
               'h2',
               'h3',
               'h4',
+              'h5',
+              'h6',
               'p',
               'ul',
               'ol',
@@ -84,9 +96,8 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
               'br',
             ]}
             disallowedElements={['script', 'img', 'a']}
-          >
-            {technicalInfo}
-          </ReactMarkdown>
+            children={technicalInfo}
+          />
         </div>
         <DialogFooter className="mt-6">
           <Button variant="secondary" onClick={onClose}>
