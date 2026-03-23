@@ -372,6 +372,7 @@ export default function Product() {
                 { l: 'Marca', v: product.manufacturer?.name },
                 { l: 'Código (SKU)', v: product.sku },
                 { l: 'Categoria', v: product.category },
+                ...(product.ncm && product.ncm.trim() !== '' ? [{ l: 'NCM', v: product.ncm }] : []),
                 { l: 'Peso', v: displayWeight(product.weight) },
                 { l: 'Dimensões', v: displayDimensions(product.dimensions) },
               ].map((s, i) => (
