@@ -18,6 +18,7 @@ import { ResponseFormatter } from '@/components/ResponseFormatter'
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
+  const searchType = searchParams.get('type') || 'ai'
   const [loading, setLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
@@ -33,7 +34,7 @@ export default function Search() {
 
   useEffect(() => {
     async function doSearch() {
-      if (!query.trim()) {
+      if (!query.trim() || searchType === 'database') {
         setAiResponse(null)
         setProducts([])
         return
@@ -77,7 +78,7 @@ export default function Search() {
       }
     }
     doSearch()
-  }, [query])
+  }, [query, searchType])
 
   const showWhatsAppButton =
     aiResponse?.should_show_whatsapp_button ||
@@ -89,14 +90,14 @@ export default function Search() {
       <div className="mb-8">
         <AIPrompt initialQuery={query} />
       </div>
-      {query && (
+      {query && searchType === 'ai' && (
         <div className="flex items-center gap-3 mb-8 pb-4 border-b">
           <SearchIcon className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold">Resultados para "{query}"</h1>
         </div>
       )}
 
-      {loading && (
+      {loading && searchType === 'ai' && (
         <div className="flex flex-col justify-center items-center py-24 space-y-6">
           <div className="relative">
             <Loader2 className="w-14 h-14 animate-spin text-primary" />
@@ -110,7 +111,7 @@ export default function Search() {
         </div>
       )}
 
-      {!loading && aiResponse && (
+      {!loading && aiResponse && searchType === 'ai' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8">
           <div className="bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm">
             <div className="bg-primary/10 p-4 rounded-full shrink-0">
@@ -170,7 +171,7 @@ export default function Search() {
         </div>
       )}
 
-      {!loading && products.length > 0 && (
+      {!loading && products.length > 0 && searchType === 'ai' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 mt-12">
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Recomendados

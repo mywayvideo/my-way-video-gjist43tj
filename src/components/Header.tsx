@@ -1,14 +1,26 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, ShoppingCart, User, Menu, X, Sparkles, Settings } from 'lucide-react'
+import {
+  Search,
+  ShoppingCart,
+  User,
+  Menu,
+  X,
+  Sparkles,
+  Settings,
+  Package,
+  Loader2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { useCartStore } from '@/stores/useCartStore'
 import logoUrl from '@/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png'
 import { DirectSearch } from '@/components/DirectSearch'
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog'
+import { useDebounce } from '@/hooks/use-debounce'
+import { searchProducts } from '@/services/database-search'
 
 export function Header() {
   const { user, signOut } = useAuth()
@@ -20,11 +32,28 @@ export function Header() {
   const [mobileDbQuery, setMobileDbQuery] = useState('')
   const { totalItems } = useCartStore()
 
+  const [mobileDbResults, setMobileDbResults] = useState<any[]>([])
+  const [isSearchingDb, setIsSearchingDb] = useState(false)
+  const debouncedDbQuery = useDebounce(mobileDbQuery, 300)
+
   const isAdmin =
     user &&
     (user.app_metadata?.role === 'admin' ||
       user.user_metadata?.role === 'admin' ||
       (user as any).role === 'admin')
+
+  useEffect(() => {
+    if (debouncedDbQuery.trim().length >= 2) {
+      setIsSearchingDb(true)
+      searchProducts(debouncedDbQuery.trim()).then((results) => {
+        setMobileDbResults(results || [])
+        setIsSearchingDb(false)
+      })
+    } else {
+      setMobileDbResults([])
+      setIsSearchingDb(false)
+    }
+  }, [debouncedDbQuery])
 
   const handleAISearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,7 +91,7 @@ export function Header() {
   return (
     <>
       <Dialog open={showMobileSearch} onOpenChange={setShowMobileSearch}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] rounded-xl overflow-hidden p-6">
+        <DialogContent className="sm:max-w-2xl w-[95vw] rounded-xl overflow-visible p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold mb-2">Pesquisar</DialogTitle>
           </DialogHeader>
@@ -77,16 +106,72 @@ export function Header() {
                 onChange={(e) => setMobileAiQuery(e.target.value)}
               />
             </form>
-            <form onSubmit={handleMobileDbSearch} className="w-full sm:w-1/2 relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
-              <Input
-                type="text"
-                placeholder="Pesquisar no catalogo..."
-                className="w-full pl-10 h-12 rounded-xl bg-blue-500/5 border-blue-500/20"
-                value={mobileDbQuery}
-                onChange={(e) => setMobileDbQuery(e.target.value)}
-              />
-            </form>
+            <div className="w-full sm:w-1/2 relative group">
+              <form onSubmit={handleMobileDbSearch} className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
+                <Input
+                  type="text"
+                  placeholder="Pesquisar no catalogo..."
+                  className="w-full pl-10 h-12 rounded-xl bg-blue-500/5 border-blue-500/20"
+                  value={mobileDbQuery}
+                  onChange={(e) => setMobileDbQuery(e.target.value)}
+                />
+              </form>
+              {mobileDbQuery.trim().length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 max-h-[60vh] overflow-y-auto">
+                  {isSearchingDb ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground flex justify-center items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> Buscando...
+                    </div>
+                  ) : mobileDbResults.length > 0 ? (
+                    <>
+                      {mobileDbResults.slice(0, 6).map((p) => (
+                        <Link
+                          key={p.id}
+                          to={`/product/${p.id}`}
+                          onClick={() => {
+                            setShowMobileSearch(false)
+                            setMobileDbQuery('')
+                          }}
+                          className="flex items-center gap-3 p-3 hover:bg-muted/80 transition-colors border-b border-border/50 last:border-0"
+                        >
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt=""
+                              className="w-10 h-10 object-contain rounded bg-white/5"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded">
+                              <Package className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex flex-col flex-1 overflow-hidden">
+                            <span className="text-sm font-medium truncate">{p.name}</span>
+                            <span className="text-xs text-muted-foreground font-mono truncate">
+                              {p.sku} • {p.category || 'Geral'}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                      <button
+                        onClick={() => {
+                          setShowMobileSearch(false)
+                          navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery)}`)
+                        }}
+                        className="w-full p-3 text-sm text-center text-blue-500 font-medium hover:bg-muted/50 transition-colors"
+                      >
+                        Ver todos os resultados
+                      </button>
+                    </>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Nenhum equipamento encontrado.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

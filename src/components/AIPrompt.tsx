@@ -85,6 +85,8 @@ export function AIPrompt({
       } else {
         setDbResults([])
         setResult(null)
+        setResponseMessage(null)
+        setReferencedProducts([])
       }
     }
   }, [debouncedQuery, activeSearchType])
@@ -92,6 +94,8 @@ export function AIPrompt({
   const performDatabaseSearch = async (searchQuery: string) => {
     setIsLoading(true)
     setError(null)
+    setResponseMessage(null)
+    setReferencedProducts([])
 
     try {
       const data = await searchProducts(searchQuery)
