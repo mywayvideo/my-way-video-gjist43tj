@@ -1,21 +1,29 @@
 import { useState, useEffect } from 'react'
-import { ChevronUp } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function ScrollToTopButton() {
-  const [isVisible, setIsVisible] = useState(false)
+  const [isScrollVisible, setIsScrollVisible] = useState(false)
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>
+
     const toggleVisibility = () => {
-      if (window.scrollY > 300) {
-        setIsVisible(true)
-      } else {
-        setIsVisible(false)
-      }
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        if (window.scrollY > 200) {
+          setIsScrollVisible(true)
+        } else {
+          setIsScrollVisible(false)
+        }
+      }, 100)
     }
 
     window.addEventListener('scroll', toggleVisibility)
-    return () => window.removeEventListener('scroll', toggleVisibility)
+    return () => {
+      window.removeEventListener('scroll', toggleVisibility)
+      clearTimeout(timeoutId)
+    }
   }, [])
 
   const scrollToTop = () => {
@@ -28,13 +36,18 @@ export function ScrollToTopButton() {
   return (
     <button
       className={cn(
-        'fixed bottom-0 right-0 mb-4 mr-4 z-[40] flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-primary p-3 text-primary-foreground opacity-90 shadow-md transition-opacity duration-300 ease-in-out hover:opacity-100',
-        !isVisible && 'pointer-events-none opacity-0',
+        'fixed flex items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md transition-all duration-200 ease-in-out hover:opacity-100 hover:scale-105 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring',
+        'bottom-[20px] right-[20px] md:bottom-[32px] md:right-[32px]',
+        'w-[48px] h-[48px] z-[40]',
+        isScrollVisible
+          ? 'opacity-100 translate-y-0'
+          : 'opacity-0 translate-y-4 pointer-events-none',
       )}
       onClick={scrollToTop}
       aria-label="Voltar ao topo"
+      tabIndex={isScrollVisible ? 0 : -1}
     >
-      <ChevronUp className="h-5 w-5" />
+      <ArrowUp className="h-6 w-6" />
     </button>
   )
 }
