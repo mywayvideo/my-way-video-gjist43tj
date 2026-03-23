@@ -1,26 +1,34 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Search, Sparkles, X, Loader2, RefreshCcw, MessageCircle } from 'lucide-react'
+import { useParams, useSearchParams } from 'react-router-dom'
+import { Search, Sparkles, X, Loader2, RefreshCcw, MessageCircle, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
+import { searchProducts } from '@/services/database-search'
 
 export function AIPrompt({
   initialQuery = '',
   productId,
+  searchType: propSearchType,
 }: {
   initialQuery?: string
   productId?: string
+  searchType?: 'ai' | 'database'
 }) {
   const { id: routeId } = useParams()
+  const [searchParams] = useSearchParams()
   const activeProductId = productId || routeId
+
+  const routeSearchType = searchParams.get('type') as 'ai' | 'database' | null
+  const activeSearchType = propSearchType || routeSearchType || 'ai'
 
   const [query, setQuery] = useState(initialQuery)
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [dbResults, setDbResults] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
@@ -35,8 +43,22 @@ export function AIPrompt({
     setIsLoading(true)
     setError(null)
     setResult(null)
+    setDbResults([])
 
     try {
+      if (activeSearchType === 'database') {
+        const data = await searchProducts(query.trim())
+        if (data && data.length > 0) {
+          setDbResults(data)
+          setResult({ status: 'database_success' })
+        } else {
+          setDbResults([])
+          setResult({ status: 'database_empty' })
+        }
+        setIsLoading(false)
+        return
+      }
+
       let sessionId = localStorage.getItem('ai-session-id')
       if (!sessionId) {
         sessionId = crypto.randomUUID
@@ -116,11 +138,19 @@ export function AIPrompt({
         className="relative group flex items-center shadow-lg rounded-full overflow-hidden border border-border/50 bg-background/50 backdrop-blur-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300"
       >
         <div className="pl-6 pr-2 py-4">
-          <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+          {activeSearchType === 'database' ? (
+            <Database className="w-6 h-6 text-blue-500" />
+          ) : (
+            <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+          )}
         </div>
         <Input
           type="text"
-          placeholder="O que você precisa? Pesquise produtos ou pergunte a IA."
+          placeholder={
+            activeSearchType === 'database'
+              ? 'Pesquisar no catálogo...'
+              : 'O que você precisa? Pesquise produtos ou pergunte a IA.'
+          }
           className="flex-1 border-0 bg-transparent text-sm md:text-lg focus-visible:ring-0 shadow-none px-2 py-5 md:py-6 h-auto disabled:opacity-50"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -144,7 +174,7 @@ export function AIPrompt({
             type="submit"
             size="icon"
             disabled={isLoading}
-            className="h-11 w-11 md:h-12 md:w-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
+            className={`h-11 w-11 md:h-12 md:w-12 rounded-full text-white disabled:opacity-50 transition-colors ${activeSearchType === 'database' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary hover:bg-primary/90'}`}
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
@@ -199,6 +229,24 @@ export function AIPrompt({
               Quer falar com um especialista? Clique aqui.
             </Button>
           )}
+        </div>
+      )}
+
+      {result?.status === 'database_success' && !isLoading && (
+        <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
+          <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <Database className="w-5 h-5 text-blue-500" />
+            Resultados no Catálogo
+          </h3>
+          <ReferencedProducts ids={dbResults} currentProductId={activeProductId} />
+        </div>
+      )}
+
+      {result?.status === 'database_empty' && !isLoading && (
+        <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm flex flex-col items-center justify-center text-center animate-fade-in-up w-full">
+          <Database className="w-10 h-10 text-muted-foreground/30 mb-4" />
+          <p className="text-lg font-medium">Nenhum produto encontrado</p>
+          <p className="text-muted-foreground">Tente utilizar outros termos na sua busca.</p>
         </div>
       )}
 
