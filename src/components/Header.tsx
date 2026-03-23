@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, ShoppingCart, User, Menu, X, Sparkles, Box, Settings } from 'lucide-react'
+import { Search, ShoppingCart, User, Menu, X, Sparkles, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
@@ -8,15 +8,16 @@ import { Input } from '@/components/ui/input'
 import { useCartStore } from '@/stores/useCartStore'
 import logoUrl from '@/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png'
 import { DirectSearch } from '@/components/DirectSearch'
-import { SearchTypeDialog } from '@/components/SearchTypeDialog'
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog'
 
 export function Header() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [showSearchTypeDialog, setShowSearchTypeDialog] = useState(false)
-  const [selectedSearchType, setSelectedSearchType] = useState<'ai' | 'database'>('ai')
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const [mobileAiQuery, setMobileAiQuery] = useState('')
+  const [mobileDbQuery, setMobileDbQuery] = useState('')
   const { totalItems } = useCartStore()
 
   const isAdmin =
@@ -33,24 +34,63 @@ export function Header() {
     }
   }
 
-  const openSearchTypeDialog = () => {
-    window.dispatchEvent(new CustomEvent('clear-search-response'))
-    setShowSearchTypeDialog(true)
+  const handleMobileAISearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (mobileAiQuery.trim()) {
+      navigate(`/search?type=ai&q=${encodeURIComponent(mobileAiQuery.trim())}`)
+      setShowMobileSearch(false)
+      setMobileAiQuery('')
+    }
   }
 
-  const selectSearchType = (type: 'ai' | 'database') => {
-    setSelectedSearchType(type)
-    setShowSearchTypeDialog(false)
-    navigate(`/search?type=${type}`)
+  const handleMobileDbSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (mobileDbQuery.trim()) {
+      navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery.trim())}`)
+      setShowMobileSearch(false)
+      setMobileDbQuery('')
+    }
+  }
+
+  const openMobileSearch = () => {
+    window.dispatchEvent(new CustomEvent('clear-search-response'))
+    setMobileAiQuery('')
+    setMobileDbQuery('')
+    setShowMobileSearch(true)
   }
 
   return (
     <>
-      <SearchTypeDialog
-        open={showSearchTypeDialog}
-        onOpenChange={setShowSearchTypeDialog}
-        onSelect={selectSearchType}
-      />
+      <Dialog open={showMobileSearch} onOpenChange={setShowMobileSearch}>
+        <DialogContent className="sm:max-w-2xl w-[95vw] rounded-xl overflow-hidden p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold mb-2">Pesquisar</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col sm:flex-row gap-4 mt-2">
+            <form onSubmit={handleMobileAISearch} className="w-full sm:w-1/2 relative group">
+              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <Input
+                type="text"
+                placeholder="Pesquisar com IA..."
+                className="w-full pl-10 h-12 rounded-xl bg-primary/5 border-primary/20"
+                value={mobileAiQuery}
+                onChange={(e) => setMobileAiQuery(e.target.value)}
+              />
+            </form>
+            <form onSubmit={handleMobileDbSearch} className="w-full sm:w-1/2 relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
+              <Input
+                type="text"
+                placeholder="Pesquisar no catalogo..."
+                className="w-full pl-10 h-12 rounded-xl bg-blue-500/5 border-blue-500/20"
+                value={mobileDbQuery}
+                onChange={(e) => setMobileDbQuery(e.target.value)}
+              />
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -149,12 +189,7 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-1 md:gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={openSearchTypeDialog}
-            >
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={openMobileSearch}>
               <Search className="w-5 h-5" />
             </Button>
 
