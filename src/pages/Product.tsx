@@ -46,13 +46,23 @@ type Message = {
   isLoading?: boolean
 }
 
-const formatNCM = (ncm?: string | null) => {
-  if (!ncm) return ''
-  const digits = ncm.replace(/\D/g, '')
-  if (digits.length >= 8) {
-    return digits.replace(/^(\d{4})(\d{2})(\d{2}).*/, '$1.$2.$3')
-  }
-  return ncm
+const formatNCM = (ncm?: string | number | null) => {
+  if (ncm === null || ncm === undefined) return ''
+  const str = String(ncm).trim()
+  if (!str) return ''
+
+  const digits = str.replace(/\D/g, '')
+  if (!digits) return str
+
+  const p1 = digits.slice(0, 4)
+  const p2 = digits.slice(4, 6)
+  const p3 = digits.slice(6, 8)
+
+  let formatted = p1
+  if (p2) formatted += '.' + p2
+  if (p3) formatted += '.' + p3
+
+  return formatted
 }
 
 const markdownComponents = {
@@ -381,7 +391,9 @@ export default function Product() {
                 { l: 'Marca', v: product.manufacturer?.name },
                 { l: 'Código (SKU)', v: product.sku },
                 { l: 'Categoria', v: product.category },
-                ...(product.ncm && product.ncm.trim() !== ''
+                ...(product.ncm !== null &&
+                product.ncm !== undefined &&
+                String(product.ncm).trim() !== ''
                   ? [{ l: 'NCM', v: formatNCM(product.ncm) }]
                   : []),
                 { l: 'Peso', v: displayWeight(product.weight) },
