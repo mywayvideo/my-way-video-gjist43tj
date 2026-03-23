@@ -417,8 +417,8 @@ export default function Product() {
               </p>
 
               {isAdmin && showPriceCost && !!product.price_cost && product.price_cost > 0 && (
-                <div className="mt-2 text-sm text-muted-foreground font-mono">
-                  <span className="font-medium mr-1">Preço de Custo (FOB Miami):</span>
+                <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono">
+                  <span className="font-medium mr-1">Preco de Custo (FOB Miami):</span>
                   US${' '}
                   {product.price_cost.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
@@ -466,11 +466,7 @@ export default function Product() {
                       })}
                     </p>
                     <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
-                      Referencial dinâmico sujeito a variação cambial. (Base:{' '}
-                      {brlData.type === 'percentage'
-                        ? `${(brlData.val * 100).toFixed(0)}%`
-                        : `+${brlData.val} BRL`}{' '}
-                      spread)
+                      Referencial dinâmico sujeito a variação cambial.
                     </p>
                   </div>
                 )}
@@ -494,25 +490,22 @@ export default function Product() {
             <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
           </Button>
 
-          <div className="border border-border/50 rounded-2xl bg-card shadow-sm flex flex-col flex-1 min-h-[400px]">
-            <div className="p-5 border-b border-border/50 flex items-center gap-3 bg-muted/20 rounded-t-2xl">
-              <div className="bg-primary/10 p-2 rounded-full ring-1 ring-primary/20">
-                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          <div className="border border-border/50 rounded-xl bg-card shadow-sm flex flex-col w-full max-h-[200px] m-2 overflow-hidden text-[0.875rem] leading-[1.4]">
+            <div className="p-2 border-b border-border/50 flex items-center gap-2 bg-muted/20">
+              <div className="bg-primary/10 p-1 rounded-full ring-1 ring-primary/20">
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground leading-tight">Engenharia IA</h3>
-                <p className="text-xs text-muted-foreground">
-                  Consulte fluxos, manuais e compatibilidade
-                </p>
+                <h3 className="font-bold text-foreground text-sm">Engenharia IA</h3>
               </div>
             </div>
 
-            <div className="flex-1 p-5 overflow-y-auto space-y-6 flex flex-col">
+            <div className="flex-1 p-2 overflow-y-auto space-y-3 flex flex-col">
               {messages.length === 0 && (
                 <div className="m-auto text-center max-w-xs text-muted-foreground opacity-60">
-                  <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">
-                    Faça perguntas técnicas avançadas sobre as especificações do {product.name}.
+                  <Bot className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">
+                    Faca perguntas tecnicas avancadas sobre as especificacoes do {product.name}
                   </p>
                 </div>
               )}
@@ -523,37 +516,36 @@ export default function Product() {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                    className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                   >
                     {msg.role === 'ai' && (
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
+                      <span className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
                         Assistente
                       </span>
                     )}
                     <div
-                      className={`p-4 rounded-2xl text-sm leading-relaxed max-w-[90%] sm:max-w-[85%] shadow-sm ${
+                      className={`p-2 rounded-xl text-xs leading-[1.4] max-w-[90%] sm:max-w-[85%] shadow-sm ${
                         msg.role === 'user'
                           ? 'bg-primary text-primary-foreground rounded-tr-sm'
                           : 'bg-background border border-border/60 rounded-tl-sm'
                       }`}
                     >
                       {msg.isLoading ? (
-                        <div className="flex items-center gap-3 opacity-70 font-mono text-xs">
-                          <Loader2 className="w-4 h-4 animate-spin text-primary" /> Pesquisando
-                          datasheets...
+                        <div className="flex items-center gap-2 opacity-70 font-mono text-[10px]">
+                          <Loader2 className="w-3 h-3 animate-spin text-primary" /> Pesquisando...
                         </div>
                       ) : (
                         <>
                           {msg.role === 'user' ? (
                             <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
                           ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 text-xs">
                               <MarkdownRenderer content={msg.content} />
 
                               {msg.aiData?.referenced_internal_products &&
                                 msg.aiData.referenced_internal_products.length > 0 && (
-                                  <div className="mt-5 border-t border-border/50 pt-4">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+                                  <div className="mt-3 border-t border-border/50 pt-2">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
                                       Soluções Mencionadas:
                                     </span>
                                     <ReferencedProducts
@@ -564,9 +556,9 @@ export default function Product() {
                                 )}
 
                               {showWhatsApp && (
-                                <div className="mt-5 pt-4 border-t border-border/50">
+                                <div className="mt-3 pt-2 border-t border-border/50">
                                   {msg.aiData?.whatsapp_reason && (
-                                    <p className="text-xs text-muted-foreground mb-3 font-medium border-l-2 border-primary/40 pl-2">
+                                    <p className="text-[10px] text-muted-foreground mb-2 font-medium border-l-2 border-primary/40 pl-2">
                                       {msg.aiData.whatsapp_reason}
                                     </p>
                                   )}
@@ -577,10 +569,10 @@ export default function Product() {
                                         '_blank',
                                       )
                                     }
-                                    className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-10"
+                                    className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-8 text-xs"
                                   >
-                                    <MessageCircle className="w-4 h-4 mr-2" /> Validar com
-                                    Engenheiro Humano
+                                    <MessageCircle className="w-3 h-3 mr-2" /> Validar com
+                                    Engenheiro
                                   </Button>
                                 </div>
                               )}
@@ -594,25 +586,25 @@ export default function Product() {
               })}
             </div>
 
-            <div className="p-4 border-t border-border/50 bg-muted/10 rounded-b-2xl">
+            <div className="p-2 border-t border-border/50 bg-muted/10">
               <form
                 onSubmit={handleAskAI}
-                className="relative group flex items-center shadow-inner rounded-xl overflow-hidden border border-border/50 bg-background focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all"
+                className="relative group flex items-center shadow-inner rounded-lg overflow-hidden border border-border/50 bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-all"
               >
                 <Input
                   disabled={isAiLoading}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ex: Quais resoluções RAW suportadas? Suporta Lemo 2-pin?"
-                  className="flex-1 border-0 bg-transparent px-4 py-4 md:py-5 shadow-none focus-visible:ring-0 text-sm placeholder:text-muted-foreground/50"
+                  placeholder="Ex: Quais resoluções RAW suportadas?"
+                  className="flex-1 border-0 bg-transparent px-2 py-1 shadow-none focus-visible:ring-0 text-xs placeholder:text-muted-foreground/50 h-8"
                 />
                 <Button
                   type="submit"
                   disabled={isAiLoading || !question.trim()}
                   size="icon"
-                  className="mr-2 h-9 w-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 transition-transform active:scale-95"
+                  className="mr-1 h-6 w-6 rounded bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 transition-transform active:scale-95"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3 h-3" />
                 </Button>
               </form>
             </div>

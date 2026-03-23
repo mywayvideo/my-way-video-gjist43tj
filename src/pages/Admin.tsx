@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import {
   Plus,
   Edit,
@@ -64,6 +65,7 @@ export default function Admin() {
   const [pricing, setPricing] = useState<any>(null)
   const [usdRate, setUsdRate] = useState<number>(0)
   const [simUsd, setSimUsd] = useState<number>(1000)
+  const [showPriceCost, setShowPriceCost] = useState(false)
 
   const [search, setSearch] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -98,6 +100,22 @@ export default function Admin() {
       .maybeSingle()
     if (prData) setPricing(prData)
     else setPricing({ spread_type: 'percentage', spread_value: 0.1 })
+
+    const { data: spData, error: spError } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'show_price_cost')
+      .maybeSingle()
+
+    if (spError) {
+      toast({
+        title: 'Erro',
+        description: 'Nao foi possivel carregar configuracoes.',
+        variant: 'destructive',
+      })
+    } else if (spData) {
+      setShowPriceCost(spData.value === 'true')
+    }
 
     try {
       const rate = await fetchUSDRate()
@@ -180,6 +198,30 @@ export default function Admin() {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
     } finally {
       setSavingPricing(false)
+    }
+  }
+
+  const handleToggleShowPriceCost = async (checked: boolean) => {
+    setShowPriceCost(checked)
+    const { error } = await supabase
+      .from('settings')
+      .upsert(
+        {
+          key: 'show_price_cost',
+          value: checked ? 'true' : 'false',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'key' },
+      )
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao atualizar configuração.',
+        variant: 'destructive',
+      })
+      setShowPriceCost(!checked)
+    } else {
+      toast({ title: 'Sucesso', description: 'Configuracao atualizada com sucesso.' })
     }
   }
 
@@ -383,6 +425,28 @@ export default function Admin() {
           >
             {savingPricing ? 'Salvando...' : 'Salvar Regras BRL'}
           </Button>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border/50 rounded-xl p-6 flex flex-col shadow-sm space-y-4">
+        <div>
+          <h2 className="font-semibold text-lg text-foreground flex items-center gap-2">
+            Configuracoes de Preco
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Gerenciar exibicao de preco de custo para administradores
+          </p>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/50 p-4">
+          <div className="space-y-0.5">
+            <Label className="text-base">
+              Exibir Preco de Custo (FOB Miami) para Administradores
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Quando ativado, o preco de custo aparecera na pagina do produto para usuarios admin.
+            </p>
+          </div>
+          <Switch checked={showPriceCost} onCheckedChange={handleToggleShowPriceCost} />
         </div>
       </div>
 
