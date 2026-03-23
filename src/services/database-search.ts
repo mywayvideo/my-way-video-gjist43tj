@@ -1,19 +1,24 @@
 import { supabase } from '@/lib/supabase/client'
 
 export const searchProducts = async (query: string) => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*, manufacturer:manufacturers(*)')
-    .or(
-      `name.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%,sku.ilike.%${query}%`,
-    )
-    .order('created_at', { ascending: false })
-    .limit(30)
+  try {
+    if (!query || !query.trim()) return []
 
-  if (error) {
-    console.error('Database search error:', error)
-    throw error
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, description, category, price_usd, image_url')
+      .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+      .order('created_at', { ascending: false })
+      .limit(30)
+
+    if (error) {
+      console.error('Database search error:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Database search error exception:', error)
+    return []
   }
-
-  return data || []
 }

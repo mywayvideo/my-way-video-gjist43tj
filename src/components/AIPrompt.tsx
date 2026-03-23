@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { searchProducts } from '@/services/database-search'
+import { useDebounce } from '@/hooks/use-debounce'
 
 export function AIPrompt({
   initialQuery = '',
@@ -32,13 +33,58 @@ export function AIPrompt({
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
+  const debouncedQuery = useDebounce(query, 300)
+
   useEffect(() => {
     setQuery(initialQuery)
   }, [initialQuery])
 
+  useEffect(() => {
+    if (activeSearchType === 'database') {
+      if (debouncedQuery.trim()) {
+        performDatabaseSearch(debouncedQuery.trim())
+      } else {
+        setDbResults([])
+        setResult(null)
+      }
+    }
+  }, [debouncedQuery, activeSearchType])
+
+  const performDatabaseSearch = async (searchQuery: string) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const data = await searchProducts(searchQuery)
+      if (data && data.length > 0) {
+        setDbResults(data)
+        setResult({ status: 'database_success' })
+      } else {
+        setDbResults([])
+        setResult({ status: 'database_empty' })
+      }
+    } catch (err: any) {
+      console.error('Database search error:', err)
+      setError('Erro ao pesquisar. Tente novamente.')
+      toast({
+        variant: 'destructive',
+        title: 'Erro na pesquisa',
+        description: 'Erro ao pesquisar. Tente novamente.',
+      })
+      setResult({ status: 'database_empty' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!query.trim() || isLoading) return
+
+    if (activeSearchType === 'database') {
+      performDatabaseSearch(query.trim())
+      return
+    }
 
     setIsLoading(true)
     setError(null)
@@ -46,19 +92,6 @@ export function AIPrompt({
     setDbResults([])
 
     try {
-      if (activeSearchType === 'database') {
-        const data = await searchProducts(query.trim())
-        if (data && data.length > 0) {
-          setDbResults(data)
-          setResult({ status: 'database_success' })
-        } else {
-          setDbResults([])
-          setResult({ status: 'database_empty' })
-        }
-        setIsLoading(false)
-        return
-      }
-
       let sessionId = localStorage.getItem('ai-session-id')
       if (!sessionId) {
         sessionId = crypto.randomUUID
@@ -192,7 +225,7 @@ export function AIPrompt({
         </div>
       )}
 
-      {error && !isLoading && (
+      {error && !isLoading && activeSearchType !== 'database' && (
         <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up">
           <p className="text-destructive font-medium">{error}</p>
           <Button onClick={() => handleSearch()} variant="outline" className="gap-2 h-11 px-6">
