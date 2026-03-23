@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import {
   Search,
@@ -43,11 +43,22 @@ export function AIPrompt({
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
+  const inputRef = useRef<HTMLInputElement>(null)
+
   const debouncedQuery = useDebounce(query, 300)
 
   useEffect(() => {
     setQuery(initialQuery)
   }, [initialQuery])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [activeSearchType])
 
   useEffect(() => {
     if (activeSearchType === 'database') {
@@ -174,6 +185,13 @@ export function AIPrompt({
     }
   }
 
+  const handleClear = () => {
+    setQuery('')
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-4">
       <form
@@ -188,7 +206,9 @@ export function AIPrompt({
           )}
         </div>
         <Input
+          ref={inputRef}
           type="text"
+          autoFocus
           placeholder={
             activeSearchType === 'database'
               ? 'Pesquisar no catálogo...'
@@ -197,7 +217,7 @@ export function AIPrompt({
           className="flex-1 border-0 bg-transparent text-sm md:text-lg focus-visible:ring-0 shadow-none px-2 py-5 md:py-6 h-auto disabled:opacity-50"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          disabled={isLoading}
+          disabled={activeSearchType === 'ai' ? isLoading : false}
         />
         {query && !isLoading && (
           <div className="pr-1">
@@ -206,7 +226,7 @@ export function AIPrompt({
               variant="ghost"
               size="icon"
               className="h-11 w-11 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setQuery('')}
+              onClick={handleClear}
             >
               <X className="w-5 h-5" />
             </Button>
@@ -228,7 +248,7 @@ export function AIPrompt({
         </div>
       </form>
 
-      {isLoading && (
+      {isLoading && activeSearchType === 'ai' && (
         <div className="flex items-center justify-center gap-2 p-4 text-muted-foreground animate-fade-in">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="font-medium">Processando sua pesquisa...</span>
@@ -275,12 +295,15 @@ export function AIPrompt({
         </div>
       )}
 
-      {result?.status === 'database_success' && !isLoading && (
+      {result?.status === 'database_success' && (
         <div className="p-4 md:p-6 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 px-2">
+          <div className="flex items-center gap-2 mb-4 px-2">
             <Database className="w-5 h-5 text-blue-500" />
-            Resultados no Catálogo
-          </h3>
+            <h3 className="text-lg font-semibold flex-1">Resultados no Catálogo</h3>
+            {isLoading && activeSearchType === 'database' && (
+              <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+            )}
+          </div>
           <div className="flex flex-col gap-2 w-full">
             {dbResults.map((product) => (
               <Link
@@ -330,6 +353,13 @@ export function AIPrompt({
           <Database className="w-10 h-10 text-muted-foreground/30 mb-4" />
           <p className="text-lg font-medium">Nenhum produto encontrado</p>
           <p className="text-muted-foreground">Tente utilizar outros termos na sua busca.</p>
+        </div>
+      )}
+
+      {result?.status === 'database_empty' && isLoading && activeSearchType === 'database' && (
+        <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm flex flex-col items-center justify-center text-center animate-fade-in-up w-full">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
+          <p className="text-muted-foreground">Buscando...</p>
         </div>
       )}
 
