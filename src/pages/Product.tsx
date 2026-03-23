@@ -388,23 +388,33 @@ export default function Product() {
                 </div>
               </div>
               {[
-                { l: 'Marca', v: product.manufacturer?.name },
-                { l: 'Código (SKU)', v: product.sku },
-                { l: 'Categoria', v: product.category },
+                ...(product.manufacturer?.name && product.manufacturer.name.trim() !== ''
+                  ? [{ l: 'Marca', v: product.manufacturer.name }]
+                  : []),
+                ...(product.sku && product.sku.trim() !== ''
+                  ? [{ l: 'Código (SKU)', v: product.sku }]
+                  : []),
+                ...(product.category && product.category.trim() !== ''
+                  ? [{ l: 'Categoria', v: product.category }]
+                  : []),
                 ...(product.ncm !== null &&
                 product.ncm !== undefined &&
                 String(product.ncm).trim() !== ''
                   ? [{ l: 'NCM', v: formatNCM(product.ncm) }]
                   : []),
-                { l: 'Peso', v: displayWeight(product.weight) },
-                { l: 'Dimensões', v: displayDimensions(product.dimensions) },
+                ...(product.weight !== null && product.weight !== undefined
+                  ? [{ l: 'Peso', v: displayWeight(product.weight) }]
+                  : []),
+                ...(product.dimensions && product.dimensions.trim() !== ''
+                  ? [{ l: 'Dimensões', v: displayDimensions(product.dimensions) }]
+                  : []),
               ].map((s, i) => (
                 <div
                   key={s.l}
                   className={`flex justify-between py-3 px-4 hover:bg-muted/30 transition-colors ${i !== 0 ? 'border-t border-border/30' : ''}`}
                 >
                   <span className="text-muted-foreground font-medium">{s.l}</span>
-                  <span className="font-mono text-foreground">{s.v || '-'}</span>
+                  <span className="font-mono text-foreground">{s.v}</span>
                 </div>
               ))}
             </div>
