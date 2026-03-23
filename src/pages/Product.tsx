@@ -35,6 +35,7 @@ import {
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
+import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 
 type Message = {
   id: string
@@ -418,21 +419,13 @@ export default function Product() {
                 <span className="text-xs font-bold uppercase tracking-widest">Base FOB Miami</span>
               </div>
               <p className="text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm">
-                <span className="text-2xl text-muted-foreground mr-1">US$</span>
-                {(product.price_usd || 0).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {formatPrice(product.price_usd)}
               </p>
 
               {isAdmin && showPriceCost && !!product.price_cost && product.price_cost > 0 && (
                 <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono">
                   <span className="font-medium mr-1">Preco de Custo (FOB Miami):</span>
-                  US${' '}
-                  {product.price_cost.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatPrice(product.price_cost)}
                 </div>
               )}
 
@@ -468,11 +461,7 @@ export default function Product() {
                       </button>
                     </div>
                     <p className="text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm">
-                      <span className="text-lg mr-1 opacity-80">R$</span>
-                      {brlData.finalBrl.toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatPriceBRL(brlData.finalBrl)}
                     </p>
                     <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
                       Referencial dinâmico sujeito a variação cambial.

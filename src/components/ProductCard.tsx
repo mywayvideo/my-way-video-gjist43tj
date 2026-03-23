@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ShoppingCart, PackageSearch } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
 import { useState } from 'react'
+import { formatPrice } from '@/utils/priceFormatter'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
@@ -41,13 +42,7 @@ export function ProductCard({ product }: { product: any }) {
             {product.name}
           </h3>
         </Link>
-        <p className="text-xl font-bold text-foreground mt-3">
-          US${' '}
-          {(product.price_usd || 0).toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </p>
+        <p className="text-xl font-bold text-foreground mt-3">{formatPrice(product.price_usd)}</p>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">
         <Button
