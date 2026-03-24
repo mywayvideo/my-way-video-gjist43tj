@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { Product, Manufacturer } from '@/types'
 import { supabase } from '@/lib/supabase/client'
-import { fetchUSDRate } from '@/services/awesome-api'
 import {
   Table,
   TableBody,
@@ -34,6 +33,8 @@ import {
   Sparkles,
   Download,
   Loader2,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -85,8 +86,7 @@ export default function Admin() {
   const [footerInfo, setFooterInfo] = useState<any>(null)
 
   // Pricing Settings
-  const [pricing, setPricing] = useState<any>(null)
-  const [usdRate, setUsdRate] = useState<number>(0)
+  const [exchangeRate, setExchangeRate] = useState<any>(null)
   const [simUsd, setSimUsd] = useState<number>(1000)
   const [showPriceCost, setShowPriceCost] = useState(false)
 
@@ -95,6 +95,7 @@ export default function Admin() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [savingInfo, setSavingInfo] = useState(false)
   const [savingPricing, setSavingPricing] = useState(false)
+  const [updatingRate, setUpdatingRate] = useState(false)
 
   // Bulk Actions State
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
@@ -124,13 +125,8 @@ export default function Admin() {
       )
     }
 
-    const { data: prData } = await supabase
-      .from('pricing_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle()
-    if (prData) setPricing(prData)
-    else setPricing({ spread_type: 'percentage', spread_value: 0.1 })
+    const { data: erData } = await supabase.from('exchange_rate').select('*').limit(1).maybeSingle()
+    if (erData) setExchangeRate(erData)
 
     const { data: spData, error: spError } = await supabase
       .from('settings')
@@ -138,7 +134,7 @@ export default function Admin() {
       .eq('key', 'show_price_cost')
       .maybeSingle()
 
-    if (spError) {
+    if (spError && spError.code !== 'PGRST116') {
       toast({
         title: 'Erro',
         description: 'Nao foi possivel carregar configuracoes.',
@@ -146,13 +142,6 @@ export default function Admin() {
       })
     } else if (spData) {
       setShowPriceCost(spData.value === 'true')
-    }
-
-    try {
-      const rate = await fetchUSDRate()
-      setUsdRate(rate)
-    } catch (e) {
-      console.error('Failed to fetch USD rate', e)
     }
   }
 
@@ -282,33 +271,40 @@ export default function Admin() {
   const handleSavePricing = async () => {
     setSavingPricing(true)
     try {
-      if (pricing.id) {
+      if (exchangeRate?.id) {
         await supabase
-          .from('pricing_settings')
+          .from('exchange_rate')
           .update({
-            spread_type: pricing.spread_type,
-            spread_value: pricing.spread_value,
-            updated_at: new Date().toISOString(),
+            spread_type: exchangeRate.spread_type,
+            spread_percentage: exchangeRate.spread_percentage,
           })
-          .eq('id', pricing.id)
-      } else {
-        const { data } = await supabase
-          .from('pricing_settings')
-          .insert([
-            {
-              spread_type: pricing.spread_type,
-              spread_value: pricing.spread_value,
-            },
-          ])
-          .select()
-          .single()
-        if (data) setPricing(data)
+          .eq('id', exchangeRate.id)
+        toast({ title: 'Salvo', description: 'Regras de precificação para o Brasil atualizadas.' })
       }
-      toast({ title: 'Salvo', description: 'Regras de precificação para o Brasil atualizadas.' })
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' })
     } finally {
       setSavingPricing(false)
+    }
+  }
+
+  const handleUpdateExchangeRate = async () => {
+    setUpdatingRate(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('update-exchange-rate', {
+        method: 'POST',
+      })
+      if (error) throw error
+      toast({ title: 'Sucesso', description: data?.message || 'Taxa atualizada com sucesso.' })
+      fetchData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar taxa. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setUpdatingRate(false)
     }
   }
 
@@ -498,87 +494,152 @@ export default function Admin() {
         </div>
 
         <div className="bg-card border border-border/50 rounded-xl p-6 flex flex-col shadow-sm space-y-4">
-          <h2 className="font-semibold text-lg text-green-500 flex items-center gap-2">
-            <DollarSign className="w-5 h-5" /> Configuração de Preço (Brasil)
-          </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="font-semibold text-lg text-green-500 flex items-center gap-2">
+              <DollarSign className="w-5 h-5" /> Configuração de Preço (Brasil)
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUpdateExchangeRate}
+              disabled={updatingRate}
+            >
+              {updatingRate ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Atualizar Taxa Agora
+            </Button>
+          </div>
 
-          <div className="flex gap-4 flex-col sm:flex-row">
-            <div className="flex-1 space-y-2">
-              <Label>Tipo de Spread</Label>
-              <Select
-                value={pricing?.spread_type || 'percentage'}
-                onValueChange={(v) => setPricing((p: any) => ({ ...p, spread_type: v }))}
+          {exchangeRate ? (
+            <>
+              <div className="p-4 bg-muted/20 border border-border/50 rounded-lg space-y-2 text-sm text-foreground">
+                <div className="flex items-center gap-2 text-green-600 font-medium mb-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Taxa sincronizada com banco de dados</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground block text-xs">Taxa de Câmbio</span>
+                    <span className="font-mono">
+                      R$ {Number(exchangeRate.usd_to_brl || 0).toFixed(4)}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (atualizada em {new Date(exchangeRate.last_updated).toLocaleString('pt-BR')})
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-xs">Margem Aplicada</span>
+                    <span className="font-mono">
+                      {exchangeRate.spread_percentage}
+                      {exchangeRate.spread_type === 'percentage' ? '%' : ''}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-xs">Tipo de Margem</span>
+                    <span className="font-mono capitalize">
+                      {exchangeRate.spread_type === 'percentage'
+                        ? 'Percentual (%)'
+                        : 'Fixo (+ Valor)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 flex-col sm:flex-row mt-2">
+                <div className="flex-1 space-y-2">
+                  <Label>Tipo de Spread</Label>
+                  <Select
+                    value={exchangeRate.spread_type || 'percentage'}
+                    onValueChange={(v) => setExchangeRate((p: any) => ({ ...p, spread_type: v }))}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">Percentual (%)</SelectItem>
+                      <SelectItem value="fixed">Fixo (+ Valor)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Label>Valor do Spread</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={exchangeRate.spread_percentage || 0}
+                    onChange={(e) =>
+                      setExchangeRate((p: any) => ({
+                        ...p,
+                        spread_percentage: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                    className="bg-background/50 border-border/50 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-muted/40 rounded-lg text-xs font-mono border border-border/50 text-muted-foreground">
+                <strong className="text-foreground">Fórmula Ativa:</strong> <br />
+                {exchangeRate.spread_type === 'fixed'
+                  ? `Preço BRL = Preço USD * (Câmbio + ${exchangeRate.spread_percentage})`
+                  : `Preço BRL = Preço USD * Câmbio * (1 + ${exchangeRate.spread_percentage})`}
+              </div>
+
+              <div className="p-4 border border-border/50 rounded-lg space-y-3 bg-background/30">
+                <h3 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                  <Calculator className="w-4 h-4" /> Simulador BRL (Câmbio: R${' '}
+                  {Number(exchangeRate.usd_to_brl || 0).toFixed(4)})
+                </h3>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-32">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      US$
+                    </span>
+                    <Input
+                      type="number"
+                      value={simUsd}
+                      onChange={(e) => setSimUsd(parseFloat(e.target.value) || 0)}
+                      className="pl-10 h-10 border-border/50"
+                    />
+                  </div>
+                  <span className="text-muted-foreground">→</span>
+                  <div className="font-mono font-bold text-xl text-green-500">
+                    R${' '}
+                    {exchangeRate.spread_type === 'fixed'
+                      ? (
+                          simUsd *
+                          (Number(exchangeRate.usd_to_brl) + Number(exchangeRate.spread_percentage))
+                        ).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      : (
+                          simUsd *
+                          Number(exchangeRate.usd_to_brl) *
+                          (1 + Number(exchangeRate.spread_percentage))
+                        ).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSavePricing}
+                disabled={savingPricing}
+                variant="secondary"
+                className="self-end mt-2"
               >
-                <SelectTrigger className="bg-background/50 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentage">Percentual (%)</SelectItem>
-                  <SelectItem value="fixed">Fixo (+ Valor)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1 space-y-2">
-              <Label>Valor do Spread</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={pricing?.spread_value || 0}
-                onChange={(e) =>
-                  setPricing((p: any) => ({ ...p, spread_value: parseFloat(e.target.value) || 0 }))
-                }
-                className="bg-background/50 border-border/50 font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="p-3 bg-muted/40 rounded-lg text-xs font-mono border border-border/50 text-muted-foreground">
-            <strong className="text-foreground">Fórmula Ativa:</strong> <br />
-            {pricing?.spread_type === 'fixed'
-              ? `Preço BRL = Preço USD * (Câmbio + ${pricing?.spread_value})`
-              : `Preço BRL = Preço USD * Câmbio * (1 + ${pricing?.spread_value})`}
-          </div>
-
-          <div className="p-4 border border-border/50 rounded-lg space-y-3 bg-background/30">
-            <h3 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
-              <Calculator className="w-4 h-4" /> Simulador BRL (Câmbio: R$ {usdRate.toFixed(3)})
-            </h3>
-            <div className="flex items-center gap-3">
-              <div className="relative w-32">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  US$
-                </span>
-                <Input
-                  type="number"
-                  value={simUsd}
-                  onChange={(e) => setSimUsd(parseFloat(e.target.value) || 0)}
-                  className="pl-10 h-10 border-border/50"
-                />
-              </div>
-              <span className="text-muted-foreground">→</span>
-              <div className="font-mono font-bold text-xl text-green-500">
-                R${' '}
-                {pricing?.spread_type === 'fixed'
-                  ? (simUsd * (usdRate + (pricing?.spread_value || 0))).toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })
-                  : (simUsd * usdRate * (1 + (pricing?.spread_value || 0))).toLocaleString(
-                      'pt-BR',
-                      { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-                    )}
-              </div>
-            </div>
-          </div>
-
-          <Button
-            onClick={handleSavePricing}
-            disabled={savingPricing}
-            variant="secondary"
-            className="self-end mt-2"
-          >
-            {savingPricing ? 'Salvando...' : 'Salvar Regras BRL'}
-          </Button>
+                {savingPricing ? 'Salvando...' : 'Salvar Regras BRL'}
+              </Button>
+            </>
+          ) : (
+            <div className="text-sm text-muted-foreground py-4">Carregando configurações...</div>
+          )}
         </div>
       </div>
 

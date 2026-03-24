@@ -37,7 +37,6 @@ import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
-import { fetchUSDRate } from '@/services/awesome-api'
 
 type Message = {
   id: string
@@ -136,8 +135,8 @@ export default function Product() {
 
   // BRL Pricing State
   const [pricingSettings, setPricingSettings] = useState<{
-    exchange_rate: number
-    spread_value: number
+    usd_to_brl: number
+    spread_percentage: number
     spread_type: string
   } | null>(null)
 
@@ -172,54 +171,18 @@ export default function Product() {
 
     const fetchPricingSettings = async () => {
       try {
-        const { data } = await supabase.from('pricing_settings').select('*').limit(1).single()
-
-        const parseNum = (v: any, def: number) => {
-          if (v === null || v === undefined) return def
-          if (typeof v === 'number') return v
-          const parsed = parseFloat(String(v).replace(',', '.'))
-          return isNaN(parsed) ? def : parsed
-        }
-
-        let currentRate = 0
-        if (data && (data as any).exchange_rate) {
-          currentRate = parseNum((data as any).exchange_rate, 0)
-        }
-
-        if (currentRate <= 0) {
-          try {
-            const apiRate = await fetchUSDRate()
-            currentRate = apiRate > 0 ? apiRate : 5.0
-          } catch (e) {
-            currentRate = 5.0
-          }
-        }
+        const { data, error } = await supabase.from('exchange_rate').select('*').limit(1).single()
+        if (error) throw error
 
         if (data) {
           setPricingSettings({
-            exchange_rate: currentRate,
-            spread_value: parseNum(data.spread_value, 0.1),
+            usd_to_brl: Number(data.usd_to_brl) || 0,
+            spread_percentage: Number(data.spread_percentage) || 0,
             spread_type: data.spread_type || 'percentage',
-          })
-        } else {
-          setPricingSettings({
-            exchange_rate: currentRate,
-            spread_value: 0.1,
-            spread_type: 'percentage',
           })
         }
       } catch (err) {
         console.error('Failed to fetch pricing settings', err)
-        try {
-          const apiRate = await fetchUSDRate()
-          setPricingSettings({
-            exchange_rate: apiRate,
-            spread_value: 0.1,
-            spread_type: 'percentage',
-          })
-        } catch (e) {
-          setPricingSettings({ exchange_rate: 5.0, spread_value: 0.1, spread_type: 'percentage' })
-        }
       }
     }
 
@@ -327,29 +290,21 @@ export default function Product() {
       await new Promise((resolve) => setTimeout(resolve, 300))
 
       let finalBrl = 0
-      let rate = 0
-      let type = 'percentage'
-      let val = 0.1
+      let rate = pricingSettings?.usd_to_brl || 0
+      let type = pricingSettings?.spread_type || 'percentage'
+      let val = pricingSettings?.spread_percentage || 0
 
-      if (pricingSettings) {
-        rate = pricingSettings.exchange_rate
-        type = pricingSettings.spread_type
-        val = pricingSettings.spread_value
-
+      if (pricingSettings && product?.price_brl && product.price_brl > 0) {
         let effectiveVal = val
         // Adjust percentage if entered as whole number (e.g. 10 instead of 0.1)
         if (type === 'percentage' && val >= 1) {
           effectiveVal = val / 100
         }
 
-        if (product?.price_brl && product.price_brl > 0) {
-          if (type === 'fixed') {
-            finalBrl = product.price_brl * (rate + effectiveVal)
-          } else {
-            finalBrl = product.price_brl * rate * (1 + effectiveVal)
-          }
+        if (type === 'fixed') {
+          finalBrl = product.price_brl * (rate + effectiveVal)
         } else {
-          finalBrl = 0
+          finalBrl = product.price_brl * rate * (1 + effectiveVal)
         }
       } else {
         finalBrl = 0
