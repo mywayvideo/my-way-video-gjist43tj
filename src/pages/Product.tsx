@@ -4,7 +4,6 @@ import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -464,9 +463,9 @@ export default function Product() {
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 leading-tight flex items-center gap-3 flex-wrap">
               {product.name}
               {product.is_discontinued && (
-                <Badge variant="destructive" className="text-sm uppercase tracking-wider">
-                  Descontinuado
-                </Badge>
+                <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-md text-sm font-semibold uppercase tracking-wider">
+                  DESCONTINUADO
+                </span>
               )}
             </h1>
 
@@ -595,16 +594,29 @@ export default function Product() {
           <div className="order-3 lg:order-none w-full mb-10 lg:mb-0">
             <Button
               size="lg"
-              onClick={() =>
-                addItem({
-                  id: product.id,
-                  name: product.name,
-                  price: product.price_usd || 0,
-                  image_url: product.image_url || undefined,
-                  quantity: 1,
-                })
+              disabled={product.is_discontinued}
+              aria-label={
+                product.is_discontinued
+                  ? 'Produto descontinuado. Nao disponivel para adicionar.'
+                  : undefined
               }
-              className="w-full h-14 text-base font-semibold shadow-lg hover:shadow-primary/20 transition-all hover:-translate-y-0.5"
+              onClick={() => {
+                if (!product.is_discontinued) {
+                  addItem({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price_usd || 0,
+                    image_url: product.image_url || undefined,
+                    quantity: 1,
+                  })
+                }
+              }}
+              className={cn(
+                'w-full h-14 text-base font-semibold shadow-lg transition-all',
+                product.is_discontinued
+                  ? 'opacity-50 cursor-not-allowed !pointer-events-auto'
+                  : 'hover:shadow-primary/20 hover:-translate-y-0.5',
+              )}
             >
               <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
             </Button>
