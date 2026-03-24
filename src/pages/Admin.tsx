@@ -35,6 +35,7 @@ import {
   Loader2,
   RefreshCw,
   CheckCircle2,
+  X,
 } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -674,10 +675,19 @@ export default function Admin() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar equipamento..."
-              className="pl-10 bg-background/50 border-border/50 h-9"
+              className="pl-10 pr-10 bg-background/50 border-border/50 h-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search.length > 0 && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer rounded-full transition-colors flex items-center justify-center"
+                aria-label="Limpar busca"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
 
