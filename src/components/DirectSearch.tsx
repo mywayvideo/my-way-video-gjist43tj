@@ -19,7 +19,7 @@ export function DirectSearch() {
       setLoading(true)
       supabase
         .from('products')
-        .select('id, name, sku, category, image_url')
+        .select('id, name, sku, category, image_url, is_discontinued')
         .or(
           `name.ilike.%${debouncedQuery}%,sku.ilike.%${debouncedQuery}%,category.ilike.%${debouncedQuery}%`,
         )
@@ -87,7 +87,14 @@ export function DirectSearch() {
                 </div>
               )}
               <div className="flex flex-col flex-1 overflow-hidden">
-                <span className="text-sm font-medium truncate">{p.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium truncate">{p.name}</span>
+                  {p.is_discontinued && (
+                    <span className="bg-yellow-100 text-yellow-700 rounded-md px-2 py-0.5 font-[600] text-[10px] shrink-0">
+                      DESCONTINUADO
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-muted-foreground font-mono truncate">
                   {p.sku} • {p.category || 'Geral'}
                 </span>
