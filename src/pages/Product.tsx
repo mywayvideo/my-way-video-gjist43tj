@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dialog'
 import { useCartStore } from '@/stores/useCartStore'
 import { supabase } from '@/lib/supabase/client'
-import { fetchUSDRate } from '@/services/awesome-api'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
@@ -135,6 +134,12 @@ export default function Product() {
   const [showPriceCost, setShowPriceCost] = useState(false)
 
   // BRL Pricing State
+  const [pricingSettings, setPricingSettings] = useState<{
+    exchange_rate: number
+    spread_value: number
+    spread_type: string
+  } | null>(null)
+
   const [brlData, setBrlData] = useState<{
     finalBrl: number
     rate: number
@@ -164,7 +169,23 @@ export default function Product() {
       }
     }
 
+    const fetchPricingSettings = async () => {
+      try {
+        const { data } = await supabase.from('pricing_settings').select('*').limit(1).single()
+        if (data) {
+          setPricingSettings({
+            exchange_rate: Number((data as any).exchange_rate) || 0,
+            spread_value: Number(data.spread_value) || 0.1,
+            spread_type: data.spread_type || 'percentage',
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch pricing settings', err)
+      }
+    }
+
     fetchSettingsAndUser()
+    fetchPricingSettings()
   }, [])
 
   useEffect(() => {
@@ -263,17 +284,30 @@ export default function Product() {
   const handleCalculateBrl = async () => {
     setCalculatingBrl(true)
     try {
-      const rate = await fetchUSDRate()
-      const { data: pSet } = await supabase.from('pricing_settings').select('*').limit(1).single()
+      // Simulate brief delay for UI consistency
+      await new Promise((resolve) => setTimeout(resolve, 300))
 
       let finalBrl = 0
-      const type = pSet?.spread_type || 'percentage'
-      const val = Number(pSet?.spread_value) || 0.1
+      let rate = 0
+      let type = 'percentage'
+      let val = 0.1
 
-      if (type === 'fixed') {
-        finalBrl = (product?.price_usd || 0) * (rate + val)
+      if (pricingSettings) {
+        rate = pricingSettings.exchange_rate
+        type = pricingSettings.spread_type
+        val = pricingSettings.spread_value
+
+        if (product?.price_brl && product.price_brl > 0) {
+          if (type === 'fixed') {
+            finalBrl = product.price_brl * (rate + val)
+          } else {
+            finalBrl = product.price_brl * rate * (1 + val)
+          }
+        } else {
+          finalBrl = 0
+        }
       } else {
-        finalBrl = (product?.price_usd || 0) * rate * (1 + val)
+        finalBrl = 0
       }
 
       setBrlData({ finalBrl, rate, type, val })
