@@ -648,8 +648,18 @@ export default function Admin() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium max-w-[200px] truncate" title={p.name}>
-                    {p.name}
+                  <TableCell className="font-medium max-w-[200px]" title={p.name}>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{p.name}</span>
+                      {p.is_discontinued && (
+                        <Badge
+                          variant="destructive"
+                          className="text-[9px] h-4 px-1 py-0 uppercase tracking-wider shrink-0"
+                        >
+                          Inativo
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {p.manufacturer?.name || '-'}

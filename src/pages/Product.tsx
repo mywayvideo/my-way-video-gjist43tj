@@ -4,6 +4,7 @@ import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -426,8 +427,13 @@ export default function Product() {
             <span className="text-primary font-mono uppercase tracking-widest text-xs font-bold mb-2">
               {product.manufacturer?.name || product.category || 'Equipamento Profissional'}
             </span>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 leading-tight">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 leading-tight flex items-center gap-3 flex-wrap">
               {product.name}
+              {product.is_discontinued && (
+                <Badge variant="destructive" className="text-sm uppercase tracking-wider">
+                  Descontinuado
+                </Badge>
+              )}
             </h1>
 
             <div className="mb-8">

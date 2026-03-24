@@ -20,6 +20,7 @@ export type Product = {
   dimensions: string | null
   category: string | null
   is_special: boolean
+  is_discontinued: boolean
   created_at?: string
   manufacturer?: Manufacturer
 }

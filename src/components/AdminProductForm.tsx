@@ -51,6 +51,7 @@ export function AdminProductForm({
       weight: 0,
       dimensions: '',
       is_special: false,
+      is_discontinued: false,
       manufacturer_id: '',
     },
   )
@@ -315,6 +316,18 @@ export function AdminProductForm({
             onCheckedChange={(c) => setFormData((p) => ({ ...p, is_special: c }))}
           />
         </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 p-3 md:col-span-2">
+          <div>
+            <Label className="text-destructive">Produto "DESCONTINUADO"</Label>
+            <p className="text-xs text-muted-foreground">Marcar como fora de linha/indisponível</p>
+          </div>
+          <Switch
+            checked={formData.is_discontinued || false}
+            onCheckedChange={(c) => setFormData((p) => ({ ...p, is_discontinued: c }))}
+          />
+        </div>
+
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="description">Descrição Técnica</Label>
           <Textarea

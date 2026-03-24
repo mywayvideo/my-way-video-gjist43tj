@@ -206,7 +206,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           const targetKey = h === 'price_usa' ? 'price_usd' : h
           if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)) {
             prod[targetKey] = val ? parseFloat(val) : 0
-          } else if (targetKey === 'is_special') {
+          } else if (targetKey === 'is_special' || targetKey === 'is_discontinued') {
             prod[targetKey] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
           } else if (targetKey === 'technical_info') {
             prod[targetKey] = val && val.trim() !== '' ? String(val) : null
