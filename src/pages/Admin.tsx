@@ -378,9 +378,9 @@ export default function Admin() {
   const renderSortIndicator = (column: string) => {
     if (sortColumn !== column) return null
     return sortDirection === 'asc' ? (
-      <ArrowUp className="w-3 h-3 ml-1" />
+      <ArrowUp className="w-[14px] h-[14px] ml-[6px] text-primary animate-in fade-in duration-150" />
     ) : (
-      <ArrowDown className="w-3 h-3 ml-1" />
+      <ArrowDown className="w-[14px] h-[14px] ml-[6px] text-primary animate-in fade-in duration-150" />
     )
   }
 
@@ -391,6 +391,15 @@ export default function Admin() {
       isActive
         ? 'bg-primary/15 font-semibold border-l-4 border-l-primary'
         : 'hover:bg-primary/15 hover:text-primary hover:border-l-2 hover:border-l-primary hover:scale-105',
+    )
+  }
+
+  const sortableHeaderClasses = (column: string) => {
+    const isActive = sortColumn === column
+    return cn(
+      'cursor-pointer select-none transition-all duration-200 ease-in-out',
+      'hover:bg-foreground/5 hover:text-primary',
+      isActive && 'font-semibold text-primary bg-primary/[0.08]',
     )
   }
 
@@ -792,7 +801,7 @@ export default function Admin() {
                 </TableHead>
                 <TableHead className="w-16">Mídia</TableHead>
                 <TableHead
-                  className="w-32 cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  className={cn('w-32', sortableHeaderClasses('is_discontinued'))}
                   onClick={() => handleSort('is_discontinued')}
                 >
                   <div className="flex items-center">
@@ -800,25 +809,25 @@ export default function Admin() {
                   </div>
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  className={sortableHeaderClasses('name')}
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center">Produto {renderSortIndicator('name')}</div>
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  className={sortableHeaderClasses('brand')}
                   onClick={() => handleSort('brand')}
                 >
                   <div className="flex items-center">Marca {renderSortIndicator('brand')}</div>
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  className={sortableHeaderClasses('sku')}
                   onClick={() => handleSort('sku')}
                 >
                   <div className="flex items-center">SKU {renderSortIndicator('sku')}</div>
                 </TableHead>
                 <TableHead
-                  className="text-right cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  className={cn('text-right', sortableHeaderClasses('price_usd'))}
                   onClick={() => handleSort('price_usd')}
                 >
                   <div className="flex items-center justify-end">
