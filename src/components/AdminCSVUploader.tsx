@@ -34,6 +34,9 @@ interface ReportData {
   rowsToUpdate: any[]
   invalidRows: { row: number; sku: string; reason: string }[]
   duplicates: { row: number; incomingSku: string; dbSku: string }[]
+  discontinuedUpdates?: number
+  discontinuedSetActive?: number
+  discontinuedSetDiscontinued?: number
 }
 
 const normalizeSkuForComparison = (sku: string) => {
@@ -103,6 +106,10 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         const duplicates: { row: number; incomingSku: string; dbSku: string }[] = []
         const processedSkus = new Set<string>()
 
+        let discontinuedUpdates = 0
+        let discontinuedSetActive = 0
+        let discontinuedSetDiscontinued = 0
+
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i]
           const values = line
@@ -122,6 +129,27 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             continue
           }
 
+          const hasDiscontinued = 'discontinued' in rowData
+          if (
+            hasDiscontinued &&
+            rowData['discontinued'] !== null &&
+            rowData['discontinued'] !== ''
+          ) {
+            const d = String(rowData['discontinued']).trim().toLowerCase()
+            if (['true', '1', 'yes'].includes(d)) {
+              rowData.is_discontinued = true
+            } else if (['false', '0', 'no'].includes(d)) {
+              rowData.is_discontinued = false
+            } else {
+              invalidRows.push({
+                row: i + 1,
+                sku: rowSku,
+                reason: 'Valor invalido para DISCONTINUED. Use TRUE ou FALSE.',
+              })
+              continue
+            }
+          }
+
           try {
             const normalizedSku = normalizeSkuForComparison(rowSku)
 
@@ -139,11 +167,16 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
                 invalidRows.push({
                   row: i + 1,
                   sku: rowSku,
-                  reason: 'Campos obrigatorios para criacao: sku, nome, descricao',
+                  reason: 'SKU nao encontrado',
                 })
                 continue
               }
               rowsToCreate.push(rowData)
+              if (rowData.is_discontinued !== undefined) {
+                discontinuedUpdates++
+                if (rowData.is_discontinued) discontinuedSetDiscontinued++
+                else discontinuedSetActive++
+              }
             } else {
               const hasOtherColumns = Object.keys(rowData).some(
                 (k) => k !== 'sku' && rowData[k] !== null && rowData[k] !== '',
@@ -158,6 +191,11 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
               }
               rowData._dbId = existing.id
               rowsToUpdate.push(rowData)
+              if (rowData.is_discontinued !== undefined) {
+                discontinuedUpdates++
+                if (rowData.is_discontinued) discontinuedSetDiscontinued++
+                else discontinuedSetActive++
+              }
             }
           } catch (err) {
             invalidRows.push({ row: i + 1, sku: rowSku, reason: 'Erro ao normalizar SKU' })
@@ -170,6 +208,9 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           rowsToUpdate,
           invalidRows,
           duplicates,
+          discontinuedUpdates,
+          discontinuedSetActive,
+          discontinuedSetDiscontinued,
         })
         setStep('REPORT')
       } catch (err: any) {
@@ -202,12 +243,20 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
       const parseRow = (p: any) => {
         const prod: any = { manufacturer_id: mfgId }
         Object.entries(p).forEach(([h, val]: [string, any]) => {
-          if (h === '_dbId') return
+          if (h === '_dbId' || h === 'discontinued') return
           const targetKey = h === 'price_usa' ? 'price_usd' : h
           if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)) {
             prod[targetKey] = val ? parseFloat(val) : 0
           } else if (targetKey === 'is_special' || targetKey === 'is_discontinued') {
-            prod[targetKey] = val === 'true' || val === '1' || val?.toLowerCase() === 'sim'
+            if (typeof val === 'boolean') {
+              prod[targetKey] = val
+            } else {
+              prod[targetKey] =
+                val === 'true' ||
+                val === '1' ||
+                val?.toLowerCase() === 'sim' ||
+                val?.toLowerCase() === 'yes'
+            }
           } else if (targetKey === 'technical_info') {
             prod[targetKey] = val && val.trim() !== '' ? String(val) : null
           } else if (targetKey !== 'manufacturer' && targetKey !== 'manufacturer_id') {
@@ -235,7 +284,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
       toast({
         title: 'Sucesso',
-        description: `Importação concluída: ${report.rowsToCreate.length} criados, ${report.rowsToUpdate.length} atualizados.`,
+        description: `Importacao concluida. ${report.rowsToCreate.length + report.rowsToUpdate.length} produtos atualizados.`,
       })
       handleReset()
       onSuccess()
@@ -350,6 +399,23 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
                   <p className="text-sm text-orange-500">
                     SKUs duplicados no CSV: <strong>{report.duplicates.length}</strong>
                   </p>
+
+                  {report.discontinuedUpdates !== undefined && report.discontinuedUpdates > 0 && (
+                    <>
+                      <div className="border-t border-white/10 my-2 pt-2"></div>
+                      <p className="text-sm">
+                        Rows updating discontinued status:{' '}
+                        <strong>{report.discontinuedUpdates}</strong>
+                      </p>
+                      <p className="text-sm text-green-500">
+                        Rows setting to active: <strong>{report.discontinuedSetActive}</strong>
+                      </p>
+                      <p className="text-sm text-orange-500">
+                        Rows setting to discontinued:{' '}
+                        <strong>{report.discontinuedSetDiscontinued}</strong>
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {report.invalidRows.length > 0 && (
