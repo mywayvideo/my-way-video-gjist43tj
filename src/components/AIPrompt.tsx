@@ -212,7 +212,8 @@ export function AIPrompt({
   }
 
   const handleClear = () => {
-    setQuery('')
+    clearResponse()
+    window.dispatchEvent(new Event('clear-search-response'))
     if (inputRef.current) {
       inputRef.current.focus()
     }
@@ -251,10 +252,10 @@ export function AIPrompt({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-11 w-11 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              className="h-11 w-11 md:h-12 md:w-12 rounded-full text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               onClick={handleClear}
             >
-              <X className="w-5 h-5" />
+              <X size={18} />
             </Button>
           </div>
         )}
@@ -331,7 +332,7 @@ export function AIPrompt({
               <Link
                 key={product.id}
                 to={`/product/${product.id}`}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50 group"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50 group relative"
               >
                 <div className="w-12 h-12 md:w-14 md:h-14 shrink-0 bg-muted/30 rounded-lg overflow-hidden flex items-center justify-center">
                   {product.image_url ? (
@@ -346,9 +347,16 @@ export function AIPrompt({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm md:text-base truncate group-hover:text-primary transition-colors">
-                    {product.name}
-                  </h4>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-medium text-sm md:text-base truncate group-hover:text-primary transition-colors">
+                      {product.name}
+                    </h4>
+                    {product.is_discontinued && (
+                      <span className="bg-yellow-100 text-yellow-700 rounded-md px-2 py-0.5 font-semibold text-[10px] shrink-0">
+                        DESCONTINUADO
+                      </span>
+                    )}
+                  </div>
                   {product.category && (
                     <p className="text-xs text-muted-foreground truncate">{product.category}</p>
                   )}

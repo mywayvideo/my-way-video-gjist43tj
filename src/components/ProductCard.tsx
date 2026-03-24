@@ -17,8 +17,13 @@ export function ProductCard({ product }: { product: any }) {
   const displayPrice = formatPrice(product.price_usd)
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
+    <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative">
       <CardHeader className="p-0 relative">
+        {product.is_discontinued && (
+          <div className="absolute top-2 right-2 z-10 bg-yellow-100 text-yellow-700 rounded-md px-2 py-1 font-semibold text-xs shadow-sm pointer-events-none">
+            DESCONTINUADO
+          </div>
+        )}
         <Link
           to={`/product/${product.id}`}
           className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
