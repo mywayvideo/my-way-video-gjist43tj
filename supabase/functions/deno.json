@@ -3,6 +3,7 @@
     "ai-search": 39,
     "functions": 8,
     "validate-ai-provider": 14,
-    "call-ai-agent": 28
+    "call-ai-agent": 28,
+    "update-exchange-rate": 1
   }
 }
