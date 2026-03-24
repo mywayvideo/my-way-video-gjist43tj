@@ -36,6 +36,8 @@ import {
   RefreshCw,
   CheckCircle2,
   X,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -106,15 +108,35 @@ export default function Admin() {
   // Toggling State
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
 
-  const fetchData = async () => {
+  // Sorting State
+  const [sortColumn, setSortColumn] = useState<string>('created_at')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  const fetchProductsData = async () => {
+    let pQuery = supabase.from('products').select('*, manufacturer:manufacturers(*)')
+
+    if (sortColumn !== 'brand') {
+      pQuery = pQuery.order(sortColumn, { ascending: sortDirection === 'asc' })
+    } else {
+      pQuery = pQuery.order('created_at', { ascending: false })
+    }
+
+    const { data: pData } = await pQuery
+    if (pData) {
+      if (sortColumn === 'brand') {
+        pData.sort((a, b) => {
+          const nameA = a.manufacturer?.name || ''
+          const nameB = b.manufacturer?.name || ''
+          return sortDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA)
+        })
+      }
+      setProducts(pData)
+    }
+  }
+
+  const fetchOtherData = async () => {
     const { data: mData } = await supabase.from('manufacturers').select('*').order('name')
     if (mData) setManufacturers(mData)
-
-    const { data: pData } = await supabase
-      .from('products')
-      .select('*, manufacturer:manufacturers(*)')
-      .order('created_at', { ascending: false })
-    if (pData) setProducts(pData)
 
     const { data: cData } = await supabase.from('company_info').select('*')
     if (cData) {
@@ -146,9 +168,22 @@ export default function Admin() {
     }
   }
 
+  const fetchData = async () => {
+    await fetchOtherData()
+    await fetchProductsData()
+  }
+
   useEffect(() => {
-    if (user) fetchData()
+    if (user) {
+      fetchOtherData()
+    }
   }, [user])
+
+  useEffect(() => {
+    if (user) {
+      fetchProductsData()
+    }
+  }, [user, sortColumn, sortDirection])
 
   if (authLoading)
     return (
@@ -329,6 +364,24 @@ export default function Admin() {
     } else {
       toast({ title: 'Sucesso', description: 'Configuracao atualizada com sucesso.' })
     }
+  }
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  const renderSortIndicator = (column: string) => {
+    if (sortColumn !== column) return null
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="w-3 h-3 ml-1" />
+    ) : (
+      <ArrowDown className="w-3 h-3 ml-1" />
+    )
   }
 
   const navBtnClasses = (path: string) => {
@@ -738,11 +791,40 @@ export default function Admin() {
                   />
                 </TableHead>
                 <TableHead className="w-16">Mídia</TableHead>
-                <TableHead className="w-32">Status</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>Marca</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-right">FOB Miami</TableHead>
+                <TableHead
+                  className="w-32 cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  onClick={() => handleSort('is_discontinued')}
+                >
+                  <div className="flex items-center">
+                    Status {renderSortIndicator('is_discontinued')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center">Produto {renderSortIndicator('name')}</div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  onClick={() => handleSort('brand')}
+                >
+                  <div className="flex items-center">Marca {renderSortIndicator('brand')}</div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  onClick={() => handleSort('sku')}
+                >
+                  <div className="flex items-center">SKU {renderSortIndicator('sku')}</div>
+                </TableHead>
+                <TableHead
+                  className="text-right cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                  onClick={() => handleSort('price_usd')}
+                >
+                  <div className="flex items-center justify-end">
+                    FOB Miami {renderSortIndicator('price_usd')}
+                  </div>
+                </TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
