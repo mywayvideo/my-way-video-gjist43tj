@@ -33,6 +33,7 @@ import {
   Settings,
   Sparkles,
   Download,
+  Loader2,
 } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -99,6 +100,9 @@ export default function Admin() {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [isDeletingBulk, setIsDeletingBulk] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Toggling State
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
 
   const fetchData = async () => {
     const { data: mData } = await supabase.from('manufacturers').select('*').order('name')
@@ -338,6 +342,51 @@ export default function Admin() {
         ? 'bg-primary/15 font-semibold border-l-4 border-l-primary'
         : 'hover:bg-primary/15 hover:text-primary hover:border-l-2 hover:border-l-primary hover:scale-105',
     )
+  }
+
+  const userRole = String(
+    user?.user_metadata?.role || user?.app_metadata?.role || 'admin',
+  ).toLowerCase()
+  const canToggleStatus = ['admin', 'administrador', 'colaborador'].includes(userRole)
+
+  const handleToggleStatus = async (product: Product) => {
+    if (!canToggleStatus) return
+
+    const newStatus = !product.is_discontinued
+
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, is_discontinued: newStatus } : p)),
+    )
+    setTogglingIds((prev) => new Set(prev).add(product.id))
+
+    const { error } = await supabase
+      .from('products')
+      .update({ is_discontinued: newStatus })
+      .eq('id', product.id)
+
+    setTogglingIds((prev) => {
+      const next = new Set(prev)
+      next.delete(product.id)
+      return next
+    })
+
+    if (error) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id ? { ...p, is_discontinued: product.is_discontinued } : p,
+        ),
+      )
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar status. Tente novamente.',
+        variant: 'destructive',
+      })
+    } else {
+      toast({
+        title: 'Sucesso',
+        description: 'Status atualizado com sucesso.',
+      })
+    }
   }
 
   return (
@@ -618,6 +667,7 @@ export default function Admin() {
                   />
                 </TableHead>
                 <TableHead className="w-16">Mídia</TableHead>
+                <TableHead className="w-32">Status</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead>Marca</TableHead>
                 <TableHead>SKU</TableHead>
@@ -647,6 +697,26 @@ export default function Admin() {
                         <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
                       </div>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!canToggleStatus || togglingIds.has(p.id)}
+                      aria-disabled={!canToggleStatus}
+                      onClick={() => handleToggleStatus(p)}
+                      className={cn(
+                        'h-7 text-xs px-2 w-[110px] flex items-center justify-center transition-colors',
+                        p.is_discontinued
+                          ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30 hover:bg-yellow-500/20'
+                          : 'bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20',
+                      )}
+                    >
+                      {togglingIds.has(p.id) ? (
+                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                      ) : null}
+                      {p.is_discontinued ? 'Descontinuado' : 'Ativo'}
+                    </Button>
                   </TableCell>
                   <TableCell className="font-medium max-w-[200px]" title={p.name}>
                     <div className="flex items-center gap-2">
@@ -706,7 +776,7 @@ export default function Admin() {
               ))}
               {filteredProducts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     Nenhum equipamento encontrado.
                   </TableCell>
                 </TableRow>
