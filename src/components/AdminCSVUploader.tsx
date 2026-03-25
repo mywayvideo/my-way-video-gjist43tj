@@ -240,6 +240,20 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
     setProgressMsg('Importando produtos...')
 
     try {
+      let invalidImagesCount = 0
+
+      const validateImageUrl = async (url: string) => {
+        try {
+          const { data, error } = await supabase.functions.invoke('validate-image-url', {
+            body: { imageUrl: url },
+          })
+          if (error) return false
+          return data?.success === true
+        } catch (e) {
+          return false
+        }
+      }
+
       const parseRow = (p: any) => {
         const prod: any = { manufacturer_id: mfgId }
         Object.entries(p).forEach(([h, val]: [string, any]) => {
@@ -268,6 +282,22 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
       if (report.rowsToCreate.length > 0) {
         const productsToInsert = report.rowsToCreate.map(parseRow)
+        for (const prod of productsToInsert) {
+          if (
+            prod.image_url &&
+            typeof prod.image_url === 'string' &&
+            prod.image_url.trim() !== ''
+          ) {
+            setProgressMsg(`Validando imagem para ${prod.name || prod.sku}...`)
+            const isValid = await validateImageUrl(prod.image_url)
+            if (!isValid) {
+              console.warn(`Imagem invalida para produto ${prod.name || prod.sku}. URL removida.`)
+              prod.image_url = null
+              invalidImagesCount++
+            }
+          }
+        }
+        setProgressMsg('Importando produtos...')
         const { error } = await supabase.from('products').insert(productsToInsert)
         if (error) throw error
       }
@@ -276,7 +306,23 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
         for (const p of report.rowsToUpdate) {
           const dbId = p._dbId
           const prod = parseRow(p)
+
+          if (
+            prod.image_url &&
+            typeof prod.image_url === 'string' &&
+            prod.image_url.trim() !== ''
+          ) {
+            setProgressMsg(`Validando imagem para ${prod.name || prod.sku}...`)
+            const isValid = await validateImageUrl(prod.image_url)
+            if (!isValid) {
+              console.warn(`Imagem invalida para produto ${prod.name || prod.sku}. URL removida.`)
+              prod.image_url = null
+              invalidImagesCount++
+            }
+          }
+
           const { sku, manufacturer_id, ...updates } = prod
+          setProgressMsg(`Atualizando produto ${prod.name || prod.sku}...`)
           const { error } = await supabase.from('products').update(updates).eq('id', dbId)
           if (error) throw error
         }
@@ -284,7 +330,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
       toast({
         title: 'Sucesso',
-        description: `Importacao concluida. ${report.rowsToCreate.length + report.rowsToUpdate.length} produtos atualizados.`,
+        description: `Importacao concluida. ${report.rowsToCreate.length + report.rowsToUpdate.length} produtos importados. ${invalidImagesCount} imagens invalidas removidas.`,
       })
       handleReset()
       onSuccess()
