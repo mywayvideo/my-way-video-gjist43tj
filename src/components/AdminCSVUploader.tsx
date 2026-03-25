@@ -197,6 +197,15 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             }
           }
 
+          if ('is_discontinued' in rowData && typeof rowData.is_discontinued !== 'boolean') {
+            if (rowData.is_discontinued !== null && rowData.is_discontinued !== '') {
+              const val = String(rowData.is_discontinued).trim().toLowerCase()
+              rowData.is_discontinued = ['true', '1', 'yes', 'sim'].includes(val)
+            } else {
+              delete rowData.is_discontinued
+            }
+          }
+
           try {
             const normalizedSku = normalizeSkuForComparison(rowSku)
 
