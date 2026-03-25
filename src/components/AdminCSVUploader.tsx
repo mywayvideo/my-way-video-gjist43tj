@@ -221,8 +221,8 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
               rowsToCreate.push(rowData)
               if (rowData.is_discontinued !== undefined) {
                 discontinuedUpdates++
-                if (rowData.is_discontinued) discontinuedSetDiscontinued++
-                else discontinuedSetActive++
+                if (rowData.is_discontinued === false) discontinuedSetActive++
+                else if (rowData.is_discontinued === true) discontinuedSetDiscontinued++
               }
             } else {
               const hasOtherColumns = Object.keys(rowData).some(
@@ -240,8 +240,8 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
               rowsToUpdate.push(rowData)
               if (rowData.is_discontinued !== undefined) {
                 discontinuedUpdates++
-                if (rowData.is_discontinued) discontinuedSetDiscontinued++
-                else discontinuedSetActive++
+                if (rowData.is_discontinued === false) discontinuedSetActive++
+                else if (rowData.is_discontinued === true) discontinuedSetDiscontinued++
               }
             }
           } catch (err) {
