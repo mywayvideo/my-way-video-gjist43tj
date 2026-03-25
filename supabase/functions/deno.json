@@ -4,6 +4,7 @@
     "functions": 9,
     "validate-ai-provider": 15,
     "call-ai-agent": 30,
-    "update-exchange-rate": 9
+    "update-exchange-rate": 9,
+    "validate-image-url": 1
   }
 }
