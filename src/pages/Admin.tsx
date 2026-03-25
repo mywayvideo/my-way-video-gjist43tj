@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   Search,
   ImageIcon,
+  ImageOff,
   Eye,
   DollarSign,
   Calculator,
@@ -94,6 +95,8 @@ export default function Admin() {
   const [showPriceCost, setShowPriceCost] = useState(false)
 
   const [search, setSearch] = useState('')
+  const [filterNoImage, setFilterNoImage] = useState(false)
+
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [savingInfo, setSavingInfo] = useState(false)
@@ -193,11 +196,17 @@ export default function Admin() {
     )
   if (!user) return <Navigate to="/login" replace />
 
-  const filteredProducts = products.filter(
-    (p) =>
+  const noImageCount = products.filter((p) => !p.image_url || p.image_url.trim() === '').length
+
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())),
-  )
+      (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
+
+    const matchesNoImage = filterNoImage ? !p.image_url || p.image_url.trim() === '' : true
+
+    return matchesSearch && matchesNoImage
+  })
 
   const isAllVisibleSelected =
     filteredProducts.length > 0 && filteredProducts.every((p) => selectedProductIds.includes(p.id))
@@ -373,6 +382,17 @@ export default function Admin() {
       setSortColumn(column)
       setSortDirection('asc')
     }
+  }
+
+  const toggleNoImageFilter = () => {
+    setFilterNoImage((prev) => {
+      const next = !prev
+      if (next) {
+        setSortColumn('created_at')
+        setSortDirection('desc')
+      }
+      return next
+    })
   }
 
   const renderSortIndicator = (column: string) => {
@@ -733,23 +753,40 @@ export default function Admin() {
           <h2 className="font-semibold text-foreground">
             Inventário ({filteredProducts.length} itens)
           </h2>
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar equipamento..."
-              className="pl-10 pr-10 bg-background/50 border-border/50 h-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search.length > 0 && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer rounded-full transition-colors flex items-center justify-center"
-                aria-label="Limpar busca"
-              >
-                <X size={18} />
-              </button>
-            )}
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant={filterNoImage ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={toggleNoImageFilter}
+              className={cn(
+                'h-9 whitespace-nowrap',
+                filterNoImage && 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30',
+              )}
+            >
+              <ImageOff className="w-4 h-4 mr-2" />
+              Sem Imagem
+              <Badge variant="secondary" className="ml-2 bg-background/50 text-foreground">
+                {noImageCount}
+              </Badge>
+            </Button>
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar equipamento..."
+                className="pl-10 pr-10 bg-background/50 border-border/50 h-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search.length > 0 && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground cursor-pointer rounded-full transition-colors flex items-center justify-center"
+                  aria-label="Limpar busca"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -814,6 +851,7 @@ export default function Admin() {
                 >
                   <div className="flex items-center">Produto {renderSortIndicator('name')}</div>
                 </TableHead>
+                <TableHead className="w-32">Status da Imagem</TableHead>
                 <TableHead
                   className={sortableHeaderClasses('brand')}
                   onClick={() => handleSort('brand')}
@@ -893,6 +931,23 @@ export default function Admin() {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    {!p.image_url || p.image_url.trim() === '' ? (
+                      <Badge
+                        variant="destructive"
+                        className="text-[10px] uppercase whitespace-nowrap"
+                      >
+                        Sem Imagem
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px] uppercase whitespace-nowrap"
+                      >
+                        Com Imagem
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {p.manufacturer?.name || '-'}
                   </TableCell>
@@ -938,7 +993,7 @@ export default function Admin() {
               ))}
               {filteredProducts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     Nenhum equipamento encontrado.
                   </TableCell>
                 </TableRow>
