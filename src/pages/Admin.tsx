@@ -208,7 +208,9 @@ export default function Admin() {
           window.scrollTo({ left: x, top: y, behavior: 'smooth' })
           sessionStorage.removeItem('admin-products-scroll-position')
         }, 100)
-      } catch (e) {}
+      } catch (e) {
+        // ignore parsing error
+      }
     }
   }
 
