@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, DragEvent } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Upload, Plus, CheckCircle2 } from 'lucide-react'
@@ -21,6 +21,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
+import { cn } from '@/lib/utils'
 
 interface Props {
   manufacturers: Manufacturer[]
@@ -53,12 +54,59 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
   const [showMfgDialog, setShowMfgDialog] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [report, setReport] = useState<ReportData | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleReset = () => {
     setFile(null)
     setReport(null)
     setStep('SELECT')
+    setIsDragging(false)
     if (!isUploading && !isAnalyzing) setOpen(false)
+  }
+
+  const handleFile = (f: File | null) => {
+    if (!f) {
+      setFile(null)
+      return
+    }
+
+    if (f.type !== 'text/csv' && !f.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: 'Erro',
+        description: 'Apenas arquivos CSV sao aceitos. Verifique o tipo do arquivo.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (f.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'Erro',
+        description: 'Arquivo muito grande. Maximo 10MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setFile(f)
+  }
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    handleFile(droppedFile || null)
   }
 
   const analyzeFile = async () => {
@@ -412,12 +460,35 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
               <div className="space-y-2">
                 <Label>2. Selecione o Arquivo CSV</Label>
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  className="bg-background/50 cursor-pointer file:cursor-pointer"
-                />
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    'border-2 rounded-xl p-6 flex flex-col items-center justify-center transition-colors cursor-pointer text-muted-foreground text-center',
+                    isDragging
+                      ? 'border-primary border-solid bg-primary/10 text-primary'
+                      : 'border-white/20 border-dashed hover:bg-white/5',
+                  )}
+                >
+                  <Upload className={cn('w-8 h-8 mb-3', isDragging ? 'animate-bounce' : '')} />
+                  {file ? (
+                    <p className="font-medium text-foreground text-sm">{file.name}</p>
+                  ) : (
+                    <p className="text-sm">Arraste um arquivo CSV aqui ou clique para selecionar</p>
+                  )}
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      handleFile(e.target.files?.[0] || null)
+                      if (e.target) e.target.value = ''
+                    }}
+                  />
+                </div>
               </div>
             </div>
           ) : (
