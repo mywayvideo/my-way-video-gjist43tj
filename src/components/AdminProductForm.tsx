@@ -112,7 +112,11 @@ export function AdminProductForm({
     setLoading(false)
 
     if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+      toast({
+        title: 'Erro',
+        description: 'Erro ao salvar produto. Tente novamente.',
+        variant: 'destructive',
+      })
     } else {
       toast({
         title: 'Sucesso',

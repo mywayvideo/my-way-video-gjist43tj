@@ -188,6 +188,30 @@ export default function Admin() {
     }
   }, [user, sortColumn, sortDirection])
 
+  const handleEditProduct = (p: Product) => {
+    sessionStorage.setItem(
+      'admin-products-scroll-position',
+      JSON.stringify({ x: window.scrollX, y: window.scrollY }),
+    )
+    setEditingProduct(p)
+    setIsDialogOpen(true)
+  }
+
+  const handleProductFormSuccess = async () => {
+    setIsDialogOpen(false)
+    const pos = sessionStorage.getItem('admin-products-scroll-position')
+    await fetchData()
+    if (pos) {
+      try {
+        const { x, y } = JSON.parse(pos)
+        setTimeout(() => {
+          window.scrollTo({ left: x, top: y, behavior: 'smooth' })
+          sessionStorage.removeItem('admin-products-scroll-position')
+        }, 100)
+      } catch (e) {}
+    }
+  }
+
   if (authLoading)
     return (
       <div className="p-8 text-center text-muted-foreground flex justify-center">
@@ -517,11 +541,22 @@ export default function Admin() {
             open={isDialogOpen}
             onOpenChange={(open) => {
               setIsDialogOpen(open)
-              if (!open) setEditingProduct(null)
+              if (!open) {
+                setEditingProduct(null)
+                sessionStorage.removeItem('admin-products-scroll-position')
+              }
             }}
           >
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+              <Button
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                onClick={() => {
+                  sessionStorage.setItem(
+                    'admin-products-scroll-position',
+                    JSON.stringify({ x: window.scrollX, y: window.scrollY }),
+                  )
+                }}
+              >
                 <Plus className="w-4 h-4 mr-2" /> Novo Equipamento
               </Button>
             </DialogTrigger>
@@ -534,10 +569,7 @@ export default function Admin() {
               <AdminProductForm
                 initialData={editingProduct}
                 manufacturers={manufacturers}
-                onSuccess={() => {
-                  setIsDialogOpen(false)
-                  fetchData()
-                }}
+                onSuccess={handleProductFormSuccess}
                 onAddManufacturer={fetchData}
               />
             </DialogContent>
@@ -972,10 +1004,7 @@ export default function Admin() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => {
-                        setEditingProduct(p)
-                        setIsDialogOpen(true)
-                      }}
+                      onClick={() => handleEditProduct(p)}
                       className="hover:bg-accent/10 hover:text-accent transition-colors"
                     >
                       <Edit className="w-4 h-4" />
