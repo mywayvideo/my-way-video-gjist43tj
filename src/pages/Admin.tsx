@@ -276,7 +276,26 @@ export default function Admin() {
 
   const handleExportCSV = () => {
     const selectedProducts = products.filter((p) => selectedProductIds.includes(p.id))
-    const headers = ['id', 'name', 'category', 'price_usd', 'ncm', 'sku']
+    const headers = [
+      'id',
+      'name',
+      'sku',
+      'description',
+      'price_brl',
+      'stock',
+      'image_url',
+      'ncm',
+      'weight',
+      'dimensions',
+      'category',
+      'created_at',
+      'is_special',
+      'manufacturer_id',
+      'price_usd',
+      'price_cost',
+      'technical_info',
+      'is_discontinued',
+    ]
 
     const escapeCsv = (val: any) => {
       if (val === null || val === undefined) return '""'
@@ -288,10 +307,22 @@ export default function Admin() {
       return [
         escapeCsv(p.id),
         escapeCsv(p.name),
-        escapeCsv(p.category),
-        p.price_usd || 0,
-        escapeCsv(formatNCM(p.ncm)),
         escapeCsv(p.sku),
+        escapeCsv(p.description),
+        p.price_brl ?? 0,
+        p.stock ?? 0,
+        escapeCsv(p.image_url),
+        escapeCsv(formatNCM(p.ncm)),
+        p.weight ?? 0,
+        escapeCsv(p.dimensions),
+        escapeCsv(p.category),
+        escapeCsv(p.created_at),
+        p.is_special,
+        escapeCsv(p.manufacturer_id),
+        p.price_usd ?? 0,
+        p.price_cost ?? 0,
+        escapeCsv(p.technical_info),
+        p.is_discontinued,
       ].join(',')
     })
 
