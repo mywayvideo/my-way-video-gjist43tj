@@ -48,6 +48,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -71,6 +73,27 @@ import { AdminProductForm } from '@/components/AdminProductForm'
 import { AdminCSVUploader } from '@/components/AdminCSVUploader'
 import { ScrollToTopButton } from '@/components/ScrollToTopButton'
 import { cn } from '@/lib/utils'
+
+const ALL_EXPORT_FIELDS = [
+  'id',
+  'name',
+  'sku',
+  'description',
+  'price_brl',
+  'stock',
+  'image_url',
+  'ncm',
+  'weight',
+  'dimensions',
+  'category',
+  'created_at',
+  'is_special',
+  'manufacturer_id',
+  'price_usd',
+  'price_cost',
+  'technical_info',
+  'is_discontinued',
+]
 
 const formatNCM = (ncm?: string | null) => {
   if (!ncm) return ''
@@ -114,6 +137,10 @@ export default function Admin() {
   // Sorting State
   const [sortColumn, setSortColumn] = useState<string>('created_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  // Export State
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [selectedExportFields, setSelectedExportFields] = useState<string[]>(ALL_EXPORT_FIELDS)
 
   const fetchProductsData = async () => {
     let pQuery = supabase.from('products').select('*, manufacturer:manufacturers(*)')
@@ -274,28 +301,9 @@ export default function Admin() {
     }
   }
 
-  const handleExportCSV = () => {
+  const executeExportCSV = () => {
     const selectedProducts = products.filter((p) => selectedProductIds.includes(p.id))
-    const headers = [
-      'id',
-      'name',
-      'sku',
-      'description',
-      'price_brl',
-      'stock',
-      'image_url',
-      'ncm',
-      'weight',
-      'dimensions',
-      'category',
-      'created_at',
-      'is_special',
-      'manufacturer_id',
-      'price_usd',
-      'price_cost',
-      'technical_info',
-      'is_discontinued',
-    ]
+    const headers = ALL_EXPORT_FIELDS.filter((f) => selectedExportFields.includes(f))
 
     const escapeCsv = (val: any) => {
       if (val === null || val === undefined) return '""'
@@ -304,26 +312,13 @@ export default function Admin() {
     }
 
     const csvRows = selectedProducts.map((p) => {
-      return [
-        escapeCsv(p.id),
-        escapeCsv(p.name),
-        escapeCsv(p.sku),
-        escapeCsv(p.description),
-        p.price_brl ?? 0,
-        p.stock ?? 0,
-        escapeCsv(p.image_url),
-        escapeCsv(formatNCM(p.ncm)),
-        p.weight ?? 0,
-        escapeCsv(p.dimensions),
-        escapeCsv(p.category),
-        escapeCsv(p.created_at),
-        p.is_special,
-        escapeCsv(p.manufacturer_id),
-        p.price_usd ?? 0,
-        p.price_cost ?? 0,
-        escapeCsv(p.technical_info),
-        p.is_discontinued,
-      ].join(',')
+      return headers
+        .map((header) => {
+          if (header === 'ncm') return escapeCsv(formatNCM(p.ncm))
+          const val = p[header as keyof Product]
+          return escapeCsv(val)
+        })
+        .join(',')
     })
 
     const csvContent = [headers.join(','), ...csvRows].join('\n')
@@ -343,6 +338,7 @@ export default function Admin() {
     document.body.removeChild(link)
 
     toast({ title: 'Sucesso', description: 'Exportacao concluida. Arquivo baixado.' })
+    setShowExportModal(false)
   }
 
   const handleDelete = async (id: string) => {
@@ -876,7 +872,7 @@ export default function Admin() {
               </Button>
               <Button
                 size="sm"
-                onClick={handleExportCSV}
+                onClick={() => setShowExportModal(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Download className="w-4 h-4 mr-2" /> Exportar CSV
@@ -1064,6 +1060,71 @@ export default function Admin() {
           </Table>
         </div>
       </div>
+
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-md bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>Exportar CSV de Produtos</DialogTitle>
+            <DialogDescription>
+              Selecione os campos que deseja incluir no arquivo exportado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-border/50">
+              <Checkbox
+                id="export-all"
+                checked={selectedExportFields.length === ALL_EXPORT_FIELDS.length}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedExportFields(ALL_EXPORT_FIELDS)
+                  } else {
+                    setSelectedExportFields([])
+                  }
+                }}
+              />
+              <Label htmlFor="export-all" className="font-semibold cursor-pointer">
+                Selecionar Todos
+              </Label>
+            </div>
+            <div className="overflow-y-auto max-h-[40vh] pr-2">
+              <div className="grid grid-cols-2 gap-3">
+                {ALL_EXPORT_FIELDS.map((field) => (
+                  <div key={field} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`export-${field}`}
+                      checked={selectedExportFields.includes(field)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedExportFields((prev) => [...prev, field])
+                        } else {
+                          setSelectedExportFields((prev) => prev.filter((f) => f !== field))
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`export-${field}`}
+                      className="text-sm font-normal cursor-pointer truncate"
+                      title={field}
+                    >
+                      {field}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={executeExportCSV} disabled={selectedExportFields.length === 0}>
+              Confirmar Exportação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
