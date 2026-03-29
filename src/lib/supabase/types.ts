@@ -1,11 +1,17 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.4'
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -108,6 +114,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_items: {
+        Row: {
+          added_at: string | null
+          cart_id: string
+          id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          added_at?: string | null
+          cart_id: string
+          id?: string
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          added_at?: string | null
+          cart_id?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_info: {
         Row: {
           content: string
@@ -155,6 +200,45 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      coupon_usage: {
+        Row: {
+          coupon_id: string
+          customer_id: string
+          id: string
+          order_id: string | null
+          used_at: string | null
+        }
+        Insert: {
+          coupon_id: string
+          customer_id: string
+          id?: string
+          order_id?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          coupon_id?: string
+          customer_id?: string
+          id?: string
+          order_id?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usage_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "discount_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_addresses: {
         Row: {
@@ -207,11 +291,91 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'customer_addresses_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "customer_addresses_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_favorites: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_favorites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_favorites_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_payment_methods: {
+        Row: {
+          card_brand: string | null
+          card_expiry_month: number | null
+          card_expiry_year: number | null
+          card_last_four: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_default: boolean | null
+          stripe_payment_method_id: string
+        }
+        Insert: {
+          card_brand?: string | null
+          card_expiry_month?: number | null
+          card_expiry_year?: number | null
+          card_last_four?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_default?: boolean | null
+          stripe_payment_method_id: string
+        }
+        Update: {
+          card_brand?: string | null
+          card_expiry_month?: number | null
+          card_expiry_year?: number | null
+          card_last_four?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_default?: boolean | null
+          stripe_payment_method_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_payment_methods_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -226,6 +390,7 @@ export type Database = {
           id: string
           phone: string | null
           profile_photo_url: string | null
+          role: string
           updated_at: string
           user_id: string
         }
@@ -239,6 +404,7 @@ export type Database = {
           id?: string
           phone?: string | null
           profile_photo_url?: string | null
+          role?: string
           updated_at?: string
           user_id: string
         }
@@ -252,8 +418,254 @@ export type Database = {
           id?: string
           phone?: string | null
           profile_photo_url?: string | null
+          role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      discount_coupons: {
+        Row: {
+          code: string
+          created_at: string | null
+          current_uses: number | null
+          discount_percentage: number
+          id: string
+          is_active: boolean | null
+          max_uses_per_customer: number | null
+          total_uses_limit: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          current_uses?: number | null
+          discount_percentage: number
+          id?: string
+          is_active?: boolean | null
+          max_uses_per_customer?: number | null
+          total_uses_limit?: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          current_uses?: number | null
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses_per_customer?: number | null
+          total_uses_limit?: number | null
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
+      discount_rule_categories: {
+        Row: {
+          category: string
+          discount_rule_id: string
+          id: string
+        }
+        Insert: {
+          category: string
+          discount_rule_id: string
+          id?: string
+        }
+        Update: {
+          category?: string
+          discount_rule_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_rule_categories_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_rule_customers: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          discount_rule_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          discount_rule_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          discount_rule_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_rule_customers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_rule_customers_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_rule_exclusions: {
+        Row: {
+          created_at: string | null
+          discount_rule_id: string
+          id: string
+          is_active: boolean | null
+          product_id: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discount_rule_id: string
+          id?: string
+          is_active?: boolean | null
+          product_id: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discount_rule_id?: string
+          id?: string
+          is_active?: boolean | null
+          product_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_rule_exclusions_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_rule_exclusions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_rule_manufacturers: {
+        Row: {
+          discount_rule_id: string
+          id: string
+          manufacturer_id: string
+        }
+        Insert: {
+          discount_rule_id: string
+          id?: string
+          manufacturer_id: string
+        }
+        Update: {
+          discount_rule_id?: string
+          id?: string
+          manufacturer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_rule_manufacturers_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_rule_manufacturers_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_rule_products: {
+        Row: {
+          discount_rule_id: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          discount_rule_id: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          discount_rule_id?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_rule_products_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
+            isOneToOne: false
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_rule_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_rules: {
+        Row: {
+          created_at: string | null
+          discount_calculation_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          rule_name: string
+          rule_type: string
+          scope_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discount_calculation_type: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          rule_name: string
+          rule_type: string
+          scope_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discount_calculation_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          rule_name?: string
+          rule_type?: string
+          scope_type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -304,6 +716,259 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      order_items: {
+        Row: {
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_returns: {
+        Row: {
+          completed_at: string | null
+          id: string
+          order_id: string
+          order_item_id: string
+          reason: string | null
+          requested_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          order_id: string
+          order_item_id: string
+          reason?: string | null
+          requested_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          order_id?: string
+          order_item_id?: string
+          reason?: string | null
+          requested_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_returns_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_status: string
+          old_status: string | null
+          order_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_status: string
+          old_status?: string | null
+          order_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_status?: string
+          old_status?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          billing_address_id: string | null
+          created_at: string | null
+          customer_id: string
+          discount_amount: number | null
+          estimated_delivery_date: string | null
+          id: string
+          order_number: string
+          payment_method_id: string | null
+          payment_method_type: string | null
+          shipping_address_id: string | null
+          shipping_cost: number | null
+          shipping_method: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          total: number
+          tracking_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          billing_address_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          discount_amount?: number | null
+          estimated_delivery_date?: string | null
+          id?: string
+          order_number: string
+          payment_method_id?: string | null
+          payment_method_type?: string | null
+          shipping_address_id?: string | null
+          shipping_cost?: number | null
+          shipping_method?: string | null
+          status?: string
+          subtotal: number
+          tax_amount?: number | null
+          total: number
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          billing_address_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          discount_amount?: number | null
+          estimated_delivery_date?: string | null
+          id?: string
+          order_number?: string
+          payment_method_id?: string | null
+          payment_method_type?: string | null
+          shipping_address_id?: string | null
+          shipping_cost?: number | null
+          shipping_method?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          total?: number
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_billing_address_id_fkey"
+            columns: ["billing_address_id"]
+            isOneToOne: false
+            referencedRelation: "customer_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "customer_payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_shipping_address_id_fkey"
+            columns: ["shipping_address_id"]
+            isOneToOne: false
+            referencedRelation: "customer_addresses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_visits: {
+        Row: {
+          device_type: string | null
+          id: string
+          page_path: string
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          device_type?: string | null
+          id?: string
+          page_path: string
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          device_type?: string | null
+          id?: string
+          page_path?: string
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pricing_settings: {
         Row: {
@@ -470,13 +1135,40 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'products_manufacturer_id_fkey'
-            columns: ['manufacturer_id']
+            foreignKeyName: "products_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
             isOneToOne: false
-            referencedRelation: 'manufacturers'
-            referencedColumns: ['id']
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
           },
         ]
+      }
+      sales_metrics: {
+        Row: {
+          conversion_rate: number | null
+          created_at: string | null
+          date: string
+          id: string
+          total_orders: number | null
+          total_revenue: number | null
+        }
+        Insert: {
+          conversion_rate?: number | null
+          created_at?: string | null
+          date: string
+          id?: string
+          total_orders?: number | null
+          total_revenue?: number | null
+        }
+        Update: {
+          conversion_rate?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          total_orders?: number | null
+          total_revenue?: number | null
+        }
+        Relationships: []
       }
       settings: {
         Row: {
@@ -505,11 +1197,54 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_carts: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_carts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      calculate_final_price: {
+        Args: { p_customer_id: string; p_product_id: string }
+        Returns: number
+      }
+      get_applicable_discounts: {
+        Args: { p_customer_id: string; p_product_id: string }
+        Returns: {
+          discount_calculation_type: string
+          discount_value: number
+          rule_id: string
+          rule_name: string
+          scope_type: string
+        }[]
+      }
       normalize_sku: { Args: { sku: string }; Returns: string }
     }
     Enums: {
@@ -521,31 +1256,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -554,23 +1291,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -579,23 +1316,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -604,36 +1341,36 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema['Enums']
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
@@ -641,6 +1378,7 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -681,6 +1419,12 @@ export const Constants = {
 //   provider_type: text (nullable)
 //   custom_endpoint: text (nullable)
 //   priority: integer (nullable, default: 999)
+// Table: cart_items
+//   id: uuid (not null, default: gen_random_uuid())
+//   cart_id: uuid (not null)
+//   product_id: uuid (not null)
+//   quantity: integer (not null)
+//   added_at: timestamp without time zone (nullable, default: now())
 // Table: company_info
 //   id: uuid (not null, default: gen_random_uuid())
 //   content: text (not null)
@@ -693,6 +1437,12 @@ export const Constants = {
 //   query: text (not null)
 //   response: text (not null)
 //   created_at: timestamp with time zone (nullable, default: now())
+// Table: coupon_usage
+//   id: uuid (not null, default: gen_random_uuid())
+//   coupon_id: uuid (not null)
+//   customer_id: uuid (not null)
+//   used_at: timestamp without time zone (nullable, default: now())
+//   order_id: uuid (nullable)
 // Table: customer_addresses
 //   id: uuid (not null, default: gen_random_uuid())
 //   customer_id: uuid (not null)
@@ -708,6 +1458,21 @@ export const Constants = {
 //   is_default: boolean (not null, default: false)
 //   created_at: timestamp with time zone (not null, default: now())
 //   updated_at: timestamp with time zone (not null, default: now())
+// Table: customer_favorites
+//   id: uuid (not null, default: gen_random_uuid())
+//   customer_id: uuid (not null)
+//   product_id: uuid (not null)
+//   created_at: timestamp without time zone (nullable, default: now())
+// Table: customer_payment_methods
+//   id: uuid (not null, default: gen_random_uuid())
+//   customer_id: uuid (not null)
+//   stripe_payment_method_id: character varying (not null)
+//   card_last_four: character varying (nullable)
+//   card_brand: character varying (nullable)
+//   card_expiry_month: integer (nullable)
+//   card_expiry_year: integer (nullable)
+//   is_default: boolean (nullable, default: false)
+//   created_at: timestamp without time zone (nullable, default: now())
 // Table: customers
 //   id: uuid (not null, default: gen_random_uuid())
 //   user_id: uuid (not null)
@@ -720,6 +1485,52 @@ export const Constants = {
 //   company_name: text (nullable)
 //   profile_photo_url: text (nullable)
 //   cpf: text (nullable)
+//   role: character varying (not null, default: 'customer'::character varying)
+// Table: discount_coupons
+//   id: uuid (not null, default: gen_random_uuid())
+//   code: character varying (not null)
+//   discount_percentage: numeric (not null)
+//   max_uses_per_customer: integer (nullable, default: 1)
+//   total_uses_limit: integer (nullable)
+//   current_uses: integer (nullable, default: 0)
+//   valid_from: timestamp without time zone (not null)
+//   valid_until: timestamp without time zone (not null)
+//   is_active: boolean (nullable, default: true)
+//   created_at: timestamp without time zone (nullable, default: now())
+// Table: discount_rule_categories
+//   id: uuid (not null, default: gen_random_uuid())
+//   discount_rule_id: uuid (not null)
+//   category: character varying (not null)
+// Table: discount_rule_customers
+//   id: uuid (not null, default: gen_random_uuid())
+//   discount_rule_id: uuid (not null)
+//   customer_id: uuid (not null)
+//   created_at: timestamp without time zone (nullable, default: now())
+// Table: discount_rule_exclusions
+//   id: uuid (not null, default: gen_random_uuid())
+//   discount_rule_id: uuid (not null)
+//   product_id: uuid (not null)
+//   reason: text (nullable)
+//   created_at: timestamp without time zone (nullable, default: now())
+//   is_active: boolean (nullable, default: true)
+// Table: discount_rule_manufacturers
+//   id: uuid (not null, default: gen_random_uuid())
+//   discount_rule_id: uuid (not null)
+//   manufacturer_id: uuid (not null)
+// Table: discount_rule_products
+//   id: uuid (not null, default: gen_random_uuid())
+//   discount_rule_id: uuid (not null)
+//   product_id: uuid (not null)
+// Table: discount_rules
+//   id: uuid (not null, default: gen_random_uuid())
+//   rule_name: character varying (not null)
+//   rule_type: character varying (not null)
+//   scope_type: character varying (not null)
+//   discount_calculation_type: character varying (not null)
+//   discount_value: numeric (not null)
+//   is_active: boolean (nullable, default: true)
+//   created_at: timestamp without time zone (nullable, default: now())
+//   updated_at: timestamp without time zone (nullable, default: now())
 // Table: exchange_rate
 //   id: uuid (not null, default: gen_random_uuid())
 //   usd_to_brl: numeric (not null)
@@ -732,6 +1543,53 @@ export const Constants = {
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: order_items
+//   id: uuid (not null, default: gen_random_uuid())
+//   order_id: uuid (not null)
+//   product_id: uuid (not null)
+//   quantity: integer (not null)
+//   unit_price: numeric (not null)
+//   total_price: numeric (not null)
+// Table: order_returns
+//   id: uuid (not null, default: gen_random_uuid())
+//   order_id: uuid (not null)
+//   order_item_id: uuid (not null)
+//   reason: text (nullable)
+//   status: character varying (nullable, default: 'pending'::character varying)
+//   requested_at: timestamp without time zone (nullable, default: now())
+//   completed_at: timestamp without time zone (nullable)
+// Table: order_status_history
+//   id: uuid (not null, default: gen_random_uuid())
+//   order_id: uuid (not null)
+//   old_status: character varying (nullable)
+//   new_status: character varying (not null)
+//   changed_at: timestamp without time zone (nullable, default: now())
+//   changed_by: uuid (nullable)
+// Table: orders
+//   id: uuid (not null, default: gen_random_uuid())
+//   customer_id: uuid (not null)
+//   order_number: character varying (not null)
+//   status: character varying (not null, default: 'pending'::character varying)
+//   shipping_address_id: uuid (nullable)
+//   billing_address_id: uuid (nullable)
+//   payment_method_id: uuid (nullable)
+//   payment_method_type: character varying (nullable)
+//   subtotal: numeric (not null)
+//   discount_amount: numeric (nullable, default: 0)
+//   tax_amount: numeric (nullable, default: 0)
+//   shipping_cost: numeric (nullable, default: 0)
+//   total: numeric (not null)
+//   shipping_method: character varying (nullable)
+//   tracking_number: character varying (nullable)
+//   estimated_delivery_date: date (nullable)
+//   created_at: timestamp without time zone (nullable, default: now())
+//   updated_at: timestamp without time zone (nullable, default: now())
+// Table: page_visits
+//   id: uuid (not null, default: gen_random_uuid())
+//   page_path: character varying (not null)
+//   user_id: uuid (nullable)
+//   device_type: character varying (nullable)
+//   timestamp: timestamp without time zone (nullable, default: now())
 // Table: pricing_settings
 //   id: uuid (not null, default: gen_random_uuid())
 //   spread_type: text (not null, default: 'percentage'::text)
@@ -779,6 +1637,13 @@ export const Constants = {
 //   price_cost: numeric (nullable, default: 0)
 //   technical_info: text (nullable)
 //   is_discontinued: boolean (not null, default: false)
+// Table: sales_metrics
+//   id: uuid (not null, default: gen_random_uuid())
+//   date: date (not null)
+//   total_orders: integer (nullable, default: 0)
+//   total_revenue: numeric (nullable, default: 0)
+//   conversion_rate: numeric (nullable, default: 0)
+//   created_at: timestamp without time zone (nullable, default: now())
 // Table: settings
 //   id: uuid (not null, default: gen_random_uuid())
 //   key: text (not null)
@@ -786,6 +1651,11 @@ export const Constants = {
 //   description: text (nullable)
 //   created_at: timestamp with time zone (nullable, default: now())
 //   updated_at: timestamp with time zone (nullable, default: now())
+// Table: shopping_carts
+//   id: uuid (not null, default: gen_random_uuid())
+//   customer_id: uuid (not null)
+//   created_at: timestamp without time zone (nullable, default: now())
+//   updated_at: timestamp without time zone (nullable, default: now())
 
 // --- CONSTRAINTS ---
 // Table: ai_agent_settings
@@ -794,25 +1664,103 @@ export const Constants = {
 //   PRIMARY KEY ai_providers_pkey: PRIMARY KEY (id)
 //   UNIQUE ai_providers_provider_name_key: UNIQUE (provider_name)
 //   CHECK ai_providers_validation_status_check: CHECK ((validation_status = ANY (ARRAY['pending'::text, 'valid'::text, 'invalid'::text, 'error'::text])))
+// Table: cart_items
+//   FOREIGN KEY cart_items_cart_id_fkey: FOREIGN KEY (cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
+//   PRIMARY KEY cart_items_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY cart_items_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+//   CHECK cart_items_quantity_check: CHECK (((quantity >= 1) AND (quantity <= 10)))
 // Table: company_info
 //   PRIMARY KEY company_info_pkey: PRIMARY KEY (id)
 // Table: conversation_history
 //   PRIMARY KEY conversation_history_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY conversation_history_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+// Table: coupon_usage
+//   UNIQUE coupon_usage_coupon_id_customer_id_key: UNIQUE (coupon_id, customer_id)
+//   FOREIGN KEY coupon_usage_coupon_id_fkey: FOREIGN KEY (coupon_id) REFERENCES discount_coupons(id) ON DELETE CASCADE
+//   FOREIGN KEY coupon_usage_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+//   PRIMARY KEY coupon_usage_pkey: PRIMARY KEY (id)
 // Table: customer_addresses
 //   CHECK customer_addresses_address_type_check: CHECK ((address_type = ANY (ARRAY['shipping'::text, 'billing'::text])))
 //   FOREIGN KEY customer_addresses_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 //   PRIMARY KEY customer_addresses_pkey: PRIMARY KEY (id)
+// Table: customer_favorites
+//   FOREIGN KEY customer_favorites_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+//   UNIQUE customer_favorites_customer_id_product_id_key: UNIQUE (customer_id, product_id)
+//   PRIMARY KEY customer_favorites_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY customer_favorites_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+// Table: customer_payment_methods
+//   FOREIGN KEY customer_payment_methods_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+//   PRIMARY KEY customer_payment_methods_pkey: PRIMARY KEY (id)
+//   UNIQUE customer_payment_methods_stripe_payment_method_id_key: UNIQUE (stripe_payment_method_id)
 // Table: customers
 //   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
+//   CHECK customers_role_check: CHECK (((role)::text = ANY ((ARRAY['customer'::character varying, 'admin'::character varying])::text[])))
 //   FOREIGN KEY customers_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   UNIQUE customers_user_id_key: UNIQUE (user_id)
+// Table: discount_coupons
+//   UNIQUE discount_coupons_code_key: UNIQUE (code)
+//   PRIMARY KEY discount_coupons_pkey: PRIMARY KEY (id)
+// Table: discount_rule_categories
+//   UNIQUE discount_rule_categories_discount_rule_id_category_key: UNIQUE (discount_rule_id, category)
+//   FOREIGN KEY discount_rule_categories_discount_rule_id_fkey: FOREIGN KEY (discount_rule_id) REFERENCES discount_rules(id) ON DELETE CASCADE
+//   PRIMARY KEY discount_rule_categories_pkey: PRIMARY KEY (id)
+// Table: discount_rule_customers
+//   FOREIGN KEY discount_rule_customers_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+//   UNIQUE discount_rule_customers_discount_rule_id_customer_id_key: UNIQUE (discount_rule_id, customer_id)
+//   FOREIGN KEY discount_rule_customers_discount_rule_id_fkey: FOREIGN KEY (discount_rule_id) REFERENCES discount_rules(id) ON DELETE CASCADE
+//   PRIMARY KEY discount_rule_customers_pkey: PRIMARY KEY (id)
+// Table: discount_rule_exclusions
+//   FOREIGN KEY discount_rule_exclusions_discount_rule_id_fkey: FOREIGN KEY (discount_rule_id) REFERENCES discount_rules(id) ON DELETE CASCADE
+//   UNIQUE discount_rule_exclusions_discount_rule_id_product_id_key: UNIQUE (discount_rule_id, product_id)
+//   PRIMARY KEY discount_rule_exclusions_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY discount_rule_exclusions_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+// Table: discount_rule_manufacturers
+//   FOREIGN KEY discount_rule_manufacturers_discount_rule_id_fkey: FOREIGN KEY (discount_rule_id) REFERENCES discount_rules(id) ON DELETE CASCADE
+//   UNIQUE discount_rule_manufacturers_discount_rule_id_manufacturer_i_key: UNIQUE (discount_rule_id, manufacturer_id)
+//   FOREIGN KEY discount_rule_manufacturers_manufacturer_id_fkey: FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE CASCADE
+//   PRIMARY KEY discount_rule_manufacturers_pkey: PRIMARY KEY (id)
+// Table: discount_rule_products
+//   FOREIGN KEY discount_rule_products_discount_rule_id_fkey: FOREIGN KEY (discount_rule_id) REFERENCES discount_rules(id) ON DELETE CASCADE
+//   UNIQUE discount_rule_products_discount_rule_id_product_id_key: UNIQUE (discount_rule_id, product_id)
+//   PRIMARY KEY discount_rule_products_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY discount_rule_products_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+// Table: discount_rules
+//   CHECK discount_rules_discount_calculation_type_check: CHECK (((discount_calculation_type)::text = ANY ((ARRAY['margin_percentage'::character varying, 'price_usa_percentage'::character varying])::text[])))
+//   PRIMARY KEY discount_rules_pkey: PRIMARY KEY (id)
+//   CHECK discount_rules_rule_type_check: CHECK (((rule_type)::text = ANY ((ARRAY['vip'::character varying, 'reseller'::character varying])::text[])))
+//   CHECK discount_rules_scope_type_check: CHECK (((scope_type)::text = ANY ((ARRAY['all_products'::character varying, 'by_manufacturer'::character varying, 'by_category'::character varying, 'by_manufacturer_category'::character varying, 'individual_products'::character varying])::text[])))
 // Table: exchange_rate
 //   PRIMARY KEY exchange_rate_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY exchange_rate_updated_by_fkey: FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL
 // Table: manufacturers
 //   UNIQUE manufacturers_name_key: UNIQUE (name)
 //   PRIMARY KEY manufacturers_pkey: PRIMARY KEY (id)
+// Table: order_items
+//   FOREIGN KEY order_items_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+//   PRIMARY KEY order_items_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY order_items_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id)
+// Table: order_returns
+//   FOREIGN KEY order_returns_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+//   FOREIGN KEY order_returns_order_item_id_fkey: FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
+//   PRIMARY KEY order_returns_pkey: PRIMARY KEY (id)
+//   CHECK order_returns_status_check: CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'completed'::character varying])::text[])))
+// Table: order_status_history
+//   FOREIGN KEY order_status_history_changed_by_fkey: FOREIGN KEY (changed_by) REFERENCES customers(id)
+//   FOREIGN KEY order_status_history_order_id_fkey: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+//   PRIMARY KEY order_status_history_pkey: PRIMARY KEY (id)
+// Table: orders
+//   FOREIGN KEY orders_billing_address_id_fkey: FOREIGN KEY (billing_address_id) REFERENCES customer_addresses(id)
+//   FOREIGN KEY orders_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+//   UNIQUE orders_order_number_key: UNIQUE (order_number)
+//   FOREIGN KEY orders_payment_method_id_fkey: FOREIGN KEY (payment_method_id) REFERENCES customer_payment_methods(id)
+//   CHECK orders_payment_method_type_check: CHECK (((payment_method_type)::text = ANY ((ARRAY['card'::character varying, 'paypal'::character varying, 'pix'::character varying, 'transfer'::character varying])::text[])))
+//   PRIMARY KEY orders_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY orders_shipping_address_id_fkey: FOREIGN KEY (shipping_address_id) REFERENCES customer_addresses(id)
+//   CHECK orders_shipping_method_check: CHECK (((shipping_method)::text = ANY ((ARRAY['miami_pickup'::character varying, 'brazil_delivery'::character varying, 'usa_cargo'::character varying])::text[])))
+//   CHECK orders_status_check: CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'processing'::character varying, 'shipped'::character varying, 'delivered'::character varying, 'cancelled'::character varying])::text[])))
+// Table: page_visits
+//   PRIMARY KEY page_visits_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY page_visits_user_id_fkey: FOREIGN KEY (user_id) REFERENCES customers(id)
 // Table: pricing_settings
 //   PRIMARY KEY pricing_settings_pkey: PRIMARY KEY (id)
 // Table: product_cache
@@ -824,9 +1772,15 @@ export const Constants = {
 // Table: products
 //   FOREIGN KEY products_manufacturer_id_fkey: FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE SET NULL
 //   PRIMARY KEY products_pkey: PRIMARY KEY (id)
+// Table: sales_metrics
+//   UNIQUE sales_metrics_date_key: UNIQUE (date)
+//   PRIMARY KEY sales_metrics_pkey: PRIMARY KEY (id)
 // Table: settings
 //   UNIQUE settings_key_key: UNIQUE (key)
 //   PRIMARY KEY settings_pkey: PRIMARY KEY (id)
+// Table: shopping_carts
+//   FOREIGN KEY shopping_carts_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+//   PRIMARY KEY shopping_carts_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: ai_agent_settings
@@ -839,12 +1793,38 @@ export const Constants = {
 //     USING: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text))
 //   Policy "allow_public_read_ai_providers" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
+// Table: cart_items
+//   Policy "Customers can add cart items" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (cart_id IN ( SELECT shopping_carts.id    FROM shopping_carts   WHERE (shopping_carts.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+//   Policy "Customers can delete own cart items" (DELETE, PERMISSIVE) roles={public}
+//     USING: (cart_id IN ( SELECT shopping_carts.id    FROM shopping_carts   WHERE (shopping_carts.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+//   Policy "Customers can update own cart items" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (cart_id IN ( SELECT shopping_carts.id    FROM shopping_carts   WHERE (shopping_carts.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+//   Policy "Customers can view own cart items" (SELECT, PERMISSIVE) roles={public}
+//     USING: (cart_id IN ( SELECT shopping_carts.id    FROM shopping_carts   WHERE (shopping_carts.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
 // Table: conversation_history
 //   Policy "Auth insert own history" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() = user_id)
 //   Policy "Auth read own history" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = user_id)
+// Table: coupon_usage
+//   Policy "Admins can view all coupon usage" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Customers can use coupon" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can view own coupon usage" (SELECT, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
 // Table: customer_addresses
+//   Policy "Admins can view all addresses" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Customers can delete own addresses" (DELETE, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can manage own addresses" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can update own addresses" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can view own addresses" (SELECT, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
 //   Policy "Users can delete own addresses" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
 //   Policy "Users can insert own addresses" (INSERT, PERMISSIVE) roles={authenticated}
@@ -854,13 +1834,40 @@ export const Constants = {
 //     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
 //   Policy "Users can view own addresses" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+// Table: customer_favorites
+//   Policy "Customers can add favorites" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can delete own favorites" (DELETE, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can view own favorites" (SELECT, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+// Table: customer_payment_methods
+//   Policy "Customers can add payment methods" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can delete own payment methods" (DELETE, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can view own payment methods" (SELECT, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
 // Table: customers
+//   Policy "Admins can update any customer" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers customers_1   WHERE ((customers_1.user_id = auth.uid()) AND ((customers_1.role)::text = 'admin'::text))))
+//   Policy "Admins can view all customers" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers customers_1   WHERE ((customers_1.user_id = auth.uid()) AND ((customers_1.role)::text = 'admin'::text))))
+//   Policy "Customers can update own profile" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (auth.uid() = user_id)
+//   Policy "Customers can view own profile" (SELECT, PERMISSIVE) roles={public}
+//     USING: (auth.uid() = user_id)
 //   Policy "Users can insert own customer data" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (auth.uid() = user_id)
 //   Policy "Users can read own customer data" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = user_id)
 //   Policy "Users can update own customer data" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = user_id)
+// Table: discount_coupons
+//   Policy "Admins can manage coupons" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Anyone can view active coupons" (SELECT, PERMISSIVE) roles={public}
+//     USING: (is_active = true)
 // Table: exchange_rate
 //   Policy "exchange_rate_insert_admin" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text))
@@ -870,6 +1877,10 @@ export const Constants = {
 //     USING: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text))
 //     WITH CHECK: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text))
 // Table: manufacturers
+//   Policy "Admins can manage manufacturers" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Admins can view all manufacturers" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
 //   Policy "Allow anon read on manufacturers" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
 //   Policy "Allow authenticated delete on manufacturers" (DELETE, PERMISSIVE) roles={authenticated}
@@ -880,6 +1891,43 @@ export const Constants = {
 //     USING: true
 //   Policy "Allow authenticated update on manufacturers" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: true
+//     WITH CHECK: true
+// Table: order_items
+//   Policy "Admins can view all order items" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Customers can view own order items" (SELECT, PERMISSIVE) roles={public}
+//     USING: (order_id IN ( SELECT orders.id    FROM orders   WHERE (orders.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+// Table: order_returns
+//   Policy "Admins can update returns" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Admins can view all returns" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Customers can request return" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (order_id IN ( SELECT orders.id    FROM orders   WHERE (orders.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+//   Policy "Customers can view own returns" (SELECT, PERMISSIVE) roles={public}
+//     USING: (order_id IN ( SELECT orders.id    FROM orders   WHERE (orders.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+// Table: order_status_history
+//   Policy "Admins can log status change" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Admins can view all order status history" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Customers can view own order status history" (SELECT, PERMISSIVE) roles={public}
+//     USING: (order_id IN ( SELECT orders.id    FROM orders   WHERE (orders.customer_id IN ( SELECT customers.id            FROM customers           WHERE (customers.user_id = auth.uid())))))
+// Table: orders
+//   Policy "Admins can update any order" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Admins can view all orders" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Customers can create orders" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can update own orders" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can view own orders" (SELECT, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+// Table: page_visits
+//   Policy "Admins can view all page visits" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Anyone can log page visit" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 // Table: pricing_settings
 //   Policy "Allow anon read on pricing_settings" (SELECT, PERMISSIVE) roles={anon}
@@ -908,19 +1956,119 @@ export const Constants = {
 //   Policy "allow_public_read_cache" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: products
+//   Policy "Admins can manage products" (ALL, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
+//   Policy "Admins can view all products" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
 //   Policy "allow_admin_update_products" (UPDATE, PERMISSIVE) roles={public}
 //     USING: ((auth.jwt() ->> 'role'::text) = 'admin'::text)
 //     WITH CHECK: ((auth.jwt() ->> 'role'::text) = 'admin'::text)
 //   Policy "allow_public_read_products" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
+// Table: sales_metrics
+//   Policy "Admins can view sales metrics" (SELECT, PERMISSIVE) roles={public}
+//     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
 // Table: settings
 //   Policy "allow_admin_write_settings" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (auth.role() = 'authenticated'::text))
 //     WITH CHECK: (((auth.jwt() ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'user_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (((auth.jwt() -> 'app_metadata'::text) ->> 'role'::text) = 'admin'::text) OR (auth.role() = 'authenticated'::text))
 //   Policy "allow_all_read_settings" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
+// Table: shopping_carts
+//   Policy "Customers can create cart" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can update own cart" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+//   Policy "Customers can view own cart" (SELECT, PERMISSIVE) roles={public}
+//     USING: (customer_id IN ( SELECT customers.id    FROM customers   WHERE (customers.user_id = auth.uid())))
+
+// --- WARNING: TABLES WITH RLS ENABLED BUT NO POLICIES ---
+// These tables have Row Level Security enabled but NO policies defined.
+// This means ALL queries (SELECT, INSERT, UPDATE, DELETE) will return ZERO rows
+// for non-superuser roles (including the anon and authenticated roles used by the app).
+// You MUST create RLS policies for these tables to allow data access.
+//   - discount_rule_categories
+//   - discount_rule_customers
+//   - discount_rule_exclusions
+//   - discount_rule_manufacturers
+//   - discount_rule_products
+//   - discount_rules
 
 // --- DATABASE FUNCTIONS ---
+// FUNCTION calculate_final_price(uuid, uuid)
+//   CREATE OR REPLACE FUNCTION public.calculate_final_price(p_product_id uuid, p_customer_id uuid)
+//    RETURNS numeric
+//    LANGUAGE plpgsql
+//    STABLE
+//   AS $function$
+//   DECLARE
+//     v_price_usa NUMERIC;
+//     v_price_cost NUMERIC;
+//     v_max_discount NUMERIC := 0;
+//     v_discount_type VARCHAR;
+//     v_final_price NUMERIC;
+//   BEGIN
+//     SELECT price_usa, price_cost INTO v_price_usa, v_price_cost
+//     FROM products WHERE id = p_product_id;
+//     
+//     IF v_price_usa IS NULL THEN RETURN NULL; END IF;
+//     
+//     SELECT dr.discount_value, dr.discount_calculation_type
+//     INTO v_max_discount, v_discount_type
+//     FROM discount_rules dr
+//     INNER JOIN discount_rule_customers drc ON dr.id = drc.discount_rule_id
+//     WHERE dr.is_active = true
+//       AND drc.customer_id = p_customer_id
+//       AND dr.scope_type = 'all_products'
+//       AND NOT EXISTS (
+//         SELECT 1 FROM discount_rule_exclusions dre 
+//         WHERE dre.discount_rule_id = dr.id 
+//           AND dre.product_id = p_product_id 
+//           AND dre.is_active = true
+//       )
+//     ORDER BY dr.discount_value DESC
+//     LIMIT 1;
+//     
+//     IF v_max_discount IS NULL OR v_max_discount = 0 THEN
+//       RETURN v_price_usa;
+//     END IF;
+//     
+//     IF v_discount_type = 'margin_percentage' THEN
+//       v_final_price := v_price_cost + ((v_max_discount / 100) * (v_price_usa - v_price_cost));
+//     ELSIF v_discount_type = 'price_usa_percentage' THEN
+//       v_final_price := v_price_usa - ((v_max_discount / 100) * v_price_usa);
+//     ELSE
+//       RETURN v_price_usa;
+//     END IF;
+//     
+//     RETURN ROUND(v_final_price, 2);
+//   END;
+//   $function$
+//   
+// FUNCTION get_applicable_discounts(uuid, uuid)
+//   CREATE OR REPLACE FUNCTION public.get_applicable_discounts(p_product_id uuid, p_customer_id uuid)
+//    RETURNS TABLE(rule_id uuid, rule_name character varying, discount_value numeric, discount_calculation_type character varying, scope_type character varying)
+//    LANGUAGE plpgsql
+//    STABLE
+//   AS $function$
+//   BEGIN
+//     RETURN QUERY
+//     SELECT dr.id, dr.rule_name, dr.discount_value, dr.discount_calculation_type, dr.scope_type
+//     FROM discount_rules dr
+//     INNER JOIN discount_rule_customers drc ON dr.id = drc.discount_rule_id
+//     WHERE dr.is_active = true
+//       AND drc.customer_id = p_customer_id
+//       AND dr.scope_type = 'all_products'
+//       AND NOT EXISTS (
+//         SELECT 1 FROM discount_rule_exclusions dre 
+//         WHERE dre.discount_rule_id = dr.id 
+//           AND dre.product_id = p_product_id 
+//           AND dre.is_active = true
+//       )
+//     ORDER BY dr.discount_value DESC;
+//   END;
+//   $function$
+//   
 // FUNCTION handle_new_customer()
 //   CREATE OR REPLACE FUNCTION public.handle_new_customer()
 //    RETURNS trigger
@@ -934,7 +2082,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION normalize_sku(text)
 //   CREATE OR REPLACE FUNCTION public.normalize_sku(sku text)
 //    RETURNS text
@@ -945,22 +2093,65 @@ export const Constants = {
 //     RETURN upper(regexp_replace(sku, '[^a-zA-Z0-9]', '', 'g'));
 //   END;
 //   $function$
-//
+//   
 
 // --- INDEXES ---
 // Table: ai_providers
 //   CREATE INDEX ai_providers_priority_active_idx ON public.ai_providers USING btree (priority_order, is_active)
 //   CREATE UNIQUE INDEX ai_providers_provider_name_key ON public.ai_providers USING btree (provider_name)
+// Table: cart_items
+//   CREATE INDEX idx_cart_items_cart_id ON public.cart_items USING btree (cart_id)
 // Table: conversation_history
 //   CREATE INDEX idx_conv_history_created_at ON public.conversation_history USING btree (created_at DESC)
 //   CREATE INDEX idx_conv_history_session_id ON public.conversation_history USING btree (session_id)
+// Table: coupon_usage
+//   CREATE UNIQUE INDEX coupon_usage_coupon_id_customer_id_key ON public.coupon_usage USING btree (coupon_id, customer_id)
+// Table: customer_favorites
+//   CREATE UNIQUE INDEX customer_favorites_customer_id_product_id_key ON public.customer_favorites USING btree (customer_id, product_id)
+//   CREATE INDEX idx_customer_favorites_customer_id ON public.customer_favorites USING btree (customer_id)
+// Table: customer_payment_methods
+//   CREATE UNIQUE INDEX customer_payment_methods_stripe_payment_method_id_key ON public.customer_payment_methods USING btree (stripe_payment_method_id)
+//   CREATE INDEX idx_customer_payment_methods_customer_id ON public.customer_payment_methods USING btree (customer_id)
 // Table: customers
 //   CREATE UNIQUE INDEX customers_user_id_key ON public.customers USING btree (user_id)
+//   CREATE INDEX idx_customers_role ON public.customers USING btree (role)
 //   CREATE INDEX idx_customers_user_id ON public.customers USING btree (user_id)
+// Table: discount_coupons
+//   CREATE UNIQUE INDEX discount_coupons_code_key ON public.discount_coupons USING btree (code)
+// Table: discount_rule_categories
+//   CREATE UNIQUE INDEX discount_rule_categories_discount_rule_id_category_key ON public.discount_rule_categories USING btree (discount_rule_id, category)
+//   CREATE INDEX idx_discount_rule_categories_rule_id ON public.discount_rule_categories USING btree (discount_rule_id)
+// Table: discount_rule_customers
+//   CREATE UNIQUE INDEX discount_rule_customers_discount_rule_id_customer_id_key ON public.discount_rule_customers USING btree (discount_rule_id, customer_id)
+//   CREATE INDEX idx_discount_rule_customers_customer_id ON public.discount_rule_customers USING btree (customer_id)
+//   CREATE INDEX idx_discount_rule_customers_rule_id ON public.discount_rule_customers USING btree (discount_rule_id)
+// Table: discount_rule_exclusions
+//   CREATE UNIQUE INDEX discount_rule_exclusions_discount_rule_id_product_id_key ON public.discount_rule_exclusions USING btree (discount_rule_id, product_id)
+//   CREATE INDEX idx_discount_rule_exclusions_active ON public.discount_rule_exclusions USING btree (discount_rule_id, is_active)
+//   CREATE INDEX idx_discount_rule_exclusions_product_id ON public.discount_rule_exclusions USING btree (product_id)
+//   CREATE INDEX idx_discount_rule_exclusions_rule_id ON public.discount_rule_exclusions USING btree (discount_rule_id)
+// Table: discount_rule_manufacturers
+//   CREATE UNIQUE INDEX discount_rule_manufacturers_discount_rule_id_manufacturer_i_key ON public.discount_rule_manufacturers USING btree (discount_rule_id, manufacturer_id)
+//   CREATE INDEX idx_discount_rule_manufacturers_rule_id ON public.discount_rule_manufacturers USING btree (discount_rule_id)
+// Table: discount_rule_products
+//   CREATE UNIQUE INDEX discount_rule_products_discount_rule_id_product_id_key ON public.discount_rule_products USING btree (discount_rule_id, product_id)
+//   CREATE INDEX idx_discount_rule_products_product_id ON public.discount_rule_products USING btree (product_id)
+//   CREATE INDEX idx_discount_rule_products_rule_id ON public.discount_rule_products USING btree (discount_rule_id)
+// Table: discount_rules
+//   CREATE INDEX idx_discount_rules_active ON public.discount_rules USING btree (is_active)
+//   CREATE INDEX idx_discount_rules_type_active ON public.discount_rules USING btree (rule_type, is_active)
 // Table: exchange_rate
 //   CREATE INDEX idx_exchange_rate_last_updated ON public.exchange_rate USING btree (last_updated DESC)
 // Table: manufacturers
 //   CREATE UNIQUE INDEX manufacturers_name_key ON public.manufacturers USING btree (name)
+// Table: orders
+//   CREATE INDEX idx_orders_created_at ON public.orders USING btree (created_at DESC)
+//   CREATE INDEX idx_orders_customer_id ON public.orders USING btree (customer_id)
+//   CREATE INDEX idx_orders_status ON public.orders USING btree (status)
+//   CREATE UNIQUE INDEX orders_order_number_key ON public.orders USING btree (order_number)
+// Table: page_visits
+//   CREATE INDEX idx_page_visits_timestamp ON public.page_visits USING btree ("timestamp" DESC)
+//   CREATE INDEX idx_page_visits_user_id ON public.page_visits USING btree (user_id)
 // Table: product_cache
 //   CREATE INDEX idx_product_cache_expires ON public.product_cache USING btree (expires_at)
 //   CREATE INDEX idx_product_cache_name ON public.product_cache USING btree (product_name)
@@ -971,6 +2162,12 @@ export const Constants = {
 //   CREATE INDEX idx_products_is_discontinued ON public.products USING btree (is_discontinued)
 //   CREATE INDEX products_is_special_idx ON public.products USING btree (is_special)
 //   CREATE UNIQUE INDEX products_manufacturer_sku_key ON public.products USING btree (manufacturer_id, sku)
+// Table: sales_metrics
+//   CREATE INDEX idx_sales_metrics_date ON public.sales_metrics USING btree (date DESC)
+//   CREATE UNIQUE INDEX sales_metrics_date_key ON public.sales_metrics USING btree (date)
 // Table: settings
 //   CREATE INDEX idx_settings_key ON public.settings USING btree (key)
 //   CREATE UNIQUE INDEX settings_key_key ON public.settings USING btree (key)
+// Table: shopping_carts
+//   CREATE INDEX idx_shopping_carts_customer_id ON public.shopping_carts USING btree (customer_id)
+
