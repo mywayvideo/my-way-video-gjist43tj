@@ -334,11 +334,19 @@ export function Header() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 max-w-[200px]">
-                    <User className="w-5 h-5 shrink-0" />
-                    <span className="hidden md:inline-block truncate font-medium">
-                      Bem-vindo{customer?.full_name ? `, ${customer.full_name}` : '!'}
+                  <Button
+                    variant="ghost"
+                    className="flex flex-col items-start justify-center gap-0.5 h-auto py-1 px-2 max-w-[200px]"
+                  >
+                    <span className="text-[10px] md:text-xs text-muted-foreground mb-0 leading-none">
+                      Bem-vindo,
                     </span>
+                    <div className="flex items-center text-left">
+                      <User className="w-5 h-5 shrink-0 mr-2" />
+                      <span className="text-sm md:text-base font-semibold text-foreground whitespace-normal leading-tight">
+                        {customer?.full_name || 'Usuário'}
+                      </span>
+                    </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
