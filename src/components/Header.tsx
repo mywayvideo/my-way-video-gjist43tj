@@ -11,15 +11,13 @@ import { DirectSearch } from '@/components/DirectSearch'
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog'
 import { useDebounce } from '@/hooks/use-debounce'
 import { searchProducts } from '@/services/database-search'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useCurrentCustomer } from '@/hooks/use-current-customer'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase/client'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Label } from '@/components/ui/label'
 
 export function Header() {
   const { user, signOut } = useAuth()
@@ -35,6 +33,100 @@ export function Header() {
   const [mobileDbResults, setMobileDbResults] = useState<any[]>([])
   const [isSearchingDb, setIsSearchingDb] = useState(false)
   const debouncedDbQuery = useDebounce(mobileDbQuery, 300)
+
+  const isMobile = useIsMobile()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+
+  useEffect(() => {
+    const fetchFirstName = async () => {
+      if (!user) return
+      const { data, error } = await supabase
+        .from('customers')
+        .select('full_name')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!error && data?.full_name) {
+        setFirstName(data.full_name.split(' ')[0])
+      }
+    }
+    fetchFirstName()
+  }, [user])
+
+  const handleSavePassword = async () => {
+    if (password !== confirmPassword) {
+      toast.error('As senhas não coincidem')
+      return
+    }
+    setIsSavingPassword(true)
+    const { error } = await supabase.auth.updateUser({ password })
+    setIsSavingPassword(false)
+    if (error) {
+      toast.error('Erro ao alterar senha')
+    } else {
+      toast.success('Senha alterada com sucesso')
+      setShowChangePassword(false)
+      setPassword('')
+      setConfirmPassword('')
+    }
+  }
+
+  const UserMenuItems = () => (
+    <div className="flex flex-col w-full gap-1">
+      <Link
+        to="/dashboard"
+        onClick={() => setIsUserMenuOpen(false)}
+        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
+      >
+        Meu Perfil
+      </Link>
+      <Link
+        to="/favorites"
+        onClick={() => setIsUserMenuOpen(false)}
+        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
+      >
+        Meus Favoritos
+      </Link>
+      <Link
+        to="/cart"
+        onClick={() => setIsUserMenuOpen(false)}
+        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
+      >
+        Meu Carrinho
+      </Link>
+      <Link
+        to="/order-history"
+        onClick={() => setIsUserMenuOpen(false)}
+        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
+      >
+        Histórico de Compras
+      </Link>
+      <button
+        onClick={() => {
+          setIsUserMenuOpen(false)
+          setShowChangePassword(true)
+        }}
+        className="w-full text-left p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
+      >
+        Alterar Senha
+      </button>
+      <div className="h-px bg-border my-1" />
+      <button
+        onClick={() => {
+          setIsUserMenuOpen(false)
+          handleLogout()
+        }}
+        className="w-full text-left p-3 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive focus:text-destructive cursor-pointer transition-colors rounded-md"
+      >
+        Sair
+      </button>
+    </div>
+  )
 
   const isAdmin =
     user &&
@@ -332,59 +424,37 @@ export function Header() {
               )}
             </Button>
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex flex-col items-start justify-center gap-0.5 h-auto p-2 rounded-lg hover:bg-secondary transition-all duration-200 max-w-[200px] cursor-pointer hover:opacity-80"
+              isMobile ? (
+                <Sheet open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Avatar className="h-11 w-11 cursor-pointer hover:opacity-80 transition-opacity">
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[85vw] max-w-sm pt-12">
+                    <UserMenuItems />
+                  </SheetContent>
+                </Sheet>
+              ) : (
+                <Popover open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
+                  <PopoverTrigger asChild>
+                    <Avatar className="h-11 w-11 cursor-pointer hover:opacity-80 transition-opacity">
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    sideOffset={8}
+                    className="w-56 p-2 bg-card border border-border rounded-lg shadow-lg animate-in fade-in duration-200 slide-in-from-top-1"
                   >
-                    <span className="text-xs text-muted-foreground leading-none">Bem-vindo,</span>
-                    <div className="flex items-center text-left gap-2">
-                      <User className="w-5 h-5 shrink-0" />
-                      <span className="text-sm sm:text-base font-semibold text-foreground whitespace-nowrap overflow-hidden text-ellipsis">
-                        {customer?.full_name || 'Usuário'}
-                      </span>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  sideOffset={8}
-                  className="w-56 bg-card border border-border rounded-lg shadow-lg animate-in fade-in duration-200 slide-in-from-top-1"
-                >
-                  <DropdownMenuItem
-                    asChild
-                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
-                  >
-                    <Link to="/dashboard">Meu Dashboard</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    asChild
-                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
-                  >
-                    <Link to="/favorites">Meus Favoritos</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    asChild
-                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
-                  >
-                    <Link to="/cart">Meu Carrinho</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    asChild
-                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
-                  >
-                    <Link to="/order-history">Histórico de Compras</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="border-t border-border m-1" />
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="p-3 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive focus:text-destructive cursor-pointer transition-colors"
-                  >
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <UserMenuItems />
+                  </PopoverContent>
+                </Popover>
+              )
             ) : (
               <Button variant="ghost" size="icon" onClick={() => navigate('/login')}>
                 <User className="w-5 h-5" />
@@ -393,6 +463,40 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label>Nova Senha</Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Confirmar Nova Senha</Label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowChangePassword(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSavePassword} disabled={isSavingPassword}>
+              Salvar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
