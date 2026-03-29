@@ -1,4 +1,4 @@
-DO $
+DO $$
 BEGIN
   ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS phone TEXT;
   ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;
@@ -6,7 +6,7 @@ BEGIN
   ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS company_name TEXT;
   ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS profile_photo_url TEXT;
   ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS cpf TEXT;
-END $;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.customer_addresses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
