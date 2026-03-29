@@ -354,9 +354,9 @@ export function Header() {
                 >
                   <DropdownMenuItem
                     asChild
-                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
                   >
-                    <Link to="/profile">Meu Perfil</Link>
+                    <Link to="/dashboard">Meu Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     asChild
