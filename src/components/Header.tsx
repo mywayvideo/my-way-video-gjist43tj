@@ -18,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
+import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
 
 export function Header() {
   const { user, signOut } = useAuth()
@@ -38,9 +39,6 @@ export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [firstName, setFirstName] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [isSavingPassword, setIsSavingPassword] = useState(false)
 
   useEffect(() => {
     const fetchFirstName = async () => {
@@ -57,24 +55,6 @@ export function Header() {
     }
     fetchFirstName()
   }, [user])
-
-  const handleSavePassword = async () => {
-    if (password !== confirmPassword) {
-      toast.error('As senhas não coincidem')
-      return
-    }
-    setIsSavingPassword(true)
-    const { error } = await supabase.auth.updateUser({ password })
-    setIsSavingPassword(false)
-    if (error) {
-      toast.error('Erro ao alterar senha')
-    } else {
-      toast.success('Senha alterada com sucesso')
-      setShowChangePassword(false)
-      setPassword('')
-      setConfirmPassword('')
-    }
-  }
 
   const UserMenuItems = () => (
     <div className="flex flex-col w-full gap-1">
@@ -464,39 +444,11 @@ export function Header() {
         </div>
       </header>
 
-      <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alterar Senha</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col gap-2">
-              <Label>Nova Senha</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Confirmar Nova Senha</Label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowChangePassword(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSavePassword} disabled={isSavingPassword}>
-              Salvar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ChangePasswordDialog
+        open={showChangePassword}
+        onOpenChange={setShowChangePassword}
+        onSuccess={() => setShowChangePassword(false)}
+      />
     </>
   )
 }
