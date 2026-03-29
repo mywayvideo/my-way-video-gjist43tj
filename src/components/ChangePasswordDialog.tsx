@@ -31,7 +31,7 @@ export function ChangePasswordDialog({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (open) {
+    if (!open) {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
@@ -39,6 +39,8 @@ export function ChangePasswordDialog({
       setNewErrs([])
       setConfirmErr('')
       setSubmitErr('')
+      setIsChecking(false)
+      setIsSubmitting(false)
     }
   }, [open])
 
@@ -102,9 +104,9 @@ export function ChangePasswordDialog({
       setSubmitErr('Nao foi possivel atualizar senha. Tente novamente.')
       console.error('Update password error:', error)
     } else {
+      onOpenChange(false)
       toast.success('Senha alterada com sucesso!')
       onSuccess()
-      onOpenChange(false)
     }
   }
 
@@ -202,10 +204,19 @@ export function ChangePasswordDialog({
           </div>
         </div>
         <div className="flex justify-between mt-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting || isChecking}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!isFormValid || isSubmitting || isChecking}
+          >
             {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Atualizar Senha
           </Button>
