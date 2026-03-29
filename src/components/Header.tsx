@@ -63,7 +63,7 @@ export function Header() {
         onClick={() => setIsUserMenuOpen(false)}
         className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
       >
-        Meu Perfil
+        Meu Dashboard
       </Link>
       <Link
         to="/favorites"
@@ -413,7 +413,11 @@ export function Header() {
                       </AvatarFallback>
                     </Avatar>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[85vw] max-w-sm pt-12">
+                  <SheetContent
+                    side="right"
+                    className="w-[85vw] max-w-sm pt-12"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                  >
                     <UserMenuItems />
                   </SheetContent>
                 </Sheet>
@@ -430,6 +434,7 @@ export function Header() {
                     align="end"
                     sideOffset={8}
                     className="w-56 p-2 bg-card border border-border rounded-lg shadow-lg animate-in fade-in duration-200 slide-in-from-top-1"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
                   >
                     <UserMenuItems />
                   </PopoverContent>
