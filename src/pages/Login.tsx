@@ -59,12 +59,16 @@ export default function Login() {
             Tentar novamente
           </ToastAction>
         ),
+        className:
+          'bg-destructive text-white text-sm fixed bottom-4 right-4 m-4 animate-in slide-in-from-bottom-2 duration-300 ease-out border-0',
       })
       setLoading(false)
     } else {
       toast({
         title: 'Sucesso',
         description: AUTH_MESSAGES.WELCOME,
+        className:
+          'bg-green-600 text-white text-sm fixed bottom-4 right-4 m-4 animate-in slide-in-from-bottom-2 duration-300 ease-out border-0',
       })
       setSuccess(true)
       setTimeout(() => {
@@ -75,15 +79,15 @@ export default function Login() {
   }
 
   return (
-    <div className="container mx-auto flex items-center justify-center min-h-[80vh] px-4 py-8 animate-fade-in">
+    <div className="container mx-auto flex items-center justify-center min-h-[80vh] px-4 py-8 animate-fade-in bg-gradient-to-br from-primary/10 to-secondary/10">
       <Card
         className={cn(
-          'w-full max-w-md bg-card/50 border-white/10 shadow-elevation backdrop-blur-sm transition-opacity duration-500',
+          'w-full max-w-full sm:max-w-md p-4 sm:p-6 bg-white dark:bg-card border-border rounded-xl shadow-lg transition-opacity duration-500 mx-auto',
           success ? 'opacity-0' : 'opacity-100',
         )}
       >
-        <CardHeader className="space-y-3 items-center text-center">
-          <div className="bg-accent text-accent-foreground p-3 rounded-xl mb-2">
+        <CardHeader className="space-y-3 items-center text-center px-0 pt-0">
+          <div className="bg-primary/10 text-primary p-3 rounded-xl mb-2">
             <Video className="w-6 h-6" />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Acesse sua conta</CardTitle>
@@ -95,18 +99,36 @@ export default function Login() {
           onValueChange={(val) => setActiveTab(val as 'login' | 'signup')}
           className="w-full"
         >
-          <div className="px-6 pb-2">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">{AUTH_MESSAGES.LOGIN_TAB}</TabsTrigger>
-              <TabsTrigger value="signup">{AUTH_MESSAGES.SIGNUP_TAB}</TabsTrigger>
+          <div className="px-0 pb-2">
+            <TabsList className="flex w-full gap-4 border-b-2 border-border bg-transparent p-0 rounded-none h-auto">
+              <TabsTrigger
+                value="login"
+                className="flex-1 p-3 font-medium text-muted-foreground data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none shadow-none bg-transparent data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+              >
+                {AUTH_MESSAGES.LOGIN_TAB}
+              </TabsTrigger>
+              <TabsTrigger
+                value="signup"
+                className="flex-1 p-3 font-medium text-muted-foreground data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none shadow-none bg-transparent data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+              >
+                {AUTH_MESSAGES.SIGNUP_TAB}
+              </TabsTrigger>
             </TabsList>
           </div>
 
-          <CardContent>
-            <TabsContent value="login" className="m-0 focus-visible:outline-none">
-              <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-login">{AUTH_MESSAGES.EMAIL_LABEL}</Label>
+          <CardContent className="p-0">
+            <TabsContent
+              value="login"
+              className="m-0 p-6 animate-in fade-in duration-300 focus-visible:outline-none"
+            >
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="email-login"
+                    className="font-semibold text-foreground mb-2 block text-sm"
+                  >
+                    {AUTH_MESSAGES.EMAIL_LABEL}
+                  </Label>
                   <Input
                     id="email-login"
                     type="email"
@@ -115,15 +137,20 @@ export default function Login() {
                     value={formData.email}
                     onChange={(e) => updateField('email', e.target.value)}
                     className={cn(
-                      'bg-background/50 h-11 border-white/10 focus-visible:ring-accent',
+                      'border-input rounded-lg p-3 h-11 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none placeholder:text-muted-foreground',
                       errors.email && 'border-destructive focus-visible:ring-destructive',
                     )}
                   />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password-login">{AUTH_MESSAGES.PASSWORD_LABEL}</Label>
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="password-login"
+                    className="font-semibold text-foreground mb-2 block text-sm"
+                  >
+                    {AUTH_MESSAGES.PASSWORD_LABEL}
+                  </Label>
                   <Input
                     id="password-login"
                     type="password"
@@ -132,22 +159,24 @@ export default function Login() {
                     value={formData.password}
                     onChange={(e) => updateField('password', e.target.value)}
                     className={cn(
-                      'bg-background/50 h-11 border-white/10 focus-visible:ring-accent',
+                      'border-input rounded-lg p-3 h-11 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none placeholder:text-muted-foreground',
                       errors.password && 'border-destructive focus-visible:ring-destructive',
                     )}
                   />
-                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                  {errors.password && (
+                    <p className="text-sm text-destructive mt-1">{errors.password}</p>
+                  )}
                 </div>
 
                 {globalError && activeTab === 'login' && (
-                  <div className="p-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-md">
+                  <div className="p-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-md mt-2">
                     {globalError}
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full h-11 mt-4 bg-accent text-accent-foreground hover:bg-accent/90"
+                  className="w-full h-11 mt-6 bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   disabled={loading || !isValid}
                 >
                   {loading ? (
@@ -160,12 +189,34 @@ export default function Login() {
                   )}
                 </Button>
               </form>
+
+              <div className="mt-6 flex flex-col gap-3 text-center">
+                <a href="#" className="text-primary hover:underline text-sm transition-colors">
+                  {AUTH_MESSAGES.FORGOT_PASSWORD}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('signup')}
+                  className="text-primary hover:underline text-sm transition-colors"
+                  disabled={loading}
+                >
+                  {AUTH_MESSAGES.NO_ACCOUNT}
+                </button>
+              </div>
             </TabsContent>
 
-            <TabsContent value="signup" className="m-0 focus-visible:outline-none">
-              <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">{AUTH_MESSAGES.FULL_NAME_LABEL}</Label>
+            <TabsContent
+              value="signup"
+              className="m-0 p-6 animate-in fade-in duration-300 focus-visible:outline-none"
+            >
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="full_name"
+                    className="font-semibold text-foreground mb-2 block text-sm"
+                  >
+                    {AUTH_MESSAGES.FULL_NAME_LABEL}
+                  </Label>
                   <Input
                     id="full_name"
                     type="text"
@@ -174,17 +225,22 @@ export default function Login() {
                     value={formData.full_name}
                     onChange={(e) => updateField('full_name', e.target.value)}
                     className={cn(
-                      'bg-background/50 h-11 border-white/10 focus-visible:ring-accent',
+                      'border-input rounded-lg p-3 h-11 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none placeholder:text-muted-foreground',
                       errors.full_name && 'border-destructive focus-visible:ring-destructive',
                     )}
                   />
                   {errors.full_name && (
-                    <p className="text-sm text-destructive">{errors.full_name}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.full_name}</p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email-signup">{AUTH_MESSAGES.EMAIL_LABEL}</Label>
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="email-signup"
+                    className="font-semibold text-foreground mb-2 block text-sm"
+                  >
+                    {AUTH_MESSAGES.EMAIL_LABEL}
+                  </Label>
                   <Input
                     id="email-signup"
                     type="email"
@@ -193,15 +249,20 @@ export default function Login() {
                     value={formData.email}
                     onChange={(e) => updateField('email', e.target.value)}
                     className={cn(
-                      'bg-background/50 h-11 border-white/10 focus-visible:ring-accent',
+                      'border-input rounded-lg p-3 h-11 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none placeholder:text-muted-foreground',
                       errors.email && 'border-destructive focus-visible:ring-destructive',
                     )}
                   />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password-signup">{AUTH_MESSAGES.PASSWORD_LABEL}</Label>
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="password-signup"
+                    className="font-semibold text-foreground mb-2 block text-sm"
+                  >
+                    {AUTH_MESSAGES.PASSWORD_LABEL}
+                  </Label>
                   <Input
                     id="password-signup"
                     type="password"
@@ -210,15 +271,22 @@ export default function Login() {
                     value={formData.password}
                     onChange={(e) => updateField('password', e.target.value)}
                     className={cn(
-                      'bg-background/50 h-11 border-white/10 focus-visible:ring-accent',
+                      'border-input rounded-lg p-3 h-11 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none placeholder:text-muted-foreground',
                       errors.password && 'border-destructive focus-visible:ring-destructive',
                     )}
                   />
-                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                  {errors.password && (
+                    <p className="text-sm text-destructive mt-1">{errors.password}</p>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirm_password">{AUTH_MESSAGES.CONFIRM_PASSWORD_LABEL}</Label>
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="confirm_password"
+                    className="font-semibold text-foreground mb-2 block text-sm"
+                  >
+                    {AUTH_MESSAGES.CONFIRM_PASSWORD_LABEL}
+                  </Label>
                   <Input
                     id="confirm_password"
                     type="password"
@@ -227,13 +295,13 @@ export default function Login() {
                     value={formData.confirm_password}
                     onChange={(e) => updateField('confirm_password', e.target.value)}
                     className={cn(
-                      'bg-background/50 h-11 border-white/10 focus-visible:ring-accent',
+                      'border-input rounded-lg p-3 h-11 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none placeholder:text-muted-foreground',
                       errors.confirm_password &&
                         'border-destructive focus-visible:ring-destructive',
                     )}
                   />
                   {errors.confirm_password && (
-                    <p className="text-sm text-destructive">{errors.confirm_password}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.confirm_password}</p>
                   )}
                 </div>
 
@@ -243,25 +311,25 @@ export default function Login() {
                     checked={formData.accept_terms}
                     disabled={loading}
                     onCheckedChange={(checked) => updateField('accept_terms', checked === true)}
-                    className="h-5 w-5"
+                    className="h-5 w-5 border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
-                  <Label htmlFor="accept_terms" className="text-sm font-normal">
+                  <Label htmlFor="accept_terms" className="text-sm font-normal ml-2">
                     {AUTH_MESSAGES.TERMS_LABEL}
                   </Label>
                 </div>
                 {errors.accept_terms && (
-                  <p className="text-sm text-destructive">{errors.accept_terms}</p>
+                  <p className="text-sm text-destructive mt-1">{errors.accept_terms}</p>
                 )}
 
                 {globalError && activeTab === 'signup' && (
-                  <div className="p-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-md">
+                  <div className="p-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-md mt-2">
                     {globalError}
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full h-11 mt-4 bg-accent text-accent-foreground hover:bg-accent/90"
+                  className="w-full h-11 mt-6 bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   disabled={loading || !isValid}
                 >
                   {loading ? (
@@ -274,27 +342,18 @@ export default function Login() {
                   )}
                 </Button>
               </form>
-            </TabsContent>
 
-            <div className="mt-6 flex flex-col gap-3 text-center text-sm">
-              {activeTab === 'login' && (
-                <a
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+              <div className="mt-6 flex flex-col gap-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('login')}
+                  className="text-primary hover:underline text-sm transition-colors"
+                  disabled={loading}
                 >
-                  {AUTH_MESSAGES.FORGOT_PASSWORD}
-                </a>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setActiveTab(activeTab === 'login' ? 'signup' : 'login')}
-                className="text-accent hover:underline font-medium"
-                disabled={loading}
-              >
-                {activeTab === 'login' ? AUTH_MESSAGES.NO_ACCOUNT : AUTH_MESSAGES.HAS_ACCOUNT}
-              </button>
-            </div>
+                  {AUTH_MESSAGES.HAS_ACCOUNT}
+                </button>
+              </div>
+            </TabsContent>
           </CardContent>
         </Tabs>
       </Card>

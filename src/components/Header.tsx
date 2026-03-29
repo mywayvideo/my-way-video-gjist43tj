@@ -203,9 +203,9 @@ export function Header() {
         </DialogContent>
       </Dialog>
 
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm p-4 flex justify-between items-center">
+        <div className="container mx-auto px-0 md:px-4 h-10 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="lg:hidden">
@@ -266,7 +266,7 @@ export function Header() {
               <img
                 src={logoUrl}
                 alt="My Way Video"
-                className="h-8 md:h-10 w-auto hover:opacity-90 transition-opacity"
+                className="h-10 w-auto hover:opacity-90 transition-opacity cursor-pointer"
               />
             </Link>
           </div>
@@ -300,7 +300,7 @@ export function Header() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 md:gap-2 shrink-0">
+          <div className="flex items-center gap-4 shrink-0">
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={openMobileSearch}>
               <Search className="w-5 h-5" />
             </Button>
@@ -336,36 +336,50 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex flex-col items-start justify-center gap-0.5 h-auto py-1 px-2 max-w-[200px]"
+                    className="flex flex-col items-start justify-center gap-0.5 h-auto p-2 rounded-lg hover:bg-secondary transition-all duration-200 max-w-[200px] cursor-pointer hover:opacity-80"
                   >
-                    <span className="text-[10px] md:text-xs text-muted-foreground mb-0 leading-none">
-                      Bem-vindo,
-                    </span>
-                    <div className="flex items-center text-left">
-                      <User className="w-5 h-5 shrink-0 mr-2" />
-                      <span className="text-sm md:text-base font-semibold text-foreground whitespace-normal leading-tight">
+                    <span className="text-xs text-muted-foreground leading-none">Bem-vindo,</span>
+                    <div className="flex items-center text-left gap-2">
+                      <User className="w-5 h-5 shrink-0" />
+                      <span className="text-sm sm:text-base font-semibold text-foreground whitespace-nowrap overflow-hidden text-ellipsis">
                         {customer?.full_name || 'Usuário'}
                       </span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="w-56 bg-card border border-border rounded-lg shadow-lg animate-in fade-in duration-200 slide-in-from-top-1"
+                >
+                  <DropdownMenuItem
+                    asChild
+                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                  >
                     <Link to="/profile">Meu Perfil</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem
+                    asChild
+                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                  >
                     <Link to="/favorites">Meus Favoritos</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem
+                    asChild
+                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                  >
                     <Link to="/cart">Meu Carrinho</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/order-history">Historico de Compras</Link>
+                  <DropdownMenuItem
+                    asChild
+                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                  >
+                    <Link to="/order-history">Histórico de Compras</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="border-t border-border m-1" />
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-red-500 cursor-pointer focus:bg-red-500/10 focus:text-red-500"
+                    className="p-3 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive focus:text-destructive cursor-pointer transition-colors"
                   >
                     Sair
                   </DropdownMenuItem>
