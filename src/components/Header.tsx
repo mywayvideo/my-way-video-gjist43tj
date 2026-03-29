@@ -11,6 +11,15 @@ import { DirectSearch } from '@/components/DirectSearch'
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog'
 import { useDebounce } from '@/hooks/use-debounce'
 import { searchProducts } from '@/services/database-search'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useCurrentCustomer } from '@/hooks/use-current-customer'
+import { toast } from 'sonner'
 
 export function Header() {
   const { user, signOut } = useAuth()
@@ -21,6 +30,7 @@ export function Header() {
   const [mobileAiQuery, setMobileAiQuery] = useState('')
   const [mobileDbQuery, setMobileDbQuery] = useState('')
   const { totalItems } = useCartStore()
+  const { customer } = useCurrentCustomer()
 
   const [mobileDbResults, setMobileDbResults] = useState<any[]>([])
   const [isSearchingDb, setIsSearchingDb] = useState(false)
@@ -31,6 +41,13 @@ export function Header() {
     (user.app_metadata?.role === 'admin' ||
       user.user_metadata?.role === 'admin' ||
       (user as any).role === 'admin')
+
+  const handleLogout = async () => {
+    await signOut()
+    localStorage.removeItem('auth-token')
+    toast.success('Voce foi desconectado com sucesso!')
+    navigate('/login')
+  }
 
   useEffect(() => {
     if (debouncedDbQuery.trim().length >= 2) {
@@ -315,11 +332,37 @@ export function Header() {
               )}
             </Button>
             {user ? (
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                  Sair
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 max-w-[200px]">
+                    <User className="w-5 h-5 shrink-0" />
+                    <span className="hidden md:inline-block truncate font-medium">
+                      Bem-vindo{customer?.full_name ? `, ${customer.full_name}` : '!'}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">Meu Perfil</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/favorites">Meus Favoritos</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/cart">Meu Carrinho</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/order-history">Historico de Compras</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-500 cursor-pointer focus:bg-red-500/10 focus:text-red-500"
+                  >
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Button variant="ghost" size="icon" onClick={() => navigate('/login')}>
                 <User className="w-5 h-5" />
