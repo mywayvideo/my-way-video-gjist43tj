@@ -118,83 +118,82 @@ export function AddressTab({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6">
       {addresses.length === 0 ? (
-        <Card className="border-dashed bg-muted/20">
-          <CardContent className="flex flex-col items-center justify-center p-10 text-center">
-            <MapPin className="w-12 h-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhum endereço cadastrado</h3>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md">
-              Adicione um endereço de {type === 'shipping' ? 'entrega' : 'cobrança'} para facilitar
-              suas futuras compras.
-            </p>
-            <Button onClick={() => openModal()}>
-              <Plus className="w-4 h-4 mr-2" /> Adicionar Endereço
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="border-2 border-dashed border-border rounded-lg p-10 text-center flex flex-col items-center justify-center">
+          <MapPin className="w-12 h-12 text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-medium mb-2">Nenhum endereço cadastrado</h3>
+          <p className="text-muted-foreground text-sm mb-6 max-w-md">
+            Adicione um endereço de {type === 'shipping' ? 'entrega' : 'cobrança'} para facilitar
+            suas futuras compras.
+          </p>
+          <Button
+            onClick={() => openModal()}
+            className="bg-primary text-primary-foreground hover:opacity-90 transition-all duration-200"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Adicionar Endereço
+          </Button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {addresses.map((address) => (
-            <Card
+            <div
               key={address.id}
-              className={address.is_default ? 'border-primary/50 shadow-sm' : ''}
+              className="border border-border rounded-lg p-4 mb-4 flex flex-col"
             >
-              <CardContent className="p-5">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    {address.is_default && (
-                      <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                        PADRÃO
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  {address.is_default && (
+                    <span className="bg-primary text-primary-foreground py-1 px-2 rounded-full text-xs font-medium">
+                      Padrão
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-primary transition-all duration-200"
+                    onClick={() => openModal(address)}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  {!address.is_default && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openModal(address)}
+                      className="text-muted-foreground hover:text-destructive transition-all duration-200"
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja excluir este endereço?'))
+                          deleteAddress(address.id)
+                      }}
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </Button>
-                    {!address.is_default && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => {
-                          if (confirm('Tem certeza que deseja excluir este endereço?'))
-                            deleteAddress(address.id)
-                        }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm space-y-1">
-                  <p className="font-medium">
-                    {address.street}, {address.number}
-                  </p>
-                  {address.complement && (
-                    <p className="text-muted-foreground">{address.complement}</p>
                   )}
-                  <p className="text-muted-foreground">{address.neighborhood}</p>
-                  <p className="text-muted-foreground">
-                    {address.city} - {address.state}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {address.zip_code} • {address.country}
-                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-sm space-y-1">
+                <p className="font-medium">
+                  {address.street}, {address.number}
+                </p>
+                {address.complement && (
+                  <p className="text-muted-foreground">{address.complement}</p>
+                )}
+                <p className="text-muted-foreground">{address.neighborhood}</p>
+                <p className="text-muted-foreground">
+                  {address.city} - {address.state}
+                </p>
+                <p className="text-muted-foreground">
+                  {address.zip_code} • {address.country}
+                </p>
+              </div>
+            </div>
           ))}
           <Button
             variant="outline"
-            className="h-full min-h-[160px] border-dashed flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors"
+            className="h-full min-h-[160px] border-dashed border-2 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-all duration-200 rounded-lg"
             onClick={() => openModal()}
           >
             <Plus className="w-6 h-6 text-muted-foreground" />
@@ -204,62 +203,87 @@ export function AddressTab({
       )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px] overflow-y-auto max-h-[90vh]">
+        <DialogContent className="sm:max-w-md bg-card rounded-xl shadow-lg p-6 border-none [&>button]:text-muted-foreground hover:[&>button]:text-foreground">
           <DialogHeader>
-            <DialogTitle>{editingAddress ? 'Editar Endereço' : 'Novo Endereço'}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              {editingAddress ? 'Editar Endereço' : 'Novo Endereço'}
+            </DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
                   name="zip_code"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>{CUSTOMER_LABELS.zip_code}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-semibold text-foreground mb-2 block">
+                        {CUSTOMER_LABELS.zip_code}
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-destructive text-sm mt-1" />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="street"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-4">
-                      <FormLabel>{CUSTOMER_LABELS.street}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="number"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>{CUSTOMER_LABELS.number}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="street"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel className="font-semibold text-foreground mb-2 block">
+                          {CUSTOMER_LABELS.street}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-destructive text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-semibold text-foreground mb-2 block">
+                          {CUSTOMER_LABELS.number}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-destructive text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="complement"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-4">
-                      <FormLabel>{CUSTOMER_LABELS.complement}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-semibold text-foreground mb-2 block">
+                        {CUSTOMER_LABELS.complement}
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ''} />
+                        <Input
+                          {...field}
+                          value={field.value || ''}
+                          className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-destructive text-sm mt-1" />
                     </FormItem>
                   )}
                 />
@@ -267,51 +291,73 @@ export function AddressTab({
                   control={form.control}
                   name="neighborhood"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                      <FormLabel>{CUSTOMER_LABELS.neighborhood}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-semibold text-foreground mb-2 block">
+                        {CUSTOMER_LABELS.neighborhood}
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-destructive text-sm mt-1" />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                      <FormLabel>{CUSTOMER_LABELS.city}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                      <FormLabel>{CUSTOMER_LABELS.state}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-semibold text-foreground mb-2 block">
+                          {CUSTOMER_LABELS.city}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-destructive text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-semibold text-foreground mb-2 block">
+                          {CUSTOMER_LABELS.state}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-destructive text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="country"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                      <FormLabel>{CUSTOMER_LABELS.country}</FormLabel>
+                    <FormItem>
+                      <FormLabel className="font-semibold text-foreground mb-2 block">
+                        {CUSTOMER_LABELS.country}
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input
+                          {...field}
+                          className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-destructive text-sm mt-1" />
                     </FormItem>
                   )}
                 />
@@ -320,7 +366,7 @@ export function AddressTab({
                 control={form.control}
                 name="is_default"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 mt-4">
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg border border-input p-4 mt-4">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -329,21 +375,31 @@ export function AddressTab({
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>{CUSTOMER_LABELS.is_default}</FormLabel>
+                      <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        {CUSTOMER_LABELS.is_default}
+                      </FormLabel>
                     </div>
                   </FormItem>
                 )}
               />
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+              <DialogFooter className="pt-4 flex gap-3">
+                <Button
+                  type="button"
+                  className="bg-secondary text-secondary-foreground hover:opacity-80 transition-all duration-200"
+                  onClick={() => setIsModalOpen(false)}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                <Button
+                  type="submit"
+                  className="bg-primary text-primary-foreground hover:opacity-90 transition-all duration-200"
+                  disabled={form.formState.isSubmitting}
+                >
                   {form.formState.isSubmitting ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
-                  )}{' '}
+                  )}
                   Salvar
                 </Button>
               </DialogFooter>

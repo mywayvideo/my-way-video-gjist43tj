@@ -23,38 +23,43 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-6 md:py-10 px-4">
-      <div className="flex items-center gap-4 mb-8">
-        <Link to="/" className="p-2 hover:bg-secondary rounded-full transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h1 className="text-2xl font-bold">Meu Dashboard</h1>
+    <div className="container max-w-4xl mx-auto py-4 md:py-6 px-4 md:px-6">
+      <div className="flex items-center justify-between p-4 md:p-6 border-b border-border mb-6 md:mb-8">
+        <div className="flex items-center gap-4">
+          <Link to="/" className="text-primary hover:opacity-80 transition-opacity duration-200">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <h1 className="text-2xl font-bold">Meu Dashboard</h1>
+        </div>
       </div>
 
       <Tabs defaultValue="pessoal" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 h-auto gap-2 md:gap-0 bg-transparent border-b border-border p-0">
+        <TabsList className="flex w-full h-auto gap-4 md:gap-6 bg-transparent border-b border-border p-0 overflow-x-auto">
           <TabsTrigger
             value="pessoal"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-4 py-3 bg-transparent font-medium"
+            className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-3 py-3 bg-transparent font-medium whitespace-nowrap"
           >
             Dados Pessoais
           </TabsTrigger>
           <TabsTrigger
             value="entrega"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-4 py-3 bg-transparent font-medium"
+            className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-3 py-3 bg-transparent font-medium whitespace-nowrap"
           >
             Endereço de Entrega
           </TabsTrigger>
           <TabsTrigger
             value="cobranca"
-            className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-4 py-3 bg-transparent font-medium"
+            className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-3 py-3 bg-transparent font-medium whitespace-nowrap"
           >
             Endereço de Cobrança
           </TabsTrigger>
         </TabsList>
 
-        <div className="pt-8">
-          <TabsContent value="pessoal" className="m-0 focus-visible:outline-none">
+        <div className="pt-6 md:pt-8">
+          <TabsContent
+            value="pessoal"
+            className="p-4 md:p-6 m-0 focus-visible:outline-none animate-fade-in duration-300"
+          >
             {customer && (
               <PersonalInfoTab
                 customer={customer}
@@ -64,10 +69,16 @@ export default function Dashboard() {
               />
             )}
           </TabsContent>
-          <TabsContent value="entrega" className="m-0 focus-visible:outline-none">
+          <TabsContent
+            value="entrega"
+            className="p-4 md:p-6 m-0 focus-visible:outline-none animate-fade-in duration-300"
+          >
             <AddressTab customerId={customer?.id} type="shipping" />
           </TabsContent>
-          <TabsContent value="cobranca" className="m-0 focus-visible:outline-none">
+          <TabsContent
+            value="cobranca"
+            className="p-4 md:p-6 m-0 focus-visible:outline-none animate-fade-in duration-300"
+          >
             <AddressTab customerId={customer?.id} type="billing" />
           </TabsContent>
         </div>

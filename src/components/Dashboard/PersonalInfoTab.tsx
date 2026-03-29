@@ -91,76 +91,21 @@ export function PersonalInfoTab({
 
   if (!isEditing) {
     return (
-      <Card className="border-border animate-fade-in-up">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:justify-between items-start gap-4 mb-6">
-            <div className="flex items-center gap-6">
-              <div className="relative w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden border shrink-0">
-                {customer.profile_photo_url ? (
-                  <img
-                    src={customer.profile_photo_url}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Camera className="w-8 h-8 text-muted-foreground" />
-                )}
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold">{customer.full_name}</h3>
-                <p className="text-muted-foreground text-sm">{customer.email}</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing(true)}
-              className="shrink-0"
-            >
-              <Pencil className="w-4 h-4 mr-2" /> Editar
-            </Button>
-          </div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-start">
+          <h2 className="text-xl font-bold">Informações Pessoais</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setEditing(true)}
+            className="text-primary hover:bg-secondary hover:text-primary transition-all duration-200"
+          >
+            <Pencil className="w-5 h-5" />
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 pt-6 border-t border-border/50">
-            <div>
-              <Label className="text-muted-foreground text-xs">{CUSTOMER_LABELS.phone}</Label>
-              <p className="font-medium">{customer.phone || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground text-xs">{CUSTOMER_LABELS.cpf}</Label>
-              <p className="font-medium">{customer.cpf || '-'}</p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground text-xs">
-                {CUSTOMER_LABELS.date_of_birth}
-              </Label>
-              <p className="font-medium">
-                {customer.date_of_birth
-                  ? new Date(customer.date_of_birth).toLocaleDateString('pt-BR')
-                  : '-'}
-              </p>
-            </div>
-            <div>
-              <Label className="text-muted-foreground text-xs">{CUSTOMER_LABELS.gender}</Label>
-              <p className="font-medium capitalize">{customer.gender || '-'}</p>
-            </div>
-            <div className="md:col-span-2">
-              <Label className="text-muted-foreground text-xs">
-                {CUSTOMER_LABELS.company_name}
-              </Label>
-              <p className="font-medium">{customer.company_name || '-'}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="border-border shadow-md animate-fade-in-up">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row items-center gap-6 mb-8 pb-6 border-b border-border">
-          <div className="relative w-24 h-24 rounded-full bg-secondary flex items-center justify-center overflow-hidden border group shrink-0">
+        <div className="flex items-center gap-6 mb-6">
+          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden border shrink-0">
             {customer.profile_photo_url ? (
               <img
                 src={customer.profile_photo_url}
@@ -170,160 +115,286 @@ export function PersonalInfoTab({
             ) : (
               <Camera className="w-8 h-8 text-muted-foreground" />
             )}
-            <div
-              className="absolute inset-0 bg-black/50 hidden group-hover:flex flex-col items-center justify-center cursor-pointer transition-all"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {isUploading ? (
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
-              ) : (
-                <Camera className="w-6 h-6 text-white" />
-              )}
-              <span className="text-[10px] text-white mt-1 font-medium">Mudar</span>
-            </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              disabled={isUploading}
-            />
           </div>
           <div>
-            <h3 className="font-medium text-lg">Foto de Perfil</h3>
-            <p className="text-sm text-muted-foreground">
-              Clique na imagem para alterar. Formatos suportados: JPG, PNG.
-            </p>
+            <h3 className="text-xl font-semibold">{customer.full_name}</h3>
+            <p className="text-muted-foreground">{customer.email}</p>
           </div>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{CUSTOMER_LABELS.full_name}</FormLabel>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-border">
+          <div>
+            <Label className="font-semibold text-foreground mb-2 block">
+              {CUSTOMER_LABELS.phone}
+            </Label>
+            <Input
+              readOnly
+              value={customer.phone || '-'}
+              className="bg-secondary border-none cursor-default"
+            />
+          </div>
+          <div>
+            <Label className="font-semibold text-foreground mb-2 block">
+              {CUSTOMER_LABELS.cpf}
+            </Label>
+            <Input
+              readOnly
+              value={customer.cpf || '-'}
+              className="bg-secondary border-none cursor-default"
+            />
+          </div>
+          <div>
+            <Label className="font-semibold text-foreground mb-2 block">
+              {CUSTOMER_LABELS.date_of_birth}
+            </Label>
+            <Input
+              readOnly
+              value={
+                customer.date_of_birth
+                  ? new Date(customer.date_of_birth).toLocaleDateString('pt-BR')
+                  : '-'
+              }
+              className="bg-secondary border-none cursor-default"
+            />
+          </div>
+          <div>
+            <Label className="font-semibold text-foreground mb-2 block">
+              {CUSTOMER_LABELS.gender}
+            </Label>
+            <Input
+              readOnly
+              value={customer.gender || '-'}
+              className="bg-secondary border-none cursor-default capitalize"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Label className="font-semibold text-foreground mb-2 block">
+              {CUSTOMER_LABELS.company_name}
+            </Label>
+            <Input
+              readOnly
+              value={customer.company_name || '-'}
+              className="bg-secondary border-none cursor-default"
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-start mb-6">
+        <h2 className="text-xl font-bold">Editar Informações</h2>
+      </div>
+
+      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary hover:bg-accent transition-all duration-200 mb-8">
+        <div className="flex flex-col items-center justify-center gap-2">
+          {customer.profile_photo_url ? (
+            <img
+              src={customer.profile_photo_url}
+              alt="Profile"
+              className="rounded-lg max-w-xs mt-4 object-cover"
+            />
+          ) : (
+            <Camera className="w-12 h-12 text-muted-foreground" />
+          )}
+          <p className="text-sm text-muted-foreground mt-2">Formatos suportados: JPG, PNG.</p>
+          <Button
+            type="button"
+            className="mt-2 bg-primary text-primary-foreground hover:opacity-90 transition-all duration-200"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Camera className="w-4 h-4 mr-2" />
+            )}
+            Fazer Upload
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            disabled={isUploading}
+          />
+        </div>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="full_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.full_name}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value || ''}
+                      className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.email}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      {...field}
+                      value={field.value || ''}
+                      className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.phone}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="(00) 00000-0000"
+                      className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cpf"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.cpf}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="000.000.000-00"
+                      className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="date_of_birth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.date_of_birth}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value || ''}
+                      className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.gender}
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ''}>
                     <FormControl>
-                      <Input {...field} value={field.value || ''} />
+                      <SelectTrigger className="border-input rounded-lg focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{CUSTOMER_LABELS.email}</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{CUSTOMER_LABELS.phone}</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ''} placeholder="(00) 00000-0000" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cpf"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{CUSTOMER_LABELS.cpf}</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ''} placeholder="000.000.000-00" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="date_of_birth"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{CUSTOMER_LABELS.date_of_birth}</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{CUSTOMER_LABELS.gender}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="feminino">Feminino</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                        <SelectItem value="prefiro_nao_dizer">Prefiro não dizer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>{CUSTOMER_LABELS.company_name}</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditing(false)}
-                disabled={form.formState.isSubmitting}
-              >
-                <X className="w-4 h-4 mr-2" /> Cancelar
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Salvar Alterações
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+                    <SelectContent>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                      <SelectItem value="prefiro_nao_dizer">Prefiro não dizer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="company_name"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel className="font-semibold text-foreground mb-2 block">
+                    {CUSTOMER_LABELS.company_name}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={field.value || ''}
+                      className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-destructive text-sm mt-1" />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+            <Button
+              type="button"
+              className="bg-secondary text-secondary-foreground hover:opacity-80 transition-all duration-200"
+              onClick={() => setEditing(false)}
+              disabled={form.formState.isSubmitting}
+            >
+              <X className="w-4 h-4 mr-2" /> Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="bg-primary text-primary-foreground hover:opacity-90 transition-all duration-200"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Salvar Alterações
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   )
 }
