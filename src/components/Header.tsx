@@ -360,19 +360,19 @@ export function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     asChild
-                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
                   >
                     <Link to="/favorites">Meus Favoritos</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     asChild
-                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
                   >
                     <Link to="/cart">Meu Carrinho</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     asChild
-                    className="p-3 text-sm text-foreground hover:bg-secondary focus:bg-secondary cursor-pointer transition-colors"
+                    className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors"
                   >
                     <Link to="/order-history">Histórico de Compras</Link>
                   </DropdownMenuItem>
