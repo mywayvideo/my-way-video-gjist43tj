@@ -6,15 +6,27 @@ import { useCartStore } from '@/stores/useCartStore'
 import { useState } from 'react'
 import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
+import { useSearchState } from '@/hooks/useSearchState'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
   const [imgError, setImgError] = useState(false)
+  const { isSearchActive, searchQuery } = useSearchState()
 
   const hasImage =
     product.image_url && typeof product.image_url === 'string' && product.image_url.trim() !== ''
 
   const displayPrice = formatPrice(product.price_usd)
+
+  const searchSuffix =
+    isSearchActive && searchQuery ? `?from=search&q=${encodeURIComponent(searchQuery)}` : ''
+  const linkTo = `/product/${product.id}${searchSuffix}`
+
+  const handleLinkClick = () => {
+    if (isSearchActive) {
+      sessionStorage.setItem('search-scroll-position', window.scrollY.toString())
+    }
+  }
 
   return (
     <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative">
@@ -25,7 +37,8 @@ export function ProductCard({ product }: { product: any }) {
           </div>
         )}
         <Link
-          to={`/product/${product.id}`}
+          to={linkTo}
+          onClick={handleLinkClick}
           className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
         >
           {hasImage && !imgError ? (
@@ -45,7 +58,7 @@ export function ProductCard({ product }: { product: any }) {
         </Link>
       </CardHeader>
       <CardContent className="flex-1 p-5">
-        <Link to={`/product/${product.id}`}>
+        <Link to={linkTo} onClick={handleLinkClick}>
           <h3 className="font-semibold text-sm md:text-base mb-2 group-hover:text-primary transition-colors">
             {product.name}
           </h3>

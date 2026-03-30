@@ -19,6 +19,7 @@ import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { searchProducts } from '@/services/database-search'
 import { useDebounce } from '@/hooks/use-debounce'
 import { formatPrice } from '@/utils/priceFormatter'
+import { useSearchState } from '@/hooks/useSearchState'
 
 export function AIPrompt({
   initialQuery = '',
@@ -44,12 +45,16 @@ export function AIPrompt({
 
   const [responseMessage, setResponseMessage] = useState<string | null>(null)
   const [referencedProducts, setReferencedProducts] = useState<any[]>([])
+  const [restoreError, setRestoreError] = useState(false)
 
   const { toast } = useToast()
 
   const inputRef = useRef<HTMLInputElement>(null)
 
   const debouncedQuery = useDebounce(query, 300)
+
+  const searchStore = useSearchState()
+  const initialized = useRef(false)
 
   const clearResponse = () => {
     setResponseMessage(null)
@@ -66,8 +71,59 @@ export function AIPrompt({
   }, [])
 
   useEffect(() => {
-    setQuery(initialQuery)
+    if (initialQuery) {
+      setQuery(initialQuery)
+    }
   }, [initialQuery])
+
+  useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
+
+    const urlQ = searchParams.get('q')
+    const urlType = searchParams.get('type') as 'ai' | 'database' | null
+
+    if (urlQ) {
+      const restored = searchStore.restoreSearchState()
+      const currentState = useSearchState.getState()
+
+      if (restored && currentState.searchQuery === urlQ) {
+        setQuery(currentState.searchQuery)
+        if (currentState.searchType === 'database') {
+          setDbResults(currentState.dbResults || [])
+          setResult({
+            status:
+              currentState.dbResults && currentState.dbResults.length > 0
+                ? 'database_success'
+                : 'database_empty',
+          })
+        } else {
+          setResponseMessage(currentState.aiResponse)
+          setReferencedProducts(currentState.productResults || [])
+          setResult({
+            status: 'success',
+            should_show_whatsapp_button: currentState.shouldShowWhatsapp,
+          })
+        }
+
+        const scrollPos = sessionStorage.getItem('search-scroll-position')
+        if (scrollPos) {
+          setTimeout(() => {
+            window.scrollTo({ top: parseInt(scrollPos), behavior: 'smooth' })
+            sessionStorage.removeItem('search-scroll-position')
+          }, 300)
+        }
+      } else {
+        setQuery(urlQ)
+        if (urlType === 'database' || activeSearchType === 'database') {
+          performDatabaseSearch(urlQ, true)
+        } else {
+          handleSearch(undefined, urlQ, true)
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -91,7 +147,7 @@ export function AIPrompt({
     }
   }, [debouncedQuery, activeSearchType])
 
-  const performDatabaseSearch = async (searchQuery: string) => {
+  const performDatabaseSearch = async (searchQuery: string, isRestore = false) => {
     setIsLoading(true)
     setError(null)
     setResponseMessage(null)
@@ -102,13 +158,27 @@ export function AIPrompt({
       if (data && data.length > 0) {
         setDbResults(data)
         setResult({ status: 'database_success' })
+        searchStore.saveSearchState(searchQuery, null, [], 'database', data)
       } else {
         setDbResults([])
         setResult({ status: 'database_empty' })
+        searchStore.saveSearchState(searchQuery, null, [], 'database', [])
+      }
+
+      if (!isRestore) {
+        setSearchParams(
+          (prev) => {
+            prev.set('q', searchQuery)
+            prev.set('type', 'database')
+            return prev
+          },
+          { replace: true },
+        )
       }
     } catch (err: any) {
       console.error('Database search error:', err)
       setError('Erro ao pesquisar. Tente novamente.')
+      if (isRestore) setRestoreError(true)
       toast({
         variant: 'destructive',
         title: 'Erro na pesquisa',
@@ -120,12 +190,14 @@ export function AIPrompt({
     }
   }
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string, isRestore = false) => {
     if (e) e.preventDefault()
-    if (!query.trim() || isLoading) return
+
+    const queryToUse = overrideQuery || query
+    if (!queryToUse.trim() || isLoading) return
 
     if (activeSearchType === 'database') {
-      performDatabaseSearch(query.trim())
+      performDatabaseSearch(queryToUse.trim(), isRestore)
       return
     }
 
@@ -160,7 +232,7 @@ export function AIPrompt({
       }
 
       const payload: Record<string, any> = {
-        query: query.trim(),
+        query: queryToUse.trim(),
       }
 
       if (activeProductId) {
@@ -197,10 +269,31 @@ export function AIPrompt({
       })
       setResponseMessage(data.response || data.message)
       setReferencedProducts(data.referenced_internal_products || [])
+
+      searchStore.saveSearchState(
+        queryToUse.trim(),
+        data.response || data.message,
+        data.referenced_internal_products || [],
+        'ai',
+        [],
+        data.should_show_whatsapp_button,
+      )
+
+      if (!isRestore) {
+        setSearchParams(
+          (prev) => {
+            prev.set('q', queryToUse.trim())
+            prev.set('type', 'ai')
+            return prev
+          },
+          { replace: true },
+        )
+      }
     } catch (err: any) {
       const errorMsg =
         err.message || 'Ocorreu um erro ao processar sua pesquisa. Por favor, tente novamente.'
       setError(errorMsg)
+      if (isRestore) setRestoreError(true)
       toast({
         variant: 'destructive',
         title: 'Erro na pesquisa',
@@ -213,6 +306,15 @@ export function AIPrompt({
 
   const handleClear = () => {
     clearResponse()
+    searchStore.clearSearchState()
+    setSearchParams(
+      (prev) => {
+        prev.delete('q')
+        prev.delete('type')
+        return prev
+      },
+      { replace: true },
+    )
     window.dispatchEvent(new Event('clear-search-response'))
     if (inputRef.current) {
       inputRef.current.focus()
@@ -282,12 +384,30 @@ export function AIPrompt({
         </div>
       )}
 
-      {error && !isLoading && activeSearchType !== 'database' && (
+      {error && !isLoading && !restoreError && activeSearchType !== 'database' && (
         <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up">
           <p className="text-destructive font-medium">{error}</p>
           <Button onClick={() => handleSearch()} variant="outline" className="gap-2 h-11 px-6">
             <RefreshCcw className="w-4 h-4" />
             Tentar novamente
+          </Button>
+        </div>
+      )}
+
+      {restoreError && !isLoading && (
+        <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up w-full">
+          <p className="text-destructive font-medium">
+            Nao foi possivel restaurar a busca anterior.
+          </p>
+          <Button
+            onClick={() => {
+              setRestoreError(false)
+              handleClear()
+            }}
+            variant="outline"
+            className="gap-2 h-11 px-6 bg-background"
+          >
+            Nova Busca
           </Button>
         </div>
       )}
@@ -331,7 +451,10 @@ export function AIPrompt({
             {dbResults.map((product) => (
               <Link
                 key={product.id}
-                to={`/product/${product.id}`}
+                to={`/product/${product.id}?from=search&q=${encodeURIComponent(searchStore.searchQuery || query)}`}
+                onClick={() =>
+                  sessionStorage.setItem('search-scroll-position', window.scrollY.toString())
+                }
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50 group relative"
               >
                 <div className="w-12 h-12 md:w-14 md:h-14 shrink-0 bg-muted/30 rounded-lg overflow-hidden flex items-center justify-center">

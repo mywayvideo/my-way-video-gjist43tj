@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, Link, useLocation } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +31,7 @@ import {
   Send,
   Info,
   HelpCircle,
+  ChevronLeft,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
@@ -112,6 +113,7 @@ const markdownComponents = {
 export default function Product() {
   const { id } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<(ProductType & { technical_info?: string | null }) | null>(
     null,
@@ -190,6 +192,7 @@ export default function Product() {
   }, [])
 
   useEffect(() => {
+    window.scrollTo(0, 0)
     if (!id) return
 
     // Dynamic Chat Context Management: Reset state on product change (or URL change)
@@ -777,6 +780,16 @@ export default function Product() {
         onClose={() => setIsTechnicalInfoOpen(false)}
         technicalInfo={product.technical_info || ''}
       />
+
+      {location.search.includes('from=search') && (
+        <Button
+          onClick={() => navigate(`/?q=${new URLSearchParams(location.search).get('q') || ''}`)}
+          className="fixed bottom-6 left-6 z-50 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 h-14 px-6 bg-primary text-primary-foreground font-semibold"
+        >
+          <ChevronLeft className="w-5 h-5 mr-2" />
+          Voltar para Busca
+        </Button>
+      )}
     </div>
   )
 }
