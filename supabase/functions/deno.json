@@ -11,6 +11,7 @@
     "change-customer-password": 1,
     "send-confirmation-email": 1,
     "create-customer": 1,
-    "send-welcome-email": 1
+    "send-welcome-email": 1,
+    "create-customer-public": 1
   }
 }
