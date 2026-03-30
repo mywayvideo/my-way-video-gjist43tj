@@ -1,5 +1,19 @@
-import { useEffect } from 'react'
-import { Users, ShoppingCart, DollarSign, TrendingDown, AlertCircle, RefreshCw } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import {
+  Users,
+  ShoppingCart,
+  DollarSign,
+  TrendingDown,
+  AlertCircle,
+  RefreshCw,
+  ShoppingBag,
+  TrendingUp,
+  BarChart3,
+  Zap,
+  Clock,
+  Activity,
+  ArrowRight,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   PieChart,
@@ -13,6 +27,15 @@ import {
   Tooltip,
 } from 'recharts'
 import { ChartContainer, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
+import { supabase } from '@/lib/supabase/client'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useToast } from '@/hooks/use-toast'
 
 const ROLE_NAMES = ['customer', 'vip', 'reseller', 'collaborator', 'admin']
 
@@ -26,9 +49,154 @@ const chartConfig = {
 }
 
 export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMetrics }: any) {
+  const [realtimeSessions, setRealtimeSessions] = useState<any[]>([])
+  const [historyPeriod, setHistoryPeriod] = useState('7')
+  const [historyRaw, setHistoryRaw] = useState<any[]>([])
+  const [historyData, setHistoryData] = useState<any[]>([])
+  const [loadingExtra, setLoadingExtra] = useState(true)
+  const [extraError, setExtraError] = useState<string | null>(null)
+  const { toast } = useToast()
+
   useEffect(() => {
     fetchMetrics()
   }, [fetchMetrics])
+
+  const fetchActiveSessions = async () => {
+    try {
+      const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+      const { data, error } = await supabase
+        .from('user_sessions')
+        .select('*')
+        .is('logout_timestamp', null)
+        .gte('login_timestamp', fiveMinsAgo)
+
+      if (error) throw error
+      setRealtimeSessions(data || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const fetchHistory = async () => {
+    try {
+      setLoadingExtra(true)
+      setExtraError(null)
+      const days = parseInt(historyPeriod)
+      const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+      const { data, error } = await supabase
+        .from('user_sessions')
+        .select('login_timestamp, logout_timestamp, page_viewed')
+        .gte('login_timestamp', periodStart)
+
+      if (error) throw error
+
+      setHistoryRaw(data || [])
+
+      const grouped: Record<string, number> = {}
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+        grouped[d.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' })] = 0
+      }
+
+      data?.forEach((row) => {
+        const d = new Date(row.login_timestamp).toLocaleDateString('pt-BR', {
+          month: 'short',
+          day: 'numeric',
+        })
+        if (grouped[d] !== undefined) {
+          grouped[d]++
+        }
+      })
+
+      setHistoryData(Object.entries(grouped).map(([date, count]) => ({ date, count })))
+    } catch (err: any) {
+      setExtraError('Não foi possível carregar dados. ' + err.message)
+    } finally {
+      setLoadingExtra(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchHistory()
+  }, [historyPeriod])
+
+  useEffect(() => {
+    fetchActiveSessions()
+    const interval = setInterval(fetchActiveSessions, 5000)
+
+    const channel = supabase
+      .channel('realtime_sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_sessions' }, () => {
+        fetchActiveSessions()
+      })
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          toast({
+            title: 'Aviso de Conexão',
+            description: 'Falha ao conectar tempo real. Tentando reconectar...',
+            variant: 'destructive',
+          })
+        }
+      })
+
+    return () => {
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
+  }, [toast])
+
+  const totalOnline = realtimeSessions.length
+  const visitingProducts = realtimeSessions.filter((s) =>
+    s.page_viewed?.includes('/product'),
+  ).length
+  const inCheckout = realtimeSessions.filter(
+    (s) => s.page_viewed?.includes('/checkout') || s.page_viewed?.includes('/cart'),
+  ).length
+
+  const completedSessions = historyRaw.filter((s) => s.logout_timestamp)
+  let avgSessionMins = 0
+  if (completedSessions.length > 0) {
+    const totalMs = completedSessions.reduce(
+      (acc, s) =>
+        acc + (new Date(s.logout_timestamp).getTime() - new Date(s.login_timestamp).getTime()),
+      0,
+    )
+    avgSessionMins = Math.round(totalMs / completedSessions.length / 60000)
+  }
+
+  const bounceRate =
+    historyRaw.length > 0
+      ? Math.round((historyRaw.filter((s) => !s.page_viewed).length / historyRaw.length) * 100)
+      : 0
+
+  const pageCounts = realtimeSessions.reduce((acc: Record<string, number>, s) => {
+    if (s.page_viewed) {
+      acc[s.page_viewed] = (acc[s.page_viewed] || 0) + 1
+    }
+    return acc
+  }, {})
+  let mostVisited = '-'
+  let maxCount = 0
+  Object.entries(pageCounts).forEach(([page, count]) => {
+    if (count > maxCount) {
+      mostVisited = page
+      maxCount = count
+    }
+  })
+
+  const totalHistoryAccesses = historyRaw.length
+  const dailyAverage = historyPeriod
+    ? Math.round(totalHistoryAccesses / parseInt(historyPeriod))
+    : 0
+
+  let peakDay = '-'
+  let peakValue = -1
+  historyData.forEach((d) => {
+    if (d.count > peakValue) {
+      peakValue = d.count
+      peakDay = d.date
+    }
+  })
 
   if (loadingMetrics)
     return (
@@ -183,6 +351,151 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
               </LineChart>
             </ChartContainer>
           </div>
+        </div>
+      </div>
+
+      <div className="space-y-[24px] mt-[24px]">
+        <div className="bg-card rounded-[12px] p-[24px] shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+          <div className="flex items-center justify-between mb-[16px]">
+            <h3 className="text-[16px] font-semibold text-foreground flex items-center gap-2">
+              Usuários Online Agora
+              <span className="bg-green-500/20 text-green-500 text-[12px] px-[8px] py-[2px] rounded-full animate-pulse">
+                {totalOnline} usuários
+              </span>
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px] mb-[24px]">
+            <MetricCard
+              title="Total Online"
+              value={totalOnline}
+              subtext="Últimos 5 minutos"
+              icon={<Users className="w-8 h-8" />}
+            />
+            <MetricCard
+              title="Visitando Produtos"
+              value={visitingProducts}
+              subtext="Páginas de produtos"
+              icon={<ShoppingBag className="w-8 h-8" />}
+            />
+            <MetricCard
+              title="No Checkout"
+              value={inCheckout}
+              subtext="Carrinho ou checkout"
+              icon={<ShoppingCart className="w-8 h-8" />}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-[24px] text-[14px] text-gray-400">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              <span>
+                Tempo Médio de Sessão:{' '}
+                <strong className="text-foreground">{avgSessionMins} minutos</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              <span>
+                Taxa de Rejeição: <strong className="text-foreground">{bounceRate}%</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ArrowRight className="w-4 h-4 text-primary" />
+              <span>
+                Página Mais Visitada: <strong className="text-foreground">{mostVisited}</strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card rounded-[12px] p-[24px] shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-[24px] gap-4">
+            <h3 className="text-[16px] font-semibold text-foreground">Histórico de Acessos</h3>
+            <Select value={historyPeriod} onValueChange={setHistoryPeriod}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Selecione o período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 90 dias</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {loadingExtra ? (
+            <div className="h-[300px] rounded-[12px] w-full bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer" />
+          ) : extraError ? (
+            <div className="text-center py-8">
+              <p className="text-red-500 mb-4">{extraError}</p>
+              <Button onClick={fetchHistory} variant="outline">
+                Tentar Novamente
+              </Button>
+            </div>
+          ) : historyData.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              Nenhum acesso registrado neste período.
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <div className="h-[300px] mb-[24px]">
+                <ChartContainer
+                  config={{ count: { label: 'Acessos', color: 'hsl(var(--primary))' } }}
+                  className="h-full w-full"
+                >
+                  <LineChart data={historyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="hsl(var(--border))"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={12}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={12}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[16px]">
+                <MetricCard
+                  title="Total de Acessos"
+                  value={totalHistoryAccesses}
+                  icon={<TrendingUp className="w-8 h-8" />}
+                />
+                <MetricCard
+                  title="Média Diária"
+                  value={dailyAverage}
+                  icon={<BarChart3 className="w-8 h-8" />}
+                />
+                <MetricCard
+                  title="Pico de Acessos"
+                  value={peakDay}
+                  subtext={`${peakValue} acessos`}
+                  icon={<Zap className="w-8 h-8" />}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
