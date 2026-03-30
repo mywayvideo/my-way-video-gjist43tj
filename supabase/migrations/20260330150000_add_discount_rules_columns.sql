@@ -8,7 +8,7 @@ ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ;
 
 ALTER TABLE public.discount_rules DROP CONSTRAINT IF EXISTS discount_rules_rule_type_check;
 
-DO $
+DO $$
 BEGIN
   -- Set up RLS policies for discount_rules
   DROP POLICY IF EXISTS "allow_admin_all_discount_rules" ON public.discount_rules;
@@ -20,4 +20,4 @@ BEGIN
   DROP POLICY IF EXISTS "allow_public_read_discount_rules" ON public.discount_rules;
   CREATE POLICY "allow_public_read_discount_rules" ON public.discount_rules
     FOR SELECT TO public USING (is_active = true);
-END $;
+END $$;
