@@ -43,7 +43,7 @@ export function ProductPrice({
     <div
       key={`${originalPrice}-${discountedPrice}`}
       className={cn(
-        'flex flex-col animate-in fade-in zoom-in-[0.95] duration-[400ms]',
+        'flex flex-col animate-in fade-in zoom-in-[0.95] duration-500',
         loading ? 'opacity-50' : 'opacity-100',
         className,
       )}
