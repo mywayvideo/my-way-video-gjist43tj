@@ -7,6 +7,8 @@
     "update-exchange-rate": 9,
     "validate-image-url": 1,
     "change-admin-password": 1,
-    "toggle-2fa": 1
+    "toggle-2fa": 1,
+    "change-customer-password": 1,
+    "send-confirmation-email": 1
   }
 }
