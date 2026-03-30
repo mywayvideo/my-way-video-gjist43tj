@@ -28,7 +28,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Search, Edit, Trash2, KeyRound, ShieldOff, Mail } from 'lucide-react'
+import { Search, Edit, Trash2, KeyRound, ShieldOff, Mail, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -54,6 +55,7 @@ export function DashboardAdminCustomers(props: any) {
     deleteCustomer,
     resetCustomer2FA,
     sendConfirmationEmail,
+    createCustomer,
   } = useCustomerManagement()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -75,7 +77,19 @@ export function DashboardAdminCustomers(props: any) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editForm, setEditForm] = useState<any>({})
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    role: 'customer',
+    status: 'ativo',
+    password: '',
+    confirmPassword: '',
+    sendEmail: true,
+  })
   const [passwordForm, setPasswordForm] = useState({
     newPassword: '',
     confirmPassword: '',
@@ -104,6 +118,48 @@ export function DashboardAdminCustomers(props: any) {
       setIsSubmitting(false)
     }
   }
+
+  const handleCreateCustomer = () =>
+    actionWrapper(async () => {
+      if (!createForm.name || !createForm.email || !createForm.password) {
+        toast.error('Preencha todos os campos obrigatórios.')
+        return
+      }
+      if (createForm.password.length < 8) {
+        toast.error('Senha deve ter no mínimo 8 caracteres.')
+        return
+      }
+      if (createForm.password !== createForm.confirmPassword) {
+        toast.error('As senhas não coincidem.')
+        return
+      }
+
+      await createCustomer({
+        name: createForm.name,
+        email: createForm.email,
+        phone: createForm.phone,
+        company: createForm.company,
+        role: createForm.role,
+        status: createForm.status,
+        password: createForm.password,
+        sendEmail: createForm.sendEmail,
+      })
+
+      setIsCreateModalOpen(false)
+      setCreateForm({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        role: 'customer',
+        status: 'ativo',
+        password: '',
+        confirmPassword: '',
+        sendEmail: true,
+      })
+      setPage(1)
+      fetchCustomers(1, limit, debouncedSearch, statusFilter)
+    })
 
   const handleSaveEdit = () =>
     actionWrapper(async () => {
@@ -153,26 +209,34 @@ export function DashboardAdminCustomers(props: any) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filtrar por Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="suspenso">Suspenso</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filtrar por Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Status</SelectItem>
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="inativo">Inativo</SelectItem>
-            <SelectItem value="suspenso">Suspenso</SelectItem>
-          </SelectContent>
-        </Select>
+        <Button
+          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Criar Novo Cliente
+        </Button>
       </div>
 
       {error ? (
@@ -308,6 +372,125 @@ export function DashboardAdminCustomers(props: any) {
           )}
         </div>
       )}
+
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">1. Informações Básicas</h3>
+              <Field l="Nome Completo *">
+                <Input
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  maxLength={100}
+                />
+              </Field>
+              <Field l="Email *">
+                <Input
+                  type="email"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                />
+              </Field>
+              <Field l="Telefone">
+                <Input
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                />
+              </Field>
+              <Field l="Empresa">
+                <Input
+                  value={createForm.company}
+                  onChange={(e) => setCreateForm({ ...createForm, company: e.target.value })}
+                  maxLength={100}
+                />
+              </Field>
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg border-b pb-2">2. Acesso e Permissões</h3>
+                <Field l="Role *">
+                  <Select
+                    value={createForm.role}
+                    onValueChange={(v) => setCreateForm({ ...createForm, role: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="customer">Customer</SelectItem>
+                      <SelectItem value="vip">VIP</SelectItem>
+                      <SelectItem value="reseller">Reseller</SelectItem>
+                      <SelectItem value="collaborator">Collaborator</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field l="Status *">
+                  <Select
+                    value={createForm.status}
+                    onValueChange={(v) => setCreateForm({ ...createForm, status: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="inativo">Inativo</SelectItem>
+                      <SelectItem value="suspenso">Suspenso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg border-b pb-2">3. Senha Inicial</h3>
+                <Field l="Senha Inicial *">
+                  <Input
+                    type="password"
+                    value={createForm.password}
+                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                    placeholder="Mínimo 8 caracteres"
+                  />
+                </Field>
+                <Field l="Confirmar Senha *">
+                  <Input
+                    type="password"
+                    value={createForm.confirmPassword}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, confirmPassword: e.target.value })
+                    }
+                  />
+                </Field>
+                <div className="flex items-center space-x-2 pt-2">
+                  <Checkbox
+                    id="sendWelcomeEmail"
+                    checked={createForm.sendEmail}
+                    onCheckedChange={(c) => setCreateForm({ ...createForm, sendEmail: c === true })}
+                  />
+                  <Label htmlFor="sendWelcomeEmail">Enviar email ao cliente com credenciais</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateCustomer}
+              disabled={
+                isSubmitting || !createForm.name || !createForm.email || !createForm.password
+              }
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Criar Cliente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">

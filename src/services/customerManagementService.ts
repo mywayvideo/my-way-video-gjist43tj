@@ -68,6 +68,15 @@ export async function resetCustomer2FA(customerId: string) {
   if (error) throw error
 }
 
+export async function createCustomer(data: any) {
+  const { data: res, error } = await supabase.functions.invoke('create-customer', {
+    body: data,
+  })
+  if (error) throw error
+  if (res?.error) throw new Error(res.error)
+  return res
+}
+
 export async function sendConfirmationEmail(customerId: string) {
   const { data, error } = await supabase.functions.invoke('send-confirmation-email', {
     body: { customerId },

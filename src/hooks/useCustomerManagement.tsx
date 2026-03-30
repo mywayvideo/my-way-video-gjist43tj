@@ -80,6 +80,17 @@ export function useCustomerManagement() {
     }
   }
 
+  const createCustomer = async (data: any) => {
+    try {
+      await customerService.createCustomer(data)
+      toast.success('Cliente criado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error(err.message || 'Não foi possível criar cliente.')
+      throw err
+    }
+  }
+
   const sendConfirmationEmail = async (customerId: string) => {
     try {
       await customerService.sendConfirmationEmail(customerId)
@@ -104,5 +115,6 @@ export function useCustomerManagement() {
     deleteCustomer,
     resetCustomer2FA,
     sendConfirmationEmail,
+    createCustomer,
   }
 }
