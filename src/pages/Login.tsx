@@ -12,7 +12,7 @@ import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { Mail, Lock, Eye, EyeOff, Loader2, User, Phone, Building2 } from 'lucide-react'
 import logoImg from '../assets/mw_logo_horiz_1200x318_fundo_escuro-037e3.png'
 
-const SITE_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY || '10000000-ffff-ffff-ffff-000000000001'
+const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
 
 const Field = ({ id, icon: Icon, right, ...p }: any) => (
   <div className="relative">
@@ -54,7 +54,7 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!captchaL) return setError('Resolva o CAPTCHA.')
+    if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
     setLoading(true)
     setError(null)
     const { error: err } = await signIn(email, password)
@@ -72,7 +72,7 @@ export default function Login() {
       return setError('Preencha os campos obrigatórios.')
     if (rPwd !== rPwdC) return setError('Senhas não coincidem.')
     if (rPwd.length < 8) return setError('Senha deve ter no mínimo 8 caracteres.')
-    if (!captchaR) return setError('Resolva o CAPTCHA.')
+    if (!captchaR) return setError('Falha na verificacao. Tente novamente.')
 
     setLoading(true)
     setError(null)
@@ -183,13 +183,19 @@ export default function Login() {
                   </Link>
                 </div>
                 <div className="flex justify-center overflow-hidden rounded-lg">
-                  <HCaptcha
-                    sitekey={SITE_KEY}
-                    theme="dark"
-                    onVerify={setCaptchaL}
-                    onExpire={() => setCaptchaL(null)}
-                    ref={captchaRefL}
-                  />
+                  {!siteKey ? (
+                    <div className="text-red-500 text-sm text-center py-2">
+                      Configuracao de CAPTCHA ausente. Contate o administrador.
+                    </div>
+                  ) : (
+                    <HCaptcha
+                      sitekey={siteKey}
+                      theme="dark"
+                      onVerify={setCaptchaL}
+                      onExpire={() => setCaptchaL(null)}
+                      ref={captchaRefL}
+                    />
+                  )}
                 </div>
                 <Button
                   type="submit"
@@ -292,13 +298,19 @@ export default function Login() {
                   <span>Aceito os Termos de Serviço</span>
                 </label>
                 <div className="flex justify-center overflow-hidden rounded-lg">
-                  <HCaptcha
-                    sitekey={SITE_KEY}
-                    theme="dark"
-                    onVerify={setCaptchaR}
-                    onExpire={() => setCaptchaR(null)}
-                    ref={captchaRefR}
-                  />
+                  {!siteKey ? (
+                    <div className="text-red-500 text-sm text-center py-2">
+                      Configuracao de CAPTCHA ausente. Contate o administrador.
+                    </div>
+                  ) : (
+                    <HCaptcha
+                      sitekey={siteKey}
+                      theme="dark"
+                      onVerify={setCaptchaR}
+                      onExpire={() => setCaptchaR(null)}
+                      ref={captchaRefR}
+                    />
+                  )}
                 </div>
                 <Button
                   type="submit"

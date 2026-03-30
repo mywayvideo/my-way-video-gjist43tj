@@ -12,6 +12,6 @@
     "send-confirmation-email": 2,
     "create-customer": 2,
     "send-welcome-email": 2,
-    "create-customer-public": 2
+    "create-customer-public": 3
   }
 }
