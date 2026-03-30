@@ -13,6 +13,7 @@ import AdminAISettings from './pages/AdminAISettings'
 import AdminAISystemPrompt from './pages/AdminAISystemPrompt'
 import SettingsPage from './pages/admin/SettingsPage'
 import Dashboard from './pages/Dashboard'
+import DashboardAdmin from './pages/DashboardAdmin'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard-admin" element={<DashboardAdmin />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Route>
