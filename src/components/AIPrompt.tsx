@@ -552,3 +552,6 @@ export function AIPrompt({
           )}
         </div>
       )}
+    </div>
+  )
+}
