@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, Trash, Search } from 'lucide-react'
+import { ArrowLeft, Trash, Search, X } from 'lucide-react'
 
 const schema = z
   .object({
@@ -38,8 +38,16 @@ const schema = z
     }),
     value: z.coerce.number().min(0, 'Valor não pode ser negativo').max(100, 'Valor máximo é 100'),
     status: z.enum(['active', 'inactive']),
-    scope: z.enum(['all_products', 'by_manufacturer', 'by_category', 'individual_products']),
-    scope_data: z.array(z.string()).default([]),
+    scope: z.enum([
+      'all_products',
+      'by_manufacturer',
+      'by_category',
+      'by_manufacturer_category',
+      'individual_products',
+    ]),
+    scope_manufacturers: z.array(z.string()).default([]),
+    scope_categories: z.array(z.string()).default([]),
+    scope_individual_products: z.array(z.string()).default([]),
     application_type: z.enum(['role', 'specific_customers']),
     role: z.string().optional(),
     customers: z.array(z.string()).default([]),
@@ -79,7 +87,7 @@ const MultiSelect = ({
   control: any
 }) => {
   const [search, setSearch] = useState('')
-  const filtered = items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = items.filter((i) => i.name?.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="space-y-2 mt-4">
@@ -128,6 +136,77 @@ const MultiSelect = ({
   )
 }
 
+const ProductList = ({
+  products,
+  manufacturers,
+  removedIds,
+  uncheckedIds,
+  onRemove,
+  onToggleCheck,
+  scope,
+}: {
+  products: any[]
+  manufacturers: any[]
+  removedIds: Set<string>
+  uncheckedIds: Set<string>
+  onRemove: (id: string) => void
+  onToggleCheck: (id: string, checked: boolean) => void
+  scope: string
+}) => {
+  if (scope === 'all_products') return null
+
+  const displayed = products.filter((p) => !removedIds.has(p.id))
+  const checkedCount = displayed.filter((p) => !uncheckedIds.has(p.id)).length
+
+  return (
+    <div className="space-y-4 mt-6">
+      <Label className="text-base font-semibold">Produtos Selecionados ({checkedCount})</Label>
+      <div className="border rounded-md divide-y max-h-96 overflow-y-auto bg-background shadow-sm">
+        {displayed.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center space-x-4">
+              <Checkbox
+                checked={!uncheckedIds.has(p.id)}
+                onCheckedChange={(checked) => onToggleCheck(p.id, !!checked)}
+              />
+              <div className="space-y-1">
+                <p className="font-medium text-sm leading-none">{p.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {manufacturers.find((m) => m.id === p.manufacturer_id)?.name || 'Sem Fabricante'}{' '}
+                  • {p.category || 'Sem categoria'} • ${p.price_usd || 0}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+              onClick={() => onRemove(p.id)}
+              title="Remover produto da lista"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        {displayed.length === 0 && (
+          <div className="p-6 text-sm text-muted-foreground text-center">
+            Nenhum produto selecionado.
+          </div>
+        )}
+      </div>
+      {checkedCount === 0 && (
+        <p className="text-sm text-destructive font-medium mt-2">
+          Selecione pelo menos um produto para aplicar o desconto.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function DiscountRuleFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -144,7 +223,11 @@ export default function DiscountRuleFormPage() {
     deleteRule,
     retry,
   } = useDiscountRule(id)
+
   const [isSaving, setIsSaving] = useState(false)
+  const [removedProductIds, setRemovedProductIds] = useState<Set<string>>(new Set())
+  const [uncheckedProductIds, setUncheckedProductIds] = useState<Set<string>>(new Set())
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   const {
     register,
@@ -162,7 +245,9 @@ export default function DiscountRuleFormPage() {
       value: 0,
       status: 'active',
       scope: 'all_products',
-      scope_data: [],
+      scope_manufacturers: [],
+      scope_categories: [],
+      scope_individual_products: [],
       application_type: 'role',
       role: '',
       customers: [],
@@ -173,28 +258,144 @@ export default function DiscountRuleFormPage() {
 
   const scope = watch('scope')
   const application_type = watch('application_type')
+  const scope_manufacturers = watch('scope_manufacturers')
+  const scope_categories = watch('scope_categories')
+  const scope_individual_products = watch('scope_individual_products')
 
   useEffect(() => {
-    if (rule) {
+    if (rule && products.length > 0 && !hasInitialized) {
+      const dbScope = (rule.scope_type as any) || 'all_products'
+      const dbScopeData = rule.scope_data || []
+
+      let initialMfrs: string[] = []
+      let initialCats: string[] = []
+      let initialIndiv: string[] = []
+      let initialUnchecked = new Set<string>()
+
+      if (dbScope !== 'all_products') {
+        const selectedProds = products.filter((p) => dbScopeData.includes(p.id))
+
+        if (selectedProds.length > 0) {
+          if (dbScope === 'by_manufacturer') {
+            initialMfrs = Array.from(
+              new Set(selectedProds.map((p) => p.manufacturer_id).filter(Boolean) as string[]),
+            )
+            products.forEach((p) => {
+              if (
+                p.manufacturer_id &&
+                initialMfrs.includes(p.manufacturer_id) &&
+                !dbScopeData.includes(p.id)
+              ) {
+                initialUnchecked.add(p.id)
+              }
+            })
+          } else if (dbScope === 'by_category') {
+            initialCats = Array.from(
+              new Set(selectedProds.map((p) => p.category).filter(Boolean) as string[]),
+            )
+            products.forEach((p) => {
+              if (p.category && initialCats.includes(p.category) && !dbScopeData.includes(p.id)) {
+                initialUnchecked.add(p.id)
+              }
+            })
+          } else if (dbScope === 'by_manufacturer_category') {
+            initialMfrs = Array.from(
+              new Set(selectedProds.map((p) => p.manufacturer_id).filter(Boolean) as string[]),
+            )
+            initialCats = Array.from(
+              new Set(selectedProds.map((p) => p.category).filter(Boolean) as string[]),
+            )
+            products.forEach((p) => {
+              if (
+                p.manufacturer_id &&
+                p.category &&
+                initialMfrs.includes(p.manufacturer_id) &&
+                initialCats.includes(p.category) &&
+                !dbScopeData.includes(p.id)
+              ) {
+                initialUnchecked.add(p.id)
+              }
+            })
+          } else if (dbScope === 'individual_products') {
+            initialIndiv = dbScopeData
+          }
+        } else {
+          // Old format fallback
+          if (dbScope === 'by_manufacturer') initialMfrs = dbScopeData
+          else if (dbScope === 'by_category') initialCats = dbScopeData
+          else if (dbScope === 'individual_products') initialIndiv = dbScopeData
+        }
+      }
+
       reset({
         name: rule.rule_name || '',
         discount_type: (rule.discount_calculation_type as any) || 'margin_percentage',
         value: rule.discount_value || 0,
         status: rule.is_active ? 'active' : 'inactive',
-        scope: (rule.scope_type as any) || 'all_products',
-        scope_data: rule.scope_data || [],
+        scope: dbScope,
+        scope_manufacturers: initialMfrs,
+        scope_categories: initialCats,
+        scope_individual_products: initialIndiv,
         application_type: (rule.application_type as any) || 'role',
         role: rule.role || '',
         customers: rule.customers || [],
         start_date: rule.start_date ? new Date(rule.start_date).toISOString().split('T')[0] : '',
         end_date: rule.end_date ? new Date(rule.end_date).toISOString().split('T')[0] : '',
       })
+      setHasInitialized(true)
+      setRemovedProductIds(new Set())
+      setUncheckedProductIds(initialUnchecked)
     }
-  }, [rule, reset])
+  }, [rule, products, reset, hasInitialized])
+
+  const eligibleProducts = useMemo(() => {
+    if (scope === 'by_manufacturer') {
+      return products.filter(
+        (p) => p.manufacturer_id && scope_manufacturers.includes(p.manufacturer_id),
+      )
+    }
+    if (scope === 'by_category') {
+      return products.filter((p) => p.category && scope_categories.includes(p.category))
+    }
+    if (scope === 'by_manufacturer_category') {
+      return products.filter(
+        (p) =>
+          p.manufacturer_id &&
+          p.category &&
+          scope_manufacturers.includes(p.manufacturer_id) &&
+          scope_categories.includes(p.category),
+      )
+    }
+    if (scope === 'individual_products') {
+      return products.filter((p) => scope_individual_products.includes(p.id))
+    }
+    return []
+  }, [scope, scope_manufacturers, scope_categories, scope_individual_products, products])
+
+  const displayedProducts = useMemo(() => {
+    return eligibleProducts.filter((p) => !removedProductIds.has(p.id))
+  }, [eligibleProducts, removedProductIds])
 
   const onSubmit = async (data: FormData) => {
+    let finalProductIds: string[] = []
+
+    if (data.scope !== 'all_products') {
+      finalProductIds = displayedProducts
+        .filter((p) => !uncheckedProductIds.has(p.id))
+        .map((p) => p.id)
+
+      if (finalProductIds.length === 0) {
+        return // UI will show validation error
+      }
+    }
+
+    const payload = {
+      ...data,
+      scope_data: data.scope === 'all_products' ? [] : finalProductIds,
+    }
+
     setIsSaving(true)
-    const success = await saveRule({ id, ...data })
+    const success = await saveRule({ id, ...payload })
     setIsSaving(false)
     if (success) {
       navigate('/dashboard-admin')
@@ -349,7 +550,11 @@ export default function DiscountRuleFormPage() {
                   <Select
                     onValueChange={(val) => {
                       field.onChange(val)
-                      setValue('scope_data', [])
+                      setValue('scope_manufacturers', [])
+                      setValue('scope_categories', [])
+                      setValue('scope_individual_products', [])
+                      setRemovedProductIds(new Set())
+                      setUncheckedProductIds(new Set())
                     }}
                     value={field.value}
                   >
@@ -360,6 +565,9 @@ export default function DiscountRuleFormPage() {
                       <SelectItem value="all_products">Todos os Produtos</SelectItem>
                       <SelectItem value="by_manufacturer">Por Fabricante</SelectItem>
                       <SelectItem value="by_category">Por Categoria</SelectItem>
+                      <SelectItem value="by_manufacturer_category">
+                        Por Fabricante + Categoria
+                      </SelectItem>
                       <SelectItem value="individual_products">Individual</SelectItem>
                     </SelectContent>
                   </Select>
@@ -370,7 +578,7 @@ export default function DiscountRuleFormPage() {
             {scope === 'by_manufacturer' && (
               <MultiSelect
                 items={manufacturers}
-                fieldName="scope_data"
+                fieldName="scope_manufacturers"
                 title="Fabricantes"
                 control={control}
               />
@@ -378,19 +586,54 @@ export default function DiscountRuleFormPage() {
             {scope === 'by_category' && (
               <MultiSelect
                 items={categories}
-                fieldName="scope_data"
+                fieldName="scope_categories"
                 title="Categorias"
                 control={control}
               />
             )}
+            {scope === 'by_manufacturer_category' && (
+              <div className="space-y-4 pt-2">
+                <MultiSelect
+                  items={manufacturers}
+                  fieldName="scope_manufacturers"
+                  title="Fabricantes"
+                  control={control}
+                />
+                <MultiSelect
+                  items={categories}
+                  fieldName="scope_categories"
+                  title="Categorias"
+                  control={control}
+                />
+              </div>
+            )}
             {scope === 'individual_products' && (
               <MultiSelect
                 items={products}
-                fieldName="scope_data"
-                title="Produtos"
+                fieldName="scope_individual_products"
+                title="Buscar Produtos"
                 control={control}
               />
             )}
+
+            <ProductList
+              products={eligibleProducts}
+              manufacturers={manufacturers}
+              removedIds={removedProductIds}
+              uncheckedIds={uncheckedProductIds}
+              onRemove={(id) => {
+                const newSet = new Set(removedProductIds)
+                newSet.add(id)
+                setRemovedProductIds(newSet)
+              }}
+              onToggleCheck={(id, checked) => {
+                const newSet = new Set(uncheckedProductIds)
+                if (checked) newSet.delete(id)
+                else newSet.add(id)
+                setUncheckedProductIds(newSet)
+              }}
+              scope={scope}
+            />
           </div>
 
           {/* Section 3 */}

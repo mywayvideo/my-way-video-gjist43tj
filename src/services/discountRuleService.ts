@@ -29,7 +29,10 @@ export const discountRuleService = {
       .sort((a, b) => a.name.localeCompare(b.name))
   },
   async fetchProducts() {
-    const { data, error } = await supabase.from('products').select('id, name').order('name')
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, manufacturer_id, category, price_usd')
+      .order('name')
     if (error) throw error
     return data || []
   },
