@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Loader2, Settings } from 'lucide-react'
+import { ExchangeRateCard } from '@/components/admin/settings/ExchangeRateCard'
+import { PriceFormulaCard } from '@/components/admin/settings/PriceFormulaCard'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -143,6 +145,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          <ExchangeRateCard />
+          <PriceFormulaCard />
         </div>
       )}
     </div>
