@@ -43,17 +43,20 @@ export function ProductPrice({
     <div
       key={`${originalPrice}-${discountedPrice}`}
       className={cn(
-        'flex flex-col gap-1 animate-in fade-in zoom-in-[0.98] duration-300',
+        'flex flex-col animate-in fade-in zoom-in-[0.95] duration-[400ms]',
         loading ? 'opacity-50' : 'opacity-100',
         className,
       )}
     >
       {discountedPrice !== null ? (
         <>
-          <span className="text-[10px] md:text-[11px] lg:text-[12px] line-through text-muted-foreground opacity-70 font-normal leading-[1.4]">
+          <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4] mb-2">
             {displayOriginal}
           </span>
-          <span className="text-[14px] md:text-[16px] lg:text-[18px] font-bold text-accent-foreground leading-[1.2]">
+          <span
+            className="text-[22px] font-extrabold text-green-600 dark:text-green-500 leading-[1.2] mt-1 bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit animate-pulse"
+            style={{ animationDuration: '1.5s' }}
+          >
             {displayCurrent}
           </span>
         </>
