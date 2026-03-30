@@ -74,7 +74,7 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
         <MetricCard
           title="Total de Clientes"
           value={metrics.totalCustomers}
-          subtext={`vip: ${metrics.customersByRole.vip || 0}, reseller: ${metrics.customersByRole.reseller || 0}`}
+          subtext={`customer: ${metrics.customersByRole.customer || 0}, vip: ${metrics.customersByRole.vip || 0}, reseller: ${metrics.customersByRole.reseller || 0}, collab: ${metrics.customersByRole.collaborator || 0}`}
           icon={<Users className="w-12 h-12" />}
         />
         <MetricCard
