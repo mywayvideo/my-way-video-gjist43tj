@@ -5,6 +5,8 @@
     "validate-ai-provider": 15,
     "call-ai-agent": 31,
     "update-exchange-rate": 9,
-    "validate-image-url": 1
+    "validate-image-url": 1,
+    "change-admin-password": 1,
+    "toggle-2fa": 1
   }
 }
