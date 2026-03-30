@@ -38,6 +38,7 @@ import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
+import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
 
 type Message = {
   id: string
@@ -148,6 +149,8 @@ export default function Product() {
     val: number
   } | null>(null)
   const [calculatingBrl, setCalculatingBrl] = useState(false)
+
+  const { discounts } = useMultipleProductDiscounts(product ? [product] : [])
 
   useEffect(() => {
     const fetchSettingsAndUser = async () => {
@@ -295,7 +298,10 @@ export default function Product() {
       let type = pricingSettings?.spread_type || 'percentage'
       let val = pricingSettings?.spread_percentage || 0
 
-      if (pricingSettings && product?.price_brl && product.price_brl > 0) {
+      const discountInfo = product ? discounts[product.id] : null
+      const basePrice = discountInfo?.discountedPrice ?? product?.price_usd ?? 0
+
+      if (pricingSettings && basePrice > 0) {
         let effectiveVal = val
         // Adjust percentage if entered as whole number (e.g. 10 instead of 0.1)
         if (type === 'percentage' && val >= 1) {
@@ -303,9 +309,9 @@ export default function Product() {
         }
 
         if (type === 'fixed') {
-          finalBrl = product.price_brl * (rate + effectiveVal)
+          finalBrl = basePrice * (rate + effectiveVal)
         } else {
-          finalBrl = product.price_brl * rate * (1 + effectiveVal)
+          finalBrl = basePrice * rate * (1 + effectiveVal)
         }
       } else {
         finalBrl = 0
