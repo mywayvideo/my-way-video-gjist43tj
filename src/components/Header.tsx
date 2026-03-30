@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/u
 import { useDebounce } from '@/hooks/use-debounce'
 import { searchProducts } from '@/services/database-search'
 import { useCurrentCustomer } from '@/hooks/use-current-customer'
+import useSearchState from '@/hooks/useSearchState'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/client'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -30,6 +31,7 @@ export function Header() {
   const [mobileDbQuery, setMobileDbQuery] = useState('')
   const { totalItems } = useCartStore()
   const { customer } = useCurrentCustomer()
+  const { saveSearchState } = useSearchState()
 
   const [mobileDbResults, setMobileDbResults] = useState<any[]>([])
   const [isSearchingDb, setIsSearchingDb] = useState(false)
@@ -137,6 +139,7 @@ export function Header() {
   const handleAISearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
+      saveSearchState(searchQuery.trim(), null, [], 'ai')
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
       setIsSheetOpen(false)
     }
@@ -145,6 +148,7 @@ export function Header() {
   const handleMobileAISearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (mobileAiQuery.trim()) {
+      saveSearchState(mobileAiQuery.trim(), null, [], 'ai')
       navigate(`/search?type=ai&q=${encodeURIComponent(mobileAiQuery.trim())}`)
       setShowMobileSearch(false)
       setMobileAiQuery('')
@@ -154,6 +158,7 @@ export function Header() {
   const handleMobileDbSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (mobileDbQuery.trim()) {
+      saveSearchState(mobileDbQuery.trim(), null, [], 'database')
       navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery.trim())}`)
       setShowMobileSearch(false)
       setMobileDbQuery('')

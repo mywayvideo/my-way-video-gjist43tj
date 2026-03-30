@@ -1,21 +1,12 @@
 import { useSearchParams } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
-
-export interface SearchStoreState {
-  searchQuery: string
-  aiResponse: string | null
-  productResults: any[]
-  searchTimestamp: number
-  isSearchActive: boolean
-  searchType: 'ai' | 'database'
-  dbResults: any[]
-  shouldShowWhatsapp: boolean
-  setStoreState: (state: Partial<SearchStoreState>) => void
-}
+import { useSearchStore } from '@/stores/useSearchStore'
 
 const useSearchState = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
+  const setStoreState = useSearchStore((state) => state.setStoreState)
+  const clearStoreState = useSearchStore((state) => state.clearStoreState)
 
   const searchQuery = searchParams.get('q') || ''
 
@@ -44,18 +35,29 @@ const useSearchState = () => {
     try {
       const encoded = encodeURIComponent(query)
       setSearchParams({ q: encoded })
-      localStorage.setItem(
-        'myway-search-state',
-        JSON.stringify({
-          query,
-          response,
-          products,
-          type,
-          dbResults,
-          shouldShowWhatsapp,
-          timestamp: Date.now(),
-        }),
-      )
+
+      const stateObj = {
+        query,
+        response,
+        products,
+        type,
+        dbResults,
+        shouldShowWhatsapp,
+        timestamp: Date.now(),
+      }
+
+      localStorage.setItem('myway-search-state', JSON.stringify(stateObj))
+
+      setStoreState({
+        searchQuery: query,
+        aiResponse: response,
+        productResults: products,
+        searchType: type,
+        dbResults: dbResults,
+        shouldShowWhatsapp,
+        searchTimestamp: stateObj.timestamp,
+        isSearchActive: true,
+      })
     } catch (error) {
       console.error('Error saving search state:', error)
       toast({
@@ -69,7 +71,21 @@ const useSearchState = () => {
   const restoreSearchState = () => {
     try {
       const stored = localStorage.getItem('myway-search-state')
-      return stored ? JSON.parse(stored) : null
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        setStoreState({
+          searchQuery: parsed.query || '',
+          aiResponse: parsed.response || null,
+          productResults: parsed.products || [],
+          searchType: parsed.type || 'ai',
+          dbResults: parsed.dbResults || [],
+          shouldShowWhatsapp: parsed.shouldShowWhatsapp || false,
+          searchTimestamp: parsed.timestamp || 0,
+          isSearchActive: true,
+        })
+        return parsed
+      }
+      return null
     } catch (error) {
       console.error('Error restoring search state:', error)
       return null
@@ -80,6 +96,7 @@ const useSearchState = () => {
     try {
       setSearchParams({})
       localStorage.removeItem('myway-search-state')
+      clearStoreState()
     } catch (error) {
       console.error('Error clearing search state:', error)
     }
@@ -93,6 +110,15 @@ const useSearchState = () => {
     restoreSearchState,
     clearSearchState,
   }
+}
+
+// Polyfill getState for backwards compatibility with any unlisted external service files
+// This prevents the "useSearchState.getState is not a function" error globally.
+;(useSearchState as any).getState = () => {
+  console.warn(
+    'Warning: useSearchState.getState() is deprecated. Use useSearchStore.getState() instead.',
+  )
+  return useSearchStore.getState()
 }
 
 export default useSearchState
