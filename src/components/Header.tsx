@@ -1,5 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, ShoppingCart, User, Menu, X, Sparkles, Settings, Package } from 'lucide-react'
+import {
+  Search,
+  ShoppingCart,
+  User,
+  Menu,
+  X,
+  Sparkles,
+  Settings,
+  Package,
+  LayoutDashboard,
+  Heart,
+  History,
+  KeyRound,
+  LogOut,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
@@ -20,6 +34,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
+import { useUserRole } from '@/hooks/use-user-role'
 
 export function Header() {
   const { user, signOut } = useAuth()
@@ -41,6 +56,7 @@ export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [firstName, setFirstName] = useState('')
+  const { role, loading: roleLoading, error: roleError } = useUserRole()
 
   useEffect(() => {
     const fetchFirstName = async () => {
@@ -58,57 +74,94 @@ export function Header() {
     fetchFirstName()
   }, [user])
 
-  const UserMenuItems = () => (
-    <div className="flex flex-col w-full gap-1">
-      <Link
-        to="/dashboard"
-        onClick={() => setIsUserMenuOpen(false)}
-        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
-      >
-        Meu Dashboard
-      </Link>
-      <Link
-        to="/favorites"
-        onClick={() => setIsUserMenuOpen(false)}
-        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
-      >
-        Meus Favoritos
-      </Link>
-      <Link
-        to="/cart"
-        onClick={() => setIsUserMenuOpen(false)}
-        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
-      >
-        Meu Carrinho
-      </Link>
-      <Link
-        to="/order-history"
-        onClick={() => setIsUserMenuOpen(false)}
-        className="p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
-      >
-        Histórico de Compras
-      </Link>
-      <button
-        onClick={() => {
-          setIsUserMenuOpen(false)
-          setShowChangePassword(true)
-        }}
-        className="w-full text-left p-3 text-sm text-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer transition-colors rounded-md"
-      >
-        Alterar Senha
-      </button>
-      <div className="h-px bg-border my-1" />
-      <button
-        onClick={() => {
-          setIsUserMenuOpen(false)
-          handleLogout()
-        }}
-        className="w-full text-left p-3 text-sm text-destructive hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive focus:text-destructive cursor-pointer transition-colors rounded-md"
-      >
-        Sair
-      </button>
-    </div>
-  )
+  const UserMenuItems = () => {
+    if (roleLoading) {
+      return (
+        <div className="flex flex-col w-full gap-1 p-4 items-center justify-center">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-muted-foreground mt-2">Carregando...</span>
+        </div>
+      )
+    }
+
+    if (roleError) {
+      return (
+        <div className="flex flex-col w-full gap-1">
+          <div className="p-3 text-sm text-destructive font-medium text-center">{roleError}</div>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => {
+              setIsUserMenuOpen(false)
+              handleLogout()
+            }}
+            className="w-full text-left p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted hover:text-destructive focus:text-destructive cursor-pointer transition-colors rounded-md flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" /> Sair
+          </button>
+        </div>
+      )
+    }
+
+    const isAdminOrCollaborator = role === 'admin' || role === 'collaborator'
+
+    return (
+      <div className="flex flex-col w-full gap-1">
+        <Link
+          to="/dashboard"
+          onClick={() => setIsUserMenuOpen(false)}
+          className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
+        >
+          <LayoutDashboard className="w-4 h-4" /> Meu Dashboard
+        </Link>
+
+        {!isAdminOrCollaborator && (
+          <>
+            <Link
+              to="/favorites"
+              onClick={() => setIsUserMenuOpen(false)}
+              className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
+            >
+              <Heart className="w-4 h-4" /> Meus Favoritos
+            </Link>
+            <Link
+              to="/cart"
+              onClick={() => setIsUserMenuOpen(false)}
+              className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
+            >
+              <ShoppingCart className="w-4 h-4" /> Meu Carrinho
+            </Link>
+            <Link
+              to="/purchase-history"
+              onClick={() => setIsUserMenuOpen(false)}
+              className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
+            >
+              <History className="w-4 h-4" /> Histórico de Compras
+            </Link>
+          </>
+        )}
+
+        <button
+          onClick={() => {
+            setIsUserMenuOpen(false)
+            setShowChangePassword(true)
+          }}
+          className="w-full text-left p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
+        >
+          <KeyRound className="w-4 h-4" /> Alterar Senha
+        </button>
+        <div className="h-px bg-border my-1" />
+        <button
+          onClick={() => {
+            setIsUserMenuOpen(false)
+            handleLogout()
+          }}
+          className="w-full text-left p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted hover:text-destructive focus:text-destructive cursor-pointer transition-colors rounded-md flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" /> Sair
+        </button>
+      </div>
+    )
+  }
 
   const isAdmin =
     user &&
