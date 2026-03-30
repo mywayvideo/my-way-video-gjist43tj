@@ -55,15 +55,17 @@ export default function Dashboard() {
       <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
         <AlertCircle className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-bold mb-2">Ops! Algo deu errado.</h2>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          Não foi possível verificar seu acesso.
-        </p>
+        <p className="text-muted-foreground mb-6 max-w-md">{roleError}</p>
         <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
       </div>
     )
   }
 
   if (role === 'admin' || role === 'collaborator') {
+    return null
+  }
+
+  if (role !== 'customer' && role !== 'vip' && role !== 'reseller') {
     return null
   }
 
