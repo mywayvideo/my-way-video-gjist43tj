@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, ShoppingCart, DollarSign, TrendingDown, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,21 +29,36 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
 
   if (loadingMetrics)
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[120px] rounded-[12px] w-full" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <Skeleton className="h-[300px] rounded-[12px] w-full" />
+          <Skeleton className="h-[300px] rounded-[12px] w-full" />
+        </div>
       </div>
     )
+
   if (error)
     return (
-      <div className="text-center p-8">
-        <AlertCircle className="mx-auto text-red-500 mb-2" />
-        <p>{error}</p>
-        <Button onClick={fetchMetrics} className="mt-4">
+      <div className="text-center py-[48px] px-6 animate-fade-in">
+        <AlertCircle className="mx-auto h-[64px] w-[64px] text-red-500 mb-4" />
+        <h3 className="text-[18px] font-semibold text-foreground mb-2">
+          Não foi possível carregar métricas.
+        </h3>
+        <p className="text-[14px] text-gray-500 mb-6">{error}</p>
+        <Button
+          onClick={fetchMetrics}
+          className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+        >
           <RefreshCw className="mr-2 h-4 w-4" /> Tentar Novamente
         </Button>
       </div>
     )
+
   if (!metrics) return null
 
   const currentMonthName = new Date().toLocaleString('pt-BR', { month: 'long' })
@@ -55,40 +69,38 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
   })).filter((d) => d.value > 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total de Clientes"
           value={metrics.totalCustomers}
           subtext={`vip: ${metrics.customersByRole.vip || 0}, reseller: ${metrics.customersByRole.reseller || 0}`}
-          icon={<Users />}
+          icon={<Users className="w-12 h-12" />}
         />
         <MetricCard
           title="Total de Pedidos"
           value={metrics.totalOrders}
           subtext={`Mês de ${currentMonthName}`}
-          icon={<ShoppingCart />}
+          icon={<ShoppingCart className="w-12 h-12" />}
         />
         <MetricCard
           title="Receita Total"
           value={`R$ ${metrics.totalRevenue.toFixed(2)}`}
           subtext={`Mês de ${currentMonthName}`}
-          icon={<DollarSign />}
+          icon={<DollarSign className="w-12 h-12" />}
         />
         <MetricCard
           title="Descontos Aplicados"
           value={`R$ ${metrics.totalDiscounts.toFixed(2)}`}
           subtext="Total economizado pelos clientes"
-          icon={<TrendingDown />}
+          icon={<TrendingDown className="w-12 h-12" />}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Clientes por Role</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="bg-card rounded-[12px] p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-[16px] font-semibold text-foreground mb-4">Clientes por Role</h3>
+          <div className="h-[200px] md:h-[250px] lg:h-[300px]">
             <ChartContainer config={chartConfig} className="h-full w-full">
               <PieChart>
                 <Pie
@@ -107,25 +119,38 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
                   ))}
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
+                <ChartLegend
+                  content={<ChartLegendContent />}
+                  className="text-[12px] text-gray-600 mt-4"
+                />
               </PieChart>
             </ChartContainer>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Vendas por Mês (últimos 12 meses)</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
+        <div className="bg-card rounded-[12px] p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-[16px] font-semibold text-foreground mb-4">
+            Vendas por Mês (últimos 12 meses)
+          </h3>
+          <div className="h-[200px] md:h-[250px] lg:h-[300px]">
             <ChartContainer config={chartConfig} className="h-full w-full">
-              <LineChart data={metrics.salesByMonth}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+              <LineChart
+                data={metrics.salesByMonth}
+                margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={12}
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={8}
+                  tickMargin={12}
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                   tickFormatter={(v) => `R$${v}`}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -133,14 +158,14 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
                   type="monotone"
                   dataKey="total"
                   stroke="var(--color-total)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: 'var(--color-total)', strokeWidth: 2 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
                 />
               </LineChart>
             </ChartContainer>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -148,15 +173,11 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
 
 function MetricCard({ title, value, subtext, icon }: any) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className="text-muted-foreground w-4 h-4">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground mt-1">{subtext}</p>
-      </CardContent>
-    </Card>
+    <div className="bg-card rounded-[12px] shadow-[0_2px_8px_rgba(0,0,0,0.1)] p-6 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:scale-[1.02] transition-all duration-200">
+      <div className="text-yellow-500 mb-2">{icon}</div>
+      <div className="text-[12px] text-gray-500 font-medium mb-2">{title}</div>
+      <div className="text-[32px] text-foreground font-bold leading-none">{value}</div>
+      {subtext && <div className="text-[11px] text-gray-400 mt-2 leading-[1.4]">{subtext}</div>}
+    </div>
   )
 }

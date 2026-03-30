@@ -8,18 +8,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Search, AlertCircle, RefreshCw, Users } from 'lucide-react'
+import { Search, AlertCircle, RefreshCw, Users, Check, X } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDebounce } from '@/hooks/use-debounce'
 
 const roleColors: Record<string, string> = {
-  customer: 'bg-gray-500 hover:bg-gray-600',
-  vip: 'bg-yellow-500 hover:bg-yellow-600 text-yellow-950',
-  reseller: 'bg-blue-500 hover:bg-blue-600',
-  collaborator: 'bg-green-500 hover:bg-green-600',
-  admin: 'bg-red-500 hover:bg-red-600',
+  customer: 'bg-gray-200 text-gray-900',
+  vip: 'bg-yellow-400 text-yellow-900',
+  reseller: 'bg-blue-200 text-blue-900',
+  collaborator: 'bg-green-200 text-green-900',
+  admin: 'bg-red-200 text-red-900',
 }
 
 export function DashboardAdminCustomers({
@@ -40,19 +39,27 @@ export function DashboardAdminCustomers({
   }, [page, debouncedSearch, roleFilter, fetchCustomers])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-1 md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <Input
-            placeholder="Buscar por nome..."
+            placeholder="Buscar por nome ou email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="w-full pl-10 pr-10 py-2.5 border border-border rounded-lg text-[14px] focus-visible:ring-2 focus-visible:ring-yellow-500/20 focus-visible:border-yellow-500 transition-all"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-full md:w-[200px]">
+          <SelectTrigger className="w-full md:w-[200px] border border-border rounded-lg text-[13px] py-2.5 focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500">
             <SelectValue placeholder="Filtrar por role" />
           </SelectTrigger>
           <SelectContent>
@@ -67,51 +74,76 @@ export function DashboardAdminCustomers({
       </div>
 
       {error ? (
-        <div className="text-center p-8">
-          <AlertCircle className="mx-auto text-red-500 mb-2" />
-          <p>{error}</p>
+        <div className="text-center py-[48px] px-6">
+          <AlertCircle className="mx-auto h-[64px] w-[64px] text-red-500 mb-4" />
+          <h3 className="text-[18px] font-semibold text-foreground mb-2">
+            Não foi possível carregar clientes.
+          </h3>
+          <p className="text-[14px] text-gray-500 mb-6">{error}</p>
           <Button
             onClick={() => fetchCustomers(page, 20, debouncedSearch, roleFilter)}
-            className="mt-4"
+            className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
           >
             <RefreshCw className="mr-2 h-4 w-4" /> Tentar Novamente
           </Button>
         </div>
       ) : loadingCustomers ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+            <Skeleton key={i} className="h-[40px] rounded-[8px] w-full" />
           ))}
         </div>
-      ) : customers.length === 0 ? (
-        <div className="text-center p-12 border border-dashed rounded-lg">
-          <Users className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">Nenhum cliente encontrado.</p>
+      ) : customers?.length === 0 ? (
+        <div className="text-center py-[48px] px-6">
+          <Users className="mx-auto h-[64px] w-[64px] text-gray-300 mb-4" />
+          <h3 className="text-[18px] font-semibold text-foreground mb-2">
+            Nenhum cliente encontrado.
+          </h3>
+          <p className="text-[14px] text-gray-500 mb-6">Tente ajustar seus filtros de busca.</p>
+          {(searchTerm || roleFilter !== 'all') && (
+            <Button
+              onClick={() => {
+                setSearchTerm('')
+                setRoleFilter('all')
+              }}
+              className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+            >
+              Limpar Filtros
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="w-full">
-          <div className="hidden md:grid grid-cols-12 gap-4 p-4 text-muted-foreground font-medium border-b">
+        <div className="w-full overflow-x-auto">
+          <div className="hidden md:grid grid-cols-12 gap-4 p-3 bg-muted text-foreground font-semibold text-left border-b border-border rounded-t-lg">
             <div className="col-span-4">Nome</div>
             <div className="col-span-3">Email</div>
             <div className="col-span-2">Role Atual</div>
             <div className="col-span-3">Ação</div>
           </div>
-          {customers.map((c: any) => (
-            <CustomerRow key={c.id} customer={c} onUpdate={updateCustomerRole} />
-          ))}
+          <div className="flex flex-col gap-3 md:gap-0">
+            {customers?.map((c: any) => (
+              <CustomerRow key={c.id} customer={c} onUpdate={updateCustomerRole} />
+            ))}
+          </div>
 
-          <div className="flex justify-between items-center mt-6">
-            <Button disabled={page === 1} onClick={() => setPage((p) => p - 1)} variant="outline">
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-4 py-2 border border-border rounded-[6px] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+            >
               Anterior
-            </Button>
-            <span className="text-sm text-muted-foreground">Página {page}</span>
-            <Button
+            </button>
+            <span className="px-3 py-2 border border-transparent rounded-[6px] text-[13px] bg-yellow-500 text-black font-semibold">
+              {page}
+            </span>
+            <button
               disabled={page * 20 >= customersTotal}
               onClick={() => setPage((p) => p + 1)}
-              variant="outline"
+              className="px-4 py-2 border border-border rounded-[6px] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
             >
               Próxima
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -139,29 +171,27 @@ function CustomerRow({ customer, onUpdate }: any) {
   }
 
   return (
-    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 border-b md:border-b-0 md:border-t md:items-center">
+    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 md:p-3 bg-card md:bg-transparent rounded-[12px] md:rounded-none shadow-sm md:shadow-none border border-border md:border-t-0 hover:bg-muted/50 transition-colors md:items-center">
       <div className="md:col-span-4">
-        <span className="md:hidden font-medium text-xs text-muted-foreground block mb-1">Nome</span>
-        <span className="font-semibold md:font-normal">{customer.full_name || 'Sem Nome'}</span>
+        <span className="md:hidden font-bold text-[14px] block mb-1">Nome</span>
+        <span className="font-normal text-[14px]">{customer.full_name || 'Sem Nome'}</span>
       </div>
       <div className="md:col-span-3">
-        <span className="md:hidden font-medium text-xs text-muted-foreground block mb-1">
-          Email
-        </span>
-        <span className="text-sm">{customer.email}</span>
+        <span className="md:hidden font-bold text-[14px] block mb-1">Email</span>
+        <span className="text-[14px]">{customer.email}</span>
       </div>
       <div className="md:col-span-2">
-        <span className="md:hidden font-medium text-xs text-muted-foreground block mb-1">
-          Role Atual
+        <span className="md:hidden font-bold text-[14px] block mb-1">Role Atual</span>
+        <span
+          className={`px-3 py-1 rounded-[20px] text-[11px] font-semibold ${roleColors[customer.role] || roleColors.customer}`}
+        >
+          {customer.role}
         </span>
-        <Badge className={roleColors[customer.role] || roleColors.customer}>{customer.role}</Badge>
       </div>
       <div className="md:col-span-3 flex flex-wrap items-center gap-2">
-        <span className="md:hidden font-medium text-xs text-muted-foreground w-full mb-1">
-          Ação
-        </span>
+        <span className="md:hidden font-bold text-[14px] w-full block mb-1">Ação</span>
         <Select value={editingRole} onValueChange={setEditingRole}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[140px] border border-border rounded-[6px] text-[13px] py-2 focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -173,24 +203,24 @@ function CustomerRow({ customer, onUpdate }: any) {
           </SelectContent>
         </Select>
         {hasChanges && (
-          <>
-            <Button
+          <div className="flex gap-2">
+            <button
               onClick={handleSave}
               disabled={isSaving}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
+              className="w-[40px] h-[40px] flex items-center justify-center bg-green-600 text-white rounded-[6px] hover:bg-green-700 hover:scale-105 transition-all duration-150 disabled:opacity-50"
+              title="Salvar"
             >
-              Salvar
-            </Button>
-            <Button
+              <Check className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => setEditingRole(customer.role)}
               disabled={isSaving}
-              size="sm"
-              variant="secondary"
+              className="w-[40px] h-[40px] flex items-center justify-center bg-gray-600 text-white rounded-[6px] hover:bg-gray-700 hover:scale-105 transition-all duration-150 disabled:opacity-50"
+              title="Cancelar"
             >
-              Cancelar
-            </Button>
-          </>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         )}
       </div>
     </div>
