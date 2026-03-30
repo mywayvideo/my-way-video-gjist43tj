@@ -8,10 +8,12 @@ import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
+import { useProductDiscount } from '@/hooks/useProductDiscount'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
   const { isSearchActive, searchQuery } = useSearchState()
+  const { originalPrice, discountedPrice } = useProductDiscount(product)
 
   const searchSuffix =
     isSearchActive && searchQuery ? `?from=search&q=${encodeURIComponent(searchQuery)}` : ''
@@ -51,7 +53,11 @@ export function ProductCard({ product }: { product: any }) {
           </h3>
         </Link>
         <div className="mt-3">
-          <ProductPrice product={product} />
+          <ProductPrice
+            originalPrice={originalPrice}
+            discountedPrice={discountedPrice}
+            weight={product.weight}
+          />
         </div>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">

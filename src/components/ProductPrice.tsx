@@ -1,75 +1,98 @@
-import { useProductDiscount } from '@/hooks/useProductDiscount'
-import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
 import { HelpCircle } from 'lucide-react'
+import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
 
 export function ProductPrice({
-  product,
+  originalPrice,
+  discountedPrice,
+  weight,
+  discountPercentage,
   className,
-  size, // Ignored per strict global styling rules
+  size,
 }: {
-  product: any
+  originalPrice: number | null | undefined
+  discountedPrice: number | null | undefined
+  weight: number | null | undefined
+  discountPercentage?: number | null
   className?: string
   size?: 'sm' | 'default' | 'lg'
 }) {
-  const { originalPrice, discountedPrice, loading } = useProductDiscount(product)
+  const effectiveDiscountPercentage =
+    discountPercentage ??
+    (originalPrice && discountedPrice && originalPrice > 0
+      ? ((originalPrice - discountedPrice) / originalPrice) * 100
+      : 0)
 
-  const rawOriginalPrice = formatPrice(originalPrice)
-  const rawDiscountedPrice = discountedPrice !== null ? formatPrice(discountedPrice) : null
+  const { calculatedPrice: originalBrl, loading: brlOriginalLoading } = useCalculatePriceBRL(
+    originalPrice,
+    weight,
+    0,
+  )
 
-  const appendUSD = (val: ReturnType<typeof formatPrice>) => {
-    if (val.isPlaceholder) return val.text
-    return `${val.text} USD`
-  }
+  const { calculatedPrice: discountedBrl, loading: brlDiscountLoading } = useCalculatePriceBRL(
+    originalPrice,
+    weight,
+    effectiveDiscountPercentage,
+  )
 
-  const displayOriginal = appendUSD(rawOriginalPrice)
-  const displayCurrent = rawDiscountedPrice ? appendUSD(rawDiscountedPrice) : displayOriginal
+  const loading = brlOriginalLoading || brlDiscountLoading
 
-  if (rawOriginalPrice.isPlaceholder || (rawDiscountedPrice && rawDiscountedPrice.isPlaceholder)) {
+  if (!loading && originalBrl === null) {
     return (
       <p
         className={cn(
-          'text-[0.75rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1',
+          'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5',
           className,
         )}
       >
         <HelpCircle className="w-[14px] h-[14px]" />
-        {rawOriginalPrice.isPlaceholder ? displayOriginal : displayCurrent}
+        Preço sob consulta
       </p>
     )
   }
 
+  const formatBRL = (val: number) =>
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(val)
+
+  const showDiscount =
+    discountedPrice !== null &&
+    discountedPrice !== undefined &&
+    discountedBrl !== null &&
+    discountedBrl < (originalBrl || 0)
+
   return (
     <div
-      key={`${originalPrice}-${discountedPrice}`}
       className={cn(
         'flex flex-col animate-in fade-in zoom-in-[0.95] duration-500',
         loading ? 'opacity-50' : 'opacity-100',
         className,
       )}
     >
-      {discountedPrice !== null ? (
+      {showDiscount ? (
         <>
           <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4] mb-2">
-            {displayOriginal}
+            {formatBRL(originalBrl!)}
           </span>
           <span
-            className="text-[22px] font-extrabold text-green-500 leading-[1.2] mt-1 bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit animate-pulse"
-            style={{ animationDuration: '1.5s' }}
+            className={cn(
+              'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
+              size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
+            )}
           >
-            {displayCurrent}
+            {formatBRL(discountedBrl!)}
           </span>
         </>
       ) : (
         <span
           className={cn(
-            'leading-[1.2]',
-            size === 'lg'
-              ? 'text-[22px] font-extrabold text-green-500 mt-1 bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit'
-              : 'text-[14px] md:text-[16px] lg:text-[18px] text-primary font-normal',
+            'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
+            size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
           )}
         >
-          {displayOriginal}
+          {originalBrl !== null ? formatBRL(originalBrl) : ''}
         </span>
       )}
     </div>

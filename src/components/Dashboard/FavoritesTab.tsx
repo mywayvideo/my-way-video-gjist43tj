@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
+import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
 
 export function FavoritesTab({
   favorites,
@@ -51,6 +52,9 @@ export function FavoritesTab({
   const handleCompare = (productId: string) => {
     toast.info('Comparação selecionada. (Funcionalidade em desenvolvimento)')
   }
+
+  const products = favorites.map((fav) => fav.products).filter(Boolean) as any[]
+  const { discounts } = useMultipleProductDiscounts(products)
 
   if (favorites.length === 0) {
     return (
@@ -95,7 +99,11 @@ export function FavoritesTab({
                 {product.name}
               </h4>
               <div className="mb-4">
-                <ProductPrice product={product} />
+                <ProductPrice
+                  originalPrice={product.price_usd}
+                  discountedPrice={discounts[product.id]?.discountedPrice}
+                  weight={product.weight}
+                />
               </div>
 
               <div className="grid grid-cols-4 gap-2 pt-4 border-t border-border">

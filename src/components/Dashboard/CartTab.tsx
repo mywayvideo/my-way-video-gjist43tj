@@ -112,7 +112,12 @@ export function CartTab({
                     {product.name}
                   </h4>
                   <div className="mt-2">
-                    <ProductPrice product={product} size="sm" />
+                    <ProductPrice
+                      originalPrice={product.price_usd}
+                      discountedPrice={discounts[product.id]?.discountedPrice}
+                      weight={product.weight}
+                      size="sm"
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

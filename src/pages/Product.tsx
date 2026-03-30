@@ -500,11 +500,16 @@ export default function Product() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <span className="text-xs font-bold uppercase tracking-widest">
-                      Base FOB Miami
+                      Preço Final (Estimado BRL)
                     </span>
                   </div>
 
-                  <ProductPrice product={product} size="lg" />
+                  <ProductPrice
+                    originalPrice={product.price_usd}
+                    discountedPrice={discountInfo?.discountedPrice}
+                    weight={product.weight}
+                    size="lg"
+                  />
 
                   {isAdmin && showPriceCost && (
                     <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">
