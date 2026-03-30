@@ -42,6 +42,22 @@ export async function updateCustomer(customerId: string, data: any) {
   if (error) throw error
 }
 
+export async function updateBillingAddress(customerId: string, address: any) {
+  const { error } = await supabase
+    .from('customers')
+    .update({ billing_address: address })
+    .eq('id', customerId)
+  if (error) throw error
+}
+
+export async function updateShippingAddress(customerId: string, address: any) {
+  const { error } = await supabase
+    .from('customers')
+    .update({ shipping_address: address })
+    .eq('id', customerId)
+  if (error) throw error
+}
+
 export async function changeCustomerPassword(
   customerId: string,
   newPassword: string,

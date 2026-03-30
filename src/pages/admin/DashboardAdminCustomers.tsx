@@ -56,6 +56,8 @@ export function DashboardAdminCustomers(props: any) {
     resetCustomer2FA,
     sendConfirmationEmail,
     createCustomer,
+    updateBillingAddress,
+    updateShippingAddress,
   } = useCustomerManagement()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -97,6 +99,10 @@ export function DashboardAdminCustomers(props: any) {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [activeTab, setActiveTab] = useState('basic')
+  const [billingForm, setBillingForm] = useState<any>({ country: 'Brasil' })
+  const [shippingForm, setShippingForm] = useState<any>({ country: 'Brasil' })
+
   const handleEditClick = (customer: any) => {
     setSelectedCustomer(customer)
     setEditForm({
@@ -107,6 +113,9 @@ export function DashboardAdminCustomers(props: any) {
       role: customer.role || 'customer',
       status: customer.status || 'ativo',
     })
+    setBillingForm(customer.billing_address || { country: 'Brasil' })
+    setShippingForm(customer.shipping_address || { country: 'Brasil' })
+    setActiveTab('basic')
     setIsEditModalOpen(true)
   }
 
@@ -159,6 +168,20 @@ export function DashboardAdminCustomers(props: any) {
       })
       setPage(1)
       fetchCustomers(1, limit, debouncedSearch, statusFilter)
+    })
+
+  const handleSaveAddress = (type: 'billing' | 'shipping') =>
+    actionWrapper(async () => {
+      const form = type === 'billing' ? billingForm : shippingForm
+      if (form.zipcode && !/^\d{5}-\d{3}$/.test(form.zipcode)) return
+      if (type === 'billing') {
+        await updateBillingAddress(selectedCustomer.id, form)
+        setSelectedCustomer((prev: any) => ({ ...prev, billing_address: form }))
+      } else {
+        await updateShippingAddress(selectedCustomer.id, form)
+        setSelectedCustomer((prev: any) => ({ ...prev, shipping_address: form }))
+      }
+      fetchCustomers(page, limit, debouncedSearch, statusFilter)
     })
 
   const handleSaveEdit = () =>
@@ -497,146 +520,323 @@ export function DashboardAdminCustomers(props: any) {
           <DialogHeader>
             <DialogTitle>Editar Cliente: {selectedCustomer?.full_name}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">1. Informações Básicas</h3>
-              <Field l="Nome Completo">
-                <Input
-                  value={editForm.full_name}
-                  onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                  maxLength={100}
-                />
-              </Field>
-              <Field l="Email">
-                <Input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                />
-              </Field>
-              <Field l="Telefone">
-                <Input
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                />
-              </Field>
-              <Field l="Empresa">
-                <Input
-                  value={editForm.company_name}
-                  onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
-                  maxLength={100}
-                />
-              </Field>
-              <Field l="Data de Criação">
-                <Input
-                  value={
-                    selectedCustomer?.created_at
-                      ? format(new Date(selectedCustomer.created_at), 'dd/MM/yyyy HH:mm')
-                      : '-'
-                  }
-                  disabled
-                />
-              </Field>
-            </div>
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg border-b pb-2">2. Acesso e Permissões</h3>
-                <Field l="Role">
-                  <Select
-                    value={editForm.role}
-                    onValueChange={(v) => setEditForm({ ...editForm, role: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="customer">Customer</SelectItem>
-                      <SelectItem value="vip">VIP</SelectItem>
-                      <SelectItem value="reseller">Reseller</SelectItem>
-                      <SelectItem value="collaborator">Collaborator</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field l="Status">
-                  <Select
-                    value={editForm.status}
-                    onValueChange={(v) => setEditForm({ ...editForm, status: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="inativo">Inativo</SelectItem>
-                      <SelectItem value="suspenso">Suspenso</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field l="Último Acesso">
-                  <Input
-                    value={
-                      selectedCustomer?.last_login
-                        ? format(new Date(selectedCustomer.last_login), 'dd/MM/yyyy HH:mm')
-                        : 'Nunca acessou'
-                    }
-                    disabled
-                  />
-                </Field>
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg border-b pb-2">3. Alterar Senha</h3>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setIsPasswordModalOpen(true)}
-                >
-                  <KeyRound className="mr-2 h-4 w-4" /> Alterar Senha do Cliente
-                </Button>
-              </div>
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg border-b pb-2">4. Ações Adicionais</h3>
-                {selectedCustomer?.two_factor_enabled && (
-                  <Button
-                    variant="outline"
-                    className="w-full text-orange-500"
-                    onClick={() => {
-                      if (window.confirm('Desativar autenticação de dois fatores?'))
-                        resetCustomer2FA(selectedCustomer.id)
-                    }}
-                  >
-                    <ShieldOff className="mr-2 h-4 w-4" /> Resetar 2FA
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => sendConfirmationEmail(selectedCustomer.id)}
-                >
-                  <Mail className="mr-2 h-4 w-4" /> Enviar Email de Confirmação
-                </Button>
-              </div>
-            </div>
+
+          <div className="flex flex-wrap gap-2 border-b mt-2">
+            {[
+              { id: 'basic', label: 'Informações Básicas' },
+              { id: 'access', label: 'Acesso e Permissões' },
+              { id: 'billing', label: 'Endereço de Cobrança' },
+              { id: 'shipping', label: 'Endereço de Entrega' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === tab.id
+                    ? 'border-yellow-500 text-white'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 mt-6 border-t pt-4">
-            <Button
-              variant="destructive"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="sm:mr-auto"
-            >
-              Deletar Cliente
-            </Button>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              disabled={isSubmitting || !editForm.full_name || !editForm.email}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Salvar Alterações
-            </Button>
-          </DialogFooter>
+
+          <div className="animate-fade-in transition-opacity duration-300 py-4 min-h-[400px]">
+            {activeTab === 'basic' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2">Informações Básicas</h3>
+                  <Field l="Nome Completo">
+                    <Input
+                      value={editForm.full_name}
+                      onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                      maxLength={100}
+                    />
+                  </Field>
+                  <Field l="Email">
+                    <Input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    />
+                  </Field>
+                  <Field l="Telefone">
+                    <Input
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    />
+                  </Field>
+                  <Field l="Empresa">
+                    <Input
+                      value={editForm.company_name}
+                      onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+                      maxLength={100}
+                    />
+                  </Field>
+                  <Field l="Data de Criação">
+                    <Input
+                      value={
+                        selectedCustomer?.created_at
+                          ? format(new Date(selectedCustomer.created_at), 'dd/MM/yyyy HH:mm')
+                          : '-'
+                      }
+                      disabled
+                    />
+                  </Field>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'access' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2">Acesso e Permissões</h3>
+                  <Field l="Role">
+                    <Select
+                      value={editForm.role}
+                      onValueChange={(v) => setEditForm({ ...editForm, role: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="customer">Customer</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                        <SelectItem value="reseller">Reseller</SelectItem>
+                        <SelectItem value="collaborator">Collaborator</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field l="Status">
+                    <Select
+                      value={editForm.status}
+                      onValueChange={(v) => setEditForm({ ...editForm, status: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ativo">Ativo</SelectItem>
+                        <SelectItem value="inativo">Inativo</SelectItem>
+                        <SelectItem value="suspenso">Suspenso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field l="Último Acesso">
+                    <Input
+                      value={
+                        selectedCustomer?.last_login
+                          ? format(new Date(selectedCustomer.last_login), 'dd/MM/yyyy HH:mm')
+                          : 'Nunca acessou'
+                      }
+                      disabled
+                    />
+                  </Field>
+                </div>
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Alterar Senha</h3>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setIsPasswordModalOpen(true)}
+                    >
+                      <KeyRound className="mr-2 h-4 w-4" /> Alterar Senha do Cliente
+                    </Button>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Ações Adicionais</h3>
+                    {selectedCustomer?.two_factor_enabled && (
+                      <Button
+                        variant="outline"
+                        className="w-full text-orange-500"
+                        onClick={() => {
+                          if (window.confirm('Desativar autenticação de dois fatores?'))
+                            resetCustomer2FA(selectedCustomer.id)
+                        }}
+                      >
+                        <ShieldOff className="mr-2 h-4 w-4" /> Resetar 2FA
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => sendConfirmationEmail(selectedCustomer.id)}
+                    >
+                      <Mail className="mr-2 h-4 w-4" /> Enviar Email de Confirmação
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(activeTab === 'billing' || activeTab === 'shipping') &&
+              (() => {
+                const isBilling = activeTab === 'billing'
+                const form = isBilling ? billingForm : shippingForm
+                const setForm = isBilling ? setBillingForm : setShippingForm
+                const cepErr = form.zipcode ? !/^\d{5}-\d{3}$/.test(form.zipcode) : false
+                const brStates = [
+                  'AC',
+                  'AL',
+                  'AP',
+                  'AM',
+                  'BA',
+                  'CE',
+                  'DF',
+                  'ES',
+                  'GO',
+                  'MA',
+                  'MT',
+                  'MS',
+                  'MG',
+                  'PA',
+                  'PB',
+                  'PR',
+                  'PE',
+                  'PI',
+                  'RJ',
+                  'RN',
+                  'RS',
+                  'RO',
+                  'RR',
+                  'SC',
+                  'SP',
+                  'TO',
+                ]
+
+                return (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <Field l="Rua/Avenida">
+                          <Input
+                            value={form.street || ''}
+                            onChange={(e) => setForm({ ...form, street: e.target.value })}
+                            maxLength={100}
+                          />
+                        </Field>
+                        <div className="flex gap-4">
+                          <div className="w-1/3">
+                            <Field l="Número">
+                              <Input
+                                value={form.number || ''}
+                                onChange={(e) => setForm({ ...form, number: e.target.value })}
+                                maxLength={10}
+                              />
+                            </Field>
+                          </div>
+                          <div className="w-2/3">
+                            <Field l="Complemento">
+                              <Input
+                                value={form.complement || ''}
+                                onChange={(e) => setForm({ ...form, complement: e.target.value })}
+                                maxLength={100}
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                        <Field l="Bairro">
+                          <Input
+                            value={form.neighborhood || ''}
+                            onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+                            maxLength={50}
+                          />
+                        </Field>
+                      </div>
+                      <div className="space-y-4">
+                        <Field l="Cidade">
+                          <Input
+                            value={form.city || ''}
+                            onChange={(e) => setForm({ ...form, city: e.target.value })}
+                            maxLength={50}
+                          />
+                        </Field>
+                        <div className="flex gap-4">
+                          <div className="w-1/2">
+                            <Field l="Estado/UF">
+                              <Select
+                                value={form.state || ''}
+                                onValueChange={(v) => setForm({ ...form, state: v })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {brStates.map((st) => (
+                                    <SelectItem key={st} value={st}>
+                                      {st}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                          </div>
+                          <div className="w-1/2">
+                            <Field l="CEP">
+                              <Input
+                                value={form.zipcode || ''}
+                                onChange={(e) => setForm({ ...form, zipcode: e.target.value })}
+                                placeholder="XXXXX-XXX"
+                                className={cepErr ? 'border-red-500' : ''}
+                              />
+                              {cepErr && (
+                                <span className="text-xs text-red-500">
+                                  Formato de CEP inválido. Use XXXXX-XXX.
+                                </span>
+                              )}
+                            </Field>
+                          </div>
+                        </div>
+                        <Field l="País">
+                          <Input
+                            value={form.country || ''}
+                            onChange={(e) => setForm({ ...form, country: e.target.value })}
+                            maxLength={50}
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4 border-t">
+                      <Button variant="outline" onClick={() => setForm({ country: 'Brasil' })}>
+                        Limpar
+                      </Button>
+                      <Button
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleSaveAddress(isBilling ? 'billing' : 'shipping')}
+                        disabled={isSubmitting || cepErr}
+                      >
+                        Salvar Endereço
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })()}
+          </div>
+
+          {(activeTab === 'basic' || activeTab === 'access') && (
+            <DialogFooter className="flex-col sm:flex-row gap-2 mt-4 border-t pt-4">
+              <Button
+                variant="destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="sm:mr-auto"
+              >
+                Deletar Cliente
+              </Button>
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={isSubmitting || !editForm.full_name || !editForm.email}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 

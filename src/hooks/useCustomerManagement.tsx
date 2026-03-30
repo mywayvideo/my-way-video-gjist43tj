@@ -43,6 +43,28 @@ export function useCustomerManagement() {
     }
   }
 
+  const updateBillingAddress = async (customerId: string, address: any) => {
+    try {
+      await customerService.updateBillingAddress(customerId, address)
+      toast.success('Endereço de cobrança atualizado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível atualizar endereço de cobrança.')
+      throw err
+    }
+  }
+
+  const updateShippingAddress = async (customerId: string, address: any) => {
+    try {
+      await customerService.updateShippingAddress(customerId, address)
+      toast.success('Endereço de entrega atualizado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível atualizar endereço de entrega.')
+      throw err
+    }
+  }
+
   const changeCustomerPassword = async (
     customerId: string,
     newPassword: string,
@@ -116,5 +138,7 @@ export function useCustomerManagement() {
     resetCustomer2FA,
     sendConfirmationEmail,
     createCustomer,
+    updateBillingAddress,
+    updateShippingAddress,
   }
 }
