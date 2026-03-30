@@ -26,7 +26,7 @@ export default function DashboardAdmin() {
         <div className="flex overflow-x-auto max-w-[1400px] mx-auto px-6 md:px-8 scrollbar-hide">
           {[
             'Dados Pessoais',
-            'Gerenciar Roles',
+            'Gerenciar Clientes',
             'Gerenciar Descontos',
             'Métricas e Relatórios',
           ].map((tab, idx) => (

@@ -1,0 +1,108 @@
+import { useState, useCallback } from 'react'
+import * as customerService from '@/services/customerManagementService'
+import { toast } from 'sonner'
+
+export function useCustomerManagement() {
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+
+  const fetchCustomers = useCallback(
+    async (page: number, limit: number, searchTerm: string, statusFilter: string) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const { customers: data, total } = await customerService.fetchAllCustomers(
+          page,
+          limit,
+          searchTerm,
+          statusFilter,
+        )
+        setCustomers(data)
+        setTotalCount(total)
+      } catch (err: any) {
+        setError(err.message || 'Não foi possível carregar clientes.')
+        toast.error('Não foi possível carregar clientes.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [],
+  )
+
+  const updateCustomer = async (customerId: string, data: any) => {
+    try {
+      await customerService.updateCustomer(customerId, data)
+      toast.success('Cliente atualizado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível atualizar cliente.')
+      throw err
+    }
+  }
+
+  const changeCustomerPassword = async (
+    customerId: string,
+    newPassword: string,
+    sendEmail: boolean = false,
+  ) => {
+    try {
+      await customerService.changeCustomerPassword(customerId, newPassword, sendEmail)
+      toast.success('Senha alterada com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível alterar a senha.')
+      throw err
+    }
+  }
+
+  const deleteCustomer = async (customerId: string) => {
+    try {
+      await customerService.deleteCustomer(customerId)
+      toast.success('Cliente deletado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível deletar o cliente.')
+      throw err
+    }
+  }
+
+  const resetCustomer2FA = async (customerId: string) => {
+    try {
+      await customerService.resetCustomer2FA(customerId)
+      toast.success('2FA desativado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível resetar o 2FA.')
+      throw err
+    }
+  }
+
+  const sendConfirmationEmail = async (customerId: string) => {
+    try {
+      await customerService.sendConfirmationEmail(customerId)
+      toast.success('Email enviado com sucesso!')
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível enviar o email de confirmação.')
+      throw err
+    }
+  }
+
+  return {
+    customers,
+    totalCount,
+    loading,
+    error,
+    selectedCustomer,
+    setSelectedCustomer,
+    fetchCustomers,
+    updateCustomer,
+    changeCustomerPassword,
+    deleteCustomer,
+    resetCustomer2FA,
+    sendConfirmationEmail,
+  }
+}
