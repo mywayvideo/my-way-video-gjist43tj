@@ -396,7 +396,7 @@ export function Header() {
               <img
                 src={logoUrl}
                 alt="My Way Video"
-                className="h-10 w-auto hover:opacity-90 transition-opacity cursor-pointer"
+                className="h-12 md:h-14 w-auto hover:opacity-90 transition-opacity cursor-pointer"
               />
             </Link>
           </div>
