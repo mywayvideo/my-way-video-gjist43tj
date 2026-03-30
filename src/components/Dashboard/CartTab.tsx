@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom'
 import { customerService } from '@/services/customerService'
 import { toast } from 'sonner'
 import { useState } from 'react'
+import { ProductPrice } from '@/components/ProductPrice'
+import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
 
 export function CartTab({
   cart,
@@ -45,11 +47,23 @@ export function CartTab({
     }
   }
 
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.quantity * (item.products?.price_usd || 0),
-    0,
-  )
-  const discount = 0 // Future implementation
+  const products = cart.map((item) => item.products).filter(Boolean)
+  const { discounts } = useMultipleProductDiscounts(products)
+
+  let subtotal = 0
+  let totalDiscountAmount = 0
+
+  cart.forEach((item) => {
+    const p = item.products
+    if (!p) return
+    const d = discounts[p.id]
+    subtotal += (p.price_usd || 0) * item.quantity
+    if (d?.discountAmount) {
+      totalDiscountAmount += d.discountAmount * item.quantity
+    }
+  })
+
+  const discount = totalDiscountAmount
   const total = subtotal - discount
 
   if (cart.length === 0) {
@@ -97,11 +111,9 @@ export function CartTab({
                   >
                     {product.name}
                   </h4>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    $
-                    {product.price_usd?.toLocaleString('en-US', { minimumFractionDigits: 2 }) ||
-                      '0.00'}
-                  </p>
+                  <div className="mt-2">
+                    <ProductPrice product={product} size="sm" />
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center border border-border rounded-md">
@@ -128,7 +140,10 @@ export function CartTab({
                   <div className="text-right w-24">
                     <p className="font-bold">
                       $
-                      {((product.price_usd || 0) * item.quantity).toLocaleString('en-US', {
+                      {(
+                        (discounts[product.id]?.discountedPrice ?? product.price_usd ?? 0) *
+                        item.quantity
+                      ).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}
                     </p>

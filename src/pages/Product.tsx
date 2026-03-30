@@ -37,6 +37,7 @@ import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
+import { ProductPrice } from '@/components/ProductPrice'
 
 type Message = {
   id: string
@@ -375,8 +376,6 @@ export default function Product() {
       </div>
     )
 
-  const usdPrice = formatPrice(product.price_usd)
-
   return (
     <>
       <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
@@ -498,16 +497,8 @@ export default function Product() {
                       Base FOB Miami
                     </span>
                   </div>
-                  <p
-                    className={cn(
-                      'text-4xl lg:text-5xl font-mono font-bold text-foreground drop-shadow-sm',
-                      usdPrice.isPlaceholder &&
-                        'text-[0.875rem] lg:text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
-                    )}
-                  >
-                    {usdPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
-                    {usdPrice.text}
-                  </p>
+
+                  <ProductPrice product={product} size="lg" />
 
                   {isAdmin && showPriceCost && (
                     <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">

@@ -7,12 +7,11 @@ import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
+import { ProductPrice } from '@/components/ProductPrice'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
   const { isSearchActive, searchQuery } = useSearchState()
-
-  const displayPrice = formatPrice(product.price_usd)
 
   const searchSuffix =
     isSearchActive && searchQuery ? `?from=search&q=${encodeURIComponent(searchQuery)}` : ''
@@ -51,17 +50,9 @@ export function ProductCard({ product }: { product: any }) {
             {product.name}
           </h3>
         </Link>
-        <p
-          className={cn(
-            'mt-3',
-            displayPrice.isPlaceholder
-              ? 'text-[0.75rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1'
-              : 'text-xl font-bold text-foreground',
-          )}
-        >
-          {displayPrice.isPlaceholder && <HelpCircle className="w-[14px] h-[14px]" />}
-          {displayPrice.text}
-        </p>
+        <div className="mt-3">
+          <ProductPrice product={product} />
+        </div>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">
         <Button

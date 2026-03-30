@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
+import { ProductPrice } from '@/components/ProductPrice'
 
 export function FavoritesTab({
   favorites,
@@ -93,10 +94,9 @@ export function FavoritesTab({
               <h4 className="font-semibold text-base line-clamp-2 mb-2 flex-grow">
                 {product.name}
               </h4>
-              <p className="text-lg font-bold text-primary mb-4">
-                $
-                {product.price_usd?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
-              </p>
+              <div className="mb-4">
+                <ProductPrice product={product} />
+              </div>
 
               <div className="grid grid-cols-4 gap-2 pt-4 border-t border-border">
                 <Button
