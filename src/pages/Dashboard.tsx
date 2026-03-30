@@ -9,12 +9,24 @@ import { useCustomerDashboard } from '@/hooks/useCustomerDashboard'
 import { customerService } from '@/services/customerService'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
+import { AlertCircle, ArrowLeft, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useUserRole } from '@/hooks/use-user-role'
 
 export default function Dashboard() {
+  const { role, loading: roleLoading, error: roleError } = useUserRole()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!roleLoading && role) {
+      if (role === 'admin' || role === 'collaborator') {
+        navigate('/dashboard-admin', { replace: true })
+      }
+    }
+  }, [role, roleLoading, navigate])
+
   const {
     user,
     activeTab,
@@ -28,6 +40,32 @@ export default function Dashboard() {
     refresh,
   } = useCustomerDashboard()
   const [isEditingProfile, setIsEditingProfile] = useState(false)
+
+  if (roleLoading) {
+    return (
+      <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Verificando acesso...</p>
+      </div>
+    )
+  }
+
+  if (roleError) {
+    return (
+      <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Ops! Algo deu errado.</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Não foi possível verificar seu acesso.
+        </p>
+        <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
+      </div>
+    )
+  }
+
+  if (role === 'admin' || role === 'collaborator') {
+    return null
+  }
 
   if (loading && !user) {
     return (
