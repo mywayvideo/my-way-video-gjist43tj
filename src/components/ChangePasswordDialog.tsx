@@ -12,10 +12,12 @@ export function ChangePasswordDialog({
   open,
   onOpenChange,
   onSuccess,
+  onSubmit,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   onSuccess: () => void
+  onSubmit?: (curr: string, newP: string) => Promise<{ error?: string }>
 }) {
   const { user } = useAuth()
   const [currentPassword, setCurrentPassword] = useState('')
@@ -94,6 +96,20 @@ export function ChangePasswordDialog({
     if (!isFormValid) return
     setIsSubmitting(true)
     setSubmitErr('')
+
+    if (onSubmit) {
+      const res = await onSubmit(currentPassword, newPassword)
+      setIsSubmitting(false)
+      if (res?.error) {
+        setSubmitErr(res.error)
+      } else {
+        onOpenChange(false)
+        toast.success('Senha alterada com sucesso!')
+        onSuccess()
+      }
+      return
+    }
+
     const isValid = await validateCurrentPassword()
     if (!isValid) return setIsSubmitting(false)
 

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { DashboardAdminCustomers } from './admin/DashboardAdminCustomers'
 import { DashboardAdminDiscounts } from './admin/DashboardAdminDiscounts'
 import { DashboardAdminMetrics } from './admin/DashboardAdminMetrics'
+import { DashboardAdminProfile } from './admin/DashboardAdminProfile'
 import { useAdminDashboard } from '@/hooks/useAdminDashboard'
 
 export default function DashboardAdmin() {
@@ -23,7 +24,12 @@ export default function DashboardAdmin() {
 
       <div className="w-full bg-card border-b border-border sticky top-0 z-10">
         <div className="flex overflow-x-auto max-w-[1400px] mx-auto px-6 md:px-8 scrollbar-hide">
-          {['Gerenciar Roles', 'Gerenciar Descontos', 'Métricas e Relatórios'].map((tab, idx) => (
+          {[
+            'Dados Pessoais',
+            'Gerenciar Roles',
+            'Gerenciar Descontos',
+            'Métricas e Relatórios',
+          ].map((tab, idx) => (
             <button
               key={idx}
               onClick={() => setActiveTab(idx)}
@@ -41,9 +47,10 @@ export default function DashboardAdmin() {
       </div>
 
       <main className="p-[32px] max-w-[1400px] mx-auto transition-opacity duration-300 animate-fade-in">
-        {activeTab === 0 && <DashboardAdminCustomers {...dashboardParams} />}
-        {activeTab === 1 && <DashboardAdminDiscounts {...dashboardParams} />}
-        {activeTab === 2 && <DashboardAdminMetrics {...dashboardParams} />}
+        {activeTab === 0 && <DashboardAdminProfile />}
+        {activeTab === 1 && <DashboardAdminCustomers {...dashboardParams} />}
+        {activeTab === 2 && <DashboardAdminDiscounts {...dashboardParams} />}
+        {activeTab === 3 && <DashboardAdminMetrics {...dashboardParams} />}
       </main>
     </div>
   )
