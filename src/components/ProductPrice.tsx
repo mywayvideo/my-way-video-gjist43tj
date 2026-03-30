@@ -54,14 +54,21 @@ export function ProductPrice({
             {displayOriginal}
           </span>
           <span
-            className="text-[22px] font-extrabold text-green-600 dark:text-green-500 leading-[1.2] mt-1 bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit animate-pulse"
+            className="text-[22px] font-extrabold text-green-500 leading-[1.2] mt-1 bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit animate-pulse"
             style={{ animationDuration: '1.5s' }}
           >
             {displayCurrent}
           </span>
         </>
       ) : (
-        <span className="text-[14px] md:text-[16px] lg:text-[18px] text-primary font-normal leading-[1.2]">
+        <span
+          className={cn(
+            'leading-[1.2]',
+            size === 'lg'
+              ? 'text-[22px] font-extrabold text-green-500 mt-1 bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit'
+              : 'text-[14px] md:text-[16px] lg:text-[18px] text-primary font-normal',
+          )}
+        >
           {displayOriginal}
         </span>
       )}

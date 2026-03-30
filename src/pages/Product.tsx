@@ -565,7 +565,7 @@ export default function Product() {
                           return (
                             <p
                               className={cn(
-                                'text-3xl font-mono font-bold text-green-500 mb-3 drop-shadow-sm',
+                                'text-[22px] font-mono font-extrabold text-green-500 mb-3 drop-shadow-sm',
                                 brlPrice.isPlaceholder &&
                                   'text-[0.875rem] lg:text-[0.875rem] font-[600] text-green-500 italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
                               )}
