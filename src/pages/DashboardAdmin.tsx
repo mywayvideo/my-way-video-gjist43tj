@@ -26,9 +26,9 @@ export default function DashboardAdmin() {
         <div className="flex overflow-x-auto max-w-[1400px] mx-auto px-6 md:px-8 scrollbar-hide">
           {[
             'Dados Pessoais',
-            'Gerenciar Clientes',
+            'Gerenciar Roles',
             'Gerenciar Descontos',
-            'Métricas e Relatórios',
+            'Metricas e Relatorios',
           ].map((tab, idx) => (
             <button
               key={idx}
@@ -46,7 +46,11 @@ export default function DashboardAdmin() {
         </div>
       </div>
 
-      <main className="p-[32px] max-w-[1400px] mx-auto transition-opacity duration-300 animate-fade-in">
+      <main
+        key={activeTab}
+        className="p-[32px] max-w-[1400px] mx-auto animate-fade-in"
+        style={{ animationDuration: '300ms' }}
+      >
         {activeTab === 0 && <DashboardAdminProfile />}
         {activeTab === 1 && <DashboardAdminCustomers {...dashboardParams} />}
         {activeTab === 2 && <DashboardAdminDiscounts {...dashboardParams} />}
