@@ -31,7 +31,7 @@ export function AIPrompt({
   searchType?: 'ai' | 'database'
 }) {
   const { id: routeId } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const activeProductId = productId || routeId
 
   const routeSearchType = searchParams.get('type') as 'ai' | 'database' | null
