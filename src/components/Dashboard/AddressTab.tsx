@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MapPin, Plus, Edit2, Trash2, Save, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { CUSTOMER_LABELS } from '@/constants/customer'
+import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -151,6 +152,23 @@ export function AddressTab({
                   )}
                 </div>
                 <div className="flex gap-2 justify-end">
+                  {!address.is_default && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground hover:text-primary transition-all duration-200 mr-2"
+                      onClick={async () => {
+                        try {
+                          await updateAddress(address.id, { is_default: true } as any)
+                          toast.success('Endereço definido como padrão.')
+                        } catch (e) {
+                          toast.error('Erro ao atualizar endereço.')
+                        }
+                      }}
+                    >
+                      Usar Padrão
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -164,9 +182,15 @@ export function AddressTab({
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-destructive transition-all duration-200"
-                      onClick={() => {
-                        if (confirm('Tem certeza que deseja excluir este endereço?'))
-                          deleteAddress(address.id)
+                      onClick={async () => {
+                        if (confirm('Tem certeza que deseja excluir este endereço?')) {
+                          try {
+                            await deleteAddress(address.id)
+                            toast.success('Endereço removido.')
+                          } catch (e) {
+                            toast.error('Erro ao remover endereço.')
+                          }
+                        }
                       }}
                     >
                       <Trash2 className="w-4 h-4" />

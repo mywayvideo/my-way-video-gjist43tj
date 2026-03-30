@@ -1,85 +1,163 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PersonalInfoTab } from '@/components/Dashboard/PersonalInfoTab'
 import { AddressTab } from '@/components/Dashboard/AddressTab'
-import { ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { useCustomerProfile } from '@/hooks/useCustomerProfile'
+import { SummaryTab } from '@/components/Dashboard/SummaryTab'
+import { FavoritesTab } from '@/components/Dashboard/FavoritesTab'
+import { CartTab } from '@/components/Dashboard/CartTab'
+import { OrderHistoryTab } from '@/components/Dashboard/OrderHistoryTab'
+import { useCustomerDashboard } from '@/hooks/useCustomerDashboard'
+import { customerService } from '@/services/customerService'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { AlertCircle, ArrowLeft } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
-  const { customer, state, updateProfile, setState } = useCustomerProfile()
+  const {
+    user,
+    activeTab,
+    setActiveTab,
+    orders,
+    favorites,
+    cart,
+    discounts,
+    loading,
+    error,
+    refresh,
+  } = useCustomerDashboard()
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
 
-  if (state === 'LOADING' && !customer) {
+  if (loading && !user) {
     return (
-      <div className="container max-w-4xl mx-auto py-8 px-4">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Skeleton className="h-12 w-full mb-6" />
+      <div className="container max-w-6xl mx-auto py-8 px-4">
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-32 mb-8" />
+        <Skeleton className="h-12 w-full mb-8" />
         <div className="space-y-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
         </div>
       </div>
     )
   }
 
+  if (error && !user) {
+    return (
+      <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center">
+        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Ops! Algo deu errado.</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+        <Button onClick={refresh}>Tentar Novamente</Button>
+      </div>
+    )
+  }
+
+  if (!user) return null
+
+  const firstName = user.full_name?.split(' ')[0] || 'Cliente'
+  const today = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
+  const handleProfileSave = async (data: any) => {
+    try {
+      await customerService.updateCustomerData(user.id, data)
+      toast.success('Dados atualizados com sucesso!')
+      setIsEditingProfile(false)
+      refresh()
+    } catch (e) {
+      toast.error('Erro ao atualizar dados. Tente novamente.')
+    }
+  }
+
   return (
-    <div className="container max-w-4xl mx-auto py-4 md:py-6 px-4 md:px-6">
-      <div className="flex items-center justify-between p-4 md:p-6 border-b border-border mb-6 md:mb-8">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-primary hover:opacity-80 transition-opacity duration-200">
-            <ArrowLeft className="w-5 h-5" />
+    <div className="container max-w-6xl mx-auto py-6 md:py-8 px-4 md:px-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div className="flex items-start gap-4">
+          <Link to="/" className="text-muted-foreground hover:text-primary transition-colors mt-2">
+            <ArrowLeft className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl font-bold">Meu Dashboard</h1>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Meu Dashboard</h1>
+            <p className="text-muted-foreground capitalize mt-1">{today}</p>
+            <p className="text-lg mt-2 text-foreground">
+              Olá, <span className="font-semibold text-primary">{firstName}</span>!
+            </p>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="pessoal" className="w-full">
-        <TabsList className="flex w-full h-auto gap-4 md:gap-6 bg-transparent border-b border-border p-0 overflow-x-auto">
-          <TabsTrigger
-            value="pessoal"
-            className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-3 py-3 bg-transparent font-medium whitespace-nowrap"
-          >
-            Dados Pessoais
-          </TabsTrigger>
-          <TabsTrigger
-            value="entrega"
-            className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-3 py-3 bg-transparent font-medium whitespace-nowrap"
-          >
-            Endereço de Entrega
-          </TabsTrigger>
-          <TabsTrigger
-            value="cobranca"
-            className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-3 py-3 bg-transparent font-medium whitespace-nowrap"
-          >
-            Endereço de Cobrança
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md pb-4 border-b border-border mb-8">
+          <TabsList className="flex w-full h-auto gap-2 sm:gap-6 bg-transparent p-0 overflow-x-auto justify-start hide-scrollbar">
+            {[
+              { id: 'resumo', label: 'Resumo' },
+              { id: 'pessoal', label: 'Dados Pessoais' },
+              { id: 'entrega', label: 'Endereço de Entrega' },
+              { id: 'favoritos', label: 'Favoritos' },
+              { id: 'carrinho', label: 'Carrinho' },
+              { id: 'historico', label: 'Histórico de Compras' },
+            ].map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="relative data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary text-muted-foreground rounded-none px-2 sm:px-4 py-3 bg-transparent font-medium whitespace-nowrap hover:text-foreground transition-colors"
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-        <div className="pt-6 md:pt-8">
-          <TabsContent
-            value="pessoal"
-            className="p-4 md:p-6 m-0 focus-visible:outline-none animate-fade-in duration-300"
-          >
-            {customer && (
-              <PersonalInfoTab
-                customer={customer}
-                onSave={updateProfile}
-                isEditing={state === 'EDIT'}
-                setEditing={(editing) => setState(editing ? 'EDIT' : 'IDLE')}
-              />
+        <div className="min-h-[400px]">
+          <TabsContent value="resumo" className="m-0 focus-visible:outline-none">
+            {loading ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : (
+              <SummaryTab orders={orders} discounts={discounts} />
             )}
           </TabsContent>
-          <TabsContent
-            value="entrega"
-            className="p-4 md:p-6 m-0 focus-visible:outline-none animate-fade-in duration-300"
-          >
-            <AddressTab customerId={customer?.id} type="shipping" />
+
+          <TabsContent value="pessoal" className="m-0 focus-visible:outline-none max-w-4xl mx-auto">
+            <PersonalInfoTab
+              customer={user}
+              onSave={handleProfileSave}
+              isEditing={isEditingProfile}
+              setEditing={setIsEditingProfile}
+            />
           </TabsContent>
-          <TabsContent
-            value="cobranca"
-            className="p-4 md:p-6 m-0 focus-visible:outline-none animate-fade-in duration-300"
-          >
-            <AddressTab customerId={customer?.id} type="billing" />
+
+          <TabsContent value="entrega" className="m-0 focus-visible:outline-none max-w-4xl mx-auto">
+            <AddressTab customerId={user.id} type="shipping" />
+          </TabsContent>
+
+          <TabsContent value="favoritos" className="m-0 focus-visible:outline-none">
+            {loading ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : (
+              <FavoritesTab favorites={favorites} customerId={user.id} onRefresh={refresh} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="carrinho" className="m-0 focus-visible:outline-none">
+            {loading ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : (
+              <CartTab cart={cart} customerId={user.id} onRefresh={refresh} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="historico" className="m-0 focus-visible:outline-none">
+            {loading ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : (
+              <OrderHistoryTab orders={orders} customerId={user.id} onRefresh={refresh} />
+            )}
           </TabsContent>
         </div>
       </Tabs>
