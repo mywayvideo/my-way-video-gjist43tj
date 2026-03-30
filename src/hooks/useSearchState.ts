@@ -1,4 +1,3 @@
-import { create } from 'zustand'
 import { useSearchParams } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 
@@ -14,24 +13,25 @@ export interface SearchStoreState {
   setStoreState: (state: Partial<SearchStoreState>) => void
 }
 
-const useSearchStore = create<SearchStoreState>((set) => ({
-  searchQuery: '',
-  aiResponse: null,
-  productResults: [],
-  searchTimestamp: 0,
-  isSearchActive: false,
-  searchType: 'ai',
-  dbResults: [],
-  shouldShowWhatsapp: false,
-  setStoreState: (state) => set(state),
-}))
-
-export const useSearchState = <T = any>(selector?: (state: any) => T): T | any => {
+const useSearchState = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
-  const store = useSearchStore()
 
-  const searchQuery = searchParams.get('q') || store.searchQuery
+  const searchQuery = searchParams.get('q') || ''
+
+  let aiResponse = ''
+  let productResults: any[] = []
+
+  try {
+    const stored = localStorage.getItem('myway-search-state')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      aiResponse = parsed.response || ''
+      productResults = parsed.products || []
+    }
+  } catch (e) {
+    console.error('Error parsing search state:', e)
+  }
 
   const saveSearchState = (
     query: string,
@@ -42,23 +42,22 @@ export const useSearchState = <T = any>(selector?: (state: any) => T): T | any =
     shouldShowWhatsapp: boolean = false,
   ) => {
     try {
-      setSearchParams({ q: encodeURIComponent(query) })
-
-      const newState = {
-        searchQuery: query,
-        aiResponse: response,
-        productResults: products,
-        searchTimestamp: Date.now(),
-        isSearchActive: true,
-        searchType: type,
-        dbResults,
-        shouldShowWhatsapp,
-      }
-
-      store.setStoreState(newState)
-      localStorage.setItem('myway-search-state', JSON.stringify(newState))
-    } catch (e) {
-      console.error('Failed to save search state', e)
+      const encoded = encodeURIComponent(query)
+      setSearchParams({ q: encoded })
+      localStorage.setItem(
+        'myway-search-state',
+        JSON.stringify({
+          query,
+          response,
+          products,
+          type,
+          dbResults,
+          shouldShowWhatsapp,
+          timestamp: Date.now(),
+        }),
+      )
+    } catch (error) {
+      console.error('Error saving search state:', error)
       toast({
         title: 'Erro ao salvar busca',
         description: 'Não foi possível salvar a busca localmente.',
@@ -70,46 +69,31 @@ export const useSearchState = <T = any>(selector?: (state: any) => T): T | any =
   const restoreSearchState = () => {
     try {
       const stored = localStorage.getItem('myway-search-state')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        store.setStoreState(parsed)
-        return parsed
-      }
-    } catch (e) {
-      console.error('Failed to restore search state', e)
+      return stored ? JSON.parse(stored) : null
+    } catch (error) {
+      console.error('Error restoring search state:', error)
+      return null
     }
-    return null
   }
 
   const clearSearchState = () => {
-    setSearchParams({})
-    localStorage.removeItem('myway-search-state')
-    sessionStorage.removeItem('search-scroll-position')
-    store.setStoreState({
-      searchQuery: '',
-      aiResponse: null,
-      productResults: [],
-      searchTimestamp: 0,
-      isSearchActive: false,
-      searchType: 'ai',
-      dbResults: [],
-      shouldShowWhatsapp: false,
-    })
+    try {
+      setSearchParams({})
+      localStorage.removeItem('myway-search-state')
+    } catch (error) {
+      console.error('Error clearing search state:', error)
+    }
   }
 
-  const getSearchStateFromUrl = () => {
-    return searchParams.get('q') || ''
-  }
-
-  const extendedState = {
-    ...store,
+  return {
     searchQuery,
+    aiResponse,
+    productResults,
     saveSearchState,
     restoreSearchState,
     clearSearchState,
-    getSearchStateFromUrl,
-    setSearchParams,
   }
-
-  return selector ? selector(extendedState) : extendedState
 }
+
+export default useSearchState
+export { useSearchState }

@@ -5,10 +5,10 @@ import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Star, TrendingUp } from 'lucide-react'
-import { useSearchState } from '@/hooks/useSearchState'
+import useSearchState from '@/hooks/useSearchState'
 
 export default function Index() {
-  const { searchQuery, saveSearchState, setSearchParams } = useSearchState()
+  const { searchQuery, saveSearchState, restoreSearchState } = useSearchState()
   const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
