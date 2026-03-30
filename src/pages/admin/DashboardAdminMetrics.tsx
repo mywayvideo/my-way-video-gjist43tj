@@ -1,15 +1,18 @@
 import { useEffect } from 'react'
 import { Users, ShoppingCart, DollarSign, TrendingDown, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from '@/components/ui/chart'
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts'
+import { ChartContainer, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
 
 const ROLE_NAMES = ['customer', 'vip', 'reseller', 'collaborator', 'admin']
 
@@ -29,30 +32,33 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
 
   if (loadingMetrics)
     return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-[24px] animate-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[120px] rounded-[12px] w-full" />
+            <div
+              key={i}
+              className="h-[120px] rounded-[12px] w-full bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer"
+            />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <Skeleton className="h-[300px] rounded-[12px] w-full" />
-          <Skeleton className="h-[300px] rounded-[12px] w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[24px] mt-[24px]">
+          <div className="h-[300px] rounded-[12px] w-full bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer" />
+          <div className="h-[300px] rounded-[12px] w-full bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer" />
         </div>
       </div>
     )
 
   if (error)
     return (
-      <div className="text-center py-[48px] px-6 animate-fade-in">
-        <AlertCircle className="mx-auto h-[64px] w-[64px] text-red-500 mb-4" />
-        <h3 className="text-[18px] font-semibold text-foreground mb-2">
+      <div className="text-center py-[48px] px-[24px] animate-fade-in">
+        <AlertCircle className="mx-auto text-[64px] h-[64px] w-[64px] text-gray-300 mb-[16px]" />
+        <h3 className="text-[18px] font-semibold text-foreground mb-[8px]">
           Não foi possível carregar métricas.
         </h3>
-        <p className="text-[14px] text-gray-500 mb-6">{error}</p>
+        <p className="text-[14px] text-gray-500 mb-[24px]">{error}</p>
         <Button
           onClick={fetchMetrics}
-          className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+          className="px-[24px] py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all duration-150"
         >
           <RefreshCw className="mr-2 h-4 w-4" /> Tentar Novamente
         </Button>
@@ -68,9 +74,21 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
     value: metrics.customersByRole[role] || 0,
   })).filter((d) => d.value > 0)
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#2d2d2d] text-white p-[8px_12px] rounded-[6px] text-[12px] shadow-lg border border-gray-700">
+          <p className="font-semibold mb-1">{label || payload[0].name}</p>
+          <p>{`${payload[0].name === label ? 'Vendas' : 'Quantidade'}: ${payload[0].value}`}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-[24px] animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
         <MetricCard
           title="Total de Clientes"
           value={metrics.totalCustomers}
@@ -97,9 +115,9 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="bg-card rounded-[12px] p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
-          <h3 className="text-[16px] font-semibold text-foreground mb-4">Clientes por Role</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[24px] mt-[24px]">
+        <div className="bg-card rounded-[12px] p-[24px] shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-[16px] font-semibold text-foreground mb-[16px]">Clientes por Role</h3>
           <div className="h-[200px] md:h-[250px] lg:h-[300px]">
             <ChartContainer config={chartConfig} className="h-full w-full">
               <PieChart>
@@ -118,18 +136,18 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
                     />
                   ))}
                 </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <Tooltip content={<CustomTooltip />} />
                 <ChartLegend
                   content={<ChartLegendContent />}
-                  className="text-[12px] text-gray-600 mt-4"
+                  className="text-[12px] text-gray-600 mt-[16px]"
                 />
               </PieChart>
             </ChartContainer>
           </div>
         </div>
 
-        <div className="bg-card rounded-[12px] p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
-          <h3 className="text-[16px] font-semibold text-foreground mb-4">
+        <div className="bg-card rounded-[12px] p-[24px] shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+          <h3 className="text-[16px] font-semibold text-foreground mb-[16px]">
             Vendas por Mês (últimos 12 meses)
           </h3>
           <div className="h-[200px] md:h-[250px] lg:h-[300px]">
@@ -153,7 +171,7 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
                   tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                   tickFormatter={(v) => `R$${v}`}
                 />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <Tooltip content={<CustomTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="total"
@@ -173,11 +191,19 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
 
 function MetricCard({ title, value, subtext, icon }: any) {
   return (
-    <div className="bg-card rounded-[12px] shadow-[0_2px_8px_rgba(0,0,0,0.1)] p-6 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:scale-[1.02] transition-all duration-200">
-      <div className="text-yellow-500 mb-2">{icon}</div>
-      <div className="text-[12px] text-gray-500 font-medium mb-2">{title}</div>
-      <div className="text-[32px] text-foreground font-bold leading-none">{value}</div>
-      {subtext && <div className="text-[11px] text-gray-400 mt-2 leading-[1.4]">{subtext}</div>}
+    <div className="bg-card rounded-[12px] shadow-[0_2px_8px_rgba(0,0,0,0.1)] p-[24px] hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:scale-[1.02] transition-all duration-200">
+      <div className="flex items-start gap-4">
+        <div className="text-yellow-500 w-[48px] h-[48px] flex-shrink-0 flex items-center justify-center">
+          {icon}
+        </div>
+        <div>
+          <div className="text-[12px] text-gray-500 font-medium mb-[8px]">{title}</div>
+          <div className="text-[32px] text-foreground font-bold leading-none">{value}</div>
+          {subtext && (
+            <div className="text-[11px] text-gray-400 mt-[8px] leading-[1.4]">{subtext}</div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

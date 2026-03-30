@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { Search, AlertCircle, RefreshCw, Users, Check, X } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useDebounce } from '@/hooks/use-debounce'
 
 const roleColors: Record<string, string> = {
@@ -42,24 +41,24 @@ export function DashboardAdminCustomers({
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-1 md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-[12px] top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <Input
             placeholder="Buscar por nome ou email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 border border-border rounded-lg text-[14px] focus-visible:ring-2 focus-visible:ring-yellow-500/20 focus-visible:border-yellow-500 transition-all"
+            className="w-full pl-[40px] pr-[12px] py-[10px] border border-border rounded-[8px] text-[14px] focus-visible:ring-[3px] focus-visible:ring-yellow-500/10 focus-visible:border-yellow-500 transition-all outline-none"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-[12px] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-full md:w-[200px] border border-border rounded-lg text-[13px] py-2.5 focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500">
+          <SelectTrigger className="w-full md:w-[200px] border border-border rounded-[8px] text-[13px] py-[10px] px-[12px] focus:ring-[3px] focus:ring-yellow-500/10 focus:border-yellow-500 outline-none">
             <SelectValue placeholder="Filtrar por role" />
           </SelectTrigger>
           <SelectContent>
@@ -74,73 +73,95 @@ export function DashboardAdminCustomers({
       </div>
 
       {error ? (
-        <div className="text-center py-[48px] px-6">
-          <AlertCircle className="mx-auto h-[64px] w-[64px] text-red-500 mb-4" />
-          <h3 className="text-[18px] font-semibold text-foreground mb-2">
+        <div className="text-center py-[48px] px-[24px]">
+          <AlertCircle className="mx-auto text-[64px] h-[64px] w-[64px] text-gray-300 mb-[16px]" />
+          <h3 className="text-[18px] font-semibold text-foreground mb-[8px]">
             Não foi possível carregar clientes.
           </h3>
-          <p className="text-[14px] text-gray-500 mb-6">{error}</p>
+          <p className="text-[14px] text-gray-500 mb-[24px]">{error}</p>
           <Button
             onClick={() => fetchCustomers(page, 20, debouncedSearch, roleFilter)}
-            className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+            className="px-[24px] py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all duration-150"
           >
             <RefreshCw className="mr-2 h-4 w-4" /> Tentar Novamente
           </Button>
         </div>
       ) : loadingCustomers ? (
-        <div className="space-y-3">
+        <div className="space-y-[12px]">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-[40px] rounded-[8px] w-full" />
+            <div
+              key={i}
+              className="h-[40px] rounded-[8px] w-full bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer"
+            />
           ))}
         </div>
       ) : customers?.length === 0 ? (
-        <div className="text-center py-[48px] px-6">
-          <Users className="mx-auto h-[64px] w-[64px] text-gray-300 mb-4" />
-          <h3 className="text-[18px] font-semibold text-foreground mb-2">
+        <div className="text-center py-[48px] px-[24px]">
+          <Users className="mx-auto text-[64px] h-[64px] w-[64px] text-gray-300 mb-[16px]" />
+          <h3 className="text-[18px] font-semibold text-foreground mb-[8px]">
             Nenhum cliente encontrado.
           </h3>
-          <p className="text-[14px] text-gray-500 mb-6">Tente ajustar seus filtros de busca.</p>
+          <p className="text-[14px] text-gray-500 mb-[24px]">
+            Tente ajustar seus filtros de busca.
+          </p>
           {(searchTerm || roleFilter !== 'all') && (
             <Button
               onClick={() => {
                 setSearchTerm('')
                 setRoleFilter('all')
               }}
-              className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+              className="px-[24px] py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all duration-150"
             >
               Limpar Filtros
             </Button>
           )}
         </div>
       ) : (
-        <div className="w-full overflow-x-auto">
-          <div className="hidden md:grid grid-cols-12 gap-4 p-3 bg-muted text-foreground font-semibold text-left border-b border-border rounded-t-lg">
-            <div className="col-span-4">Nome</div>
-            <div className="col-span-3">Email</div>
-            <div className="col-span-2">Role Atual</div>
-            <div className="col-span-3">Ação</div>
+        <div className="w-full">
+          <div className="hidden md:block w-full overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="bg-muted border-b border-border">
+                  <th className="p-[12px] font-semibold text-[14px]">Nome</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Email</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Role Atual</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customers?.map((c: any) => (
+                  <CustomerRow
+                    key={c.id}
+                    customer={c}
+                    onUpdate={updateCustomerRole}
+                    isMobile={false}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="flex flex-col gap-3 md:gap-0">
+
+          <div className="flex flex-col md:hidden">
             {customers?.map((c: any) => (
-              <CustomerRow key={c.id} customer={c} onUpdate={updateCustomerRole} />
+              <CustomerRow key={c.id} customer={c} onUpdate={updateCustomerRole} isMobile={true} />
             ))}
           </div>
 
-          <div className="flex justify-center items-center gap-2 mt-6">
+          <div className="flex justify-center items-center gap-[8px] mt-[24px]">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="px-4 py-2 border border-border rounded-[6px] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+              className="px-[16px] py-[8px] border border-border rounded-[6px] text-[13px] hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Anterior
             </button>
-            <span className="px-3 py-2 border border-transparent rounded-[6px] text-[13px] bg-yellow-500 text-black font-semibold">
+            <span className="px-[12px] py-[8px] border border-border rounded-[6px] text-[13px] bg-yellow-500 text-black font-semibold">
               {page}
             </span>
             <button
               disabled={page * 20 >= customersTotal}
               onClick={() => setPage((p) => p + 1)}
-              className="px-4 py-2 border border-border rounded-[6px] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+              className="px-[16px] py-[8px] border border-border rounded-[6px] text-[13px] hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Próxima
             </button>
@@ -151,7 +172,7 @@ export function DashboardAdminCustomers({
   )
 }
 
-function CustomerRow({ customer, onUpdate }: any) {
+function CustomerRow({ customer, onUpdate, isMobile }: any) {
   const [editingRole, setEditingRole] = useState<string>(customer.role)
   const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
@@ -170,59 +191,79 @@ function CustomerRow({ customer, onUpdate }: any) {
     }
   }
 
-  return (
-    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 md:p-3 bg-card md:bg-transparent rounded-[12px] md:rounded-none shadow-sm md:shadow-none border border-border md:border-t-0 hover:bg-muted/50 transition-colors md:items-center">
-      <div className="md:col-span-4">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Nome</span>
-        <span className="font-normal text-[14px]">{customer.full_name || 'Sem Nome'}</span>
-      </div>
-      <div className="md:col-span-3">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Email</span>
-        <span className="text-[14px]">{customer.email}</span>
-      </div>
-      <div className="md:col-span-2">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Role Atual</span>
-        <span
-          className={`px-3 py-1 rounded-[20px] text-[11px] font-semibold ${roleColors[customer.role] || roleColors.customer}`}
-        >
-          {customer.role}
-        </span>
-      </div>
-      <div className="md:col-span-3 flex flex-wrap items-center gap-2">
-        <span className="md:hidden font-bold text-[14px] w-full block mb-1">Ação</span>
-        <Select value={editingRole} onValueChange={setEditingRole}>
-          <SelectTrigger className="w-[140px] border border-border rounded-[6px] text-[13px] py-2 focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {['customer', 'vip', 'reseller', 'collaborator', 'admin'].map((r) => (
-              <SelectItem key={r} value={r}>
-                {r}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasChanges && (
-          <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="w-[40px] h-[40px] flex items-center justify-center bg-green-600 text-white rounded-[6px] hover:bg-green-700 hover:scale-105 transition-all duration-150 disabled:opacity-50"
-              title="Salvar"
-            >
-              <Check className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setEditingRole(customer.role)}
-              disabled={isSaving}
-              className="w-[40px] h-[40px] flex items-center justify-center bg-gray-600 text-white rounded-[6px] hover:bg-gray-700 hover:scale-105 transition-all duration-150 disabled:opacity-50"
-              title="Cancelar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-      </div>
+  const actions = (
+    <div className="flex flex-wrap items-center gap-[8px]">
+      <Select value={editingRole} onValueChange={setEditingRole}>
+        <SelectTrigger className="w-[140px] px-[12px] py-[8px] border border-border rounded-[6px] text-[13px] focus:ring-[3px] focus:ring-yellow-500/10 focus:border-yellow-500 outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {['customer', 'vip', 'reseller', 'collaborator', 'admin'].map((r) => (
+            <SelectItem key={r} value={r}>
+              {r}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {hasChanges && (
+        <div className="flex gap-[8px]">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-[40px] h-[40px] flex items-center justify-center bg-green-600 text-white rounded-[6px] hover:bg-green-700 hover:scale-105 transition-all duration-150 disabled:opacity-50"
+            title="Salvar"
+          >
+            <Check className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setEditingRole(customer.role)}
+            disabled={isSaving}
+            className="w-[40px] h-[40px] flex items-center justify-center bg-gray-600 text-white rounded-[6px] hover:bg-gray-700 hover:scale-105 transition-all duration-150 disabled:opacity-50"
+            title="Cancelar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
+  )
+
+  const roleBadge = (
+    <span
+      className={`px-[12px] py-[4px] rounded-[20px] text-[11px] font-semibold ${roleColors[customer.role] || roleColors.customer}`}
+    >
+      {customer.role}
+    </span>
+  )
+
+  if (isMobile) {
+    return (
+      <div className="bg-card border border-border rounded-[12px] p-[16px] mb-[12px]">
+        <div className="mb-2">
+          <span className="font-bold text-[14px]">Nome:</span>{' '}
+          <span className="text-[14px]">{customer.full_name || 'Sem Nome'}</span>
+        </div>
+        <div className="mb-2">
+          <span className="font-bold text-[14px]">Email:</span>{' '}
+          <span className="text-[14px]">{customer.email}</span>
+        </div>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="font-bold text-[14px]">Role Atual:</span> {roleBadge}
+        </div>
+        <div className="mt-1">
+          <span className="font-bold text-[14px] block mb-2">Ação:</span>
+          {actions}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <tr className="border-b border-border hover:bg-muted transition-colors">
+      <td className="p-[12px] text-[14px]">{customer.full_name || 'Sem Nome'}</td>
+      <td className="p-[12px] text-[14px]">{customer.email}</td>
+      <td className="p-[12px]">{roleBadge}</td>
+      <td className="p-[12px]">{actions}</td>
+    </tr>
   )
 }

@@ -21,14 +21,14 @@ export default function DashboardAdmin() {
         <p className="text-lg mt-2 font-medium">Olá, Admin!</p>
       </header>
 
-      <div className="w-full bg-card border-b border-border sticky top-0 z-10 shadow-sm">
+      <div className="w-full bg-card border-b border-border sticky top-0 z-10">
         <div className="flex overflow-x-auto max-w-[1400px] mx-auto px-6 md:px-8 scrollbar-hide">
           {['Gerenciar Roles', 'Gerenciar Descontos', 'Métricas e Relatórios'].map((tab, idx) => (
             <button
               key={idx}
               onClick={() => setActiveTab(idx)}
               className={cn(
-                'whitespace-nowrap px-6 py-4 text-[14px] font-medium transition-all duration-300 border-b-4 outline-none min-w-[120px] text-center',
+                'whitespace-nowrap px-[24px] py-[16px] text-[14px] font-medium transition-all duration-300 border-b-[4px] outline-none min-w-[120px] text-center',
                 activeTab === idx
                   ? 'border-yellow-500 text-white bg-yellow-500/10'
                   : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-muted cursor-pointer',
@@ -40,7 +40,7 @@ export default function DashboardAdmin() {
         </div>
       </div>
 
-      <main className="p-8 max-w-[1400px] mx-auto transition-opacity duration-300 animate-fade-in">
+      <main className="p-[32px] max-w-[1400px] mx-auto transition-opacity duration-300 animate-fade-in">
         {activeTab === 0 && <DashboardAdminCustomers {...dashboardParams} />}
         {activeTab === 1 && <DashboardAdminDiscounts {...dashboardParams} />}
         {activeTab === 2 && <DashboardAdminMetrics {...dashboardParams} />}

@@ -3,7 +3,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { Edit, Trash, Copy, Search, AlertCircle, RefreshCw, Tag, X } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Link } from 'react-router-dom'
 import { useDebounce } from '@/hooks/use-debounce'
 import {
@@ -39,17 +38,17 @@ export function DashboardAdminDiscounts({
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-1 md:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-[12px] top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <Input
             placeholder="Buscar por nome da regra..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 border border-border rounded-lg text-[14px] focus-visible:ring-2 focus-visible:ring-yellow-500/20 focus-visible:border-yellow-500 transition-all"
+            className="w-full pl-[40px] pr-[12px] py-[10px] border border-border rounded-[8px] text-[14px] focus-visible:ring-[3px] focus-visible:ring-yellow-500/10 focus-visible:border-yellow-500 transition-all outline-none"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-[12px] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -57,82 +56,106 @@ export function DashboardAdminDiscounts({
         </div>
         <Button
           asChild
-          className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+          className="px-[24px] py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all duration-150"
         >
           <Link to="/admin/discount/new">Criar Nova Regra</Link>
         </Button>
       </div>
 
       {error ? (
-        <div className="text-center py-[48px] px-6">
-          <AlertCircle className="mx-auto h-[64px] w-[64px] text-red-500 mb-4" />
-          <h3 className="text-[18px] font-semibold text-foreground mb-2">
+        <div className="text-center py-[48px] px-[24px]">
+          <AlertCircle className="mx-auto text-[64px] h-[64px] w-[64px] text-gray-300 mb-[16px]" />
+          <h3 className="text-[18px] font-semibold text-foreground mb-[8px]">
             Não foi possível carregar regras.
           </h3>
-          <p className="text-[14px] text-gray-500 mb-6">{error}</p>
+          <p className="text-[14px] text-gray-500 mb-[24px]">{error}</p>
           <Button
             onClick={() => fetchDiscounts(page, 10, debouncedSearch)}
-            className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+            className="px-[24px] py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all duration-150"
           >
             <RefreshCw className="mr-2 h-4 w-4" /> Tentar Novamente
           </Button>
         </div>
       ) : loadingDiscounts ? (
-        <div className="space-y-3">
+        <div className="space-y-[12px]">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-[40px] rounded-[8px] w-full" />
+            <div
+              key={i}
+              className="h-[40px] rounded-[8px] w-full bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer"
+            />
           ))}
         </div>
       ) : discounts?.length === 0 ? (
-        <div className="text-center py-[48px] px-6">
-          <Tag className="mx-auto h-[64px] w-[64px] text-gray-300 mb-4" />
-          <h3 className="text-[18px] font-semibold text-foreground mb-2">
+        <div className="text-center py-[48px] px-[24px]">
+          <Tag className="mx-auto text-[64px] h-[64px] w-[64px] text-gray-300 mb-[16px]" />
+          <h3 className="text-[18px] font-semibold text-foreground mb-[8px]">
             Nenhuma regra de desconto encontrada.
           </h3>
-          <p className="text-[14px] text-gray-500 mb-6">Clique em Criar Nova Regra para começar.</p>
+          <p className="text-[14px] text-gray-500 mb-[24px]">
+            Clique em Criar Nova Regra para começar.
+          </p>
           <Button
             asChild
-            className="px-6 py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all"
+            className="px-[24px] py-[10px] bg-yellow-500 text-black font-semibold rounded-[8px] hover:bg-yellow-600 hover:scale-105 transition-all duration-150"
           >
             <Link to="/admin/discount/new">Criar Nova Regra</Link>
           </Button>
         </div>
       ) : (
-        <div className="w-full overflow-x-auto">
-          <div className="hidden md:grid grid-cols-12 gap-4 p-3 bg-muted text-foreground font-semibold text-left border-b border-border rounded-t-lg">
-            <div className="col-span-3">Nome da Regra</div>
-            <div className="col-span-2">Tipo de Desconto</div>
-            <div className="col-span-2">Valor</div>
-            <div className="col-span-2">Escopo</div>
-            <div className="col-span-1">Clientes</div>
-            <div className="col-span-2">Ação</div>
+        <div className="w-full">
+          <div className="hidden md:block w-full overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="bg-muted border-b border-border">
+                  <th className="p-[12px] font-semibold text-[14px]">Nome da Regra</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Tipo de Desconto</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Valor</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Escopo</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Clientes</th>
+                  <th className="p-[12px] font-semibold text-[14px]">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {discounts?.map((d: any) => (
+                  <DiscountRow
+                    key={d.id}
+                    discount={d}
+                    onDelete={deleteDiscount}
+                    onDuplicate={duplicateDiscount}
+                    isMobile={false}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="flex flex-col gap-3 md:gap-0">
+
+          <div className="flex flex-col md:hidden">
             {discounts?.map((d: any) => (
               <DiscountRow
                 key={d.id}
                 discount={d}
                 onDelete={deleteDiscount}
                 onDuplicate={duplicateDiscount}
+                isMobile={true}
               />
             ))}
           </div>
 
-          <div className="flex justify-center items-center gap-2 mt-6">
+          <div className="flex justify-center items-center gap-[8px] mt-[24px]">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="px-4 py-2 border border-border rounded-[6px] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+              className="px-[16px] py-[8px] border border-border rounded-[6px] text-[13px] hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Anterior
             </button>
-            <span className="px-3 py-2 border border-transparent rounded-[6px] text-[13px] bg-yellow-500 text-black font-semibold">
+            <span className="px-[12px] py-[8px] border border-border rounded-[6px] text-[13px] bg-yellow-500 text-black font-semibold">
               {page}
             </span>
             <button
               disabled={page * 10 >= discountsTotal}
               onClick={() => setPage((p) => p + 1)}
-              className="px-4 py-2 border border-border rounded-[6px] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+              className="px-[16px] py-[8px] border border-border rounded-[6px] text-[13px] hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Próxima
             </button>
@@ -143,7 +166,7 @@ export function DashboardAdminDiscounts({
   )
 }
 
-function DiscountRow({ discount, onDelete, onDuplicate }: any) {
+function DiscountRow({ discount, onDelete, onDuplicate, isMobile }: any) {
   const { toast } = useToast()
 
   const handleDelete = async () => {
@@ -164,81 +187,106 @@ function DiscountRow({ discount, onDelete, onDuplicate }: any) {
     }
   }
 
-  return (
-    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 md:p-3 bg-card md:bg-transparent rounded-[12px] md:rounded-none shadow-sm md:shadow-none border border-border md:border-t-0 hover:bg-muted/50 transition-colors md:items-center">
-      <div className="md:col-span-3 font-normal text-[14px]">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Nome</span>
-        {discount.rule_name}
-      </div>
-      <div className="md:col-span-2 text-[14px]">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Tipo</span>
-        {discount.discount_calculation_type === 'margin_percentage' ? 'Margem %' : 'Price USA %'}
-      </div>
-      <div className="md:col-span-2 text-[14px]">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Valor</span>
-        {discount.discount_value}%
-      </div>
-      <div className="md:col-span-2 text-[14px]">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Escopo</span>
-        {discount.scope_type === 'all_products'
-          ? 'Todos os Produtos'
-          : discount.scope_type === 'by_manufacturer'
-            ? 'Por Fabricante'
-            : discount.scope_type === 'by_category'
-              ? 'Por Categoria'
-              : discount.scope_type === 'individual_products'
-                ? 'Individual'
-                : discount.scope_type}
-      </div>
-      <div className="md:col-span-1 text-[14px]">
-        <span className="md:hidden font-bold text-[14px] block mb-1">Clientes</span>
-        {discount.customerCount} clientes
-      </div>
-      <div className="md:col-span-2 flex flex-wrap items-center gap-2">
-        <span className="md:hidden font-bold text-[14px] w-full block mb-1">Ação</span>
-        <Link
-          to={`/admin/discount/${discount.id}`}
-          className="w-[40px] h-[40px] flex items-center justify-center bg-blue-600 text-white rounded-[6px] hover:bg-blue-700 hover:scale-105 transition-all duration-150"
-          title="Editar"
-        >
-          <Edit className="w-5 h-5" />
-        </Link>
-        <button
-          onClick={handleDuplicate}
-          className="w-[40px] h-[40px] flex items-center justify-center bg-purple-600 text-white rounded-[6px] hover:bg-purple-700 hover:scale-105 transition-all duration-150"
-          title="Duplicar"
-        >
-          <Copy className="w-5 h-5" />
-        </button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              className="w-[40px] h-[40px] flex items-center justify-center bg-red-600 text-white rounded-[6px] hover:bg-red-700 hover:scale-105 transition-all duration-150"
-              title="Deletar"
+  const actions = (
+    <div className="flex flex-wrap items-center gap-[8px]">
+      <Link
+        to={`/admin/discount/${discount.id}`}
+        className="w-[40px] h-[40px] flex items-center justify-center bg-blue-600 text-white rounded-[6px] hover:bg-blue-700 hover:scale-105 transition-all duration-150"
+        title="Editar"
+      >
+        <Edit className="w-5 h-5" />
+      </Link>
+      <button
+        onClick={handleDuplicate}
+        className="w-[40px] h-[40px] flex items-center justify-center bg-purple-600 text-white rounded-[6px] hover:bg-purple-700 hover:scale-105 transition-all duration-150"
+        title="Duplicar"
+      >
+        <Copy className="w-5 h-5" />
+      </button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button
+            className="w-[40px] h-[40px] flex items-center justify-center bg-red-600 text-white rounded-[6px] hover:bg-red-700 hover:scale-105 transition-all duration-150"
+            title="Deletar"
+          >
+            <Trash className="w-5 h-5" />
+          </button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja deletar esta regra?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A regra deixará de ser aplicada aos clientes
+              imediatamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              <Trash className="w-5 h-5" />
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Tem certeza que deseja deletar esta regra?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. A regra deixará de ser aplicada aos clientes
-                imediatamente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Deletar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+  )
+
+  const scopeText =
+    discount.scope_type === 'all_products'
+      ? 'Todos os Produtos'
+      : discount.scope_type === 'by_manufacturer'
+        ? 'Por Fabricante'
+        : discount.scope_type === 'by_category'
+          ? 'Por Categoria'
+          : discount.scope_type === 'individual_products'
+            ? 'Individual'
+            : discount.scope_type
+
+  const typeText =
+    discount.discount_calculation_type === 'margin_percentage' ? 'Margem %' : 'Price USA %'
+
+  if (isMobile) {
+    return (
+      <div className="bg-card border border-border rounded-[12px] p-[16px] mb-[12px] flex flex-col gap-2">
+        <div>
+          <span className="font-bold text-[14px]">Nome:</span>{' '}
+          <span className="text-[14px]">{discount.rule_name}</span>
+        </div>
+        <div>
+          <span className="font-bold text-[14px]">Tipo:</span>{' '}
+          <span className="text-[14px]">{typeText}</span>
+        </div>
+        <div>
+          <span className="font-bold text-[14px]">Valor:</span>{' '}
+          <span className="text-[14px]">{discount.discount_value}%</span>
+        </div>
+        <div>
+          <span className="font-bold text-[14px]">Escopo:</span>{' '}
+          <span className="text-[14px]">{scopeText}</span>
+        </div>
+        <div>
+          <span className="font-bold text-[14px]">Clientes:</span>{' '}
+          <span className="text-[14px]">{discount.customerCount} clientes</span>
+        </div>
+        <div className="mt-1">
+          <span className="font-bold text-[14px] block mb-2">Ação:</span>
+          {actions}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <tr className="border-b border-border hover:bg-muted transition-colors">
+      <td className="p-[12px] text-[14px]">{discount.rule_name}</td>
+      <td className="p-[12px] text-[14px]">{typeText}</td>
+      <td className="p-[12px] text-[14px]">{discount.discount_value}%</td>
+      <td className="p-[12px] text-[14px]">{scopeText}</td>
+      <td className="p-[12px] text-[14px]">{discount.customerCount} clientes</td>
+      <td className="p-[12px]">{actions}</td>
+    </tr>
   )
 }
