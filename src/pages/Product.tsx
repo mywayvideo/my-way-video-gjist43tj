@@ -771,13 +771,18 @@ export default function Product() {
       />
 
       {location.search.includes('from=search') && (
-        <Button
+        <button
           onClick={() => navigate(`/?q=${new URLSearchParams(location.search).get('q') || ''}`)}
-          className="fixed bottom-6 left-6 z-50 rounded-full shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 h-14 px-6 bg-primary text-primary-foreground font-semibold"
+          aria-label="Voltar para busca anterior"
+          className={cn(
+            'fixed z-40 flex items-center justify-center rounded-full border border-white/20 bg-black/15 backdrop-blur transition-all duration-200 ease-out hover:bg-black/25 active:scale-95 active:bg-black/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group animate-in fade-in slide-in-from-left-5 duration-300',
+            'bottom-4 left-4 h-12 w-12',
+            'md:bottom-5 md:left-5 md:h-[52px] md:w-[52px]',
+            'lg:bottom-6 lg:left-6 lg:h-14 lg:w-14',
+          )}
         >
-          <ChevronLeft className="w-5 h-5 mr-2" />
-          Voltar para Busca
-        </Button>
+          <ChevronLeft className="text-white/80 group-hover:text-white transition-opacity w-5 h-5 md:w-[22px] md:h-[22px] lg:w-6 lg:h-6" />
+        </button>
       )}
     </div>
   )
