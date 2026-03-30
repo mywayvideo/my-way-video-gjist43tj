@@ -153,8 +153,6 @@ const ProductList = ({
   onToggleCheck: (id: string, checked: boolean) => void
   scope: string
 }) => {
-  if (scope === 'all_products') return null
-
   const displayed = products.filter((p) => !removedIds.has(p.id))
   const checkedCount = displayed.filter((p) => !uncheckedIds.has(p.id)).length
 
@@ -272,9 +270,17 @@ export default function DiscountRuleFormPage() {
       let initialIndiv: string[] = []
       let initialUnchecked = new Set<string>()
 
-      if (dbScope !== 'all_products') {
-        const selectedProds = products.filter((p) => dbScopeData.includes(p.id))
+      const selectedProds = products.filter((p) => dbScopeData.includes(p.id))
 
+      if (dbScope === 'all_products') {
+        if (dbScopeData && dbScopeData.length > 0) {
+          products.forEach((p) => {
+            if (!dbScopeData.includes(p.id)) {
+              initialUnchecked.add(p.id)
+            }
+          })
+        }
+      } else {
         if (selectedProds.length > 0) {
           if (dbScope === 'by_manufacturer') {
             initialMfrs = Array.from(
@@ -349,6 +355,9 @@ export default function DiscountRuleFormPage() {
   }, [rule, products, reset, hasInitialized])
 
   const eligibleProducts = useMemo(() => {
+    if (scope === 'all_products') {
+      return products
+    }
     if (scope === 'by_manufacturer') {
       return products.filter(
         (p) => p.manufacturer_id && scope_manufacturers.includes(p.manufacturer_id),
@@ -377,21 +386,17 @@ export default function DiscountRuleFormPage() {
   }, [eligibleProducts, removedProductIds])
 
   const onSubmit = async (data: FormData) => {
-    let finalProductIds: string[] = []
+    const finalProductIds = displayedProducts
+      .filter((p) => !uncheckedProductIds.has(p.id))
+      .map((p) => p.id)
 
-    if (data.scope !== 'all_products') {
-      finalProductIds = displayedProducts
-        .filter((p) => !uncheckedProductIds.has(p.id))
-        .map((p) => p.id)
-
-      if (finalProductIds.length === 0) {
-        return // UI will show validation error
-      }
+    if (finalProductIds.length === 0) {
+      return // UI will show validation error
     }
 
     const payload = {
       ...data,
-      scope_data: data.scope === 'all_products' ? [] : finalProductIds,
+      scope_data: finalProductIds,
     }
 
     setIsSaving(true)
