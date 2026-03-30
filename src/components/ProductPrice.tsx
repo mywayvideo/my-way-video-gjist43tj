@@ -6,26 +6,26 @@ import { HelpCircle } from 'lucide-react'
 export function ProductPrice({
   product,
   className,
-  size = 'default',
+  size, // Ignored per strict global styling rules
 }: {
   product: any
   className?: string
   size?: 'sm' | 'default' | 'lg'
 }) {
-  const { originalPrice, discountedPrice, discountPercentage, loading } =
-    useProductDiscount(product)
+  const { originalPrice, discountedPrice, loading } = useProductDiscount(product)
 
-  const currentPrice = discountedPrice !== null ? discountedPrice : originalPrice
-  const displayPrice = formatPrice(currentPrice)
-  const oldPrice = formatPrice(originalPrice)
+  const rawOriginalPrice = formatPrice(originalPrice)
+  const rawDiscountedPrice = discountedPrice !== null ? formatPrice(discountedPrice) : null
 
-  const sizeClasses = {
-    sm: { old: 'text-[10px]', current: 'text-sm' },
-    default: { old: 'text-xs', current: 'text-xl' },
-    lg: { old: 'text-sm', current: 'text-4xl lg:text-5xl' },
+  const appendUSD = (val: ReturnType<typeof formatPrice>) => {
+    if (val.isPlaceholder) return val.text
+    return `${val.text} USD`
   }
 
-  if (displayPrice.isPlaceholder) {
+  const displayOriginal = appendUSD(rawOriginalPrice)
+  const displayCurrent = rawDiscountedPrice ? appendUSD(rawDiscountedPrice) : displayOriginal
+
+  if (rawOriginalPrice.isPlaceholder || (rawDiscountedPrice && rawDiscountedPrice.isPlaceholder)) {
     return (
       <p
         className={cn(
@@ -34,40 +34,34 @@ export function ProductPrice({
         )}
       >
         <HelpCircle className="w-[14px] h-[14px]" />
-        {displayPrice.text}
+        {rawOriginalPrice.isPlaceholder ? displayOriginal : displayCurrent}
       </p>
     )
   }
 
   return (
     <div
+      key={`${originalPrice}-${discountedPrice}`}
       className={cn(
-        'flex flex-col gap-0.5 transition-opacity duration-300',
+        'flex flex-col gap-1 animate-in fade-in zoom-in-[0.98] duration-300',
         loading ? 'opacity-50' : 'opacity-100',
         className,
       )}
     >
-      {discountedPrice !== null && (
-        <div className="flex items-center gap-2">
-          <span className={cn('line-through text-muted-foreground', sizeClasses[size].old)}>
-            {oldPrice.text}
+      {discountedPrice !== null ? (
+        <>
+          <span className="text-[10px] md:text-[11px] lg:text-[12px] line-through text-muted-foreground opacity-70 font-normal leading-[1.4]">
+            {displayOriginal}
           </span>
-          {discountPercentage && (
-            <span className="text-[10px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-sm">
-              -{discountPercentage}%
-            </span>
-          )}
-        </div>
+          <span className="text-[14px] md:text-[16px] lg:text-[18px] font-bold text-accent-foreground leading-[1.2]">
+            {displayCurrent}
+          </span>
+        </>
+      ) : (
+        <span className="text-[14px] md:text-[16px] lg:text-[18px] text-primary font-normal leading-[1.2]">
+          {displayOriginal}
+        </span>
       )}
-      <span
-        className={cn(
-          'font-bold font-mono text-foreground drop-shadow-sm',
-          sizeClasses[size].current,
-          discountedPrice !== null && 'text-green-600',
-        )}
-      >
-        {displayPrice.text}
-      </span>
     </div>
   )
 }
