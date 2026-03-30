@@ -7,6 +7,7 @@ import { customerService } from '@/services/customerService'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ImageWithFallback } from '@/components/ImageWithFallback'
 
 export function FavoritesTab({
   favorites,
@@ -78,15 +79,12 @@ export function FavoritesTab({
             className="overflow-hidden flex flex-col group hover:shadow-md transition-all duration-200"
           >
             <div className="aspect-square bg-muted relative overflow-hidden flex items-center justify-center p-4">
-              {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full bg-secondary rounded-md" />
-              )}
+              <ImageWithFallback
+                src={product.image_url}
+                alt={product.name}
+                productId={product.id}
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+              />
             </div>
             <CardContent className="p-4 flex flex-col flex-grow">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">

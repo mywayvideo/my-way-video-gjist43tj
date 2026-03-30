@@ -1,20 +1,16 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, PackageSearch, HelpCircle } from 'lucide-react'
+import { ShoppingCart, HelpCircle } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
-import { useState } from 'react'
 import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
+import { ImageWithFallback } from '@/components/ImageWithFallback'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
-  const [imgError, setImgError] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
-
-  const hasImage =
-    product.image_url && typeof product.image_url === 'string' && product.image_url.trim() !== ''
 
   const displayPrice = formatPrice(product.price_usd)
 
@@ -41,20 +37,12 @@ export function ProductCard({ product }: { product: any }) {
           onClick={handleLinkClick}
           className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
         >
-          {hasImage && !imgError ? (
-            <img
-              src={product.image_url}
-              alt={product.name}
-              loading="lazy"
-              onError={() => setImgError(true)}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-muted-foreground/50 h-full w-full bg-muted/20">
-              <PackageSearch className="w-12 h-12 mb-2" />
-              <span className="text-xs font-medium">Imagem Indisponível</span>
-            </div>
-          )}
+          <ImageWithFallback
+            src={product.image_url}
+            alt={product.name}
+            productId={product.id}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         </Link>
       </CardHeader>
       <CardContent className="flex-1 p-5">

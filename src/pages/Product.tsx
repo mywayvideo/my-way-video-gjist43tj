@@ -23,7 +23,6 @@ import {
   Globe,
   Loader2,
   Sparkles,
-  PackageSearch,
   MessageCircle,
   Calculator,
   ChevronRight,
@@ -37,6 +36,7 @@ import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
+import { ImageWithFallback } from '@/components/ImageWithFallback'
 
 type Message = {
   id: string
@@ -127,7 +127,6 @@ export default function Product() {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const [isMetric, setIsMetric] = useState(false)
-  const [imgError, setImgError] = useState(false)
   const [isTechnicalInfoOpen, setIsTechnicalInfoOpen] = useState(false)
 
   // Admin & Settings State
@@ -201,7 +200,6 @@ export default function Product() {
     setMessages([])
     setIsAiLoading(false)
     setBrlData(null)
-    setImgError(false)
     setIsTechnicalInfoOpen(false)
     setIsAiChatOpen(false)
 
@@ -392,21 +390,12 @@ export default function Product() {
         <div className="contents lg:block lg:space-y-8">
           <div className="order-1 lg:order-none mb-8 lg:mb-0">
             <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
-              {product.image_url && !imgError ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  onError={() => setImgError(true)}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-muted-foreground/50 w-full h-full bg-white/5 rounded-xl border border-white/5 border-dashed">
-                  <PackageSearch className="w-20 h-20 mb-6 opacity-30 drop-shadow-md" />
-                  <span className="text-sm font-semibold tracking-widest uppercase opacity-70">
-                    Imagem Indisponível
-                  </span>
-                </div>
-              )}
+              <ImageWithFallback
+                src={product.image_url}
+                alt={product.name}
+                productId={product.id}
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
+              />
             </div>
           </div>
 
