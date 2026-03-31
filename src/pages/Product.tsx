@@ -693,7 +693,7 @@ export default function Product() {
                 Estimativa Entregue no Brasil
               </DialogTitle>
               <DialogDescription>
-                Preço final estimado em reais incluindo conversão de câmbio, spread, frete e markup.
+                Preço final estimado em reais incluindo o frete e a conversão de câmbio
               </DialogDescription>
             </DialogHeader>
 
@@ -721,8 +721,7 @@ export default function Product() {
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-4 max-w-[280px] mx-auto leading-relaxed">
-                    * Referencial dinâmico sujeito a variação cambial e possíveis ajustes de
-                    projeto.
+                    * Referencial dinâmico sujeito a variação cambial
                   </p>
                 </div>
               )}
