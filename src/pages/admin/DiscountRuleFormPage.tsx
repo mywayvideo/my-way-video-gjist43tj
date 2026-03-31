@@ -29,7 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, Trash, Search, X } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
+import { ArrowLeft, Trash, Search, X, Loader2 } from 'lucide-react'
 
 const schema = z
   .object({
@@ -391,31 +392,61 @@ export default function DiscountRuleFormPage() {
     return displayedProducts.filter((p) => !uncheckedProductIds.has(p.id)).length
   }, [displayedProducts, uncheckedProductIds])
 
-  const onSubmit = async (data: FormData) => {
-    const finalProductIds = displayedProducts
-      .filter((p) => !uncheckedProductIds.has(p.id))
-      .map((p) => p.id)
+  const handleSubmitDiscountRule = (event: React.FormEvent) => {
+    event.preventDefault()
+    handleSubmit(async (data: FormData) => {
+      const finalProductIds = displayedProducts
+        .filter((p) => !uncheckedProductIds.has(p.id))
+        .map((p) => p.id)
 
-    if (finalProductIds.length === 0) {
-      toast({
-        title: 'Erro de Validação',
-        description: 'Nao e possivel salvar desconto sem produtos selecionados.',
-        variant: 'destructive',
-      })
-      return
-    }
+      if (finalProductIds.length === 0) {
+        toast({
+          title: 'Erro de Validação',
+          description: 'Selecione pelo menos um produto',
+          variant: 'destructive',
+        })
+        return
+      }
 
-    const payload = {
-      ...data,
-      scope_data: finalProductIds,
-    }
+      setIsSaving(true)
 
-    setIsSaving(true)
-    const success = await saveRule({ id, ...payload })
-    setIsSaving(false)
-    if (success) {
-      navigate('/dashboard-admin')
-    }
+      try {
+        const payload = {
+          name: data.name,
+          discount_type: data.discount_type,
+          discount_value: data.value,
+          product_selection: finalProductIds,
+          is_active: data.status === 'active',
+          start_date: data.start_date || null,
+          end_date: data.end_date || null,
+          customer_application_type: data.application_type,
+          customer_role: data.role === 'all' ? null : data.role,
+        }
+
+        if (isEdit && id) {
+          const { error } = await supabase.from('discounts').update(payload).eq('id', id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase.from('discounts').insert([payload])
+          if (error) throw error
+        }
+
+        toast({
+          title: 'Sucesso',
+          description: 'Regra salva com sucesso!',
+        })
+        navigate('/admin/discounts')
+      } catch (error: any) {
+        console.error('Submit error:', error)
+        toast({
+          title: 'Erro ao salvar',
+          description: 'Ocorreu um erro ao comunicar com o banco de dados. Tente novamente.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsSaving(false)
+      }
+    })(event)
   }
 
   const handleDelete = async () => {
@@ -468,25 +499,57 @@ export default function DiscountRuleFormPage() {
       </div>
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmitDiscountRule}
         className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8"
       >
-        <div className="space-y-6 md:space-y-8">
-          {/* Section 1 */}
-          <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2">Informações Básicas</h2>
+        <fieldset disabled={isSaving} className="contents">
+          <div className="space-y-6 md:space-y-8">
+            {/* Section 1 */}
+            <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold border-b pb-2">Informações Básicas</h2>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da Regra</Label>
-              <Input id="name" {...register('name')} placeholder="Ex: Black Friday" />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Tipo de Desconto</Label>
+                <Label htmlFor="name">Nome da Regra</Label>
+                <Input id="name" {...register('name')} placeholder="Ex: Black Friday" />
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Desconto</Label>
+                  <Controller
+                    name="discount_type"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="margin_percentage">Margem %</SelectItem>
+                          <SelectItem value="price_usa_percentage">Price USA %</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.discount_type && (
+                    <p className="text-sm text-destructive">{errors.discount_type.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="value">Valor</Label>
+                  <Input id="value" type="number" step="0.01" {...register('value')} />
+                  {errors.value && (
+                    <p className="text-sm text-destructive">{errors.value.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
                 <Controller
-                  name="discount_type"
+                  name="status"
                   control={control}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
@@ -494,298 +557,277 @@ export default function DiscountRuleFormPage() {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="margin_percentage">Margem %</SelectItem>
-                        <SelectItem value="price_usa_percentage">Price USA %</SelectItem>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 />
-                {errors.discount_type && (
-                  <p className="text-sm text-destructive">{errors.discount_type.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="value">Valor</Label>
-                <Input id="value" type="number" step="0.01" {...register('value')} />
-                {errors.value && <p className="text-sm text-destructive">{errors.value.message}</p>}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="inactive">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+            {/* Section 4 */}
+            <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold border-b pb-2">Datas (Opcional)</h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start_date">Data de Início</Label>
+                  <Input id="start_date" type="date" {...register('start_date')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end_date">Data de Fim</Label>
+                  <Input id="end_date" type="date" {...register('end_date')} />
+                </div>
+              </div>
+              {errors.end_date && (
+                <p className="text-sm text-destructive">{errors.end_date.message}</p>
+              )}
             </div>
           </div>
 
-          {/* Section 4 */}
-          <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2">Datas (Opcional)</h2>
+          <div className="space-y-6 md:space-y-8">
+            {/* Section 2 */}
+            <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold border-b pb-2">Escopo</h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start_date">Data de Início</Label>
-                <Input id="start_date" type="date" {...register('start_date')} />
+                <Label>Tipo de Escopo</Label>
+                <Controller
+                  name="scope"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={(val) => {
+                        field.onChange(val)
+                        setValue('scope_manufacturers', [])
+                        setValue('scope_categories', [])
+                        setValue('scope_individual_products', [])
+                        setRemovedProductIds(new Set())
+                        setUncheckedProductIds(new Set())
+                      }}
+                      value={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all_products">Todos os Produtos</SelectItem>
+                        <SelectItem value="by_manufacturer">Por Fabricante</SelectItem>
+                        <SelectItem value="by_category">Por Categoria</SelectItem>
+                        <SelectItem value="by_manufacturer_category">
+                          Por Fabricante + Categoria
+                        </SelectItem>
+                        <SelectItem value="individual_products">Individual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_date">Data de Fim</Label>
-                <Input id="end_date" type="date" {...register('end_date')} />
-              </div>
-            </div>
-            {errors.end_date && (
-              <p className="text-sm text-destructive">{errors.end_date.message}</p>
-            )}
-          </div>
-        </div>
 
-        <div className="space-y-6 md:space-y-8">
-          {/* Section 2 */}
-          <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2">Escopo</h2>
-
-            <div className="space-y-2">
-              <Label>Tipo de Escopo</Label>
-              <Controller
-                name="scope"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={(val) => {
-                      field.onChange(val)
-                      setValue('scope_manufacturers', [])
-                      setValue('scope_categories', [])
-                      setValue('scope_individual_products', [])
-                      setRemovedProductIds(new Set())
-                      setUncheckedProductIds(new Set())
-                    }}
-                    value={field.value}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all_products">Todos os Produtos</SelectItem>
-                      <SelectItem value="by_manufacturer">Por Fabricante</SelectItem>
-                      <SelectItem value="by_category">Por Categoria</SelectItem>
-                      <SelectItem value="by_manufacturer_category">
-                        Por Fabricante + Categoria
-                      </SelectItem>
-                      <SelectItem value="individual_products">Individual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-
-            {scope === 'by_manufacturer' && (
-              <MultiSelect
-                items={manufacturers}
-                fieldName="scope_manufacturers"
-                title="Fabricantes"
-                control={control}
-              />
-            )}
-            {scope === 'by_category' && (
-              <MultiSelect
-                items={categories}
-                fieldName="scope_categories"
-                title="Categorias"
-                control={control}
-              />
-            )}
-            {scope === 'by_manufacturer_category' && (
-              <div className="space-y-4 pt-2">
+              {scope === 'by_manufacturer' && (
                 <MultiSelect
                   items={manufacturers}
                   fieldName="scope_manufacturers"
                   title="Fabricantes"
                   control={control}
                 />
+              )}
+              {scope === 'by_category' && (
                 <MultiSelect
                   items={categories}
                   fieldName="scope_categories"
                   title="Categorias"
                   control={control}
                 />
-              </div>
-            )}
-            {scope === 'individual_products' && (
-              <MultiSelect
-                items={products}
-                fieldName="scope_individual_products"
-                title="Buscar Produtos"
-                control={control}
-              />
-            )}
-
-            <ProductList
-              products={eligibleProducts}
-              manufacturers={manufacturers}
-              removedIds={removedProductIds}
-              uncheckedIds={uncheckedProductIds}
-              onRemove={(id) => {
-                const newSet = new Set(removedProductIds)
-                newSet.add(id)
-                setRemovedProductIds(newSet)
-              }}
-              onToggleCheck={(id, checked) => {
-                const newSet = new Set(uncheckedProductIds)
-                if (checked) newSet.delete(id)
-                else newSet.add(id)
-                setUncheckedProductIds(newSet)
-              }}
-              scope={scope}
-            />
-          </div>
-
-          {/* Section 3 */}
-          <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
-            <h2 className="text-lg font-semibold border-b pb-2">Aplicação de Clientes</h2>
-
-            <Controller
-              name="application_type"
-              control={control}
-              render={({ field }) => (
-                <RadioGroup
-                  onValueChange={(val) => {
-                    field.onChange(val)
-                    if (val === 'role') setValue('customers', [])
-                    else setValue('role', '')
-                  }}
-                  value={field.value}
-                  className="space-y-4"
-                >
-                  <div className="flex items-start space-x-2 border rounded-md p-4 bg-muted/20">
-                    <RadioGroupItem value="role" id="opt-role" className="mt-1" />
-                    <div className="space-y-2 w-full">
-                      <Label htmlFor="opt-role" className="text-base cursor-pointer">
-                        Por Regra de Cliente
-                      </Label>
-                      {application_type === 'role' && (
-                        <div className="space-y-2 pt-2">
-                          <Controller
-                            name="role"
-                            control={control}
-                            render={({ field: roleField }) => (
-                              <Select
-                                onValueChange={(v) => roleField.onChange(v === 'all' ? '' : v)}
-                                value={roleField.value || 'all'}
-                              >
-                                <SelectTrigger className="bg-background">
-                                  <SelectValue placeholder="Todas as Roles" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">Todas as Roles</SelectItem>
-                                  <SelectItem value="vip">VIP</SelectItem>
-                                  <SelectItem value="reseller">Reseller</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          <p className="text-sm text-muted-foreground">
-                            Essa regra será aplicada a TODOS os clientes com a role selecionada. Se
-                            nenhuma for selecionada, aplicará a TODOS os clientes.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-2 border rounded-md p-4 bg-muted/20">
-                    <RadioGroupItem value="specific_customers" id="opt-specific" className="mt-1" />
-                    <div className="space-y-2 w-full">
-                      <Label htmlFor="opt-specific" className="text-base cursor-pointer">
-                        Clientes Específicos
-                      </Label>
-                      {application_type === 'specific_customers' && (
-                        <div className="pt-2">
-                          <MultiSelect
-                            items={customers}
-                            fieldName="customers"
-                            title="Lista de Clientes"
-                            control={control}
-                          />
-                          <p className="text-sm text-muted-foreground mt-3">
-                            Essa regra será aplicada APENAS aos clientes selecionados acima.
-                          </p>
-                          {errors.customers && (
-                            <p className="text-sm text-destructive mt-1 font-medium">
-                              {errors.customers.message}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </RadioGroup>
               )}
-            />
-          </div>
-        </div>
+              {scope === 'by_manufacturer_category' && (
+                <div className="space-y-4 pt-2">
+                  <MultiSelect
+                    items={manufacturers}
+                    fieldName="scope_manufacturers"
+                    title="Fabricantes"
+                    control={control}
+                  />
+                  <MultiSelect
+                    items={categories}
+                    fieldName="scope_categories"
+                    title="Categorias"
+                    control={control}
+                  />
+                </div>
+              )}
+              {scope === 'individual_products' && (
+                <MultiSelect
+                  items={products}
+                  fieldName="scope_individual_products"
+                  title="Buscar Produtos"
+                  control={control}
+                />
+              )}
 
-        {/* Form Buttons */}
-        <div className="md:col-span-2 flex flex-col sm:flex-row items-center justify-between pt-6 border-t mt-4 gap-4">
-          <div className="w-full sm:w-auto order-2 sm:order-1">
-            {isEdit && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="destructive" className="w-full sm:w-auto">
-                    <Trash className="w-4 h-4 mr-2" /> Deletar Regra
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Tem certeza que deseja deletar esta regra?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita. Isso excluirá permanentemente a regra de
-                      desconto.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Sim, deletar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+              <ProductList
+                products={eligibleProducts}
+                manufacturers={manufacturers}
+                removedIds={removedProductIds}
+                uncheckedIds={uncheckedProductIds}
+                onRemove={(id) => {
+                  const newSet = new Set(removedProductIds)
+                  newSet.add(id)
+                  setRemovedProductIds(newSet)
+                }}
+                onToggleCheck={(id, checked) => {
+                  const newSet = new Set(uncheckedProductIds)
+                  if (checked) newSet.delete(id)
+                  else newSet.add(id)
+                  setUncheckedProductIds(newSet)
+                }}
+                scope={scope}
+              />
+            </div>
+
+            {/* Section 3 */}
+            <div className="bg-card border rounded-lg p-5 md:p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold border-b pb-2">Aplicação de Clientes</h2>
+
+              <Controller
+                name="application_type"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup
+                    onValueChange={(val) => {
+                      field.onChange(val)
+                      if (val === 'role') setValue('customers', [])
+                      else setValue('role', '')
+                    }}
+                    value={field.value}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-start space-x-2 border rounded-md p-4 bg-muted/20">
+                      <RadioGroupItem value="role" id="opt-role" className="mt-1" />
+                      <div className="space-y-2 w-full">
+                        <Label htmlFor="opt-role" className="text-base cursor-pointer">
+                          Por Regra de Cliente
+                        </Label>
+                        {application_type === 'role' && (
+                          <div className="space-y-2 pt-2">
+                            <Controller
+                              name="role"
+                              control={control}
+                              render={({ field: roleField }) => (
+                                <Select
+                                  onValueChange={(v) => roleField.onChange(v === 'all' ? '' : v)}
+                                  value={roleField.value || 'all'}
+                                >
+                                  <SelectTrigger className="bg-background">
+                                    <SelectValue placeholder="Todas as Roles" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todas as Roles</SelectItem>
+                                    <SelectItem value="vip">VIP</SelectItem>
+                                    <SelectItem value="reseller">Reseller</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                            <p className="text-sm text-muted-foreground">
+                              Essa regra será aplicada a TODOS os clientes com a role selecionada.
+                              Se nenhuma for selecionada, aplicará a TODOS os clientes.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 border rounded-md p-4 bg-muted/20">
+                      <RadioGroupItem
+                        value="specific_customers"
+                        id="opt-specific"
+                        className="mt-1"
+                      />
+                      <div className="space-y-2 w-full">
+                        <Label htmlFor="opt-specific" className="text-base cursor-pointer">
+                          Clientes Específicos
+                        </Label>
+                        {application_type === 'specific_customers' && (
+                          <div className="pt-2">
+                            <MultiSelect
+                              items={customers}
+                              fieldName="customers"
+                              title="Lista de Clientes"
+                              control={control}
+                            />
+                            <p className="text-sm text-muted-foreground mt-3">
+                              Essa regra será aplicada APENAS aos clientes selecionados acima.
+                            </p>
+                            {errors.customers && (
+                              <p className="text-sm text-destructive mt-1 font-medium">
+                                {errors.customers.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </RadioGroup>
+                )}
+              />
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto order-1 sm:order-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/dashboard-admin')}
-              className="w-full sm:w-auto"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving || selectedProductsCount === 0}
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isSaving ? 'Salvando...' : 'Salvar Regra'}
-            </Button>
+
+          {/* Form Buttons */}
+          <div className="md:col-span-2 flex flex-col sm:flex-row items-center justify-between pt-6 border-t mt-4 gap-4">
+            <div className="w-full sm:w-auto order-2 sm:order-1">
+              {isEdit && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" className="w-full sm:w-auto">
+                      <Trash className="w-4 h-4 mr-2" /> Deletar Regra
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Tem certeza que deseja deletar esta regra?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isso excluirá permanentemente a regra de
+                        desconto.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Sim, deletar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto order-1 sm:order-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/dashboard-admin')}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSaving || selectedProductsCount === 0}
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving ? 'Salvando...' : 'Salvar Regra'}
+              </Button>
+            </div>
           </div>
-        </div>
+        </fieldset>
       </form>
     </div>
   )
