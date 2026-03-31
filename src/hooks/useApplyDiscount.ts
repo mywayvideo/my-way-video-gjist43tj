@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Discount } from '@/types/discount'
 import { getBestDiscount, DiscountCalculation } from '@/services/discountApplicationService'
@@ -9,7 +9,6 @@ import { toast } from '@/hooks/use-toast'
 let globalDiscounts: Discount[] = []
 let isFetching = false
 let fetchPromise: Promise<void> | null = null
-let subscriptionSetup = false
 const listeners = new Set<() => void>()
 
 const notifyListeners = () => listeners.forEach((l) => l())
@@ -38,33 +37,6 @@ const fetchDiscounts = async () => {
   return fetchPromise
 }
 
-const setupRealtime = () => {
-  if (subscriptionSetup) return
-  subscriptionSetup = true
-
-  fetchDiscounts()
-
-  let debounceTimer: NodeJS.Timeout
-  const debouncedFetch = () => {
-    clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-      fetchDiscounts()
-    }, 300)
-  }
-
-  supabase
-    .channel('public:discounts')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, () =>
-      debouncedFetch(),
-    )
-    .subscribe((status, err) => {
-      if (status === 'CHANNEL_ERROR') {
-        console.error('Realtime subscription failed', err)
-        toast({ title: 'Erro', description: 'Erro ao carregar descontos.', variant: 'destructive' })
-      }
-    })
-}
-
 export function useApplyDiscount(
   productId?: string,
   originalPrice?: number | null,
@@ -73,14 +45,117 @@ export function useApplyDiscount(
   const { user } = useAuth()
   const [discounts, setDiscounts] = useState<Discount[]>(globalDiscounts)
 
+  const subscriptionRef = useRef<any>(null)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const retriesRef = useRef(0)
+  const isSubscribingRef = useRef(false)
+
   useEffect(() => {
-    setupRealtime()
+    let debounceTimer: NodeJS.Timeout
+
     const handleUpdate = () => setDiscounts([...globalDiscounts])
     listeners.add(handleUpdate)
-    if (globalDiscounts.length === 0) fetchDiscounts()
+
+    if (globalDiscounts.length === 0) {
+      fetchDiscounts()
+    }
+
+    const setupSubscription = () => {
+      if (isSubscribingRef.current) return
+      isSubscribingRef.current = true
+
+      console.log('Setting up Realtime subscription for discounts...')
+
+      const channel = supabase.channel(
+        `public:discounts:${Math.random().toString(36).substring(7)}`,
+      )
+
+      subscriptionRef.current = channel
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, () => {
+          clearTimeout(debounceTimer)
+          debounceTimer = setTimeout(() => {
+            fetchDiscounts()
+          }, 300)
+        })
+        .subscribe((status, err) => {
+          isSubscribingRef.current = false
+          if (status === 'SUBSCRIBED') {
+            retriesRef.current = 0
+            console.log('Realtime subscription successful.')
+          }
+          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            console.error('Realtime subscription failed:', err || status)
+            handleSubscriptionError()
+          }
+        })
+    }
+
+    const handleSubscriptionError = () => {
+      if (subscriptionRef.current) {
+        if (typeof subscriptionRef.current.unsubscribe === 'function') {
+          subscriptionRef.current.unsubscribe()
+        }
+        supabase.removeChannel(subscriptionRef.current)
+        subscriptionRef.current = null
+      }
+
+      if (retriesRef.current < 3) {
+        retriesRef.current += 1
+        console.log(
+          `Retrying Realtime subscription in 3 seconds... (Attempt ${retriesRef.current} of 3)`,
+        )
+        retryTimeoutRef.current = setTimeout(() => {
+          setupSubscription()
+        }, 3000)
+      } else {
+        if (retriesRef.current === 3) {
+          console.error('Realtime subscription failed after 3 retries.')
+          toast({
+            title: 'Erro',
+            description: 'Erro ao sincronizar descontos.',
+            variant: 'destructive',
+          })
+          toast({
+            title: 'Aviso',
+            description: 'Sincronizacao em modo compatibilidade.',
+            variant: 'default',
+          })
+          retriesRef.current += 1 // Increment to avoid multiple toasts
+        }
+        startPolling()
+      }
+    }
+
+    const startPolling = () => {
+      if (pollingRef.current) return
+      console.log('Fallback to REST API polling active.')
+      pollingRef.current = setInterval(() => {
+        fetchDiscounts()
+      }, 5000)
+    }
+
+    setupSubscription()
 
     return () => {
       listeners.delete(handleUpdate)
+      if (debounceTimer) clearTimeout(debounceTimer)
+
+      if (subscriptionRef.current) {
+        if (typeof subscriptionRef.current.unsubscribe === 'function') {
+          subscriptionRef.current.unsubscribe()
+        }
+        supabase.removeChannel(subscriptionRef.current)
+        subscriptionRef.current = null
+      }
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current)
+        retryTimeoutRef.current = null
+      }
     }
   }, [])
 
@@ -88,7 +163,18 @@ export function useApplyDiscount(
 
   const calculate = useCallback(
     (pId: string, pPrice: number, cPrice: number): DiscountCalculation => {
-      return getBestDiscount(discounts, pId, user?.id || null, userRole, pPrice, cPrice)
+      try {
+        return getBestDiscount(discounts, pId, user?.id || null, userRole, pPrice, cPrice)
+      } catch (error) {
+        console.error('Error calculating discount:', error)
+        return {
+          originalPrice: pPrice,
+          discountedPrice: pPrice,
+          discountPercentage: 0,
+          ruleName: null,
+          discountType: null,
+        }
+      }
     },
     [discounts, user?.id, userRole],
   )
