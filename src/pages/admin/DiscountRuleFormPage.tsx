@@ -4,6 +4,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useDiscountRule } from '@/hooks/useDiscountRule'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -208,6 +209,7 @@ const ProductList = ({
 export default function DiscountRuleFormPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const isEdit = Boolean(id)
   const {
     rule,
@@ -385,13 +387,22 @@ export default function DiscountRuleFormPage() {
     return eligibleProducts.filter((p) => !removedProductIds.has(p.id))
   }, [eligibleProducts, removedProductIds])
 
+  const selectedProductsCount = useMemo(() => {
+    return displayedProducts.filter((p) => !uncheckedProductIds.has(p.id)).length
+  }, [displayedProducts, uncheckedProductIds])
+
   const onSubmit = async (data: FormData) => {
     const finalProductIds = displayedProducts
       .filter((p) => !uncheckedProductIds.has(p.id))
       .map((p) => p.id)
 
     if (finalProductIds.length === 0) {
-      return // UI will show validation error
+      toast({
+        title: 'Erro de Validação',
+        description: 'Nao e possivel salvar desconto sem produtos selecionados.',
+        variant: 'destructive',
+      })
+      return
     }
 
     const payload = {
@@ -768,8 +779,8 @@ export default function DiscountRuleFormPage() {
             </Button>
             <Button
               type="submit"
-              disabled={isSaving}
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white shadow-sm"
+              disabled={isSaving || selectedProductsCount === 0}
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white shadow-sm disabled:opacity-50 disabled:pointer-events-none"
             >
               {isSaving ? 'Salvando...' : 'Salvar Regra'}
             </Button>
