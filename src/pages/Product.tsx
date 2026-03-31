@@ -441,7 +441,7 @@ export default function Product() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <span className="text-xs font-bold uppercase tracking-widest">
-                      Preço Final (USD)
+                      Preço base usa (USD)
                     </span>
                   </div>
 
