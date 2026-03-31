@@ -151,6 +151,7 @@ export default function Product() {
   const [calculatingBrl, setCalculatingBrl] = useState(false)
 
   const { discounts } = useMultipleProductDiscounts(product ? [product] : [])
+  const discountInfo = product ? discounts[product.id] : null
 
   useEffect(() => {
     const fetchSettingsAndUser = async () => {
@@ -298,7 +299,6 @@ export default function Product() {
       let type = pricingSettings?.spread_type || 'percentage'
       let val = pricingSettings?.spread_percentage || 0
 
-      const discountInfo = product ? discounts[product.id] : null
       const basePrice = discountInfo?.discountedPrice ?? product?.price_usd ?? 0
 
       if (pricingSettings && basePrice > 0) {
