@@ -6,6 +6,7 @@ export function ProductPrice({
   discountedPrice,
   weight,
   discountPercentage,
+  ruleName,
   className,
   size,
 }: {
@@ -13,6 +14,7 @@ export function ProductPrice({
   discountedPrice?: number | null | undefined
   weight?: number | null | undefined
   discountPercentage?: number | null
+  ruleName?: string | null
   className?: string
   size?: 'sm' | 'default' | 'lg'
 }) {
@@ -51,9 +53,16 @@ export function ProductPrice({
     >
       {showDiscount ? (
         <>
-          <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4] mb-2">
-            {formatUSD(originalPrice)}
-          </span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4]">
+              {formatUSD(originalPrice)}
+            </span>
+            {discountPercentage && discountPercentage > 0 ? (
+              <span className="bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                {discountPercentage.toFixed(0)}% OFF
+              </span>
+            ) : null}
+          </div>
           <span
             className={cn(
               'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
@@ -62,6 +71,19 @@ export function ProductPrice({
           >
             {formatUSD(discountedPrice!)}
           </span>
+          {originalPrice - discountedPrice! > 0 && (
+            <div className="mt-1.5 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-1">
+              <span className="text-[12px] font-medium text-green-600 dark:text-green-400">
+                Economize {formatUSD(originalPrice - discountedPrice!)}
+              </span>
+              {ruleName && (
+                <span className="text-[10px] text-muted-foreground italic">
+                  Desconto: {ruleName}
+                  {size === 'lg' && ' (Melhor desconto aplicado)'}
+                </span>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <span

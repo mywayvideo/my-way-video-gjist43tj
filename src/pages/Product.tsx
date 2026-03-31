@@ -38,7 +38,7 @@ import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
-import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
+import { useApplyDiscount } from '@/hooks/useApplyDiscount'
 import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
 
 type Message = {
@@ -139,13 +139,13 @@ export default function Product() {
   // BRL Pricing Modal State
   const [isBrlModalOpen, setIsBrlModalOpen] = useState(false)
 
-  const { discounts } = useMultipleProductDiscounts(product ? [product] : [])
-  const discountInfo = product ? discounts[product.id] : null
+  const { discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
+    product?.id,
+    product?.price_usd,
+    product?.price_cost,
+  )
 
-  const effectiveDiscountPercentage =
-    discountInfo?.discountedPrice && product?.price_usd && product.price_usd > 0
-      ? ((product.price_usd - discountInfo.discountedPrice) / product.price_usd) * 100
-      : 0
+  const effectiveDiscountPercentage = discountPercentage || 0
 
   const { calculatedPrice: finalBrl, loading: calculatingBrl } = useCalculatePriceBRL(
     product?.price_usd,
@@ -447,7 +447,9 @@ export default function Product() {
 
                   <ProductPrice
                     originalPrice={product.price_usd}
-                    discountedPrice={discountInfo?.discountedPrice}
+                    discountedPrice={discountedPrice}
+                    discountPercentage={discountPercentage}
+                    ruleName={ruleName}
                     size="lg"
                   />
 
@@ -505,7 +507,9 @@ export default function Product() {
                     addItem({
                       id: product.id,
                       name: product.name,
-                      price: product.price_usd || 0,
+                      price: discountedPrice ?? product.price_usd ?? 0,
+                      original_price: product.price_usd || 0,
+                      cost_price: product.price_cost || 0,
                       image_url: product.image_url || undefined,
                       quantity: 1,
                     })

@@ -1,11 +1,16 @@
-import { useSyncExternalStore, ReactNode } from 'react'
+import { useSyncExternalStore, useMemo, ReactNode } from 'react'
+import { useApplyDiscount } from '@/hooks/useApplyDiscount'
 
 export interface CartItem {
   id: string
   name: string
   price: number
+  original_price?: number
+  cost_price?: number
   image_url?: string
   quantity: number
+  originalPrice?: number
+  discountRule?: string | null
 }
 
 class CartStore {
@@ -72,13 +77,37 @@ class CartStore {
 const cartStore = new CartStore()
 
 export function useCartStore() {
-  const items = useSyncExternalStore(cartStore.subscribe, cartStore.getSnapshot)
+  const rawItems = useSyncExternalStore(cartStore.subscribe, cartStore.getSnapshot)
+  const { calculateDiscount } = useApplyDiscount()
+
+  const items = useMemo(() => {
+    return rawItems.map((item) => {
+      const calc = calculateDiscount(
+        item.id,
+        item.original_price || item.price,
+        item.cost_price || 0,
+      )
+      return {
+        ...item,
+        price: calc.discountedPrice, // Automatically updates the cart display with new price
+        originalPrice: calc.originalPrice,
+        discountRule: calc.ruleName,
+      }
+    })
+  }, [rawItems, calculateDiscount])
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = items.reduce(
+    (sum, item) => sum + (item.originalPrice || item.price) * item.quantity,
+    0,
+  )
+  const discountTotal = subtotal - totalPrice
 
   return {
     items,
+    subtotal,
+    discountTotal,
     addItem: cartStore.addItem,
     removeItem: cartStore.removeItem,
     updateQuantity: cartStore.updateQuantity,

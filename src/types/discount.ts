@@ -10,6 +10,9 @@ export interface Discount {
   is_active?: boolean | null
   created_at?: string | null
   updated_at?: string | null
+  customer_application_type?: string | null
+  customer_role?: string | null
+  customers?: string[] | null
 }
 
 export interface DiscountRule {
