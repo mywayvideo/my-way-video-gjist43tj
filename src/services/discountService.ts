@@ -8,6 +8,47 @@ const TTL = 5 * 60 * 1000
 let rulesPromise: Promise<DiscountRule[]> | null = null
 
 export const discountService = {
+  async getDiscounts(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('discounts')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  async createDiscount(payload: any): Promise<any> {
+    const { data, error } = await supabase.from('discounts').insert([payload]).select().single()
+    if (error) throw error
+    return data
+  },
+
+  async updateDiscount(id: string, payload: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('discounts')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async deleteDiscount(id: string): Promise<boolean> {
+    const { error } = await supabase.from('discounts').delete().eq('id', id)
+    if (error) throw error
+    return true
+  },
+
+  async getProductsForSelection(): Promise<{ id: string; name: string }[]> {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name')
+      .order('name', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
+
   async fetchActiveRules(): Promise<DiscountRule[]> {
     const now = Date.now()
     if (cachedRules && now - lastFetchTime < TTL) {

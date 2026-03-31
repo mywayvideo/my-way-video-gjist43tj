@@ -15,6 +15,7 @@ import SettingsPage from './pages/admin/SettingsPage'
 import DiscountRuleFormPage from './pages/admin/DiscountRuleFormPage'
 import Dashboard from './pages/Dashboard'
 import DashboardAdmin from './pages/DashboardAdmin'
+import AdminDiscountsPage from './pages/admin/AdminDiscountsPage'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/admin/ai-settings" element={<AdminAISettings />} />
             <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
+            <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
             <Route path="/admin/discount/new" element={<DiscountRuleFormPage />} />
             <Route path="/admin/discount/:id" element={<DiscountRuleFormPage />} />
             <Route path="/dashboard" element={<Dashboard />} />

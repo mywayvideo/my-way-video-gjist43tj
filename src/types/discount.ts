@@ -1,3 +1,17 @@
+export interface Discount {
+  id: string
+  name: string
+  description?: string | null
+  discount_type: string
+  discount_value: number
+  product_selection?: any | null
+  start_date?: string | null
+  end_date?: string | null
+  is_active?: boolean | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
 export interface DiscountRule {
   id: string
   rule_name: string
