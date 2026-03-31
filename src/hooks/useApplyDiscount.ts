@@ -50,6 +50,7 @@ export function useApplyDiscount(
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const retriesRef = useRef(0)
   const isSubscribingRef = useRef(false)
+  const isUnsubscribingRef = useRef(false)
 
   useEffect(() => {
     let debounceTimer: NodeJS.Timeout
@@ -61,56 +62,70 @@ export function useApplyDiscount(
       fetchDiscounts()
     }
 
-    const setupSubscription = () => {
-      if (isSubscribingRef.current) return
-      isSubscribingRef.current = true
-
-      console.log('Setting up Realtime subscription for discounts...')
-
-      const channel = supabase.channel(
-        `public:discounts:${Math.random().toString(36).substring(7)}`,
-      )
-
-      subscriptionRef.current = channel
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, () => {
-          clearTimeout(debounceTimer)
-          debounceTimer = setTimeout(() => {
-            fetchDiscounts()
-          }, 300)
-        })
-        .subscribe((status, err) => {
-          isSubscribingRef.current = false
-          if (status === 'SUBSCRIBED') {
-            retriesRef.current = 0
-            console.log('Realtime subscription successful.')
-          }
-          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.error('Realtime subscription failed:', err || status)
-            handleSubscriptionError()
-          }
-        })
-    }
-
-    const handleSubscriptionError = () => {
-      if (subscriptionRef.current) {
+    const safeUnsubscribe = () => {
+      if (isUnsubscribingRef.current || !subscriptionRef.current) return
+      isUnsubscribingRef.current = true
+      try {
         if (typeof subscriptionRef.current.unsubscribe === 'function') {
           subscriptionRef.current.unsubscribe()
         }
         supabase.removeChannel(subscriptionRef.current)
+      } catch (err) {
+        console.error(`Realtime failed: ${err instanceof Error ? err.message : String(err)}`)
+      } finally {
         subscriptionRef.current = null
+        isUnsubscribingRef.current = false
       }
+    }
+
+    const setupSubscription = () => {
+      if (isSubscribingRef.current) return
+      isSubscribingRef.current = true
+
+      console.log('Attempting Realtime subscription...')
+
+      try {
+        const channel = supabase.channel(
+          `public:discounts:${Math.random().toString(36).substring(7)}`,
+        )
+
+        subscriptionRef.current = channel
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, () => {
+            clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+              fetchDiscounts()
+            }, 300)
+          })
+          .subscribe((status, err) => {
+            isSubscribingRef.current = false
+            if (status === 'SUBSCRIBED') {
+              retriesRef.current = 0
+              console.log('Realtime connected successfully')
+            }
+            if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+              console.error(`Realtime failed: ${err?.message || err || status}`)
+              handleSubscriptionError()
+            }
+          })
+      } catch (err) {
+        isSubscribingRef.current = false
+        console.error(`Realtime failed: ${err instanceof Error ? err.message : String(err)}`)
+        handleSubscriptionError()
+      }
+    }
+
+    const handleSubscriptionError = () => {
+      safeUnsubscribe()
 
       if (retriesRef.current < 3) {
         retriesRef.current += 1
-        console.log(
-          `Retrying Realtime subscription in 3 seconds... (Attempt ${retriesRef.current} of 3)`,
-        )
+        const backoffDelay = Math.pow(2, retriesRef.current) * 1000 // 2s, 4s, 8s
+        console.log(`Realtime failed, attempting retry [${retriesRef.current}/3]...`)
         retryTimeoutRef.current = setTimeout(() => {
           setupSubscription()
-        }, 3000)
+        }, backoffDelay)
       } else {
         if (retriesRef.current === 3) {
-          console.error('Realtime subscription failed after 3 retries.')
           toast({
             title: 'Erro',
             description: 'Erro ao sincronizar descontos.',
@@ -129,6 +144,7 @@ export function useApplyDiscount(
 
     const startPolling = () => {
       if (pollingRef.current) return
+      console.log('Using REST API polling for discounts (Realtime disabled temporarily).')
       console.log('Fallback to REST API polling active.')
       pollingRef.current = setInterval(() => {
         fetchDiscounts()
@@ -141,13 +157,8 @@ export function useApplyDiscount(
       listeners.delete(handleUpdate)
       if (debounceTimer) clearTimeout(debounceTimer)
 
-      if (subscriptionRef.current) {
-        if (typeof subscriptionRef.current.unsubscribe === 'function') {
-          subscriptionRef.current.unsubscribe()
-        }
-        supabase.removeChannel(subscriptionRef.current)
-        subscriptionRef.current = null
-      }
+      safeUnsubscribe()
+
       if (pollingRef.current) {
         clearInterval(pollingRef.current)
         pollingRef.current = null
