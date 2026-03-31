@@ -12,7 +12,6 @@ import AdminProductCache from './pages/AdminProductCache'
 import AdminAISettings from './pages/AdminAISettings'
 import AdminAISystemPrompt from './pages/AdminAISystemPrompt'
 import SettingsPage from './pages/admin/SettingsPage'
-import DiscountRuleFormPage from './pages/admin/DiscountRuleFormPage'
 import Dashboard from './pages/Dashboard'
 import DashboardAdmin from './pages/DashboardAdmin'
 import AdminDiscountsPage from './pages/admin/AdminDiscountsPage'
@@ -39,8 +38,6 @@ const App = () => (
             <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
             <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
-            <Route path="/admin/discount/new" element={<DiscountRuleFormPage />} />
-            <Route path="/admin/discount/:id" element={<DiscountRuleFormPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard-admin" element={<DashboardAdmin />} />
             <Route path="/login" element={<Login />} />
