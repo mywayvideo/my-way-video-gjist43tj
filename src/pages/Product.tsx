@@ -39,6 +39,7 @@ import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
 import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
+import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
 
 type Message = {
   id: string
@@ -135,23 +136,22 @@ export default function Product() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [showPriceCost, setShowPriceCost] = useState(false)
 
-  // BRL Pricing State
-  const [pricingSettings, setPricingSettings] = useState<{
-    usd_to_brl: number
-    spread_percentage: number
-    spread_type: string
-  } | null>(null)
-
-  const [brlData, setBrlData] = useState<{
-    finalBrl: number
-    rate: number
-    type: string
-    val: number
-  } | null>(null)
-  const [calculatingBrl, setCalculatingBrl] = useState(false)
+  // BRL Pricing Modal State
+  const [isBrlModalOpen, setIsBrlModalOpen] = useState(false)
 
   const { discounts } = useMultipleProductDiscounts(product ? [product] : [])
   const discountInfo = product ? discounts[product.id] : null
+
+  const effectiveDiscountPercentage =
+    discountInfo?.discountedPrice && product?.price_usd && product.price_usd > 0
+      ? ((product.price_usd - discountInfo.discountedPrice) / product.price_usd) * 100
+      : 0
+
+  const { calculatedPrice: finalBrl, loading: calculatingBrl } = useCalculatePriceBRL(
+    product?.price_usd,
+    product?.weight,
+    effectiveDiscountPercentage,
+  )
 
   useEffect(() => {
     const fetchSettingsAndUser = async () => {
@@ -174,25 +174,7 @@ export default function Product() {
       }
     }
 
-    const fetchPricingSettings = async () => {
-      try {
-        const { data, error } = await supabase.from('exchange_rate').select('*').limit(1).single()
-        if (error) throw error
-
-        if (data) {
-          setPricingSettings({
-            usd_to_brl: Number(data.usd_to_brl) || 0,
-            spread_percentage: Number(data.spread_percentage) || 0,
-            spread_type: data.spread_type || 'percentage',
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch pricing settings', err)
-      }
-    }
-
     fetchSettingsAndUser()
-    fetchPricingSettings()
   }, [])
 
   useEffect(() => {
@@ -204,7 +186,7 @@ export default function Product() {
     setQuestion('')
     setMessages([])
     setIsAiLoading(false)
-    setBrlData(null)
+    setIsBrlModalOpen(false)
     setIsTechnicalInfoOpen(false)
     setIsAiChatOpen(false)
 
@@ -285,47 +267,6 @@ export default function Product() {
       })
     } finally {
       setIsAiLoading(false)
-    }
-  }
-
-  const handleCalculateBrl = async () => {
-    setCalculatingBrl(true)
-    try {
-      // Simulate brief delay for UI consistency
-      await new Promise((resolve) => setTimeout(resolve, 300))
-
-      let finalBrl = 0
-      let rate = pricingSettings?.usd_to_brl || 0
-      let type = pricingSettings?.spread_type || 'percentage'
-      let val = pricingSettings?.spread_percentage || 0
-
-      const basePrice = discountInfo?.discountedPrice ?? product?.price_usd ?? 0
-
-      if (pricingSettings && basePrice > 0) {
-        let effectiveVal = val
-        // Adjust percentage if entered as whole number (e.g. 10 instead of 0.1)
-        if (type === 'percentage' && val >= 1) {
-          effectiveVal = val / 100
-        }
-
-        if (type === 'fixed') {
-          finalBrl = basePrice * (rate + effectiveVal)
-        } else {
-          finalBrl = basePrice * rate * (1 + effectiveVal)
-        }
-      } else {
-        finalBrl = 0
-      }
-
-      setBrlData({ finalBrl, rate, type, val })
-    } catch (err) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível estimar o preço em BRL.',
-        variant: 'destructive',
-      })
-    } finally {
-      setCalculatingBrl(false)
     }
   }
 
@@ -500,14 +441,13 @@ export default function Product() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <span className="text-xs font-bold uppercase tracking-widest">
-                      Preço Final (Estimado BRL)
+                      Preço Final (USD)
                     </span>
                   </div>
 
                   <ProductPrice
                     originalPrice={product.price_usd}
                     discountedPrice={discountInfo?.discountedPrice}
-                    weight={product.weight}
                     size="lg"
                   />
 
@@ -535,58 +475,17 @@ export default function Product() {
                   )}
 
                   <div className="mt-6 pt-6 border-t border-border/50">
-                    {!brlData ? (
-                      <Button
-                        variant="secondary"
-                        className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
-                        onClick={handleCalculateBrl}
-                        disabled={calculatingBrl}
-                      >
-                        <span className="flex items-center gap-2 text-foreground font-medium">
-                          {calculatingBrl ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Calculator className="w-4 h-4 text-green-500" />
-                          )}
-                          Estimar Preço Entregue no Brasil
-                        </span>
-                        <ChevronRight className="w-4 h-4 opacity-50" />
-                      </Button>
-                    ) : (
-                      <div className="animate-in fade-in slide-in-from-top-2 bg-gradient-to-r from-green-500/10 to-transparent rounded-xl p-5 border border-green-500/20">
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
-                            Estimativa BRL
-                          </span>
-                          <button
-                            onClick={() => setBrlData(null)}
-                            className="text-muted-foreground hover:text-foreground transition-colors bg-background/50 rounded-full p-1"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                        {(() => {
-                          const brlPrice = formatPriceBRL(brlData.finalBrl)
-                          return (
-                            <p
-                              className={cn(
-                                'text-[22px] font-mono font-extrabold text-green-500 mb-3 drop-shadow-sm',
-                                brlPrice.isPlaceholder &&
-                                  'text-[0.875rem] lg:text-[0.875rem] font-[600] text-green-500 italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 font-sans drop-shadow-none',
-                              )}
-                            >
-                              {brlPrice.isPlaceholder && (
-                                <HelpCircle className="w-[14px] h-[14px]" />
-                              )}
-                              {brlPrice.text}
-                            </p>
-                          )
-                        })()}
-                        <p className="text-[10px] text-muted-foreground font-mono leading-relaxed border-l-2 border-green-500/50 pl-2">
-                          Referencial dinâmico sujeito a variação cambial.
-                        </p>
-                      </div>
-                    )}
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
+                      onClick={() => setIsBrlModalOpen(true)}
+                    >
+                      <span className="flex items-center gap-2 text-foreground font-medium">
+                        <Calculator className="w-4 h-4 text-green-500" />
+                        Estimar Preço Entregue no Brasil
+                      </span>
+                      <ChevronRight className="w-4 h-4 opacity-50" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -781,6 +680,57 @@ export default function Product() {
           onClose={() => setIsTechnicalInfoOpen(false)}
           technicalInfo={product.technical_info || ''}
         />
+
+        <Dialog open={isBrlModalOpen} onOpenChange={setIsBrlModalOpen}>
+          <DialogContent className="sm:max-w-md bg-background border-border/50">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-green-500" />
+                Estimativa Entregue no Brasil
+              </DialogTitle>
+              <DialogDescription>
+                Preço final estimado em reais incluindo conversão de câmbio, spread, frete e markup.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-6 flex flex-col items-center justify-center">
+              {calculatingBrl ? (
+                <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+              ) : finalBrl === null ? (
+                <div className="flex flex-col items-center text-center gap-2">
+                  <HelpCircle className="w-10 h-10 text-muted-foreground opacity-50 mb-2" />
+                  <p className="text-lg font-semibold text-foreground uppercase tracking-wider">
+                    Preço sob consulta
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Entre em contato para um orçamento detalhado em BRL.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center animate-in fade-in zoom-in-95 duration-300">
+                  <span className="text-sm font-semibold text-green-500 uppercase tracking-wider block mb-2">
+                    Preço Final BRL
+                  </span>
+                  <p className="text-4xl font-mono font-extrabold text-green-500 drop-shadow-sm">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                      finalBrl,
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-4 max-w-[280px] mx-auto leading-relaxed">
+                    * Referencial dinâmico sujeito a variação cambial e possíveis ajustes de
+                    projeto.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-2 text-center border-t border-border/30 pt-4">
+              <Button onClick={() => setIsBrlModalOpen(false)} variant="outline" className="w-full">
+                Fechar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <button

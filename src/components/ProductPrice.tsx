@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
 import { HelpCircle } from 'lucide-react'
-import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
 
 export function ProductPrice({
   originalPrice,
@@ -11,33 +10,13 @@ export function ProductPrice({
   size,
 }: {
   originalPrice: number | null | undefined
-  discountedPrice: number | null | undefined
-  weight: number | null | undefined
+  discountedPrice?: number | null | undefined
+  weight?: number | null | undefined
   discountPercentage?: number | null
   className?: string
   size?: 'sm' | 'default' | 'lg'
 }) {
-  const effectiveDiscountPercentage =
-    discountPercentage ??
-    (originalPrice && discountedPrice && originalPrice > 0
-      ? ((originalPrice - discountedPrice) / originalPrice) * 100
-      : 0)
-
-  const { calculatedPrice: originalBrl, loading: brlOriginalLoading } = useCalculatePriceBRL(
-    originalPrice,
-    weight,
-    0,
-  )
-
-  const { calculatedPrice: discountedBrl, loading: brlDiscountLoading } = useCalculatePriceBRL(
-    originalPrice,
-    weight,
-    effectiveDiscountPercentage,
-  )
-
-  const loading = brlOriginalLoading || brlDiscountLoading
-
-  if (!loading && originalBrl === null) {
+  if (originalPrice === null || originalPrice === undefined || originalPrice <= 0) {
     return (
       <p
         className={cn(
@@ -51,30 +30,29 @@ export function ProductPrice({
     )
   }
 
-  const formatBRL = (val: number) =>
-    new Intl.NumberFormat('pt-BR', {
+  const formatUSD = (val: number) =>
+    new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'BRL',
+      currency: 'USD',
     }).format(val)
 
   const showDiscount =
     discountedPrice !== null &&
     discountedPrice !== undefined &&
-    discountedBrl !== null &&
-    discountedBrl < (originalBrl || 0)
+    discountedPrice < originalPrice &&
+    discountedPrice > 0
 
   return (
     <div
       className={cn(
-        'flex flex-col animate-in fade-in zoom-in-[0.95] duration-500',
-        loading ? 'opacity-50' : 'opacity-100',
+        'flex flex-col animate-in fade-in zoom-in-[0.95] duration-500 opacity-100',
         className,
       )}
     >
       {showDiscount ? (
         <>
           <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4] mb-2">
-            {formatBRL(originalBrl!)}
+            {formatUSD(originalPrice)}
           </span>
           <span
             className={cn(
@@ -82,7 +60,7 @@ export function ProductPrice({
               size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
             )}
           >
-            {formatBRL(discountedBrl!)}
+            {formatUSD(discountedPrice!)}
           </span>
         </>
       ) : (
@@ -92,7 +70,7 @@ export function ProductPrice({
             size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
           )}
         >
-          {originalBrl !== null ? formatBRL(originalBrl) : ''}
+          {formatUSD(originalPrice)}
         </span>
       )}
     </div>
