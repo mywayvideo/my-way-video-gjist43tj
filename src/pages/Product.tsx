@@ -42,6 +42,7 @@ import { ProductPrice } from '@/components/ProductPrice'
 import { useApplyDiscount } from '@/hooks/useApplyDiscount'
 import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
 import { useFavorites } from '@/hooks/useFavorites'
+import { useHeartAnimation } from '@/hooks/useHeartAnimation'
 
 type Message = {
   id: string
@@ -146,6 +147,7 @@ export default function Product() {
 
   // Use state or derived state for isFavorite so it reacts to changes
   const isProductFavorite = product ? favorites.includes(product.id) : false
+  const { isAnimating, triggerAnimation } = useHeartAnimation()
 
   const { discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
     product?.id,
@@ -167,9 +169,14 @@ export default function Product() {
     try {
       if (isProductFavorite) {
         await removeFavorite(product.id)
+        toast({ title: 'Removido dos favoritos!' })
       } else {
         await addFavorite(product.id)
+        triggerAnimation()
+        toast({ title: 'Adicionado aos favoritos!' })
       }
+    } catch (error) {
+      toast({ title: 'Erro ao favoritar produto.', variant: 'destructive' })
     } finally {
       setFavLoading(false)
     }
@@ -365,6 +372,36 @@ export default function Product() {
                   productId={product.id}
                   className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
                 />
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleToggleFavorite()
+                  }}
+                  disabled={favLoading}
+                  className="absolute top-4 right-4 z-10 p-3 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-sm transition-all hover:scale-110 active:scale-95 disabled:opacity-50"
+                  aria-label={
+                    isProductFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
+                  }
+                >
+                  <div className="relative flex items-center justify-center">
+                    <Heart
+                      className={cn(
+                        'w-6 h-6 transition-all duration-300 relative z-10',
+                        isProductFavorite
+                          ? 'fill-red-500 text-red-500'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    />
+                    {isAnimating && (
+                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
+                        <Heart className="w-6 h-6 fill-red-500 text-red-500 animate-ping absolute opacity-75" />
+                        <div className="absolute -inset-4 bg-red-500/20 rounded-full animate-pulse blur-sm" />
+                      </div>
+                    )}
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -557,7 +594,7 @@ export default function Product() {
                 onClick={handleToggleFavorite}
                 disabled={favLoading}
                 className={cn(
-                  'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm',
+                  'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm relative overflow-hidden',
                   isProductFavorite
                     ? 'border-red-200 bg-red-50 hover:bg-red-100'
                     : 'hover:bg-muted',
@@ -566,10 +603,16 @@ export default function Product() {
               >
                 <Heart
                   className={cn(
-                    'w-6 h-6 transition-colors',
+                    'w-6 h-6 transition-all duration-300 relative z-10',
                     isProductFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
                   )}
                 />
+                {isAnimating && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
+                    <Heart className="w-6 h-6 fill-red-500 text-red-500 animate-ping absolute opacity-75" />
+                    <div className="absolute inset-0 bg-red-500/10 animate-pulse" />
+                  </div>
+                )}
               </Button>
             </div>
 

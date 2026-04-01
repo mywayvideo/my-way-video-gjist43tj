@@ -1,6 +1,6 @@
-export const playCoinSound = () => {
-  const audio = new Audio('/sounds/coin-drop.mp3')
-  audio.volume = 0.5
+export const playCrystalSound = () => {
+  const audio = new Audio('/sounds/crystal-toast.mp3')
+  audio.volume = 0.6
   audio.play().catch(() => {
     // Fallback to Web Audio API if audio file fails to load or play
     try {
@@ -8,24 +8,45 @@ export const playCoinSound = () => {
       if (!AudioContextClass) return
 
       const ctx = new AudioContextClass()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
 
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(800, ctx.currentTime)
-      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1)
+      // Main clear tone
+      const osc1 = ctx.createOscillator()
+      const gain1 = ctx.createGain()
+      osc1.type = 'sine'
+      osc1.frequency.setValueAtTime(2000, ctx.currentTime)
 
-      gain.gain.setValueAtTime(0, ctx.currentTime)
-      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05)
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+      // Subtle harmonic for richness
+      const osc2 = ctx.createOscillator()
+      const gain2 = ctx.createGain()
+      osc2.type = 'sine'
+      osc2.frequency.setValueAtTime(4000, ctx.currentTime)
 
-      osc.connect(gain)
-      gain.connect(ctx.destination)
+      // Envelope: attack 0.05s, sustain 0.4s, release 0.25s (Total 0.7s)
+      gain1.gain.setValueAtTime(0, ctx.currentTime)
+      gain1.gain.linearRampToValueAtTime(0.8, ctx.currentTime + 0.05)
+      gain1.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.45)
+      gain1.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.7)
 
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.5)
+      gain2.gain.setValueAtTime(0, ctx.currentTime)
+      gain2.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05)
+      gain2.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.45)
+      gain2.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.7)
+
+      osc1.connect(gain1)
+      gain1.connect(ctx.destination)
+
+      osc2.connect(gain2)
+      gain2.connect(ctx.destination)
+
+      osc1.start(ctx.currentTime)
+      osc2.start(ctx.currentTime)
+      osc1.stop(ctx.currentTime + 0.7)
+      osc2.stop(ctx.currentTime + 0.7)
     } catch (e) {
       // Ignore errors
     }
   })
 }
+
+// Preserve existing exports in case they are used elsewhere
+export const playCoinSound = playCrystalSound
