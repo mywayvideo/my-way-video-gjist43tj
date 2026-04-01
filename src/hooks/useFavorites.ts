@@ -73,7 +73,7 @@ export function useFavorites() {
     let channel: any
     if (user) {
       channel = supabase
-        .channel('public:favorites')
+        .channel(`public:favorites-${Math.random()}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'favorites', filter: `user_id=eq.${user.id}` },
