@@ -14,11 +14,14 @@ export const customerService = {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return null
+
+    if (!user || !user.id) {
+      throw new Error('not_logged_in')
+    }
 
     const { data, error } = await supabase
       .from('customers')
-      .select('*')
+      .select('id, full_name, email, phone, role, status, created_at')
       .eq('user_id', user.id)
       .single()
 

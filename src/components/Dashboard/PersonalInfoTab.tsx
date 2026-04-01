@@ -2,10 +2,9 @@ import { Customer } from '@/types/customer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { CUSTOMER_LABELS } from '@/constants/customer'
-import { useState, useRef } from 'react'
-import { Pencil, Camera, Save, X, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Pencil, Camera, Save, X, Loader2, RefreshCcw } from 'lucide-react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,6 +26,8 @@ import {
 import { customerService } from '@/services/customerService'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useCustomerProfile } from '@/hooks/useCustomerProfile'
 
 const profileSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
@@ -43,35 +44,67 @@ const profileSchema = z.object({
 })
 
 export function PersonalInfoTab({
-  customer,
-  onSave,
-  isEditing,
-  setEditing,
+  customer: propCustomer,
+  onSave: propOnSave,
+  isEditing: propIsEditing,
+  setEditing: propSetEditing,
 }: {
-  customer: Customer
-  onSave: (data: Partial<Customer>) => Promise<void>
-  isEditing: boolean
-  setEditing: (editing: boolean) => void
+  customer?: Customer | null
+  onSave?: (data: Partial<Customer>) => Promise<void>
+  isEditing?: boolean
+  setEditing?: (editing: boolean) => void
 }) {
   const { user } = useAuth()
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const {
+    customer: hookCustomer,
+    state,
+    errorMsg,
+    fetchProfile,
+    updateProfile,
+  } = useCustomerProfile()
+
+  const customer = propCustomer !== undefined ? propCustomer : hookCustomer
+  const onSave = propOnSave || updateProfile
+
+  const [localIsEditing, setLocalIsEditing] = useState(false)
+  const isEditing = propIsEditing !== undefined ? propIsEditing : localIsEditing
+  const setEditing = propSetEditing || setLocalIsEditing
+
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      full_name: customer.full_name || '',
-      email: customer.email || '',
-      phone: customer.phone || '',
-      date_of_birth: customer.date_of_birth || '',
-      gender: customer.gender || '',
-      company_name: customer.company_name || '',
-      cpf: customer.cpf || '',
+      full_name: '',
+      email: '',
+      phone: '',
+      date_of_birth: '',
+      gender: '',
+      company_name: '',
+      cpf: '',
     },
   })
 
+  useEffect(() => {
+    if (customer) {
+      form.reset({
+        full_name: customer.full_name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        date_of_birth: customer.date_of_birth || '',
+        gender: customer.gender || '',
+        company_name: customer.company_name || '',
+        cpf: customer.cpf || '',
+      })
+    }
+  }, [customer, form])
+
   const onSubmit = async (data: z.infer<typeof profileSchema>) => {
-    await onSave(data)
+    if (onSave) {
+      await onSave(data)
+      setEditing(false)
+    }
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +114,7 @@ export function PersonalInfoTab({
     setIsUploading(true)
     try {
       const url = await customerService.uploadProfilePhoto(user.id, file)
-      await onSave({ profile_photo_url: url })
+      if (onSave) await onSave({ profile_photo_url: url })
     } catch (err) {
       toast.error('Erro ao fazer upload da foto.')
     } finally {
@@ -89,9 +122,67 @@ export function PersonalInfoTab({
     }
   }
 
+  if (state === 'LOADING') {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="flex justify-between items-start">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-10 rounded-md" />
+        </div>
+        <div className="flex items-center gap-6 mb-6">
+          <Skeleton className="w-20 h-20 rounded-full shrink-0" />
+          <div className="space-y-2 w-full max-w-sm">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-border">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className={i === 5 ? 'md:col-span-2' : ''}>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (state === 'EMPTY') {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card">
+        <p className="text-lg font-medium text-muted-foreground">Nenhum dado encontrado.</p>
+        <Button onClick={fetchProfile} variant="outline" className="mt-2">
+          <RefreshCcw className="w-4 h-4 mr-2" />
+          Atualizar
+        </Button>
+      </div>
+    )
+  }
+
+  if (state === 'ERROR') {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card border-destructive/50">
+        <p className="text-lg font-medium text-destructive">
+          {errorMsg || 'Erro ao carregar dados. Tente novamente.'}
+        </p>
+        <Button
+          onClick={fetchProfile}
+          variant="outline"
+          className="mt-2 border-destructive/50 hover:bg-destructive/10"
+        >
+          <RefreshCcw className="w-4 h-4 mr-2" />
+          Tentar novamente
+        </Button>
+      </div>
+    )
+  }
+
+  if (!customer) return null
+
   if (!isEditing) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in-up">
         <div className="flex justify-between items-start">
           <h2 className="text-xl font-bold">Informações Pessoais</h2>
           <Button
@@ -183,7 +274,7 @@ export function PersonalInfoTab({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex justify-between items-start mb-6">
         <h2 className="text-xl font-bold">Editar Informações</h2>
       </div>

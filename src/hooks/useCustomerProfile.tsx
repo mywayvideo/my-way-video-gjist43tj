@@ -4,7 +4,7 @@ import { customerService } from '@/services/customerService'
 import { toast } from 'sonner'
 import { ERROR_MESSAGES } from '@/constants/customer'
 
-type State = 'LOADING' | 'IDLE' | 'ERROR' | 'EDIT' | 'SUCCESS'
+type State = 'LOADING' | 'IDLE' | 'ERROR' | 'EDIT' | 'SUCCESS' | 'EMPTY'
 
 export function useCustomerProfile() {
   const [customer, setCustomer] = useState<Customer | null>(null)
@@ -15,11 +15,32 @@ export function useCustomerProfile() {
     setState('LOADING')
     try {
       const data = await customerService.getProfile()
+      if (!data) {
+        setState('EMPTY')
+        setErrorMsg('Nenhum dado encontrado.')
+        return
+      }
       setCustomer(data)
       setState('IDLE')
     } catch (err: any) {
-      setState('ERROR')
-      setErrorMsg(ERROR_MESSAGES.network_error)
+      if (err.message === 'not_logged_in') {
+        toast.error('Voce precisa estar logado.')
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 1500)
+        return
+      }
+
+      if (err.code === 'PGRST116') {
+        setState('EMPTY')
+        setErrorMsg('Nenhum dado encontrado.')
+      } else if (err.code === '403') {
+        setState('ERROR')
+        setErrorMsg('Voce nao tem permissao para acessar estes dados.')
+      } else {
+        setState('ERROR')
+        setErrorMsg('Erro ao carregar dados. Tente novamente.')
+      }
     }
   }, [])
 
