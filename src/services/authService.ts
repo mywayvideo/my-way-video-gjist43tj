@@ -4,15 +4,19 @@ import { AuthResponse } from '@/types/auth'
 // Setup global auth listener for auto-logout
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-    const hadToken = localStorage.getItem('auth-token')
+    const hadToken =
+      localStorage.getItem('supabase-auth-token') || localStorage.getItem('auth-token')
     if (hadToken) {
-      localStorage.removeItem('auth-token')
+      localStorage.removeItem('auth-token') // Cleanup old key
+      localStorage.removeItem('supabase-auth-token')
+      localStorage.removeItem('supabase-refresh-token')
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
     }
   } else if (session) {
-    localStorage.setItem('auth-token', session.access_token)
+    localStorage.setItem('supabase-auth-token', session.access_token)
+    localStorage.setItem('supabase-refresh-token', session.refresh_token)
   }
 })
 
@@ -29,7 +33,8 @@ export const authService = {
       }
 
       if (data.session) {
-        localStorage.setItem('auth-token', data.session.access_token)
+        localStorage.setItem('supabase-auth-token', data.session.access_token)
+        localStorage.setItem('supabase-refresh-token', data.session.refresh_token)
       }
 
       return { success: true, token: data.session?.access_token }
@@ -55,7 +60,8 @@ export const authService = {
       }
 
       if (data.session) {
-        localStorage.setItem('auth-token', data.session.access_token)
+        localStorage.setItem('supabase-auth-token', data.session.access_token)
+        localStorage.setItem('supabase-refresh-token', data.session.refresh_token)
       }
 
       return { success: true, token: data.session?.access_token }
