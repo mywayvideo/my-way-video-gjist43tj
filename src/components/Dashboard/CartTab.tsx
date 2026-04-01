@@ -24,9 +24,20 @@ export function CartTab({
 
   const cartContext = useCart() as any
   const globalCart = cartContext?.cart || cartContext?.items || cartContext?.cartItems
-  const globalRefresh = cartContext?.refreshCart || cartContext?.fetchCart || cartContext?.loadCart
+  const globalRefresh =
+    cartContext?.refreshCart ||
+    cartContext?.fetchCart ||
+    cartContext?.loadCart ||
+    cartContext?.fetchCartItems
 
-  const activeCart = Array.isArray(globalCart) ? globalCart : propsCart
+  const activeCart =
+    Array.isArray(globalCart) && globalCart.length > 0
+      ? globalCart
+      : Array.isArray(propsCart) && propsCart.length > 0
+        ? propsCart
+        : Array.isArray(globalCart)
+          ? globalCart
+          : []
 
   useEffect(() => {
     if (globalRefresh) globalRefresh()
@@ -62,14 +73,14 @@ export function CartTab({
     }
   }
 
-  const products = activeCart.map((item) => item.products).filter(Boolean)
+  const products = activeCart.map((item: any) => item.products || item.product).filter(Boolean)
   const { discounts } = useMultipleProductDiscounts(products)
 
   let subtotal = 0
   let totalDiscountAmount = 0
 
-  activeCart.forEach((item) => {
-    const p = item.products
+  activeCart.forEach((item: any) => {
+    const p = item.products || item.product
     if (!p) return
     const d = discounts[p.id]
     subtotal += (p.price_usd || 0) * item.quantity
@@ -97,8 +108,8 @@ export function CartTab({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
       <div className="lg:col-span-2 space-y-4">
-        {activeCart.map((item) => {
-          const product = item.products
+        {activeCart.map((item: any) => {
+          const product = item.products || item.product
           if (!product) return null
           const isProcessing = processing === item.id || processing === `qty-${item.id}`
 
