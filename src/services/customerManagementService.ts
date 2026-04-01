@@ -33,18 +33,24 @@ export async function fetchAllCustomers(
   const from = (page - 1) * limit
   const to = from + limit - 1
 
+  console.log('Query: SELECT id, full_name, email, role, phone, status, created_at FROM customers')
+
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to)
 
   if (error) {
+    console.log('Query error: ' + error.message)
     console.error(error)
     throw new Error('Erro ao buscar clientes.')
   }
 
   if (!data || data.length === 0) {
+    console.log('Query returned empty array')
     console.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
     toast.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
+  } else {
+    console.log('Query returned: ' + data.length)
   }
 
   return { customers: data || [], total: count || 0 }

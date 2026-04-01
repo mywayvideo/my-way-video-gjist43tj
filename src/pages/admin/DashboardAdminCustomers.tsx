@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCustomerManagement } from '@/hooks/useCustomerManagement'
 import { supabase } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
@@ -74,22 +74,37 @@ export function DashboardAdminCustomers(props: any) {
   }, [searchTerm])
 
   useEffect(() => {
+    console.log('Fetching customers from Supabase...')
     fetchCustomers(page, limit, debouncedSearch, statusFilter)
   }, [page, debouncedSearch, statusFilter, fetchCustomers])
 
   useEffect(() => {
     const debugRLS = async () => {
+      console.log('DashboardAdminCustomers component mounted')
       const {
         data: { session },
       } = await supabase.auth.getSession()
-      console.log(`Current user ID: [${session?.user?.id}]`)
+      console.log('Current user ID: ' + session?.user?.id)
       console.log(
-        `Current user role: [${session?.user?.app_metadata?.role || session?.user?.user_metadata?.role}]`,
+        'Current user role: ' +
+          (session?.user?.app_metadata?.role || session?.user?.user_metadata?.role),
       )
-      console.log('Attempting to fetch customers...')
     }
     debugRLS()
   }, [])
+
+  const prevLoading = useRef(true)
+  useEffect(() => {
+    if (prevLoading.current && !loading) {
+      if (error) {
+        console.log('Fetch error: ' + ((error as any).message || error))
+        if ((error as any).code) console.log('Error code: ' + (error as any).code)
+      } else {
+        console.log('Customers loaded: ' + customers.length)
+      }
+    }
+    prevLoading.current = loading
+  }, [loading, error, customers])
 
   useEffect(() => {
     if (error) {
