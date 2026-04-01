@@ -31,6 +31,7 @@ import {
   Info,
   HelpCircle,
   ChevronLeft,
+  Heart,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
@@ -40,6 +41,7 @@ import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
 import { useApplyDiscount } from '@/hooks/useApplyDiscount'
 import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
+import { useFavorites } from '@/hooks/useFavorites'
 
 type Message = {
   id: string
@@ -139,6 +141,9 @@ export default function Product() {
   // BRL Pricing Modal State
   const [isBrlModalOpen, setIsBrlModalOpen] = useState(false)
 
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites()
+  const [favLoading, setFavLoading] = useState(false)
+
   const { discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
     product?.id,
     product?.price_usd,
@@ -152,6 +157,20 @@ export default function Product() {
     product?.weight,
     effectiveDiscountPercentage,
   )
+
+  const handleToggleFavorite = async () => {
+    if (!product) return
+    setFavLoading(true)
+    try {
+      if (isFavorite(product.id)) {
+        await removeFavorite(product.id)
+      } else {
+        await addFavorite(product.id)
+      }
+    } finally {
+      setFavLoading(false)
+    }
+  }
 
   useEffect(() => {
     const fetchSettingsAndUser = async () => {
@@ -493,7 +512,7 @@ export default function Product() {
               </div>
             </div>
 
-            <div className="order-3 lg:order-none w-full mb-10 lg:mb-0">
+            <div className="order-3 lg:order-none w-full mb-10 lg:mb-0 flex gap-4">
               <Button
                 size="lg"
                 disabled={product.is_discontinued}
@@ -516,13 +535,35 @@ export default function Product() {
                   }
                 }}
                 className={cn(
-                  'w-full h-14 text-base font-semibold shadow-lg transition-all',
+                  'flex-1 h-14 text-base font-semibold shadow-lg transition-all',
                   product.is_discontinued
                     ? 'opacity-50 cursor-not-allowed !pointer-events-auto'
                     : 'hover:shadow-primary/20 hover:-translate-y-0.5',
                 )}
               >
                 <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleToggleFavorite}
+                disabled={favLoading}
+                className={cn(
+                  'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm',
+                  isFavorite(product.id)
+                    ? 'border-red-200 bg-red-50 hover:bg-red-100'
+                    : 'hover:bg-muted',
+                )}
+                aria-label={
+                  isFavorite(product.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
+                }
+              >
+                <Heart
+                  className={cn(
+                    'w-6 h-6 transition-colors',
+                    isFavorite(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
+                  )}
+                />
               </Button>
             </div>
 

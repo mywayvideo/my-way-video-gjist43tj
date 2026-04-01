@@ -85,13 +85,13 @@ export function ProductCard({ product }: { product: any }) {
           />
         </Link>
       </CardHeader>
-      <CardContent className="flex-1 p-5">
-        <Link to={linkTo} onClick={handleLinkClick}>
-          <h3 className="font-semibold text-sm md:text-base mb-2 group-hover:text-primary transition-colors">
+      <CardContent className="flex-1 p-5 flex flex-col">
+        <Link to={linkTo} onClick={handleLinkClick} className="mb-2">
+          <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px]">
             {product.name}
           </h3>
         </Link>
-        <div className="mt-3">
+        <div className="mt-auto pt-1">
           <ProductPrice
             originalPrice={originalPrice}
             discountedPrice={discountedPrice}
