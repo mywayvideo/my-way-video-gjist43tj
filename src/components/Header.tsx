@@ -19,7 +19,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
-import { useCartStore } from '@/stores/useCartStore'
+import { useCart } from '@/hooks/useCart'
 import logoUrl from '@/assets/mw_logo_horiz_1200x318_fundo_escuro-a5934.png'
 import { DirectSearch } from '@/components/DirectSearch'
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog'
@@ -45,7 +45,7 @@ export function Header() {
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [mobileAiQuery, setMobileAiQuery] = useState('')
   const [mobileDbQuery, setMobileDbQuery] = useState('')
-  const { totalItems } = useCartStore()
+  const { itemCount } = useCart()
   const { customer } = useCurrentCustomer()
   const { saveSearchState } = useSearchState()
   const { favorites } = useFavorites()
@@ -473,9 +473,9 @@ export function Header() {
               onClick={() => navigate('/cart')}
             >
               <ShoppingCart className="w-5 h-5 group-hover:text-primary transition-colors" />
-              {totalItems > 0 && (
+              {itemCount > 0 && (
                 <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
-                  {totalItems}
+                  {itemCount}
                 </span>
               )}
             </Button>

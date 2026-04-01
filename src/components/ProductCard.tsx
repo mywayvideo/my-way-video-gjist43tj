@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, HelpCircle, Heart } from 'lucide-react'
-import { useCartStore } from '@/stores/useCartStore'
 import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
@@ -11,9 +10,10 @@ import { ProductPrice } from '@/components/ProductPrice'
 import { useApplyDiscount } from '@/hooks/useApplyDiscount'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useState } from 'react'
+import { QuantityModal } from '@/components/QuantityModal'
 
 export function ProductCard({ product }: { product: any }) {
-  const { addItem } = useCartStore()
+  const [showQtyModal, setShowQtyModal] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
   const { originalPrice, discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
     product.id,
@@ -162,22 +162,13 @@ export function ProductCard({ product }: { product: any }) {
       <CardFooter className="p-5 pt-0 mt-auto">
         <Button
           className="w-full gap-2 transition-all hover:scale-[1.02]"
-          onClick={() =>
-            addItem({
-              id: product.id,
-              name: product.name,
-              price: discountedPrice ?? product.price_usd ?? 0,
-              original_price: product.price_usd || 0,
-              cost_price: product.price_cost || 0,
-              image_url: product.image_url,
-              quantity: 1,
-            })
-          }
+          onClick={() => setShowQtyModal(true)}
         >
           <ShoppingCart className="w-4 h-4" />
           Adicionar
         </Button>
       </CardFooter>
+      {showQtyModal && <QuantityModal product={product} onClose={() => setShowQtyModal(false)} />}
     </Card>
   )
 }
