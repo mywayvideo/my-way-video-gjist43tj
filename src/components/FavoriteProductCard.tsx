@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, ShoppingCart, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import {
   Dialog,
@@ -100,11 +100,11 @@ export function FavoriteProductCard({
     <>
       <Card
         className={cn(
-          'flex flex-col h-full overflow-hidden group transition-all duration-200 border-border/50',
-          isRemoved ? 'card-fade-out' : 'hover:shadow-md hover:border-primary/50',
+          'flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative',
+          isRemoved ? 'card-fade-out' : '',
         )}
       >
-        <div className="relative w-full h-[200px] bg-muted/30 flex items-center justify-center overflow-hidden p-4">
+        <CardHeader className="p-0 relative">
           <div className="absolute top-2 right-2 z-10">
             <Button
               variant="secondary"
@@ -149,29 +149,29 @@ export function FavoriteProductCard({
           </div>
           <Link
             to={`/product/${product.id}`}
-            className="w-full h-full flex items-center justify-center"
+            className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
           >
             <ImageWithFallback
               src={product.image_url}
               alt={product.name}
               productId={product.id}
-              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           </Link>
-        </div>
+        </CardHeader>
 
-        <CardContent className="p-4 flex flex-col flex-grow">
-          <Link to={`/product/${product.id}`} className="mb-2 flex-grow">
-            <h4 className="font-semibold text-base line-clamp-3 group-hover:text-primary transition-colors">
+        <CardContent className="flex-1 p-5 flex flex-col">
+          <Link to={`/product/${product.id}`} className="mb-2">
+            <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px]">
               {product.name}
-            </h4>
+            </h3>
           </Link>
-          <div className="font-bold text-green-600 text-lg mt-auto pt-2">
+          <div className="mt-auto pt-1 font-bold text-green-600 text-lg">
             USD {Number(product.price_usd || 0).toFixed(2)}
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 pt-0 gap-2 flex flex-col">
+        <CardFooter className="p-5 pt-0 mt-auto gap-2 flex flex-col">
           <Button
             className="w-full bg-green-600 hover:bg-green-700 text-white transition-all hover:scale-[1.02] shadow-sm"
             onClick={() => setQuantityModalOpen(true)}
@@ -182,7 +182,7 @@ export function FavoriteProductCard({
             ) : (
               <ShoppingCart className="w-4 h-4 mr-2" />
             )}
-            Adicionar ao Carrinho
+            Adicionar
           </Button>
           <Button
             variant="destructive"

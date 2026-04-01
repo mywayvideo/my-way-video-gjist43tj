@@ -91,10 +91,17 @@ export default function Favorites() {
         <h1 className="text-3xl font-bold mb-8">Meus Favoritos</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex flex-col gap-4">
-              <Skeleton className="w-full h-[200px] rounded-xl" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
+            <div key={i} className="flex flex-col h-full bg-card border rounded-lg overflow-hidden">
+              <Skeleton className="h-[200px] w-full rounded-none" />
+              <div className="p-5 flex flex-col flex-1 gap-4">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-6 w-1/3 mt-auto pt-1" />
+              </div>
+              <div className="p-5 pt-0 mt-auto flex flex-col gap-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             </div>
           ))}
         </div>

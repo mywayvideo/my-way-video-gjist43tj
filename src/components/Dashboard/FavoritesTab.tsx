@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { HeartOff, AlertCircle, ShoppingCart, Trash2, Heart, Loader2 } from 'lucide-react'
+import { ImageWithFallback } from '@/components/ImageWithFallback'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
@@ -145,74 +147,82 @@ function FavoriteCard({
 
   return (
     <>
-      <div
+      <Card
         className={cn(
-          'group relative flex flex-col bg-card border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300',
+          'flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative',
           isFadingOut && 'opacity-0 -translate-y-3 pointer-events-none',
         )}
       >
-        <button
-          onClick={handleToggleFavorite}
-          disabled={isRemoving || isAddingToCart}
-          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white hover:scale-105 transition-all disabled:opacity-50"
-        >
-          {isFavorited ? (
-            <Heart className="w-5 h-5 fill-red-500 text-red-500" />
-          ) : (
-            <Heart className="w-5 h-5 text-muted-foreground" />
-          )}
-        </button>
-        <div className="aspect-square bg-secondary/20 relative">
-          {item.product.image_url ? (
-            <img
+        <CardHeader className="p-0 relative">
+          <div className="absolute top-2 right-2 z-10">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 rounded-full shadow-sm bg-white/80 hover:bg-white backdrop-blur-sm transition-all overflow-visible"
+              onClick={handleToggleFavorite}
+              disabled={isRemoving || isAddingToCart}
+            >
+              {isFavorited ? (
+                <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+              ) : (
+                <Heart className="w-4 h-4 text-muted-foreground" />
+              )}
+            </Button>
+          </div>
+          <Link
+            to={`/product/${item.product_id}`}
+            className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
+          >
+            <ImageWithFallback
               src={item.product.image_url}
               alt={item.product.name}
-              className="w-full h-full object-cover mix-blend-multiply"
+              productId={item.product_id}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              Sem imagem
-            </div>
-          )}
-        </div>
-        <div className="p-4 flex flex-col flex-1">
-          <h3 className="font-medium text-sm line-clamp-3 mb-2 flex-1">{item.product.name}</h3>
-          <div className="text-lg font-bold text-green-600 mb-4">
+          </Link>
+        </CardHeader>
+        <CardContent className="flex-1 p-5 flex flex-col">
+          <Link to={`/product/${item.product_id}`} className="mb-2">
+            <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px]">
+              {item.product.name}
+            </h3>
+          </Link>
+          <div className="mt-auto pt-1 font-bold text-green-600 text-lg">
             US${' '}
             {item.product.price_usd?.toLocaleString('en-US', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </div>
-          <div className="flex flex-col gap-2 mt-auto">
-            <Button
-              onClick={() => setShowQtyModal(true)}
-              disabled={isRemoving || isAddingToCart}
-              className="w-full bg-green-600 hover:bg-green-700 hover:scale-[1.02] hover:shadow-md transition-all text-white font-medium"
-            >
-              {isAddingToCart ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <ShoppingCart className="w-4 h-4 mr-2" />
-              )}
-              Adicionar ao Carrinho
-            </Button>
-            <Button
-              onClick={handleRemoveBtn}
-              disabled={isRemoving || isAddingToCart}
-              variant="destructive"
-              className="w-full hover:scale-[1.02] hover:shadow-md transition-all"
-            >
-              {isRemoving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
-              )}
-              Remover
-            </Button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="p-5 pt-0 mt-auto gap-2 flex flex-col">
+          <Button
+            onClick={() => setShowQtyModal(true)}
+            disabled={isRemoving || isAddingToCart}
+            className="w-full bg-green-600 hover:bg-green-700 text-white transition-all hover:scale-[1.02] shadow-sm"
+          >
+            {isAddingToCart ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <ShoppingCart className="w-4 h-4 mr-2" />
+            )}
+            Adicionar
+          </Button>
+          <Button
+            onClick={handleRemoveBtn}
+            disabled={isRemoving || isAddingToCart}
+            variant="destructive"
+            className="w-full transition-all hover:scale-[1.02] shadow-sm"
+          >
+            {isRemoving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4 mr-2" />
+            )}
+            Remover
+          </Button>
+        </CardFooter>
+      </Card>
       <Dialog open={showQtyModal} onOpenChange={setShowQtyModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -312,18 +322,18 @@ export function FavoritesTab({
         {[1, 2, 3, 4, 5].map((i, index) => (
           <div
             key={i}
-            className="flex flex-col bg-card border rounded-lg overflow-hidden animate-fade-in"
+            className="flex flex-col h-full bg-card border rounded-lg overflow-hidden animate-fade-in"
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            <Skeleton className="aspect-square w-full rounded-none" />
-            <div className="p-4 flex flex-col flex-1 gap-4">
+            <Skeleton className="h-[200px] w-full rounded-none" />
+            <div className="p-5 flex flex-col flex-1 gap-4">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-6 w-1/3 mt-2" />
-              <div className="flex flex-col gap-2 mt-auto pt-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
+              <Skeleton className="h-6 w-1/3 mt-auto pt-1" />
+            </div>
+            <div className="p-5 pt-0 mt-auto flex flex-col gap-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           </div>
         ))}
