@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 export async function fetchAllCustomers(
   page: number,
@@ -7,25 +8,18 @@ export async function fetchAllCustomers(
   statusFilter: string,
 ) {
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  const user = session?.user
+  const role = user?.app_metadata?.role || user?.user_metadata?.role
 
   let query = supabase
     .from('customers')
-    .select(
-      'id, full_name, email, role, phone, status, created_at, company_name, last_login, two_factor_enabled, billing_address, shipping_address',
-      { count: 'exact' },
-    )
+    .select('id, full_name, email, role, phone, status, created_at', { count: 'exact' })
 
-  if (user) {
-    const { data: currentUser } = await supabase
-      .from('customers')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-    if (currentUser && (currentUser.role === 'customer' || currentUser.role === 'reseller')) {
-      query = query.eq('user_id', user.id)
-    }
+  if (role !== 'admin' && user) {
+    query = query.eq('user_id', user.id)
   }
 
   if (searchTerm) {
@@ -42,7 +36,16 @@ export async function fetchAllCustomers(
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to)
-  if (error) throw error
+
+  if (error) {
+    console.error(error)
+    throw new Error('Erro ao buscar clientes.')
+  }
+
+  if (!data || data.length === 0) {
+    console.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
+    toast.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
+  }
 
   return { customers: data || [], total: count || 0 }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useCustomerManagement } from '@/hooks/useCustomerManagement'
+import { supabase } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -75,6 +76,31 @@ export function DashboardAdminCustomers(props: any) {
   useEffect(() => {
     fetchCustomers(page, limit, debouncedSearch, statusFilter)
   }, [page, debouncedSearch, statusFilter, fetchCustomers])
+
+  useEffect(() => {
+    const debugRLS = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      console.log(`Current user ID: [${session?.user?.id}]`)
+      console.log(
+        `Current user role: [${session?.user?.app_metadata?.role || session?.user?.user_metadata?.role}]`,
+      )
+      console.log('Attempting to fetch customers...')
+    }
+    debugRLS()
+  }, [])
+
+  useEffect(() => {
+    if (error) {
+      toast.error('Erro ao carregar clientes. Tente novamente.', {
+        action: {
+          label: 'Tentar novamente',
+          onClick: () => fetchCustomers(page, limit, debouncedSearch, statusFilter),
+        },
+      })
+    }
+  }, [error, page, limit, debouncedSearch, statusFilter, fetchCustomers])
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -262,153 +288,144 @@ export function DashboardAdminCustomers(props: any) {
         </Button>
       </div>
 
-      {error ? (
-        <div className="text-center py-10 bg-card rounded-lg border border-border">
-          <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}>
-            Tentar novamente
-          </Button>
-        </div>
-      ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          {isMobile ? (
-            <div className="grid gap-4 p-4">
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32 w-full rounded-lg" />
-                ))
-              ) : customers.length === 0 ? (
-                <div className="text-center py-10 flex flex-col items-center justify-center space-y-4">
-                  <p className="text-muted-foreground">Nenhum cliente encontrado</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}
-                  >
-                    Atualizar
-                  </Button>
-                </div>
-              ) : (
-                customers.map((c) => (
-                  <div key={c.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{c.full_name || 'Sem nome'}</p>
-                        <p className="text-sm text-muted-foreground">{c.email}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(c)}>
-                          <Edit className="h-4 w-4 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedCustomer(c)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {getBadge(c.role, 'role')}
-                      {getBadge(c.status, 'status')}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{c.phone || '-'}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={6}>
-                        <Skeleton className="h-8 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : customers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
-                      <div className="flex flex-col items-center justify-center space-y-4">
-                        <p className="text-muted-foreground">Nenhum cliente encontrado</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}
-                        >
-                          Atualizar
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  customers.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.full_name || 'Sem nome'}</TableCell>
-                      <TableCell>{c.email}</TableCell>
-                      <TableCell>{getBadge(c.role, 'role')}</TableCell>
-                      <TableCell>{getBadge(c.status, 'status')}</TableCell>
-                      <TableCell>{c.phone || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(c)}>
-                          <Edit className="h-4 w-4 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedCustomer(c)
-                            setIsDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-          {!loading && totalCount > limit && (
-            <div className="p-4 border-t flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total: {totalCount}</span>
-              <div className="flex gap-2">
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        {isMobile ? (
+          <div className="grid gap-4 p-4">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-lg" />
+              ))
+            ) : customers.length === 0 ? (
+              <div className="text-center py-10 flex flex-col items-center justify-center space-y-4">
+                <p className="text-muted-foreground">Nenhum cliente encontrado</p>
                 <Button
                   variant="outline"
-                  size="sm"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}
                 >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page * limit >= totalCount}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Próxima
+                  Atualizar
                 </Button>
               </div>
+            ) : (
+              customers.map((c) => (
+                <div key={c.id} className="p-4 border rounded-lg space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{c.full_name || 'Sem nome'}</p>
+                      <p className="text-sm text-muted-foreground">{c.email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(c)}>
+                        <Edit className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedCustomer(c)
+                          setIsDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {getBadge(c.role, 'role')}
+                    {getBadge(c.status, 'status')}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{c.phone || '-'}</p>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={6}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : customers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}
+                      >
+                        Atualizar
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                customers.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.full_name || 'Sem nome'}</TableCell>
+                    <TableCell>{c.email}</TableCell>
+                    <TableCell>{getBadge(c.role, 'role')}</TableCell>
+                    <TableCell>{getBadge(c.status, 'status')}</TableCell>
+                    <TableCell>{c.phone || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(c)}>
+                        <Edit className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedCustomer(c)
+                          setIsDeleteDialogOpen(true)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
+        {!loading && !error && totalCount > limit && (
+          <div className="p-4 border-t flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Total: {totalCount}</span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page * limit >= totalCount}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Próxima
+              </Button>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
