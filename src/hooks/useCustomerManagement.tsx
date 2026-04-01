@@ -23,8 +23,14 @@ export function useCustomerManagement() {
         setCustomers(data)
         setTotalCount(total)
       } catch (err: any) {
-        setError(err.message || 'Não foi possível carregar clientes.')
-        toast.error('Não foi possível carregar clientes.')
+        console.error('Fetch customers error:', err)
+        setError(err.message || 'Erro ao carregar clientes.')
+        toast.error('Nenhum cliente encontrado. Tente novamente mais tarde.', {
+          action: {
+            label: 'Tentar novamente',
+            onClick: () => fetchCustomers(page, limit, searchTerm, statusFilter),
+          },
+        })
       } finally {
         setLoading(false)
       }
@@ -108,7 +114,7 @@ export function useCustomerManagement() {
       toast.success('Cliente criado com sucesso!')
       return true
     } catch (err: any) {
-      toast.error(err.message || 'Não foi possível criar cliente.')
+      toast.error(err.message || 'Erro ao salvar cliente. Tente novamente.')
       throw err
     }
   }

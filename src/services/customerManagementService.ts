@@ -6,7 +6,27 @@ export async function fetchAllCustomers(
   searchTerm: string,
   statusFilter: string,
 ) {
-  let query = supabase.from('customers').select('*', { count: 'exact' })
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let query = supabase
+    .from('customers')
+    .select(
+      'id, full_name, email, role, phone, status, created_at, company_name, last_login, two_factor_enabled, billing_address, shipping_address',
+      { count: 'exact' },
+    )
+
+  if (user) {
+    const { data: currentUser } = await supabase
+      .from('customers')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+    if (currentUser && (currentUser.role === 'customer' || currentUser.role === 'reseller')) {
+      query = query.eq('user_id', user.id)
+    }
+  }
 
   if (searchTerm) {
     query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)

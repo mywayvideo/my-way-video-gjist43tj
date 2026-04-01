@@ -278,9 +278,15 @@ export function DashboardAdminCustomers(props: any) {
                   <Skeleton key={i} className="h-32 w-full rounded-lg" />
                 ))
               ) : customers.length === 0 ? (
-                <p className="text-center py-10 text-muted-foreground">
-                  Nenhum cliente encontrado.
-                </p>
+                <div className="text-center py-10 flex flex-col items-center justify-center space-y-4">
+                  <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}
+                  >
+                    Atualizar
+                  </Button>
+                </div>
               ) : (
                 customers.map((c) => (
                   <div key={c.id} className="p-4 border rounded-lg space-y-3">
@@ -323,7 +329,7 @@ export function DashboardAdminCustomers(props: any) {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -337,8 +343,16 @@ export function DashboardAdminCustomers(props: any) {
                   ))
                 ) : customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                      Nenhum cliente encontrado.
+                    <TableCell colSpan={6} className="text-center py-10">
+                      <div className="flex flex-col items-center justify-center space-y-4">
+                        <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+                        <Button
+                          variant="outline"
+                          onClick={() => fetchCustomers(page, limit, debouncedSearch, statusFilter)}
+                        >
+                          Atualizar
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
