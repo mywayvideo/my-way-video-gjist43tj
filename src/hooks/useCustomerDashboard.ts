@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { Customer, Order, Favorite, CartItem, DiscountRuleCustomer } from '@/types/customer'
 
 export function useCustomerDashboard() {
-  const { user: authUser } = useAuth()
+  const { user: authUser, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const [user, setUser] = useState<Customer | null>(null)
@@ -19,7 +19,14 @@ export function useCustomerDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
-    if (!authUser) return
+    if (authLoading) return
+
+    if (!authUser) {
+      setLoading(false)
+      setError('NOT_LOGGED_IN')
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
@@ -40,8 +47,7 @@ export function useCustomerDashboard() {
     } catch (err: any) {
       console.error(err)
       if (err.message === 'NOT_LOGGED_IN') {
-        toast.error('Voce precisa estar logado.')
-        navigate('/login')
+        setError('NOT_LOGGED_IN')
       } else if (err.message === 'PGRST116') {
         setError('PGRST116')
       } else if (err.message === '403') {
@@ -52,11 +58,18 @@ export function useCustomerDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [authUser, navigate])
+  }, [authUser, authLoading, navigate])
 
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (error === 'NOT_LOGGED_IN') {
+      toast.error('Você precisa estar logado para acessar o painel.')
+      navigate('/login', { replace: true })
+    }
+  }, [error, navigate])
 
   return {
     user,

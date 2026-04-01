@@ -15,7 +15,35 @@ import { toast } from 'sonner'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUserRole } from '@/hooks/use-user-role'
 
-export default function Dashboard() {
+import React from 'react'
+
+class DashboardErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Dashboard Render Error:", error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+          <AlertCircle className="w-16 h-16 text-destructive mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Erro ao carregar o painel</h2>
+          <p className="text-muted-foreground mb-6 max-w-md">Ocorreu um problema inesperado ao exibir seus dados. Nossa equipe foi notificada.</p>
+          <Button onClick={() => window.location.reload()}>Recarregar Página</Button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+function DashboardContent() {
   const { role, loading: roleLoading, error: roleError } = useUserRole()
   const navigate = useNavigate()
 
@@ -65,10 +93,6 @@ export default function Dashboard() {
     return null
   }
 
-  if (role !== 'customer' && role !== 'vip' && role !== 'reseller') {
-    return null
-  }
-
   if (loading && !user) {
     return (
       <div className="container max-w-6xl mx-auto py-8 px-4">
@@ -84,6 +108,15 @@ export default function Dashboard() {
   }
 
   if (error && !user) {
+    if (error === 'NOT_LOGGED_IN') {
+      return (
+        <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Redirecionando para login...</p>
+        </div>
+      )
+    }
+
     if (error === 'PGRST116') {
       return (
         <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
@@ -111,10 +144,18 @@ export default function Dashboard() {
     )
   }
 
-  if (!user) return null
+  if (!user) {
+    return (
+      <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+        <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Usuário não identificado</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">Não foi possível carregar seu perfil. Tente atualizar a página.</p>
+        <Button onClick={refresh} variant="outline">Atualizar</Button>
+      </div>
+    )
+  }
 
-  const firstName = user.full_name?.split(' ')[0] || 'Cliente'
-  const today = new Date().toLocaleDateString('pt-BR', {
+  const firstName = user.full_name?.split(' ')[0] || 'Cliente'  const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -219,5 +260,13 @@ export default function Dashboard() {
         </div>
       </Tabs>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <DashboardErrorBoundary>
+      <DashboardContent />
+    </DashboardErrorBoundary>
   )
 }
