@@ -138,4 +138,35 @@
     background-size: 200% 100%;
     animation: shimmer 2s infinite linear;
   }
+
+  @keyframes heart-particle {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--tx), var(--ty)) scale(0);
+      opacity: 0;
+    }
+  }
+
+  .animate-heart-particle {
+    animation: heart-particle 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
+  @keyframes card-fade-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  .card-fade-out {
+    animation: card-fade-out 0.3s forwards;
+    pointer-events: none;
+  }
 }

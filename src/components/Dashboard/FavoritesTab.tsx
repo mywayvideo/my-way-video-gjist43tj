@@ -1,15 +1,10 @@
 import { Favorite } from '@/types/customer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trash2, ShoppingCart, Eye, GitCompare, HeartOff } from 'lucide-react'
+import { HeartOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { customerService } from '@/services/customerService'
-import { toast } from 'sonner'
-import { useState } from 'react'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ImageWithFallback } from '@/components/ImageWithFallback'
-import { ProductPrice } from '@/components/ProductPrice'
-import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
+import { FavoriteProductCard } from '@/components/FavoriteProductCard'
 
 export function FavoritesTab({
   favorites,
@@ -21,40 +16,6 @@ export function FavoritesTab({
   onRefresh: () => void
 }) {
   const navigate = useNavigate()
-  const [processing, setProcessing] = useState<string | null>(null)
-
-  const handleRemove = async (productId: string) => {
-    try {
-      setProcessing(productId)
-      await customerService.removeFavorite(customerId, productId)
-      toast.success('Removido dos favoritos')
-      onRefresh()
-    } catch (e) {
-      toast.error('Erro ao remover favorito. Tente novamente.')
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  const handleAddToCart = async (productId: string) => {
-    try {
-      setProcessing(`add-${productId}`)
-      await customerService.addToCart(customerId, productId, 1)
-      toast.success('Adicionado ao carrinho')
-      onRefresh()
-    } catch (e) {
-      toast.error('Erro ao adicionar ao carrinho.')
-    } finally {
-      setProcessing(null)
-    }
-  }
-
-  const handleCompare = (productId: string) => {
-    toast.info('Comparação selecionada. (Funcionalidade em desenvolvimento)')
-  }
-
-  const products = favorites.map((fav) => fav.products).filter(Boolean) as any[]
-  const { discounts } = useMultipleProductDiscounts(products)
 
   if (favorites.length === 0) {
     return (
@@ -75,79 +36,30 @@ export function FavoritesTab({
       {favorites.map((fav) => {
         const product = fav.products
         if (!product) return null
-        const isRemoving = processing === product.id
-        const isAdding = processing === `add-${product.id}`
 
         return (
-          <Card
+          <FavoriteProductCard
             key={fav.id}
-            className="overflow-hidden flex flex-col group hover:shadow-md transition-all duration-200"
-          >
-            <div className="aspect-square bg-muted relative overflow-hidden flex items-center justify-center p-4">
-              <ImageWithFallback
-                src={product.image_url}
-                alt={product.name}
-                productId={product.id}
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-            <CardContent className="p-4 flex flex-col flex-grow">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                {product.category || 'Geral'}
-              </p>
-              <h4 className="font-semibold text-base line-clamp-2 mb-2 flex-grow">
-                {product.name}
-              </h4>
-              <div className="mb-4">
-                <ProductPrice
-                  originalPrice={product.price_usd}
-                  discountedPrice={discounts[product.id]?.discountedPrice}
-                  weight={product.weight}
-                />
-              </div>
-
-              <div className="grid grid-cols-4 gap-2 pt-4 border-t border-border">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemove(product.id)}
-                  disabled={isRemoving || isAdding}
-                  title="Remover dos favoritos"
-                  className="hover:bg-red-500/10 hover:text-red-500"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleAddToCart(product.id)}
-                  disabled={isRemoving || isAdding}
-                  title="Adicionar ao carrinho"
-                  className="hover:bg-green-500/10 hover:text-green-500"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  title="Ver detalhes"
-                  className="hover:bg-blue-500/10 hover:text-blue-500"
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleCompare(product.id)}
-                  title="Comparar"
-                  className="hover:bg-purple-500/10 hover:text-purple-500"
-                >
-                  <GitCompare className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            product={product}
+            onRemove={async (id) => {
+              await customerService.removeFavorite(customerId, id)
+              onRefresh()
+            }}
+            onAddToCart={async (id, quantity) => {
+              await customerService.addToCart(customerId, id, quantity)
+              onRefresh()
+            }}
+            isFavorited={true}
+            onToggleFavorite={async (id, willBeFavorite) => {
+              if (willBeFavorite) {
+                await customerService.addFavorite(customerId, id)
+                onRefresh()
+              } else {
+                await customerService.removeFavorite(customerId, id)
+                onRefresh()
+              }
+            }}
+          />
         )
       })}
     </div>

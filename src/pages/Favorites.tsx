@@ -1,20 +1,29 @@
 import { useEffect, useState } from 'react'
 import { useFavorites } from '@/hooks/useFavorites'
 import { supabase } from '@/lib/supabase/client'
-import { ProductCard } from '@/components/ProductCard'
-import { Heart, PackageX, RefreshCcw } from 'lucide-react'
+import { Heart, HeartOff, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { FavoriteProductCard } from '@/components/FavoriteProductCard'
+import { useCartStore } from '@/stores/useCartStore'
 import { Link } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 
 export default function Favorites() {
-  const { favorites, loading: favLoading, error } = useFavorites()
+  const {
+    favorites,
+    removeFavorite,
+    addFavorite,
+    isFavorite,
+    loading: favLoading,
+    error,
+  } = useFavorites()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { addItem } = useCartStore()
 
-  const fetchProducts = async () => {
-    if (favorites.length === 0) {
+  const fetchProducts = async (currentFavorites: string[]) => {
+    if (currentFavorites.length === 0) {
       setProducts([])
       setLoading(false)
       return
@@ -25,7 +34,7 @@ export default function Favorites() {
       const { data, error: dbError } = await supabase
         .from('products')
         .select('*')
-        .in('id', favorites)
+        .in('id', currentFavorites)
 
       if (dbError) throw dbError
       setProducts(data || [])
@@ -38,7 +47,24 @@ export default function Favorites() {
 
   useEffect(() => {
     if (!favLoading) {
-      fetchProducts()
+      setProducts((prev) => {
+        const newProducts = prev.filter((p) => favorites.includes(p.id))
+
+        const hasMissing = favorites.some((id) => !prev.some((p) => p.id === id))
+        if (hasMissing || (favorites.length > 0 && prev.length === 0)) {
+          fetchProducts(favorites)
+          return prev
+        }
+
+        if (newProducts.length !== prev.length) {
+          return newProducts
+        }
+
+        return prev
+      })
+      if (favorites.length === 0) {
+        setLoading(false)
+      }
     }
   }, [favorites, favLoading])
 
@@ -78,17 +104,18 @@ export default function Favorites() {
 
   if (favorites.length === 0 || products.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center min-h-[50vh] animate-fade-in">
-        <div className="bg-muted p-6 rounded-full mb-6">
-          <PackageX className="w-12 h-12 text-muted-foreground" />
+      <div className="container mx-auto px-4 py-8 animate-fade-in">
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed rounded-lg my-8">
+          <HeartOff className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
+          <h3 className="text-xl font-medium mb-2">Nenhum favorito ainda</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm">
+            Você não adicionou nenhum produto aos favoritos. Explore nosso catálogo e salve seus
+            produtos preferidos aqui!
+          </p>
+          <Button asChild>
+            <Link to="/search">Explorar Produtos</Link>
+          </Button>
         </div>
-        <h2 className="text-2xl font-bold mb-2">Nenhum favorito</h2>
-        <p className="text-muted-foreground mb-8 text-center max-w-md">
-          Adicione produtos aos seus favoritos para vê-los aqui.
-        </p>
-        <Button asChild size="lg">
-          <Link to="/search">Voltar aos Produtos</Link>
-        </Button>
       </div>
     )
   }
@@ -106,7 +133,32 @@ export default function Favorites() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <FavoriteProductCard
+            key={product.id}
+            product={product}
+            onRemove={async (id) => {
+              await removeFavorite(id)
+            }}
+            onAddToCart={async (id, quantity) => {
+              addItem({
+                id: product.id,
+                name: product.name,
+                price: product.price_usd ?? 0,
+                original_price: product.price_usd || 0,
+                cost_price: product.price_cost || 0,
+                image_url: product.image_url,
+                quantity: quantity,
+              })
+            }}
+            isFavorited={isFavorite(product.id)}
+            onToggleFavorite={async (id, willBeFavorite) => {
+              if (willBeFavorite) {
+                await addFavorite(id)
+              } else {
+                await removeFavorite(id)
+              }
+            }}
+          />
         ))}
       </div>
     </div>
