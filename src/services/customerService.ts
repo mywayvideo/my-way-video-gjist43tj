@@ -119,16 +119,27 @@ export const customerService = {
 
   // New Requested Methods
   async fetchCustomerData(userId: string): Promise<Customer | null> {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    if (error) throw error
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    return { ...data, email: user?.email } as Customer
+    if (!user || !user.id) {
+      throw new Error('NOT_LOGGED_IN')
+    }
+
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, full_name, email, phone, role, status, created_at')
+      .eq('user_id', user.id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') throw new Error('PGRST116')
+      if (error.code === '42501' || error.message.includes('403') || error.code === '403')
+        throw new Error('403')
+      throw error
+    }
+
+    return { ...data, email: user.email } as Customer
   },
 
   async fetchCustomerAddresses(customerId: string): Promise<CustomerAddress[]> {

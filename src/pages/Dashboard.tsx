@@ -84,11 +84,28 @@ export default function Dashboard() {
   }
 
   if (error && !user) {
+    if (error === 'PGRST116') {
+      return (
+        <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+          <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Nenhum dado encontrado</h2>
+          <Button onClick={refresh} variant="outline">
+            Atualizar
+          </Button>
+        </div>
+      )
+    }
+
+    let errorMessage = error
+    if (error === '403') {
+      errorMessage = 'Voce nao tem permissao para acessar estes dados.'
+    }
+
     return (
-      <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center">
+      <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
         <AlertCircle className="w-16 h-16 text-destructive mb-4" />
         <h2 className="text-2xl font-bold mb-2">Ops! Algo deu errado.</h2>
-        <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+        <p className="text-muted-foreground mb-6 max-w-md">{errorMessage}</p>
         <Button onClick={refresh}>Tentar Novamente</Button>
       </div>
     )
