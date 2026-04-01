@@ -209,6 +209,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           .insert({ user_id: user.id, product_id: productId, quantity })
         if (error) throw error
       }
+      await loadSupabaseCart()
     } else {
       const local = localStorage.getItem('my-way-cart')
       const items: any[] = local ? JSON.parse(local) : []
@@ -230,6 +231,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', user.id)
         .eq('product_id', productId)
       if (error) throw error
+      await loadSupabaseCart()
     } else {
       const local = localStorage.getItem('my-way-cart')
       let items: any[] = local ? JSON.parse(local) : []
@@ -247,6 +249,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', user.id)
         .eq('product_id', productId)
       if (error) throw error
+      await loadSupabaseCart()
     } else {
       const local = localStorage.getItem('my-way-cart')
       let items: any[] = local ? JSON.parse(local) : []
@@ -262,6 +265,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id)
       if (error) throw error
+      await loadSupabaseCart()
     } else {
       localStorage.removeItem('my-way-cart')
       setCartItems([])

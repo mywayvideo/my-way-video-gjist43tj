@@ -27,10 +27,6 @@ export function QuantityModal({ product, onClose, onSuccess }: QuantityModalProp
       toast.error('Quantidade inválida')
       return
     }
-    if (product.stock !== null && product.stock !== undefined && qty > product.stock) {
-      toast.error(`Quantidade indisponível. Estoque: ${product.stock}`)
-      return
-    }
     setLoading(true)
     try {
       await addToCart(product.id, qty)
