@@ -43,6 +43,7 @@ import { useApplyDiscount } from '@/hooks/useApplyDiscount'
 import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
+import { useAuthState } from '@/hooks/useAuthState'
 
 type Message = {
   id: string
@@ -148,6 +149,7 @@ export default function Product() {
   // Use state or derived state for isFavorite so it reacts to changes
   const isProductFavorite = product ? favorites.includes(product.id) : false
   const { isAnimating, triggerAnimation } = useHeartAnimation()
+  const { user: authUser, isLoading: isAuthLoading } = useAuthState()
 
   const { discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
     product?.id,
@@ -183,13 +185,7 @@ export default function Product() {
   }
 
   useEffect(() => {
-    const fetchSettingsAndUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      const role = user?.app_metadata?.role || user?.user_metadata?.role
-      setIsAdmin(role === 'admin')
-
+    const fetchSettings = async () => {
       const { data } = await supabase
         .from('settings')
         .select('value')
@@ -203,8 +199,15 @@ export default function Product() {
       }
     }
 
-    fetchSettingsAndUser()
+    fetchSettings()
   }, [])
+
+  useEffect(() => {
+    if (!isAuthLoading) {
+      const role = authUser?.app_metadata?.role || authUser?.user_metadata?.role
+      setIsAdmin(role === 'admin')
+    }
+  }, [authUser, isAuthLoading])
 
   useEffect(() => {
     window.scrollTo(0, 0)
