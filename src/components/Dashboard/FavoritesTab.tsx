@@ -40,7 +40,9 @@ const playCoinSound = () => {
       g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.5)
       o.start(c.currentTime)
       o.stop(c.currentTime + 0.5)
-    } catch (e) {}
+    } catch (e) {
+      // ignore audio context errors
+    }
   })
 }
 
