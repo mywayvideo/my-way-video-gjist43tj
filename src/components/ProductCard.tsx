@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, HelpCircle } from 'lucide-react'
+import { ShoppingCart, HelpCircle, Heart } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
 import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,8 @@ import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
 import { useApplyDiscount } from '@/hooks/useApplyDiscount'
+import { useFavorites } from '@/hooks/useFavorites'
+import { useState } from 'react'
 
 export function ProductCard({ product }: { product: any }) {
   const { addItem } = useCartStore()
@@ -18,6 +20,23 @@ export function ProductCard({ product }: { product: any }) {
     product.price_usd,
     product.price_cost,
   )
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites()
+  const [favLoading, setFavLoading] = useState(false)
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setFavLoading(true)
+    try {
+      if (isFavorite(product.id)) {
+        await removeFavorite(product.id)
+      } else {
+        await addFavorite(product.id)
+      }
+    } finally {
+      setFavLoading(false)
+    }
+  }
 
   const searchSuffix =
     isSearchActive && searchQuery ? `?from=search&q=${encodeURIComponent(searchQuery)}` : ''
@@ -32,11 +51,27 @@ export function ProductCard({ product }: { product: any }) {
   return (
     <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative">
       <CardHeader className="p-0 relative">
-        {product.is_discontinued && (
-          <div className="absolute top-2 right-2 z-10 bg-yellow-100 text-yellow-700 rounded-md px-2 py-1 font-[600] text-xs shadow-sm pointer-events-none">
-            DESCONTINUADO
-          </div>
-        )}
+        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
+          {product.is_discontinued && (
+            <div className="bg-yellow-100 text-yellow-700 rounded-md px-2 py-1 font-[600] text-xs shadow-sm pointer-events-none">
+              DESCONTINUADO
+            </div>
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 rounded-full shadow-sm bg-white/80 hover:bg-white backdrop-blur-sm transition-all"
+            onClick={handleToggleFavorite}
+            disabled={favLoading}
+          >
+            <Heart
+              className={cn(
+                'h-4 w-4 transition-colors',
+                isFavorite(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
+              )}
+            />
+          </Button>
+        </div>
         <Link
           to={linkTo}
           onClick={handleLinkClick}

@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
 import { useUserRole } from '@/hooks/use-user-role'
+import { useFavorites } from '@/hooks/useFavorites'
 
 export function Header() {
   const { user, signOut } = useAuth()
@@ -47,6 +48,7 @@ export function Header() {
   const { totalItems } = useCartStore()
   const { customer } = useCurrentCustomer()
   const { saveSearchState } = useSearchState()
+  const { favorites } = useFavorites()
 
   const [mobileDbResults, setMobileDbResults] = useState<any[]>([])
   const [isSearchingDb, setIsSearchingDb] = useState(false)
@@ -447,6 +449,22 @@ export function Header() {
                 <Settings className="w-6 h-6 group-hover:text-primary transition-colors" />
               </Button>
             )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden sm:flex relative group hover:bg-primary/10 transition-colors"
+              onClick={() => navigate('/favorites')}
+              title="Meus Favoritos"
+              aria-label="Meus Favoritos"
+            >
+              <Heart className="w-5 h-5 group-hover:text-primary transition-colors" />
+              {favorites.length > 0 && (
+                <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
+                  {favorites.length}
+                </span>
+              )}
+            </Button>
 
             <Button
               variant="ghost"

@@ -19,6 +19,7 @@ import AdminDiscountsPage from './pages/admin/AdminDiscountsPage'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
+import Favorites from './pages/Favorites'
 import { AuthProvider } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -76,6 +77,7 @@ const App = () => {
               <Route path="/dashboard-admin" element={<DashboardAdmin />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/favorites" element={<Favorites />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
