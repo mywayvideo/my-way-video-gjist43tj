@@ -5,14 +5,15 @@ import { Trash2, ShoppingCart, Eye, Minus, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { customerService } from '@/services/customerService'
 import { toast } from 'sonner'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ProductPrice } from '@/components/ProductPrice'
 import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
+import { useCart } from '@/hooks/useCart'
 
 export function CartTab({
-  cart,
+  cart: propsCart,
   customerId,
-  onRefresh,
+  onRefresh: propsOnRefresh,
 }: {
   cart: CartItem[]
   customerId: string
@@ -21,12 +22,25 @@ export function CartTab({
   const navigate = useNavigate()
   const [processing, setProcessing] = useState<string | null>(null)
 
+  const cartContext = useCart() as any
+  const globalCart = cartContext?.cart || cartContext?.items || cartContext?.cartItems
+  const globalRefresh = cartContext?.refreshCart || cartContext?.fetchCart || cartContext?.loadCart
+
+  const activeCart = Array.isArray(globalCart) ? globalCart : propsCart
+
+  useEffect(() => {
+    if (globalRefresh) globalRefresh()
+    if (propsOnRefresh) propsOnRefresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleRemove = async (cartItemId: string) => {
     try {
       setProcessing(cartItemId)
       await customerService.removeFromCart(cartItemId)
       toast.success('Item removido do carrinho')
-      onRefresh()
+      if (globalRefresh) globalRefresh()
+      if (propsOnRefresh) propsOnRefresh()
     } catch (e) {
       toast.error('Erro ao remover item. Tente novamente.')
     } finally {
@@ -39,7 +53,8 @@ export function CartTab({
     try {
       setProcessing(`qty-${cartItemId}`)
       await customerService.updateCartQuantity(cartItemId, newQty)
-      onRefresh()
+      if (globalRefresh) globalRefresh()
+      if (propsOnRefresh) propsOnRefresh()
     } catch (e) {
       toast.error('Erro ao atualizar quantidade.')
     } finally {
@@ -47,13 +62,13 @@ export function CartTab({
     }
   }
 
-  const products = cart.map((item) => item.products).filter(Boolean)
+  const products = activeCart.map((item) => item.products).filter(Boolean)
   const { discounts } = useMultipleProductDiscounts(products)
 
   let subtotal = 0
   let totalDiscountAmount = 0
 
-  cart.forEach((item) => {
+  activeCart.forEach((item) => {
     const p = item.products
     if (!p) return
     const d = discounts[p.id]
@@ -66,7 +81,7 @@ export function CartTab({
   const discount = totalDiscountAmount
   const total = subtotal - discount
 
-  if (cart.length === 0) {
+  if (activeCart.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed rounded-lg animate-fade-in">
         <ShoppingCart className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
@@ -82,7 +97,7 @@ export function CartTab({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
       <div className="lg:col-span-2 space-y-4">
-        {cart.map((item) => {
+        {activeCart.map((item) => {
           const product = item.products
           if (!product) return null
           const isProcessing = processing === item.id || processing === `qty-${item.id}`
@@ -186,7 +201,7 @@ export function CartTab({
             <h3 className="text-xl font-bold mb-4 border-b border-border pb-4">Resumo do Pedido</h3>
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal ({cart.reduce((a, b) => a + b.quantity, 0)} itens)</span>
+                <span>Subtotal ({activeCart.reduce((a, b) => a + b.quantity, 0)} itens)</span>
                 <span>${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
               {discount > 0 && (
