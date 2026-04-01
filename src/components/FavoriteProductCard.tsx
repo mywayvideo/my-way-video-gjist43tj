@@ -16,11 +16,12 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { playCoinSound } from '@/utils/sound'
 import { toast } from 'sonner'
+import { useCart } from '@/hooks/useCart'
 
 interface FavoriteProductCardProps {
   product: any
   onRemove: (productId: string) => Promise<void>
-  onAddToCart: (productId: string, quantity: number) => Promise<void>
+  onAddToCart?: (productId: string, quantity: number) => Promise<void>
   isFavorited: boolean
   onToggleFavorite: (productId: string, willBeFavorite: boolean) => Promise<void>
 }
@@ -32,6 +33,7 @@ export function FavoriteProductCard({
   isFavorited: initialIsFavorited,
   onToggleFavorite,
 }: FavoriteProductCardProps) {
+  const { addToCart } = useCart()
   const [isRemoved, setIsRemoved] = useState(false)
   const [quantityModalOpen, setQuantityModalOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
@@ -57,7 +59,7 @@ export function FavoriteProductCard({
   const handleAddToCart = async () => {
     setProcessingAction('cart')
     try {
-      await onAddToCart(product.id, quantity)
+      await addToCart(product.id, quantity)
       setQuantityModalOpen(false)
       toast.success('Movido para o carrinho!')
       setIsRemoved(true)

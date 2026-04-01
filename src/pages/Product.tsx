@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCartStore } from '@/stores/useCartStore'
+import { useCart } from '@/hooks/useCart'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -119,7 +119,7 @@ export default function Product() {
   const { id } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { addItem } = useCartStore()
+  const { addToCart } = useCart()
   const [product, setProduct] = useState<(ProductType & { technical_info?: string | null }) | null>(
     null,
   )
@@ -141,8 +141,11 @@ export default function Product() {
   // BRL Pricing Modal State
   const [isBrlModalOpen, setIsBrlModalOpen] = useState(false)
 
-  const { isFavorite, addFavorite, removeFavorite } = useFavorites()
+  const { favorites, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
+
+  // Use state or derived state for isFavorite so it reacts to changes
+  const isProductFavorite = product ? favorites.includes(product.id) : false
 
   const { discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
     product?.id,
@@ -162,7 +165,7 @@ export default function Product() {
     if (!product) return
     setFavLoading(true)
     try {
-      if (isFavorite(product.id)) {
+      if (isProductFavorite) {
         await removeFavorite(product.id)
       } else {
         await addFavorite(product.id)
@@ -523,15 +526,20 @@ export default function Product() {
                 }
                 onClick={() => {
                   if (!product.is_discontinued) {
-                    addItem({
-                      id: product.id,
-                      name: product.name,
-                      price: discountedPrice ?? product.price_usd ?? 0,
-                      original_price: product.price_usd || 0,
-                      cost_price: product.price_cost || 0,
-                      image_url: product.image_url || undefined,
-                      quantity: 1,
-                    })
+                    addToCart(product.id, 1)
+                      .then(() => {
+                        toast({
+                          title: 'Adicionado ao carrinho!',
+                          description: `${product.name} adicionado com sucesso.`,
+                        })
+                      })
+                      .catch(() => {
+                        toast({
+                          variant: 'destructive',
+                          title: 'Erro',
+                          description: 'Falha ao adicionar ao carrinho.',
+                        })
+                      })
                   }
                 }}
                 className={cn(
@@ -550,18 +558,16 @@ export default function Product() {
                 disabled={favLoading}
                 className={cn(
                   'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm',
-                  isFavorite(product.id)
+                  isProductFavorite
                     ? 'border-red-200 bg-red-50 hover:bg-red-100'
                     : 'hover:bg-muted',
                 )}
-                aria-label={
-                  isFavorite(product.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
-                }
+                aria-label={isProductFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
               >
                 <Heart
                   className={cn(
                     'w-6 h-6 transition-colors',
-                    isFavorite(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
+                    isProductFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
                   )}
                 />
               </Button>
