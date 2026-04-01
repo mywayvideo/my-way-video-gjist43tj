@@ -23,12 +23,68 @@ export function ProductCard({ product }: { product: any }) {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
 
+  const triggerFavoriteEffects = (e: React.MouseEvent) => {
+    try {
+      const audio = new Audio('/sounds/coin-drop.mp3')
+      audio.volume = 0.5
+      audio.play().catch(() => {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.setValueAtTime(800, ctx.currentTime)
+        gain.gain.setValueAtTime(0.5, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.5)
+      })
+    } catch (err) {}
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const x = rect.left + rect.width / 2
+    const y = rect.top + rect.height / 2
+
+    for (let i = 0; i < 10; i++) {
+      const particle = document.createElement('div')
+      particle.innerHTML = '❤️'
+      particle.style.position = 'fixed'
+      particle.style.left = `${x}px`
+      particle.style.top = `${y}px`
+      particle.style.color = '#ef4444'
+      particle.style.fontSize = '12px'
+      particle.style.pointerEvents = 'none'
+      particle.style.zIndex = '9999'
+      particle.style.transition = 'all 0.6s ease-out'
+
+      const angle = Math.random() * Math.PI * 2
+      const velocity = 30 + Math.random() * 40
+      const tx = Math.cos(angle) * velocity
+      const ty = Math.sin(angle) * velocity - 20
+
+      document.body.appendChild(particle)
+
+      requestAnimationFrame(() => {
+        particle.style.transform = `translate(${tx}px, ${ty}px) scale(${0.5 + Math.random()})`
+        particle.style.opacity = '0'
+      })
+
+      setTimeout(() => particle.remove(), 600)
+    }
+  }
+
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    const currentlyFavorite = isFavorite(product.id)
+
+    if (!currentlyFavorite) {
+      triggerFavoriteEffects(e)
+    }
+
     setFavLoading(true)
     try {
-      if (isFavorite(product.id)) {
+      if (currentlyFavorite) {
         await removeFavorite(product.id)
       } else {
         await addFavorite(product.id)
