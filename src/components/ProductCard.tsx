@@ -39,7 +39,9 @@ export function ProductCard({ product }: { product: any }) {
         osc.start(ctx.currentTime)
         osc.stop(ctx.currentTime + 0.5)
       })
-    } catch (err) {}
+    } catch (err) {
+      // Ignore audio play errors
+    }
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     const x = rect.left + rect.width / 2
