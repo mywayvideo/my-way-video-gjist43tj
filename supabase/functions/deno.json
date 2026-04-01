@@ -10,7 +10,7 @@
     "toggle-2fa": 2,
     "change-customer-password": 2,
     "send-confirmation-email": 2,
-    "create-customer": 2,
+    "create-customer": 3,
     "send-welcome-email": 2,
     "create-customer-public": 3
   }
