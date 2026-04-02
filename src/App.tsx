@@ -22,6 +22,7 @@ import NotFound from './pages/NotFound'
 import Favorites from './pages/Favorites'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
+import CheckoutSuccess from './pages/CheckoutSuccess'
 import { AuthProvider } from '@/hooks/use-auth'
 import { CartProvider } from '@/hooks/useCart'
 import { supabase } from '@/lib/supabase/client'
@@ -84,6 +85,7 @@ const App = () => {
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/checkout/success" element={<CheckoutSuccess />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

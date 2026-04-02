@@ -54,6 +54,17 @@ export default function Checkout() {
   const [orderConfirmed, setOrderConfirmed] = useState(false)
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('cancel') === 'paypal') {
+      toast({
+        description: 'Pagamento cancelado no PayPal. Tente novamente.',
+        variant: 'destructive',
+      })
+      navigate('/checkout', { replace: true })
+    }
+  }, [navigate, toast])
+
+  useEffect(() => {
     if (loading) return
     if (!user) {
       toast({ description: 'Por favor, faça login para continuar', variant: 'destructive' })
@@ -236,6 +247,7 @@ export default function Checkout() {
   const getDBPaymentMethod = (method: string) => {
     if (method === 'stripe') return 'card'
     if (method === 'pix') return 'pix'
+    if (method === 'paypal') return 'paypal'
     return 'transfer'
   }
 
@@ -322,6 +334,24 @@ export default function Checkout() {
           localStorage.removeItem('cart')
           window.location.href = stripeData.payment_link
         }
+      } else if (paymentMethod === 'paypal') {
+        const { data: paypalData, error: paypalErr } = await supabase.functions.invoke(
+          'create-paypal-payment-intent',
+          {
+            body: { order_id: order.id, amount: Math.round(total * 100) },
+          },
+        )
+        if (paypalErr || !paypalData?.paypal_approval_url) {
+          toast({
+            description: 'Erro ao conectar com PayPal. Tente novamente.',
+            variant: 'destructive',
+          })
+          setIsLoading(false)
+          return
+        }
+        if (cartContext?.clearCart) cartContext.clearCart()
+        localStorage.removeItem('cart')
+        window.location.href = paypalData.paypal_approval_url
       } else {
         setShowManualPaymentDialog(true)
       }
@@ -660,6 +690,18 @@ export default function Checkout() {
                     <div className="flex items-center gap-3">
                       <Smartphone className="w-5 h-5 text-gray-500" />
                       <span className="font-medium">Zelle</span>
+                    </div>
+                  </div>
+                  <div
+                    className={`border p-4 rounded-lg cursor-pointer ${paymentMethod === 'paypal' ? 'border-black ring-1 ring-black' : ''}`}
+                    onClick={() => setPaymentMethod('paypal')}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="w-5 h-5 text-blue-600" />
+                        <span className="font-medium">PayPal</span>
+                      </div>
+                      <span className="text-sm text-gray-500 ml-8">Pague com sua conta PayPal</span>
                     </div>
                   </div>
 
