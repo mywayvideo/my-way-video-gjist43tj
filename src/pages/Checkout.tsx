@@ -135,7 +135,9 @@ export default function Checkout() {
       if (cartContext?.updateQuantity) cartContext.updateQuantity(item.id, newQtd)
       else if (cartContext?.updateItemQuantity) cartContext.updateItemQuantity(item.id, newQtd)
       else localStorage.setItem('cart', JSON.stringify(newItems))
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error updating cart quantity', e)
+    }
   }
 
   const removeItem = (index: number) => {
@@ -148,7 +150,9 @@ export default function Checkout() {
       if (cartContext?.removeItem) cartContext.removeItem(removedItem.id)
       else if (cartContext?.removeFromCart) cartContext.removeFromCart(removedItem.id)
       else localStorage.setItem('cart', JSON.stringify(newItems))
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error removing cart item', e)
+    }
   }
 
   const total = subtotal - discountAmount + (freight || 0)
