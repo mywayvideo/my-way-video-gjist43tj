@@ -287,7 +287,7 @@ export default function Cart() {
               <p className="text-[12px] text-muted-foreground text-center">2 opcoes de checkout</p>
               <div className="flex flex-col w-full gap-[12px] mt-[16px]">
                 <Button
-                  className="w-full min-h-[48px] h-auto py-[16px] px-[20px] rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm transition-all border-none"
+                  className="w-full min-h-[48px] h-auto py-[16px] px-[16px] rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-start shadow-sm transition-all border-none"
                   onClick={() => {
                     setIsCheckingOut(true)
                     navigate('/checkout')
@@ -295,30 +295,30 @@ export default function Cart() {
                   disabled={isCheckingOut}
                 >
                   {isCheckingOut ? (
-                    <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[8px] text-white" />
+                    <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[12px] text-white" />
                   ) : (
-                    <Zap className="w-[20px] h-[20px] shrink-0 mr-[8px] text-white" />
+                    <Zap className="w-[20px] h-[20px] shrink-0 mr-[12px] text-white" />
                   )}
                   <div className="flex flex-col items-start text-left leading-tight text-white">
-                    <span className="font-bold text-[16px]">Checkout Automatizado</span>
-                    <span className="text-[13px] font-light opacity-90">
+                    <span className="font-bold text-[14px]">Checkout Automatizado</span>
+                    <span className="text-[12px] font-light opacity-90">
                       Finalize sua compra em 2 minutos
                     </span>
                   </div>
                 </Button>
                 <Button
-                  className="w-full min-h-[48px] h-auto py-[16px] px-[20px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center shadow-sm transition-all border-none"
+                  className="w-full min-h-[48px] h-auto py-[16px] px-[16px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-start shadow-sm transition-all border-none"
                   onClick={handleWhatsAppCheckout}
                   disabled={isCheckingOut}
                 >
                   {isCheckingOut ? (
-                    <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[8px] text-white" />
+                    <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[12px] text-white" />
                   ) : (
-                    <MessageCircle className="w-[20px] h-[20px] shrink-0 mr-[8px] text-white" />
+                    <MessageCircle className="w-[20px] h-[20px] shrink-0 mr-[12px] text-white" />
                   )}
                   <div className="flex flex-col items-start text-left leading-tight text-white">
-                    <span className="font-bold text-[16px]">Checkout com Especialista</span>
-                    <span className="text-[13px] font-light opacity-90">
+                    <span className="font-bold text-[14px]">Checkout com Especialista</span>
+                    <span className="text-[12px] font-light opacity-90">
                       Faca o checkout com um atendente humano
                     </span>
                   </div>
