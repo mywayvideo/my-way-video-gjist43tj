@@ -1,11 +1,33 @@
 import { useCart } from '@/hooks/useCart'
 import { useFavorites } from '@/hooks/useFavorites'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Heart, Trash2, AlertCircle, Minus, Plus, ArrowRight } from 'lucide-react'
+import {
+  ShoppingCart,
+  Heart,
+  Trash2,
+  AlertCircle,
+  Minus,
+  Plus,
+  ArrowRight,
+  Zap,
+  MessageCircle,
+  Copy,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
 
 export default function Cart() {
   const { cartItems, cartTotal, isLoading, error, removeFromCart, updateQuantity } = useCart()
@@ -13,6 +35,50 @@ export default function Cart() {
   const navigate = useNavigate()
   const [fadingItems, setFadingItems] = useState<string[]>([])
   const [loadingItems, setLoadingItems] = useState<string[]>([])
+  const [showHoursModal, setShowHoursModal] = useState(false)
+  const [waMessage, setWaMessage] = useState('')
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
+
+  const checkBusinessHours = () => {
+    const miamiTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+    const hours = miamiTime.getHours()
+    return hours >= 8 && hours < 17
+  }
+
+  const generateWaMessage = () => {
+    const items = cartItems.filter((item) => !fadingItems.includes(item.id))
+    return `Ola! Gostaria de fazer checkout com um especialista. Itens:\n${items.map((i) => `- ${i.quantity}x ${i.name} (R$ ${i.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`).join('\n')}\nSubtotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\nTotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  }
+
+  const handleWhatsAppCheckout = () => {
+    try {
+      setIsCheckingOut(true)
+      const msg = generateWaMessage()
+      setWaMessage(msg)
+
+      if (!checkBusinessHours()) {
+        setShowHoursModal(true)
+        setIsCheckingOut(false)
+        return
+      }
+
+      openWhatsApp(msg)
+    } catch (e) {
+      toast.error('Erro ao abrir WhatsApp')
+    } finally {
+      setIsCheckingOut(false)
+    }
+  }
+
+  const openWhatsApp = (msg: string) => {
+    const phone = import.meta.env.VITE_WHATSAPP_NUMBER || ''
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(waMessage)
+    toast.success('Mensagem copiada!')
+  }
 
   const handleMoveToFavorites = async (productId: string) => {
     setLoadingItems((prev) => [...prev, productId])
@@ -218,17 +284,53 @@ export default function Cart() {
               </p>
             </div>
             <div className="space-y-3">
-              <Button
-                className="w-full shadow-sm hover:scale-[1.02] transition-all"
-                size="lg"
-                onClick={() => navigate('/checkout')}
-              >
-                Ir para Checkout
-              </Button>
+              <p className="text-[12px] text-muted-foreground mb-3 text-center">
+                2 opcoes de checkout
+              </p>
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button
+                  className="flex-1 min-h-[44px] h-auto py-2 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
+                  onClick={() => {
+                    setIsCheckingOut(true)
+                    navigate('/checkout')
+                  }}
+                  disabled={isCheckingOut}
+                >
+                  {isCheckingOut ? (
+                    <Loader2 className="w-4 h-4 mr-2 shrink-0 animate-spin" />
+                  ) : (
+                    <Zap className="w-4 h-4 mr-2 shrink-0" />
+                  )}
+                  <div className="flex flex-col items-start text-left leading-tight">
+                    <span className="font-bold text-sm">Checkout Automatizado</span>
+                    <span className="text-[10px] font-normal opacity-90">
+                      Finalize sua compra em 2 minutos
+                    </span>
+                  </div>
+                </Button>
+                <Button
+                  className="flex-1 min-h-[44px] h-auto py-2 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm transition-all"
+                  onClick={handleWhatsAppCheckout}
+                  disabled={isCheckingOut}
+                >
+                  {isCheckingOut ? (
+                    <Loader2 className="w-4 h-4 mr-2 shrink-0 animate-spin" />
+                  ) : (
+                    <MessageCircle className="w-4 h-4 mr-2 shrink-0" />
+                  )}
+                  <div className="flex flex-col items-start text-left leading-tight">
+                    <span className="font-bold text-sm">Checkout com Especialista</span>
+                    <span className="text-[10px] font-normal opacity-90">
+                      Faca o checkout com um atendente humano
+                    </span>
+                  </div>
+                </Button>
+              </div>
               <Button
                 variant="outline"
-                className="w-full shadow-sm hover:scale-[1.02] transition-all"
+                className="w-full shadow-sm hover:scale-[1.02] transition-all mt-3"
                 onClick={() => navigate('/search')}
+                disabled={isCheckingOut}
               >
                 Continuar Comprando
               </Button>
@@ -236,6 +338,33 @@ export default function Cart() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={showHoursModal} onOpenChange={setShowHoursModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Fora do Horário Comercial</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nosso atendimento funciona de 8h as 17h (horario de Miami). Deixe sua mensagem que
+              responderemos assim que possivel!
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+            <Button variant="outline" onClick={handleCopyMessage}>
+              <Copy className="w-4 h-4 mr-2" /> Copiar Mensagem
+            </Button>
+            <Button
+              className="bg-[#25D366] hover:bg-[#20bd5a] text-white"
+              onClick={() => {
+                openWhatsApp(waMessage)
+                setShowHoursModal(false)
+              }}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" /> Enviar Mesmo Assim
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
