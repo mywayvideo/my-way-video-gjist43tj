@@ -283,13 +283,11 @@ export default function Cart() {
                 Impostos e frete calculados no checkout.
               </p>
             </div>
-            <div className="space-y-3">
-              <p className="text-[12px] text-muted-foreground mb-3 text-center">
-                2 opcoes de checkout
-              </p>
-              <div className="flex flex-col md:flex-row gap-3">
+            <div>
+              <p className="text-[12px] text-muted-foreground text-center">2 opcoes de checkout</p>
+              <div className="flex flex-col w-full gap-[12px] mt-[16px]">
                 <Button
-                  className="flex-1 min-h-[44px] h-auto py-2 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
+                  className="w-full min-h-[44px] h-auto py-[12px] px-[16px] rounded-[8px] bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-[8px] shadow-sm transition-all"
                   onClick={() => {
                     setIsCheckingOut(true)
                     navigate('/checkout')
@@ -297,9 +295,9 @@ export default function Cart() {
                   disabled={isCheckingOut}
                 >
                   {isCheckingOut ? (
-                    <Loader2 className="w-4 h-4 mr-2 shrink-0 animate-spin" />
+                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
                   ) : (
-                    <Zap className="w-4 h-4 mr-2 shrink-0" />
+                    <Zap className="w-4 h-4 shrink-0" />
                   )}
                   <div className="flex flex-col items-start text-left leading-tight">
                     <span className="font-bold text-sm">Checkout Automatizado</span>
@@ -309,14 +307,14 @@ export default function Cart() {
                   </div>
                 </Button>
                 <Button
-                  className="flex-1 min-h-[44px] h-auto py-2 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm transition-all"
+                  className="w-full min-h-[44px] h-auto py-[12px] px-[16px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center gap-[8px] shadow-sm transition-all"
                   onClick={handleWhatsAppCheckout}
                   disabled={isCheckingOut}
                 >
                   {isCheckingOut ? (
-                    <Loader2 className="w-4 h-4 mr-2 shrink-0 animate-spin" />
+                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
                   ) : (
-                    <MessageCircle className="w-4 h-4 mr-2 shrink-0" />
+                    <MessageCircle className="w-4 h-4 shrink-0" />
                   )}
                   <div className="flex flex-col items-start text-left leading-tight">
                     <span className="font-bold text-sm">Checkout com Especialista</span>
