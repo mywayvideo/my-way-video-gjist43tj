@@ -14,6 +14,11 @@
     "send-welcome-email": 2,
     "create-customer-public": 3,
     "enrich-product-specs": 1,
-    "generate-cart-whatsapp-message": 1
+    "generate-cart-whatsapp-message": 1,
+    "create-discount-coupon": 1,
+    "validate-discount-coupon": 1,
+    "apply-discount-coupon": 1,
+    "generate-payment-token": 1,
+    "validate-payment-token": 1
   }
 }
