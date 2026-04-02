@@ -287,7 +287,7 @@ export default function Cart() {
               <p className="text-[12px] text-muted-foreground text-center">2 opcoes de checkout</p>
               <div className="flex flex-col w-full gap-[12px] mt-[16px]">
                 <Button
-                  className="w-full min-h-[44px] h-auto py-[12px] px-[16px] rounded-[8px] bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-[8px] shadow-sm transition-all"
+                  className="w-full min-h-[48px] h-auto py-[16px] px-[20px] rounded-[8px] bg-primary hover:bg-primary/90 text-white flex items-center justify-center shadow-sm transition-all"
                   onClick={() => {
                     setIsCheckingOut(true)
                     navigate('/checkout')
@@ -295,13 +295,13 @@ export default function Cart() {
                   disabled={isCheckingOut}
                 >
                   {isCheckingOut ? (
-                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                    <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[8px] text-white" />
                   ) : (
-                    <Zap className="w-4 h-4 shrink-0" />
+                    <Zap className="w-[20px] h-[20px] shrink-0 mr-[8px] text-white" />
                   )}
-                  <div className="flex flex-col items-start text-left leading-tight">
-                    <span className="font-bold text-sm">Checkout Automatizado</span>
-                    <span className="text-[10px] font-normal opacity-90">
+                  <div className="flex flex-col items-start text-left leading-tight text-white">
+                    <span className="font-bold text-[16px]">Checkout Automatizado</span>
+                    <span className="text-[13px] font-light opacity-90">
                       Finalize sua compra em 2 minutos
                     </span>
                   </div>
@@ -346,19 +346,18 @@ export default function Cart() {
               responderemos assim que possivel!
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel>Fechar</AlertDialogCancel>
-            <Button variant="outline" onClick={handleCopyMessage}>
-              <Copy className="w-4 h-4 mr-2" /> Copiar Mensagem
-            </Button>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-[12px] sm:space-x-0">
+            <AlertDialogCancel className="w-full sm:w-1/2 h-[44px] rounded-[8px] bg-gray-800 text-white hover:bg-gray-700 hover:text-white border-0 mt-0 sm:mt-0">
+              Fechar
+            </AlertDialogCancel>
             <Button
-              className="bg-[#25D366] hover:bg-[#20bd5a] text-white"
+              className="w-full sm:w-1/2 h-[44px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white m-0"
               onClick={() => {
                 openWhatsApp(waMessage)
                 setShowHoursModal(false)
               }}
             >
-              <ExternalLink className="w-4 h-4 mr-2" /> Enviar Mesmo Assim
+              Enviar Pedido pelo WhatsApp
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
