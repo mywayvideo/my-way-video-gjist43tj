@@ -287,7 +287,7 @@ export default function Cart() {
               <p className="text-[12px] text-muted-foreground text-center">2 opcoes de checkout</p>
               <div className="flex flex-col w-full gap-[12px] mt-[16px]">
                 <Button
-                  className="w-full min-h-[48px] h-auto py-[16px] px-[20px] rounded-[8px] bg-primary hover:bg-primary/90 text-white flex items-center justify-center shadow-sm transition-all"
+                  className="w-full min-h-[48px] h-auto py-[16px] px-[20px] rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm transition-all border-none"
                   onClick={() => {
                     setIsCheckingOut(true)
                     navigate('/checkout')
