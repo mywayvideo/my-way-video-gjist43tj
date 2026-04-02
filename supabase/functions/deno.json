@@ -21,6 +21,8 @@
     "generate-payment-token": 1,
     "validate-payment-token": 1,
     "calculate-freight": 1,
-    "create-payment-intent": 1
+    "create-payment-intent": 1,
+    "create-paypal-payment-intent": 1,
+    "verify-paypal-payment": 1
   }
 }
