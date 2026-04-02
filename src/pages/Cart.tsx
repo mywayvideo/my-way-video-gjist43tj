@@ -301,7 +301,7 @@ export default function Cart() {
                   )}
                   <div className="flex flex-col items-start text-left leading-tight text-white">
                     <span className="font-bold text-[14px]">Checkout Automatizado</span>
-                    <span className="text-[12px] font-light opacity-90">
+                    <span className="font-light opacity-90 text-[10px] mb-[0px] pb-[0px]">
                       Finalize sua compra em 2 minutos
                     </span>
                   </div>
@@ -318,7 +318,7 @@ export default function Cart() {
                   )}
                   <div className="flex flex-col items-start text-left leading-tight text-white">
                     <span className="font-bold text-[14px]">Checkout com Especialista</span>
-                    <span className="text-[12px] font-light opacity-90">
+                    <span className="font-light opacity-90 text-[10px]">
                       Faca o checkout com um atendente humano
                     </span>
                   </div>
