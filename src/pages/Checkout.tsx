@@ -34,11 +34,11 @@ const formatCurrency = (value: number) => {
 }
 
 const btnPrimary =
-  'bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg border-none cursor-pointer transition-all duration-200 ease-out hover:bg-emerald-700 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(5,150,105,0.2)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-emerald-600 focus-visible:outline-offset-2 flex items-center justify-center text-center'
+  'bg-[hsl(152,68%,40%)] text-[hsl(0,0%,100%)] font-semibold py-3 px-6 rounded-lg border-none cursor-pointer transition-all duration-200 ease-out hover:bg-[hsl(152,68%,35%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(152,68%,40%)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-center'
 const btnSecondary =
-  'border-2 border-emerald-600 text-emerald-600 bg-white font-semibold py-3 px-6 rounded-lg cursor-pointer transition-all duration-200 ease-out hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-emerald-600 focus-visible:outline-offset-2 flex items-center justify-center text-center'
+  'bg-[hsl(215,20%,90%)] text-[hsl(215,25%,15%)] font-semibold py-3 px-6 rounded-lg border-none cursor-pointer transition-all duration-200 ease-out hover:bg-[hsl(215,20%,85%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-center'
 const inputClass =
-  'border-slate-200 rounded-lg px-4 py-3 h-auto text-base transition-colors duration-200 ease-out focus-visible:border-emerald-600 focus-visible:ring-emerald-600/20 focus-visible:ring-4 bg-white'
+  'bg-[hsl(215,20%,96%)] text-[hsl(215,25%,15%)] border-2 border-[hsl(215,20%,90%)] rounded-lg px-4 py-3 h-auto text-base font-normal transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-0 focus-visible:border-[hsl(152,68%,40%)] focus-visible:shadow-[0_0_0_3px_hsl(152,68%,10%)] placeholder:text-[hsl(215,15%,45%)] placeholder:text-base placeholder:font-normal w-full'
 
 function StepWrapper({
   step,
@@ -509,34 +509,34 @@ export default function Checkout() {
 
   const renderOrderSummary = () => (
     <div className="space-y-4">
-      <div className="flex justify-between py-3 border-b border-slate-200">
-        <span className="font-medium text-slate-500">Subtotal</span>
-        <span className="font-semibold text-slate-900 font-mono text-base">
+      <div className="flex justify-between py-3 border-b border-slate-200 items-center">
+        <span className="text-sm font-medium text-[hsl(215,15%,45%)]">Subtotal</span>
+        <span className="text-base font-semibold text-[hsl(215,25%,15%)] font-mono">
           {formatCurrency(subtotal)}
         </span>
       </div>
 
       {discountAmount > 0 && (
-        <div className="flex justify-between py-3 border-b border-slate-200">
-          <span className="font-semibold text-emerald-600">Desconto</span>
-          <span className="font-bold text-emerald-600 font-mono text-base">
+        <div className="flex justify-between py-3 border-b border-slate-200 items-center">
+          <span className="text-sm font-medium text-[hsl(215,15%,45%)]">Desconto</span>
+          <span className="text-base font-semibold text-[hsl(152,68%,40%)] font-mono">
             -{formatCurrency(discountAmount)}
           </span>
         </div>
       )}
 
       {freight !== null && (
-        <div className="flex justify-between py-3 border-b border-slate-200">
-          <span className="font-medium text-slate-500">Frete</span>
-          <span className="font-semibold text-slate-900 font-mono text-base">
+        <div className="flex justify-between py-3 border-b border-slate-200 items-center">
+          <span className="text-sm font-medium text-[hsl(215,15%,45%)]">Frete</span>
+          <span className="text-base font-semibold text-[hsl(215,25%,15%)] font-mono">
             {formatCurrency(freight)}
           </span>
         </div>
       )}
 
-      <div className="flex justify-between py-5 border-b-2 border-slate-200 mt-2">
-        <span className="text-xl font-bold text-slate-900">Total</span>
-        <span className="text-2xl font-bold text-emerald-600 font-mono tracking-tight">
+      <div className="flex justify-between py-4 border-b-2 border-slate-200 mt-2 items-center">
+        <span className="font-bold text-[hsl(215,25%,15%)] text-base">Total</span>
+        <span className="font-bold text-[hsl(152,68%,40%)] text-2xl font-mono tracking-tight">
           {formatCurrency(total)}
         </span>
       </div>
@@ -646,19 +646,19 @@ export default function Checkout() {
                     </div>
                   </div>
                   <div className="flex items-center gap-5 w-full sm:w-auto justify-between sm:justify-end mt-2 sm:mt-0">
-                    <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                    <div className="flex items-center border border-[hsl(215,20%,90%)] rounded-lg overflow-hidden bg-[hsl(215,20%,96%)]">
                       <button
                         onClick={() => updateQuantity(idx, item.quantity - 1)}
-                        className="px-4 py-2 hover:bg-slate-100 transition-colors text-slate-600 font-bold focus-visible:outline-emerald-600"
+                        className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)]"
                       >
                         -
                       </button>
-                      <span className="px-4 py-2 border-x border-slate-200 font-semibold text-slate-900 min-w-[3.5rem] text-center bg-white">
+                      <span className="px-4 py-2 border-x border-[hsl(215,20%,90%)] font-semibold text-[hsl(215,25%,15%)] min-w-[3.5rem] text-center bg-white">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateQuantity(idx, item.quantity + 1)}
-                        className="px-4 py-2 hover:bg-slate-100 transition-colors text-slate-600 font-bold focus-visible:outline-emerald-600"
+                        className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)]"
                       >
                         +
                       </button>
@@ -668,7 +668,7 @@ export default function Checkout() {
                     </p>
                     <button
                       onClick={() => removeItem(idx)}
-                      className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors focus-visible:outline-red-600"
+                      className="p-2.5 text-[hsl(0,84%,60%)] hover:bg-red-50 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(0,84%,60%)]"
                       aria-label="Remover item"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -708,20 +708,32 @@ export default function Checkout() {
                   key={opt.id}
                   onClick={() => setDeliveryMethod(opt.id)}
                   className={cn(
-                    'group border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ease-out',
+                    'group border-2 rounded-xl p-4 cursor-pointer transition-all duration-200 ease-out',
                     deliveryMethod === opt.id
-                      ? 'border-emerald-600 bg-emerald-50 shadow-[0_4px_12px_rgba(5,150,105,0.1)]'
-                      : 'border-slate-200 hover:border-emerald-300',
+                      ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
+                      : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
                   )}
                 >
                   <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
                   <Label
                     htmlFor={opt.id}
-                    className="cursor-pointer font-bold text-slate-900 block text-lg mb-1"
+                    className={cn(
+                      'cursor-pointer block text-base font-semibold mb-2 transition-colors',
+                      deliveryMethod === opt.id
+                        ? 'text-[hsl(152,68%,25%)]'
+                        : 'text-[hsl(215,25%,15%)]',
+                    )}
                   >
                     {opt.label}
                   </Label>
-                  <span className="text-sm font-medium text-slate-500 group-hover:text-slate-600">
+                  <span
+                    className={cn(
+                      'block text-sm font-medium leading-snug m-0 transition-colors',
+                      deliveryMethod === opt.id
+                        ? 'text-[hsl(152,68%,35%)]'
+                        : 'text-[hsl(215,25%,25%)]',
+                    )}
+                  >
                     {opt.desc}
                   </span>
                 </div>
@@ -729,9 +741,9 @@ export default function Checkout() {
             </RadioGroup>
 
             {deliveryMethod === 'miami' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-50/80 p-6 rounded-2xl border border-slate-200 mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-[hsl(215,20%,96%)] p-6 rounded-2xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
                 <div className="space-y-2">
-                  <Label className="font-semibold text-slate-800">Rua</Label>
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Rua</Label>
                   <Input
                     value={address.street}
                     onChange={(e) => setAddress({ ...address, street: e.target.value })}
@@ -740,7 +752,7 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold text-slate-800">Número</Label>
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Número</Label>
                   <Input
                     value={address.number}
                     onChange={(e) => setAddress({ ...address, number: e.target.value })}
@@ -749,8 +761,9 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold text-slate-800">
-                    Complemento <span className="text-slate-400 font-normal">(Opcional)</span>
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">
+                    Complemento{' '}
+                    <span className="text-[hsl(215,15%,45%)] font-normal">(Opcional)</span>
                   </Label>
                   <Input
                     value={address.complement}
@@ -760,7 +773,7 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold text-slate-800">ZIP Code</Label>
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">ZIP Code</Label>
                   <Input
                     value={address.zip_code}
                     onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
@@ -769,29 +782,29 @@ export default function Checkout() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold text-slate-800">Cidade</Label>
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Cidade</Label>
                   <Input
                     value="Miami"
                     readOnly
                     disabled
-                    className={cn(inputClass, 'bg-slate-100 text-slate-500 opacity-70')}
+                    className={cn(inputClass, 'opacity-70 cursor-not-allowed')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold text-slate-800">Estado</Label>
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Estado</Label>
                   <Input
                     value="FL"
                     readOnly
                     disabled
-                    className={cn(inputClass, 'bg-slate-100 text-slate-500 opacity-70')}
+                    className={cn(inputClass, 'opacity-70 cursor-not-allowed')}
                   />
                 </div>
               </div>
             )}
 
             {(deliveryMethod === 'usa' || deliveryMethod === 'brasil') && (
-              <div className="space-y-3 bg-slate-50/80 p-6 rounded-2xl border border-slate-200 mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                <Label className="font-semibold text-slate-800 text-base">
+              <div className="space-y-3 bg-[hsl(215,20%,96%)] p-6 rounded-2xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                <Label className="font-semibold text-[hsl(215,25%,15%)] text-base">
                   {deliveryMethod === 'usa' ? 'ZIP Code de Destino' : 'CEP de Destino'}
                 </Label>
                 <Input
@@ -820,9 +833,11 @@ export default function Checkout() {
 
           {/* STEP 3 */}
           <StepWrapper step={3} currentStep={currentStep} title="Cálculo de Frete">
-            <div className="bg-emerald-50 border-l-4 border-emerald-600 p-6 rounded-xl flex items-center justify-between">
-              <p className="text-lg font-medium text-slate-800">Custo estimado de frete:</p>
-              <p className="text-2xl font-bold font-mono text-emerald-700">
+            <div className="bg-[hsl(152,68%,95%)] border-l-4 border-[hsl(152,68%,40%)] p-6 rounded-xl flex items-center justify-between">
+              <p className="text-lg font-medium text-[hsl(215,25%,15%)]">
+                Custo estimado de frete:
+              </p>
+              <p className="text-2xl font-bold font-mono text-[hsl(152,68%,40%)]">
                 {formatCurrency(freight || 0)}
               </p>
             </div>
@@ -839,12 +854,12 @@ export default function Checkout() {
           {/* STEP 4 */}
           <StepWrapper step={4} currentStep={currentStep} title="Cupom de Desconto">
             {appliedCoupon ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-emerald-600 p-5 rounded-2xl shadow-lg shadow-emerald-600/20 gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[hsl(152,68%,40%)] p-5 rounded-2xl shadow-lg shadow-[hsl(152,68%,10%)] gap-4">
                 <div className="text-white">
                   <p className="font-bold text-lg mb-1 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5" /> Cupom Aplicado!
                   </p>
-                  <p className="text-emerald-100 font-medium tracking-wide">
+                  <p className="text-[hsl(152,68%,95%)] font-medium tracking-wide">
                     {appliedCoupon} — <span className="opacity-80">Desconto:</span>{' '}
                     <span className="font-mono font-bold text-white ml-1">
                       {formatCurrency(discountAmount)}
@@ -856,7 +871,7 @@ export default function Checkout() {
                     setAppliedCoupon(null)
                     setDiscountAmount(0)
                   }}
-                  className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-semibold text-sm border border-white/10 w-full sm:w-auto"
+                  className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors font-semibold text-sm border border-white/10 w-full sm:w-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                 >
                   Remover
                 </button>
@@ -902,8 +917,8 @@ export default function Checkout() {
                   className={cn(
                     'group border-2 rounded-2xl p-6 cursor-pointer transition-all duration-200 ease-out flex flex-col items-center text-center',
                     paymentMethod === opt.id
-                      ? 'border-emerald-600 bg-emerald-50 shadow-[0_4px_12px_rgba(5,150,105,0.1)]'
-                      : 'border-slate-200 hover:border-emerald-300',
+                      ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
+                      : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
                   )}
                 >
                   <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
@@ -912,11 +927,25 @@ export default function Checkout() {
                   </div>
                   <Label
                     htmlFor={opt.id}
-                    className="cursor-pointer font-bold text-slate-900 block text-lg mb-1"
+                    className={cn(
+                      'cursor-pointer block text-lg font-bold mb-1 transition-colors',
+                      paymentMethod === opt.id
+                        ? 'text-[hsl(152,68%,25%)]'
+                        : 'text-[hsl(215,25%,15%)]',
+                    )}
                   >
                     {opt.label}
                   </Label>
-                  <span className="text-sm font-medium text-slate-500">{opt.desc}</span>
+                  <span
+                    className={cn(
+                      'block text-sm font-medium transition-colors',
+                      paymentMethod === opt.id
+                        ? 'text-[hsl(152,68%,35%)]'
+                        : 'text-[hsl(215,25%,25%)]',
+                    )}
+                  >
+                    {opt.desc}
+                  </span>
                 </div>
               ))}
             </RadioGroup>
@@ -952,7 +981,10 @@ export default function Checkout() {
                   Voltar
                 </button>
                 <button
-                  className={cn(btnPrimary, 'flex-1 text-lg py-4 shadow-lg shadow-emerald-600/30')}
+                  className={cn(
+                    btnPrimary,
+                    'flex-1 text-lg py-4 shadow-lg shadow-[hsl(152,68%,10%)]',
+                  )}
                   onClick={handleConfirmOrder}
                   disabled={isLoading}
                 >
@@ -980,16 +1012,16 @@ export default function Checkout() {
       {/* Mobile Sticky Summary Drawer */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 z-50 flex justify-between items-center shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
         <div>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
+          <p className="text-sm font-semibold text-[hsl(215,15%,45%)] uppercase tracking-wider mb-0.5">
             Total a Pagar
           </p>
-          <p className="text-2xl font-bold text-emerald-600 font-mono tracking-tight">
+          <p className="text-2xl font-bold text-[hsl(152,68%,40%)] font-mono tracking-tight">
             {formatCurrency(total)}
           </p>
         </div>
         <Sheet>
           <SheetTrigger asChild>
-            <button className="text-emerald-600 bg-emerald-50 font-bold px-6 py-3 border-2 border-emerald-200 hover:border-emerald-600 rounded-xl transition-colors shadow-sm">
+            <button className="text-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] font-bold px-6 py-3 border-2 border-[hsl(152,68%,40%)] hover:bg-[hsl(152,68%,90%)] rounded-xl transition-colors shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(152,68%,40%)]">
               Ver Resumo
             </button>
           </SheetTrigger>
@@ -1083,13 +1115,13 @@ export default function Checkout() {
           <AlertDialogFooter className="gap-3 sm:gap-4 mt-4">
             <AlertDialogCancel
               onClick={() => setShowManualPaymentDialog(false)}
-              className="rounded-xl border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 hover:text-slate-900 py-6 px-6"
+              className={cn(btnSecondary, 'py-4 px-6')}
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={completeManualPayment}
-              className="rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 border-none shadow-lg shadow-emerald-600/30 py-6 px-8"
+              className={cn(btnPrimary, 'py-4 px-8 shadow-lg shadow-[hsl(152,68%,10%)]')}
             >
               Completei a Transferência
             </AlertDialogAction>
