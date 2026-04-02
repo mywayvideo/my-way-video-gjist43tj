@@ -1,18 +1,5 @@
 {
   "_versions": {
-    "ai-search": 43,
-    "functions": 10,
-    "validate-ai-provider": 16,
-    "call-ai-agent": 32,
-    "update-exchange-rate": 10,
-    "validate-image-url": 2,
-    "change-admin-password": 2,
-    "toggle-2fa": 2,
-    "change-customer-password": 2,
-    "send-confirmation-email": 2,
-    "create-customer": 4,
-    "send-welcome-email": 2,
-    "create-customer-public": 3,
-    "enrich-product-specs": 1
+    "ai-search": 13
   }
 }
