@@ -307,18 +307,18 @@ export default function Cart() {
                   </div>
                 </Button>
                 <Button
-                  className="w-full min-h-[44px] h-auto py-[12px] px-[16px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center gap-[8px] shadow-sm transition-all"
+                  className="w-full min-h-[48px] h-auto py-[16px] px-[20px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center shadow-sm transition-all border-none"
                   onClick={handleWhatsAppCheckout}
                   disabled={isCheckingOut}
                 >
                   {isCheckingOut ? (
-                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                    <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[8px] text-white" />
                   ) : (
-                    <MessageCircle className="w-4 h-4 shrink-0" />
+                    <MessageCircle className="w-[20px] h-[20px] shrink-0 mr-[8px] text-white" />
                   )}
-                  <div className="flex flex-col items-start text-left leading-tight">
-                    <span className="font-bold text-sm">Checkout com Especialista</span>
-                    <span className="text-[10px] font-normal opacity-90">
+                  <div className="flex flex-col items-start text-left leading-tight text-white">
+                    <span className="font-bold text-[16px]">Checkout com Especialista</span>
+                    <span className="text-[13px] font-light opacity-90">
                       Faca o checkout com um atendente humano
                     </span>
                   </div>
