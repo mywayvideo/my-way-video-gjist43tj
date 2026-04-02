@@ -13,6 +13,7 @@
     "create-customer": 4,
     "send-welcome-email": 2,
     "create-customer-public": 3,
-    "enrich-product-specs": 1
+    "enrich-product-specs": 1,
+    "generate-cart-whatsapp-message": 1
   }
 }
