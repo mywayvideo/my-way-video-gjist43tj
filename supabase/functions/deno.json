@@ -12,6 +12,7 @@
     "send-confirmation-email": 2,
     "create-customer": 4,
     "send-welcome-email": 2,
-    "create-customer-public": 3
+    "create-customer-public": 3,
+    "enrich-product-specs": 1
   }
 }
