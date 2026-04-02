@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { useCart } from '@/hooks/useCart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +22,8 @@ import {
 } from '@/components/ui/alert-dialog'
 
 export default function Checkout() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  const cartContext = useCart() as any
   const { toast } = useToast()
   const navigate = useNavigate()
 
@@ -52,35 +54,65 @@ export default function Checkout() {
   const [orderConfirmed, setOrderConfirmed] = useState(false)
 
   useEffect(() => {
+    if (loading) return
     if (!user) {
       toast({ description: 'Por favor, faça login para continuar', variant: 'destructive' })
       navigate('/login?redirect=/checkout')
       return
     }
     loadCart()
-  }, [user])
+  }, [user, loading, cartContext])
 
   const loadCart = () => {
     try {
-      const local = localStorage.getItem('cart')
-      if (local) {
-        const parsed = JSON.parse(local)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const formatted = parsed.map((p: any) => ({
-            id: p.id,
-            product_id: p.product_id || p.id,
-            name: p.name,
-            unit_price: p.unit_price || p.price_usd || p.price || 0,
-            quantity: p.quantity || 1,
-            image_url: p.image_url,
-          }))
-          setCartItems(formatted)
-          calculateSubtotal(formatted)
-          return
+      let itemsArray = cartContext?.items || cartContext?.cartItems || cartContext?.cart || []
+
+      if (!itemsArray || itemsArray.length === 0) {
+        const keys = ['cart', 'shopping-cart', 'cart-storage', 'cartItems']
+        for (const key of keys) {
+          const local = localStorage.getItem(key)
+          if (local) {
+            const parsed = JSON.parse(local)
+            if (Array.isArray(parsed)) itemsArray = parsed
+            else if (parsed && Array.isArray(parsed.items)) itemsArray = parsed.items
+            else if (parsed && parsed.state && Array.isArray(parsed.state.items))
+              itemsArray = parsed.state.items
+            else if (parsed && parsed.state && Array.isArray(parsed.state.cartItems))
+              itemsArray = parsed.state.cartItems
+            else if (parsed && Array.isArray(parsed.cartItems)) itemsArray = parsed.cartItems
+
+            if (itemsArray && itemsArray.length > 0) break
+          }
         }
       }
-      setCartItems([])
-      setSubtotal(0)
+
+      if (itemsArray && itemsArray.length > 0) {
+        const formatted = itemsArray.map((p: any) => {
+          const prod = p.product || p
+          return {
+            id: p.id || prod.id,
+            product_id: prod.id || p.product_id || p.id,
+            name: prod.name || p.name,
+            unit_price: p.unit_price || prod.price_usd || prod.price || p.price_usd || p.price || 0,
+            quantity: p.quantity || 1,
+            image_url: prod.image_url || p.image_url,
+          }
+        })
+
+        const currentIds = cartItems.map((i: any) => `${i.id}-${i.quantity}`).join(',')
+        const newIds = formatted.map((i: any) => `${i.id}-${i.quantity}`).join(',')
+
+        if (currentIds !== newIds) {
+          setCartItems(formatted)
+          calculateSubtotal(formatted)
+        }
+        return
+      }
+
+      if (cartItems.length > 0) {
+        setCartItems([])
+        setSubtotal(0)
+      }
     } catch (e) {
       console.error(e)
     }
@@ -97,14 +129,26 @@ export default function Checkout() {
     newItems[index].quantity = newQtd
     setCartItems(newItems)
     calculateSubtotal(newItems)
-    localStorage.setItem('cart', JSON.stringify(newItems))
+
+    try {
+      const item = newItems[index]
+      if (cartContext?.updateQuantity) cartContext.updateQuantity(item.id, newQtd)
+      else if (cartContext?.updateItemQuantity) cartContext.updateItemQuantity(item.id, newQtd)
+      else localStorage.setItem('cart', JSON.stringify(newItems))
+    } catch (e) {}
   }
 
   const removeItem = (index: number) => {
+    const removedItem = cartItems[index]
     const newItems = cartItems.filter((_, i) => i !== index)
     setCartItems(newItems)
     calculateSubtotal(newItems)
-    localStorage.setItem('cart', JSON.stringify(newItems))
+
+    try {
+      if (cartContext?.removeItem) cartContext.removeItem(removedItem.id)
+      else if (cartContext?.removeFromCart) cartContext.removeFromCart(removedItem.id)
+      else localStorage.setItem('cart', JSON.stringify(newItems))
+    } catch (e) {}
   }
 
   const total = subtotal - discountAmount + (freight || 0)
@@ -270,6 +314,7 @@ export default function Checkout() {
         )
         if (stripeErr) throw stripeErr
         if (stripeData?.payment_link) {
+          if (cartContext?.clearCart) cartContext.clearCart()
           localStorage.removeItem('cart')
           window.location.href = stripeData.payment_link
         }
@@ -289,6 +334,7 @@ export default function Checkout() {
     setIsLoading(true)
     try {
       await supabase.from('orders').update({ status: 'pending_payment' }).eq('id', createdOrderId)
+      if (cartContext?.clearCart) cartContext.clearCart()
       localStorage.removeItem('cart')
       setOrderConfirmed(true)
       setShowManualPaymentDialog(false)
