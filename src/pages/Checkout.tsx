@@ -60,62 +60,34 @@ export default function Checkout() {
     loadCart()
   }, [user])
 
-  const loadCart = async () => {
-    setIsLoading(true)
+  const loadCart = () => {
     try {
-      const { data: cartData } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', user!.id)
-        .maybeSingle()
-      let dbItems: any[] = []
-
-      if (cartData) {
-        const { data } = await supabase
-          .from('cart_items')
-          .select('*, products(id, name, price_usd, image_url)')
-          .eq('cart_id', cartData.id)
-        if (data)
-          dbItems = data.map((item: any) => ({
-            id: item.id,
-            product_id: item.product_id,
-            name: item.products?.name,
-            price_usd: item.products?.price_usd || 0,
-            image_url: item.products?.image_url,
-            quantity: item.quantity,
+      const local = localStorage.getItem('cart')
+      if (local) {
+        const parsed = JSON.parse(local)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const formatted = parsed.map((p: any) => ({
+            id: p.id,
+            product_id: p.product_id || p.id,
+            name: p.name,
+            unit_price: p.unit_price || p.price_usd || p.price || 0,
+            quantity: p.quantity || 1,
+            image_url: p.image_url,
           }))
-      }
-
-      if (dbItems.length === 0) {
-        const local =
-          localStorage.getItem('cart') ||
-          localStorage.getItem('shopping_cart') ||
-          localStorage.getItem('myway-cart')
-        if (local) {
-          const parsed = JSON.parse(local)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            dbItems = parsed.map((p: any) => ({
-              product_id: p.id || p.product?.id,
-              name: p.name || p.product?.name,
-              price_usd: p.price_usd || p.product?.price_usd || p.price || 0,
-              image_url: p.image_url || p.product?.image_url,
-              quantity: p.quantity || 1,
-            }))
-          }
+          setCartItems(formatted)
+          calculateSubtotal(formatted)
+          return
         }
       }
-
-      setCartItems(dbItems)
-      calculateSubtotal(dbItems)
+      setCartItems([])
+      setSubtotal(0)
     } catch (e) {
       console.error(e)
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const calculateSubtotal = (items: any[]) => {
-    const sum = items.reduce((acc, item) => acc + item.price_usd * item.quantity, 0)
+    const sum = items.reduce((acc, item) => acc + item.unit_price * item.quantity, 0)
     setSubtotal(sum)
   }
 
@@ -125,17 +97,19 @@ export default function Checkout() {
     newItems[index].quantity = newQtd
     setCartItems(newItems)
     calculateSubtotal(newItems)
+    localStorage.setItem('cart', JSON.stringify(newItems))
   }
 
   const removeItem = (index: number) => {
     const newItems = cartItems.filter((_, i) => i !== index)
     setCartItems(newItems)
     calculateSubtotal(newItems)
+    localStorage.setItem('cart', JSON.stringify(newItems))
   }
 
   const total = subtotal - discountAmount + (freight || 0)
 
-  const handleDeliveryNext = async () => {
+  const handleCalculateFreight = async () => {
     if (!deliveryMethod) return
 
     if (deliveryMethod === 'miami') {
@@ -147,9 +121,13 @@ export default function Checkout() {
         return
       }
     } else if (deliveryMethod === 'usa' || deliveryMethod === 'brasil') {
-      if (!address.zip_code || address.zip_code.length < 5) {
+      const zip = address.zip_code.replace(/\D/g, '')
+      if (!zip || zip.length < 5) {
         toast({
-          description: deliveryMethod === 'usa' ? 'ZIP code inválido.' : 'CEP inválido.',
+          description:
+            deliveryMethod === 'usa'
+              ? 'ZIP code inválido (mínimo 5 dígitos).'
+              : 'CEP inválido (mínimo 5 dígitos).',
           variant: 'destructive',
         })
         return
@@ -159,7 +137,7 @@ export default function Checkout() {
     setIsLoading(true)
     try {
       const { data, error } = await supabase.functions.invoke('calculate-freight', {
-        body: { delivery_method: deliveryMethod, zip_code: address.zip_code },
+        body: { delivery_method: deliveryMethod, address, cart_subtotal: subtotal },
       })
       if (error) throw error
       if (data && typeof data.freight === 'number') {
@@ -268,8 +246,8 @@ export default function Checkout() {
         order_id: order.id,
         product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.price_usd,
-        total_price: item.price_usd * item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.unit_price * item.quantity,
       }))
 
       const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert)
@@ -293,8 +271,6 @@ export default function Checkout() {
         if (stripeErr) throw stripeErr
         if (stripeData?.payment_link) {
           localStorage.removeItem('cart')
-          localStorage.removeItem('shopping_cart')
-          localStorage.removeItem('myway-cart')
           window.location.href = stripeData.payment_link
         }
       } else {
@@ -314,8 +290,6 @@ export default function Checkout() {
     try {
       await supabase.from('orders').update({ status: 'pending_payment' }).eq('id', createdOrderId)
       localStorage.removeItem('cart')
-      localStorage.removeItem('shopping_cart')
-      localStorage.removeItem('myway-cart')
       setOrderConfirmed(true)
       setShowManualPaymentDialog(false)
     } catch (e) {
@@ -344,6 +318,7 @@ export default function Checkout() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
+          {/* STEP 1 */}
           <Card className={currentStep !== 1 ? 'opacity-50 pointer-events-none' : ''}>
             <CardHeader>
               <CardTitle>1. Revisão do Carrinho</CardTitle>
@@ -371,7 +346,7 @@ export default function Checkout() {
                         <div>
                           <p className="font-medium line-clamp-2">{item.name}</p>
                           <p className="text-sm text-gray-500">
-                            USD {item.price_usd.toFixed(2)} un.
+                            USD {item.unit_price.toFixed(2)} un.
                           </p>
                         </div>
                       </div>
@@ -392,7 +367,7 @@ export default function Checkout() {
                           </button>
                         </div>
                         <p className="font-bold w-24 text-right">
-                          USD {(item.price_usd * item.quantity).toFixed(2)}
+                          USD {(item.unit_price * item.quantity).toFixed(2)}
                         </p>
                         <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}>
                           <Trash2 className="w-4 h-4 text-red-500" />
@@ -401,15 +376,19 @@ export default function Checkout() {
                     </div>
                   ))
                 )}
-                {cartItems.length > 0 && (
-                  <div className="flex justify-end pt-4">
-                    <Button onClick={() => setCurrentStep(2)}>Continuar para Entrega</Button>
-                  </div>
-                )}
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={() => navigate('/cart')}>
+                    Editar Carrinho
+                  </Button>
+                  <Button onClick={() => setCurrentStep(2)} disabled={cartItems.length === 0}>
+                    Continuar para Entrega
+                  </Button>
+                </div>
               </CardContent>
             )}
           </Card>
 
+          {/* STEP 2 */}
           <Card className={currentStep !== 2 ? 'opacity-50 pointer-events-none' : ''}>
             <CardHeader>
               <CardTitle>2. Seleção de Entrega</CardTitle>
@@ -484,6 +463,14 @@ export default function Checkout() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label>Cidade</Label>
+                      <Input value="Miami" readOnly disabled />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado</Label>
+                      <Input value="FL" readOnly disabled />
+                    </div>
+                    <div className="space-y-2">
                       <Label>ZIP Code</Label>
                       <Input
                         value={address.zip_code}
@@ -497,7 +484,7 @@ export default function Checkout() {
                   <div className="space-y-2 max-w-sm bg-gray-50 p-4 rounded-lg">
                     <Label>{deliveryMethod === 'usa' ? 'ZIP Code' : 'CEP'}</Label>
                     <Input
-                      placeholder="Apenas números"
+                      placeholder="Apenas números (mínimo 5)"
                       value={address.zip_code}
                       onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
                     />
@@ -508,7 +495,7 @@ export default function Checkout() {
                   <Button variant="outline" onClick={() => setCurrentStep(1)}>
                     Voltar
                   </Button>
-                  <Button onClick={handleDeliveryNext} disabled={!deliveryMethod || isLoading}>
+                  <Button onClick={handleCalculateFreight} disabled={!deliveryMethod || isLoading}>
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Calcular Frete
                   </Button>
@@ -517,11 +504,32 @@ export default function Checkout() {
             )}
           </Card>
 
+          {/* STEP 3 */}
           <Card className={currentStep !== 3 ? 'opacity-50 pointer-events-none' : ''}>
             <CardHeader>
-              <CardTitle>3. Cupom de Desconto (Opcional)</CardTitle>
+              <CardTitle>3. Cálculo de Frete</CardTitle>
             </CardHeader>
             {currentStep === 3 && (
+              <CardContent className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-lg font-medium">Frete calculado: USD {freight?.toFixed(2)}</p>
+                </div>
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                    Voltar
+                  </Button>
+                  <Button onClick={() => setCurrentStep(4)}>Continuar para Cupom</Button>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* STEP 4 */}
+          <Card className={currentStep !== 4 ? 'opacity-50 pointer-events-none' : ''}>
+            <CardHeader>
+              <CardTitle>4. Cupom de Desconto (Opcional)</CardTitle>
+            </CardHeader>
+            {currentStep === 4 && (
               <CardContent className="space-y-4">
                 {appliedCoupon ? (
                   <div className="flex items-center justify-between bg-green-50 p-4 rounded-lg border border-green-200">
@@ -542,7 +550,7 @@ export default function Checkout() {
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-4 max-w-md">
                     <Input
-                      placeholder="Código do cupom"
+                      placeholder="Enter coupon code (optional)"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                     />
@@ -551,25 +559,26 @@ export default function Checkout() {
                       onClick={handleApplyCoupon}
                       disabled={!couponCode || isLoading}
                     >
-                      Aplicar
+                      Apply Coupon
                     </Button>
                   </div>
                 )}
                 <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                  <Button variant="outline" onClick={() => setCurrentStep(3)}>
                     Voltar
                   </Button>
-                  <Button onClick={() => setCurrentStep(4)}>Continuar para Pagamento</Button>
+                  <Button onClick={() => setCurrentStep(5)}>Continuar para Pagamento</Button>
                 </div>
               </CardContent>
             )}
           </Card>
 
-          <Card className={currentStep !== 4 ? 'opacity-50 pointer-events-none' : ''}>
+          {/* STEP 5 */}
+          <Card className={currentStep !== 5 ? 'opacity-50 pointer-events-none' : ''}>
             <CardHeader>
-              <CardTitle>4. Seleção de Pagamento</CardTitle>
+              <CardTitle>5. Seleção de Pagamento</CardTitle>
             </CardHeader>
-            {currentStep === 4 && (
+            {currentStep === 5 && (
               <CardContent className="space-y-6">
                 <RadioGroup
                   value={paymentMethod}
@@ -582,7 +591,7 @@ export default function Checkout() {
                   >
                     <div className="flex items-center gap-3">
                       <CreditCard className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium">Cartão de Crédito/Débito</span>
+                      <span className="font-medium">Cartão de Crédito/Débito (Stripe)</span>
                     </div>
                   </div>
                   <div
@@ -591,7 +600,7 @@ export default function Checkout() {
                   >
                     <div className="flex items-center gap-3">
                       <Landmark className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium">Transferência (Miami, USD)</span>
+                      <span className="font-medium">Transferência Bancária (Miami, USD)</span>
                     </div>
                   </div>
                   <div
@@ -621,7 +630,7 @@ export default function Checkout() {
                       >
                         <div className="flex items-center gap-3">
                           <Landmark className="w-5 h-5 text-gray-500" />
-                          <span className="font-medium">Transferência (Brasil, BRL)</span>
+                          <span className="font-medium">Transferência Bancária (Brasil, BRL)</span>
                         </div>
                       </div>
                     </>
@@ -629,10 +638,10 @@ export default function Checkout() {
                 </RadioGroup>
 
                 <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={() => setCurrentStep(3)}>
+                  <Button variant="outline" onClick={() => setCurrentStep(4)}>
                     Voltar
                   </Button>
-                  <Button onClick={() => setCurrentStep(5)} disabled={!paymentMethod}>
+                  <Button onClick={() => setCurrentStep(6)} disabled={!paymentMethod}>
                     Continuar para Resumo
                   </Button>
                 </div>
@@ -640,29 +649,37 @@ export default function Checkout() {
             )}
           </Card>
 
-          {currentStep === 5 && (
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                variant="outline"
-                className="order-2 sm:order-1"
-                onClick={() => setCurrentStep(4)}
-              >
-                Voltar ao Pagamento
-              </Button>
-              <Button
-                className="flex-1 order-1 sm:order-2"
-                size="lg"
-                onClick={handleConfirmOrder}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                ) : (
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
-                )}
-                Confirmar Pedido
-              </Button>
-            </div>
+          {/* STEP 6 */}
+          {currentStep === 6 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>6. Confirmação do Pedido</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button
+                    variant="outline"
+                    className="order-2 sm:order-1"
+                    onClick={() => setCurrentStep(5)}
+                  >
+                    Voltar para Pagamento
+                  </Button>
+                  <Button
+                    className="flex-1 order-1 sm:order-2"
+                    size="lg"
+                    onClick={handleConfirmOrder}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                    )}
+                    Confirmar Pedido
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
@@ -695,6 +712,20 @@ export default function Checkout() {
                 <span>Total</span>
                 <span>USD {total.toFixed(2)}</span>
               </div>
+
+              {deliveryMethod && (
+                <div className="pt-4 border-t text-sm text-gray-600">
+                  <strong>Entrega:</strong> {deliveryMethod.toUpperCase()}
+                  {deliveryMethod !== 'coleta' &&
+                    address.zip_code &&
+                    ` (ZIP/CEP: ${address.zip_code})`}
+                </div>
+              )}
+              {paymentMethod && (
+                <div className="pt-2 text-sm text-gray-600">
+                  <strong>Pagamento:</strong> {paymentMethod.toUpperCase().replace('_', ' ')}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -761,7 +792,7 @@ export default function Checkout() {
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction onClick={completeManualPayment}>
-              Eu realizei a transferência
+              Completei a Transferência
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
