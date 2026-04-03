@@ -46,11 +46,13 @@ function StepWrapper({
   currentStep,
   title,
   children,
+  onStepClick,
 }: {
   step: number
   currentStep: number
   title: string
   children: React.ReactNode
+  onStepClick?: (step: number) => void
 }) {
   const isActive = currentStep === step
   const isCompleted = currentStep > step
@@ -66,13 +68,17 @@ function StepWrapper({
             : 'border-slate-200 bg-white opacity-60 pointer-events-none',
       )}
     >
-      <div className="flex items-center gap-4">
+      <div
+        className={cn('flex items-center gap-4', isCompleted && 'cursor-pointer group')}
+        onClick={() => isCompleted && onStepClick?.(step)}
+      >
         <div
           className={cn(
             'w-10 h-10 shrink-0 rounded-full font-bold flex items-center justify-center transition-colors duration-300',
             isActive || isCompleted
               ? 'bg-[hsl(152,68%,40%)] text-white shadow-md shadow-[hsl(152,68%,40%)]/20'
               : 'bg-slate-200 text-slate-500',
+            isCompleted && 'group-hover:bg-[hsl(152,68%,35%)]',
           )}
         >
           {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : step}
@@ -81,6 +87,7 @@ function StepWrapper({
           className={cn(
             'text-xl font-semibold transition-colors duration-300',
             isActive || isCompleted ? 'text-slate-900' : 'text-slate-500',
+            isCompleted && 'group-hover:text-[hsl(152,68%,40%)]',
           )}
         >
           {title}
@@ -1038,7 +1045,12 @@ export default function Checkout() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         <div className="lg:col-span-8 space-y-6">
           {/* STEP 1 */}
-          <StepWrapper step={1} currentStep={currentStep} title="Revisão do Carrinho">
+          <StepWrapper
+            step={1}
+            currentStep={currentStep}
+            title="Revisão do Carrinho"
+            onStepClick={setCurrentStep}
+          >
             <div className="space-y-2">
               {cartItems.map((item, idx) => (
                 <div
@@ -1114,7 +1126,12 @@ export default function Checkout() {
           </StepWrapper>
 
           {/* STEP 2 */}
-          <StepWrapper step={2} currentStep={currentStep} title="Seleção de Entrega">
+          <StepWrapper
+            step={2}
+            currentStep={currentStep}
+            title="Seleção de Entrega"
+            onStepClick={setCurrentStep}
+          >
             <RadioGroup
               value={deliveryMethod}
               onValueChange={handleDeliveryChange}
@@ -1191,7 +1208,12 @@ export default function Checkout() {
           </StepWrapper>
 
           {/* STEP 3 */}
-          <StepWrapper step={3} currentStep={currentStep} title="Cálculo de Frete">
+          <StepWrapper
+            step={3}
+            currentStep={currentStep}
+            title="Cálculo de Frete"
+            onStepClick={setCurrentStep}
+          >
             <div className="bg-[hsl(152,68%,95%)] border-l-4 border-[hsl(152,68%,40%)] p-6 rounded-xl flex items-center justify-between">
               <p className="text-lg font-medium text-[hsl(215,25%,15%)]">
                 Custo estimado de frete:
@@ -1211,7 +1233,12 @@ export default function Checkout() {
           </StepWrapper>
 
           {/* STEP 4 */}
-          <StepWrapper step={4} currentStep={currentStep} title="Cupom de Desconto">
+          <StepWrapper
+            step={4}
+            currentStep={currentStep}
+            title="Cupom de Desconto"
+            onStepClick={setCurrentStep}
+          >
             {appliedCoupon ? (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[hsl(152,68%,40%)] p-5 rounded-2xl shadow-lg shadow-[hsl(152,68%,10%)] gap-4">
                 <div className="text-white">
@@ -1263,7 +1290,12 @@ export default function Checkout() {
           </StepWrapper>
 
           {/* STEP 5 */}
-          <StepWrapper step={5} currentStep={currentStep} title="Seleção de Pagamento">
+          <StepWrapper
+            step={5}
+            currentStep={currentStep}
+            title="Seleção de Pagamento"
+            onStepClick={setCurrentStep}
+          >
             <RadioGroup
               value={paymentMethod}
               onValueChange={setPaymentMethod}
