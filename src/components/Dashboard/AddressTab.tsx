@@ -27,18 +27,43 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { supabase } from '@/lib/supabase/client'
+import { customerService } from '@/services/customerService'
 
-const addressSchema = z.object({
-  street: z.string().min(2, 'Obrigatório'),
-  number: z.string().min(1, 'Obrigatório'),
-  complement: z.string().optional().nullable(),
-  neighborhood: z.string().min(2, 'Obrigatório'),
-  city: z.string().min(2, 'Obrigatório'),
-  state: z.string().min(2, 'Obrigatório'),
-  zip_code: z.string().min(8, 'Obrigatório'),
-  country: z.string().min(2, 'Obrigatório'),
-  is_default: z.boolean().default(false),
-})
+const addressSchema = z
+  .object({
+    street: z.string().min(2, 'Obrigatório'),
+    number: z.string().min(1, 'Obrigatório'),
+    complement: z.string().optional().nullable(),
+    neighborhood: z.string().optional().nullable(),
+    city: z.string().min(2, 'Obrigatório'),
+    state: z.string().min(2, 'Obrigatório'),
+    zip_code: z.string().min(5, 'Obrigatório'),
+    country: z.string().min(2, 'Obrigatório'),
+    is_default: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      const value = data.zip_code.replace(/\D/g, '')
+      return value.length === 8 || value.length === 5
+    },
+    {
+      message: 'CEP ou ZIP invalido. Use formato correto: 01001-000 (Brasil) ou 12345 (EUA).',
+      path: ['zip_code'],
+    },
+  )
+
+const MOCK_CUSTOMER_LABELS: any = {
+  zip_code: 'CEP / ZIP Code',
+  street: 'Rua / Logradouro',
+  number: 'Número',
+  complement: 'Complemento',
+  neighborhood: 'Bairro',
+  city: 'Cidade',
+  state: 'Estado',
+  country: 'País',
+  is_default: 'Tornar endereço padrão',
+}
 
 export function AddressTab({
   customerId,
@@ -53,6 +78,7 @@ export function AddressTab({
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null)
+  const [copyBilling, setCopyBilling] = useState(false)
 
   const form = useForm<z.infer<typeof addressSchema>>({
     resolver: zodResolver(addressSchema),
@@ -69,6 +95,8 @@ export function AddressTab({
     },
   })
 
+  const LABELS = typeof CUSTOMER_LABELS !== 'undefined' ? CUSTOMER_LABELS : MOCK_CUSTOMER_LABELS
+
   const openModal = (address?: CustomerAddress) => {
     if (address) {
       setEditingAddress(address)
@@ -76,7 +104,7 @@ export function AddressTab({
         street: address.street,
         number: address.number,
         complement: address.complement || '',
-        neighborhood: address.neighborhood,
+        neighborhood: address.neighborhood || '',
         city: address.city,
         state: address.state,
         zip_code: address.zip_code,
@@ -97,6 +125,7 @@ export function AddressTab({
         is_default: addresses.length === 0,
       })
     }
+    setCopyBilling(false)
     setIsModalOpen(true)
   }
 
@@ -107,6 +136,85 @@ export function AddressTab({
       await addAddress({ ...data, address_type: type } as any)
     }
     setIsModalOpen(false)
+  }
+
+  const handleZipCodeBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '')
+    const isBrazil = value.length === 8
+    const isUSA = value.length === 5
+
+    if (value.length > 0 && !isBrazil && !isUSA) {
+      form.setError('zip_code', {
+        type: 'manual',
+        message: 'CEP ou ZIP invalido. Use formato correto: 01001-000 (Brasil) ou 12345 (EUA).',
+      })
+      return
+    }
+
+    if (value.length === 0) return
+
+    form.clearErrors('zip_code')
+    const country = isBrazil ? 'Brasil' : 'USA'
+    form.setValue('country', country)
+
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-address', {
+        body: { cep_or_zip: value, country },
+      })
+
+      if (error || !data || data.error) {
+        toast.error('CEP nao encontrado. Verifique o numero e tente novamente.')
+        return
+      }
+
+      if (data.street) form.setValue('street', data.street)
+      if (data.neighborhood) form.setValue('neighborhood', data.neighborhood)
+      if (data.city) form.setValue('city', data.city)
+      if (data.state) form.setValue('state', data.state)
+
+      toast.success('Endereco encontrado com sucesso!')
+    } catch (err) {
+      toast.error('Nao foi possivel validar o endereco. Tente novamente.')
+    }
+  }
+
+  const handleCopyBillingChange = async (checked: boolean) => {
+    setCopyBilling(checked)
+    if (checked && customerId) {
+      try {
+        const billingAddresses = await customerService.getAddresses(customerId)
+        const defaultBilling =
+          billingAddresses.find((a) => a.address_type === 'billing' && a.is_default) ||
+          billingAddresses.find((a) => a.address_type === 'billing')
+
+        if (defaultBilling) {
+          form.setValue('street', defaultBilling.street)
+          form.setValue('number', defaultBilling.number)
+          form.setValue('complement', defaultBilling.complement || '')
+          form.setValue('neighborhood', defaultBilling.neighborhood || '')
+          form.setValue('city', defaultBilling.city)
+          form.setValue('state', defaultBilling.state)
+          form.setValue('zip_code', defaultBilling.zip_code)
+          form.setValue('country', defaultBilling.country)
+          toast.success('Endereco de cobranca copiado para entrega.')
+        } else {
+          toast.error('Nenhum endereco de cobranca cadastrado.')
+          setCopyBilling(false)
+        }
+      } catch (e) {
+        toast.error('Erro ao processar. Tente novamente.')
+        setCopyBilling(false)
+      }
+    } else {
+      form.setValue('street', '')
+      form.setValue('number', '')
+      form.setValue('complement', '')
+      form.setValue('neighborhood', '')
+      form.setValue('city', '')
+      form.setValue('state', '')
+      form.setValue('zip_code', '')
+      form.setValue('country', 'Brasil')
+    }
   }
 
   if (isLoading) {
@@ -227,7 +335,7 @@ export function AddressTab({
       )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card rounded-xl shadow-lg p-6 border-none [&>button]:text-muted-foreground hover:[&>button]:text-foreground">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-card rounded-xl shadow-lg p-6 border-none [&>button]:text-muted-foreground hover:[&>button]:text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {editingAddress ? 'Editar Endereço' : 'Novo Endereço'}
@@ -242,11 +350,15 @@ export function AddressTab({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-semibold text-foreground mb-2 block">
-                        {CUSTOMER_LABELS.zip_code}
+                        {LABELS.zip_code}
                       </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
+                          onBlur={(e) => {
+                            field.onBlur()
+                            handleZipCodeBlur(e)
+                          }}
                           className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
                         />
                       </FormControl>
@@ -261,7 +373,7 @@ export function AddressTab({
                     render={({ field }) => (
                       <FormItem className="col-span-2">
                         <FormLabel className="font-semibold text-foreground mb-2 block">
-                          {CUSTOMER_LABELS.street}
+                          {LABELS.street}
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -279,7 +391,7 @@ export function AddressTab({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="font-semibold text-foreground mb-2 block">
-                          {CUSTOMER_LABELS.number}
+                          {LABELS.number}
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -298,7 +410,7 @@ export function AddressTab({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-semibold text-foreground mb-2 block">
-                        {CUSTOMER_LABELS.complement}
+                        {LABELS.complement}
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -317,11 +429,12 @@ export function AddressTab({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-semibold text-foreground mb-2 block">
-                        {CUSTOMER_LABELS.neighborhood}
+                        {LABELS.neighborhood}
                       </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
+                          value={field.value || ''}
                           className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
                         />
                       </FormControl>
@@ -336,7 +449,7 @@ export function AddressTab({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="font-semibold text-foreground mb-2 block">
-                          {CUSTOMER_LABELS.city}
+                          {LABELS.city}
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -354,7 +467,7 @@ export function AddressTab({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="font-semibold text-foreground mb-2 block">
-                          {CUSTOMER_LABELS.state}
+                          {LABELS.state}
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -373,7 +486,7 @@ export function AddressTab({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-semibold text-foreground mb-2 block">
-                        {CUSTOMER_LABELS.country}
+                        {LABELS.country}
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -386,6 +499,18 @@ export function AddressTab({
                   )}
                 />
               </div>
+
+              {type === 'shipping' && (
+                <div className="flex flex-row items-center space-x-3 space-y-0 rounded-lg border border-input p-4 mt-4">
+                  <Checkbox checked={copyBilling} onCheckedChange={handleCopyBillingChange} />
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Usar endereco de cobranca como entrega
+                    </FormLabel>
+                  </div>
+                </div>
+              )}
+
               <FormField
                 control={form.control}
                 name="is_default"
@@ -400,7 +525,7 @@ export function AddressTab({
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        {CUSTOMER_LABELS.is_default}
+                        {LABELS.is_default}
                       </FormLabel>
                     </div>
                   </FormItem>
