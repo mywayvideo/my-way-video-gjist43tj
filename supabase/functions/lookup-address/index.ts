@@ -1,11 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -15,19 +9,31 @@ Deno.serve(async (req: Request) => {
   try {
     const { cep_or_zip, country } = await req.json()
 
-    if (!cep_or_zip || !country) {
-      return new Response(JSON.stringify({ error: 'Missing parameters' }), {
+    if (!cep_or_zip) {
+      return new Response(JSON.stringify({ error: 'CEP ou ZIP não fornecido' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    if (country === 'Brasil') {
-      const cleanCep = cep_or_zip.replace(/\D/g, '')
-      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-      if (!res.ok) throw new Error('ViaCEP error')
-      const data = await res.json()
-      if (data.erro) throw new Error('CEP not found')
+    const cleanZip = cep_or_zip.replace(/\D/g, '')
+
+    if (country?.toLowerCase() === 'brasil' || country?.toLowerCase() === 'brazil') {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanZip}/json/`)
+      if (!response.ok) {
+        return new Response(JSON.stringify({ error: 'Erro ao consultar ViaCEP' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const data = await response.json()
+      if (data.erro) {
+        return new Response(JSON.stringify({ error: 'CEP não encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
       return new Response(
         JSON.stringify({
@@ -35,16 +41,35 @@ Deno.serve(async (req: Request) => {
           neighborhood: data.bairro || '',
           city: data.localidade || '',
           state: data.uf || '',
+          country: 'Brasil',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     } else {
-      const cleanZip = cep_or_zip.replace(/\D/g, '')
-      const res = await fetch(`https://api.zippopotam.us/us/${cleanZip}`)
-      if (!res.ok) throw new Error('Zippopotam error')
-      const data = await res.json()
+      // US Zipcode lookup
+      const response = await fetch(`https://api.zippopotam.us/us/${cleanZip}`)
+      if (!response.ok) {
+        if (response.status === 404) {
+          return new Response(JSON.stringify({ error: 'ZIP não encontrado' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+        return new Response(JSON.stringify({ error: 'Erro ao consultar ZIP' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const data = await response.json()
       const place = data.places && data.places[0]
-      if (!place) throw new Error('ZIP not found')
+
+      if (!place) {
+        return new Response(JSON.stringify({ error: 'Local não encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
       return new Response(
         JSON.stringify({
@@ -52,13 +77,14 @@ Deno.serve(async (req: Request) => {
           neighborhood: '',
           city: place['place name'] || '',
           state: place['state abbreviation'] || '',
+          country: 'USA',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
