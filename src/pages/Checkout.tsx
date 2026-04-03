@@ -172,7 +172,9 @@ export default function Checkout() {
           .eq('address_type', 'shipping')
         if (addresses) setSavedAddresses(addresses)
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error fetching addresses:', e)
+    }
   }
 
   const loadCart = () => {
@@ -365,7 +367,9 @@ export default function Checkout() {
             }))
             return
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('ViaCEP fallback error:', e)
+        }
       }
       toast({
         description:
