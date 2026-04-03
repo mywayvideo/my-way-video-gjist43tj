@@ -33,7 +33,7 @@ import { customerService } from '@/services/customerService'
 const addressSchema = z
   .object({
     street: z.string().min(2, 'Obrigatório'),
-    number: z.string().min(1, 'Obrigatório'),
+    number: z.string().optional().nullable(),
     complement: z.string().optional().nullable(),
     neighborhood: z.string().optional().nullable(),
     city: z.string().min(2, 'Obrigatório'),
@@ -78,7 +78,7 @@ export function AddressTab({
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null)
-  const [copyBilling, setCopyBilling] = useState(false)
+  const [isShippingSame, setIsShippingSame] = useState(false)
 
   const form = useForm<z.infer<typeof addressSchema>>({
     resolver: zodResolver(addressSchema),
@@ -96,14 +96,14 @@ export function AddressTab({
   })
 
   const baseLabels = typeof CUSTOMER_LABELS !== 'undefined' ? CUSTOMER_LABELS : MOCK_CUSTOMER_LABELS
-  const LABELS = { ...baseLabels, street: 'Logradouro' }
+  const LABELS = { ...baseLabels, street: 'Logradouro', zip_code: 'CEP / ZIP Code' }
 
   const openModal = (address?: CustomerAddress) => {
     if (address) {
       setEditingAddress(address)
       form.reset({
         street: address.street,
-        number: address.number,
+        number: address.number || '',
         complement: address.complement || '',
         neighborhood: address.neighborhood || '',
         city: address.city,
@@ -126,7 +126,7 @@ export function AddressTab({
         is_default: addresses.length === 0,
       })
     }
-    setCopyBilling(false)
+    setIsShippingSame(false)
     setIsModalOpen(true)
   }
 
@@ -138,6 +138,29 @@ export function AddressTab({
       await updateAddress(editingAddress.id, finalData)
     } else {
       await addAddress({ ...finalData, address_type: type } as any)
+
+      if (type === 'billing' && isShippingSame && customerId) {
+        try {
+          const existingAddresses = await customerService.getAddresses(customerId)
+          const isDuplicate = existingAddresses.some(
+            (a) =>
+              a.address_type === 'shipping' &&
+              a.zip_code === finalData.zip_code &&
+              a.street === finalData.street &&
+              (a.number || '') === (finalData.number || ''),
+          )
+          if (!isDuplicate) {
+            await customerService.addAddress({
+              ...finalData,
+              address_type: 'shipping',
+              customer_id: customerId,
+            } as any)
+            toast.success('Endereço de entrega criado e sincronizado com sucesso!')
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
     }
     setIsModalOpen(false)
   }
@@ -176,48 +199,9 @@ export function AddressTab({
       if (data.city) form.setValue('city', data.city)
       if (data.state) form.setValue('state', data.state)
 
-      toast.success('Endereço preenchido com sucesso!')
+      toast.success('Busca de endereço concluída!')
     } catch (err) {
       toast.error('Não foi possível validar o endereço. Tente novamente.')
-    }
-  }
-
-  const handleCopyBillingChange = async (checked: boolean) => {
-    setCopyBilling(checked)
-    if (checked && customerId) {
-      try {
-        const billingAddresses = await customerService.getAddresses(customerId)
-        const defaultBilling =
-          billingAddresses.find((a) => a.address_type === 'billing' && a.is_default) ||
-          billingAddresses.find((a) => a.address_type === 'billing')
-
-        if (defaultBilling) {
-          form.setValue('street', defaultBilling.street)
-          form.setValue('number', defaultBilling.number)
-          form.setValue('complement', defaultBilling.complement || '')
-          form.setValue('neighborhood', defaultBilling.neighborhood || '')
-          form.setValue('city', defaultBilling.city)
-          form.setValue('state', defaultBilling.state)
-          form.setValue('zip_code', defaultBilling.zip_code)
-          form.setValue('country', defaultBilling.country)
-          toast.success('Endereco de cobranca copiado para entrega.')
-        } else {
-          toast.error('Nenhum endereco de cobranca cadastrado.')
-          setCopyBilling(false)
-        }
-      } catch (e) {
-        toast.error('Erro ao processar. Tente novamente.')
-        setCopyBilling(false)
-      }
-    } else {
-      form.setValue('street', '')
-      form.setValue('number', '')
-      form.setValue('complement', '')
-      form.setValue('neighborhood', '')
-      form.setValue('city', '')
-      form.setValue('state', '')
-      form.setValue('zip_code', '')
-      form.setValue('country', 'Brasil')
     }
   }
 
@@ -312,7 +296,8 @@ export function AddressTab({
               </div>
               <div className="text-sm space-y-1">
                 <p className="font-medium">
-                  {address.street}, {address.number}
+                  {address.street}
+                  {address.number ? `, ${address.number}` : ''}
                 </p>
                 {address.complement && (
                   <p className="text-muted-foreground">{address.complement}</p>
@@ -356,7 +341,10 @@ export function AddressTab({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-semibold text-foreground mb-2 block">
-                        {LABELS.zip_code}
+                        {LABELS.zip_code}{' '}
+                        <span className="text-muted-foreground font-normal text-xs ml-1">
+                          (xxxxx-xxx para CEP e xxxxx para ZIP)
+                        </span>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -402,6 +390,7 @@ export function AddressTab({
                         <FormControl>
                           <Input
                             {...field}
+                            value={field.value || ''}
                             className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
                           />
                         </FormControl>
@@ -506,12 +495,19 @@ export function AddressTab({
                 />
               </div>
 
-              {type === 'shipping' && (
+              {type === 'billing' && !editingAddress && (
                 <div className="flex flex-row items-center space-x-3 space-y-0 rounded-lg border border-input p-4 mt-4">
-                  <Checkbox checked={copyBilling} onCheckedChange={handleCopyBillingChange} />
+                  <Checkbox
+                    checked={isShippingSame}
+                    onCheckedChange={(c) => setIsShippingSame(c === true)}
+                    id="same_shipping"
+                  />
                   <div className="space-y-1 leading-none">
-                    <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Usar endereco de cobranca como entrega
+                    <FormLabel
+                      htmlFor="same_shipping"
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      Endereço de entrega é o mesmo
                     </FormLabel>
                   </div>
                 </div>
