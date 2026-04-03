@@ -117,7 +117,7 @@ export default function Checkout() {
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false)
-  const [saveNewAddress, setSaveNewAddress] = useState(false)
+  const [saveNewAddress, setSaveNewAddress] = useState(true)
 
   const [address, setAddress] = useState({
     street: '',
@@ -330,18 +330,49 @@ export default function Checkout() {
     const zip = e.target.value.replace(/\D/g, '')
     if (!zip) return
 
+    const zipNum = parseInt(zip, 10)
+
+    if (deliveryMethod === 'miami') {
+      if (zipNum < 33101 || zipNum > 33199 || isNaN(zipNum)) {
+        toast({
+          description: 'Entrega em Miami requer um ZIP válido de Miami.',
+          variant: 'destructive',
+        })
+        return
+      }
+    } else if (deliveryMethod === 'usa') {
+      if (zipNum >= 33101 && zipNum <= 33199) {
+        toast({
+          description:
+            'Não é possível usar um ZIP de Miami para entrega nos EUA. Selecione Entrega em Miami ou use um ZIP de outro estado.',
+          variant: 'destructive',
+        })
+        return
+      }
+    } else if (deliveryMethod === 'brasil') {
+      if (zipNum < 1000000 || zipNum > 19999999 || isNaN(zipNum) || zip.length !== 8) {
+        toast({
+          description:
+            'Entrega no Brasil é disponível apenas para São Paulo. Seu CEP não é de São Paulo. Verifique o endereço.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('lookup-address', {
-        body: { zip_code: zip, country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA' },
+        body: { cep_or_zip: zip, country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA' },
       })
 
-      if (data && !error && data.street) {
+      if (data && !error && !data.error) {
         setAddress((prev) => ({
           ...prev,
           street: data.street || prev.street,
           city: data.city || prev.city,
           state: data.state || prev.state,
         }))
+        toast({ description: 'Endereço encontrado com sucesso.' })
       } else if (deliveryMethod === 'brasil' && zip.length === 8) {
         const res = await fetch(`https://viacep.com.br/ws/${zip}/json/`)
         const viacepData = await res.json()
@@ -352,35 +383,25 @@ export default function Checkout() {
             city: viacepData.localidade || prev.city,
             state: viacepData.uf || prev.state,
           }))
+          toast({ description: 'Endereço encontrado com sucesso.' })
         } else {
           toast({
             description:
-              'Nao foi possivel validar o endereco. Tente novamente ou preencha manualmente.',
+              'Não foi possível validar o endereço. Tente novamente ou preencha manualmente.',
             variant: 'destructive',
           })
         }
+      } else {
+        toast({
+          description:
+            'Não foi possível preencher o endereço automaticamente. Preencha manualmente.',
+          variant: 'destructive',
+        })
       }
     } catch (err) {
-      if (deliveryMethod === 'brasil' && zip.length === 8) {
-        try {
-          const res = await fetch(`https://viacep.com.br/ws/${zip}/json/`)
-          const viacepData = await res.json()
-          if (!viacepData.erro) {
-            setAddress((prev) => ({
-              ...prev,
-              street: viacepData.logradouro || prev.street,
-              city: viacepData.localidade || prev.city,
-              state: viacepData.uf || prev.state,
-            }))
-            return
-          }
-        } catch (e) {
-          console.error('ViaCEP fallback error:', e)
-        }
-      }
       toast({
         description:
-          'Nao foi possivel validar o endereco. Tente novamente ou preencha manualmente.',
+          'Não foi possível validar o endereço. Tente novamente ou preencha manualmente.',
         variant: 'destructive',
       })
     }
@@ -403,8 +424,7 @@ export default function Checkout() {
       }
       if (zipNum < 33101 || zipNum > 33199 || isNaN(zipNum)) {
         toast({
-          description:
-            'Entrega em Miami requer um endereco em Miami. O ZIP informado nao e de Miami.',
+          description: 'Entrega em Miami requer um ZIP válido de Miami.',
           variant: 'destructive',
         })
         return false
@@ -429,7 +449,7 @@ export default function Checkout() {
       if (zipNum >= 33101 && zipNum <= 33199) {
         toast({
           description:
-            'Nao e possivel usar um ZIP de Miami para entrega nos EUA. Selecione Entrega em Miami ou use um ZIP de outro estado.',
+            'Não é possível usar um ZIP de Miami para entrega nos EUA. Selecione Entrega em Miami ou use um ZIP de outro estado.',
           variant: 'destructive',
         })
         return false
@@ -454,7 +474,7 @@ export default function Checkout() {
       if (zipNum < 1000000 || zipNum > 19999999 || isNaN(zipNum)) {
         toast({
           description:
-            'Entrega no Brasil e disponivel apenas para Sao Paulo. Seu CEP nao e de Sao Paulo. Verifique o endereco.',
+            'Entrega no Brasil é disponível apenas para São Paulo. Seu CEP não é de São Paulo. Verifique o endereço.',
           variant: 'destructive',
         })
         return false
@@ -763,12 +783,12 @@ export default function Checkout() {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label className="font-semibold text-[hsl(215,25%,15%)]">Rua</Label>
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">Logradouro</Label>
               <Input
                 value={address.street}
                 onChange={(e) => setAddress({ ...address, street: e.target.value })}
                 className={inputClass}
-                placeholder="Nome da rua"
+                placeholder="Nome do logradouro"
               />
             </div>
 
@@ -831,7 +851,7 @@ export default function Checkout() {
               htmlFor="save-address"
               className="cursor-pointer font-medium text-[hsl(215,25%,15%)] m-0 leading-none"
             >
-              Salvar este endereço para próximas compras
+              Salvar endereço para futuras compras
             </Label>
           </div>
         </div>
