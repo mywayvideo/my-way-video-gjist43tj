@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/hooks/useCart'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Loader2,
@@ -59,9 +60,9 @@ function StepWrapper({
       className={cn(
         'border rounded-xl p-6 transition-all duration-300 ease-out',
         isActive
-          ? 'border-emerald-600 bg-emerald-50/30 shadow-[0_4px_12px_rgba(5,150,105,0.1)]'
+          ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,98%)] shadow-[0_4px_12px_rgba(5,150,105,0.1)]'
           : isCompleted
-            ? 'border-emerald-600 bg-white'
+            ? 'border-[hsl(152,68%,40%)] bg-white'
             : 'border-slate-200 bg-white opacity-60 pointer-events-none',
       )}
     >
@@ -70,7 +71,7 @@ function StepWrapper({
           className={cn(
             'w-10 h-10 shrink-0 rounded-full font-bold flex items-center justify-center transition-colors duration-300',
             isActive || isCompleted
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+              ? 'bg-[hsl(152,68%,40%)] text-white shadow-md shadow-[hsl(152,68%,40%)]/20'
               : 'bg-slate-200 text-slate-500',
           )}
         >
@@ -106,6 +107,11 @@ export default function Checkout() {
   const [subtotal, setSubtotal] = useState(0)
 
   const [deliveryMethod, setDeliveryMethod] = useState('')
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false)
+  const [saveNewAddress, setSaveNewAddress] = useState(false)
+
   const [address, setAddress] = useState({
     street: '',
     number: '',
@@ -114,6 +120,7 @@ export default function Checkout() {
     state: '',
     zip_code: '',
   })
+
   const [freight, setFreight] = useState<number | null>(null)
 
   const [couponCode, setCouponCode] = useState('')
@@ -146,7 +153,27 @@ export default function Checkout() {
       return
     }
     loadCart()
+    fetchAddresses()
   }, [user, loading, cartContext])
+
+  const fetchAddresses = async () => {
+    if (!user) return
+    try {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+      if (customer) {
+        const { data: addresses } = await supabase
+          .from('customer_addresses')
+          .select('*')
+          .eq('customer_id', customer.id)
+          .eq('address_type', 'shipping')
+        if (addresses) setSavedAddresses(addresses)
+      }
+    } catch (e) {}
+  }
 
   const loadCart = () => {
     try {
@@ -242,30 +269,198 @@ export default function Checkout() {
 
   const total = subtotal - discountAmount + (freight || 0)
 
-  const handleCalculateFreight = async () => {
-    if (!deliveryMethod) return
+  const getFilteredAddresses = (method: string = deliveryMethod) => {
+    if (method === 'miami') {
+      return savedAddresses.filter(
+        (a) => a.city?.toLowerCase() === 'miami' && a.state?.toLowerCase() === 'fl',
+      )
+    }
+    if (method === 'usa') {
+      return savedAddresses.filter(
+        (a) =>
+          (a.country?.toLowerCase() === 'usa' || a.country?.toLowerCase() === 'estados unidos') &&
+          a.state?.toLowerCase() !== 'fl',
+      )
+    }
+    if (method === 'brasil') {
+      return savedAddresses.filter(
+        (a) => a.country?.toLowerCase() === 'brasil' && a.state?.toUpperCase() === 'SP',
+      )
+    }
+    return []
+  }
+
+  const handleDeliveryChange = (val: string) => {
+    setDeliveryMethod(val)
+    setFreight(null)
+
+    if (val === 'coleta') return
+
+    const filtered = getFilteredAddresses(val)
+    if (filtered.length > 0) {
+      setSelectedAddressId(filtered[0].id)
+      setIsAddingNewAddress(false)
+      setAddress({
+        street: filtered[0].street,
+        number: filtered[0].number,
+        complement: filtered[0].complement || '',
+        city: filtered[0].city,
+        state: filtered[0].state,
+        zip_code: filtered[0].zip_code,
+      })
+    } else {
+      setSelectedAddressId(null)
+      setIsAddingNewAddress(true)
+      setAddress({ street: '', number: '', complement: '', city: '', state: '', zip_code: '' })
+      if (val === 'miami') setAddress((a) => ({ ...a, city: 'Miami', state: 'FL' }))
+      if (val === 'brasil') setAddress((a) => ({ ...a, city: 'Sao Paulo', state: 'SP' }))
+    }
+  }
+
+  const handleZipBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const zip = e.target.value.replace(/\D/g, '')
+    if (!zip) return
+
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-address', {
+        body: { zip_code: zip, country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA' },
+      })
+
+      if (data && !error && data.street) {
+        setAddress((prev) => ({
+          ...prev,
+          street: data.street || prev.street,
+          city: data.city || prev.city,
+          state: data.state || prev.state,
+        }))
+      } else if (deliveryMethod === 'brasil' && zip.length === 8) {
+        const res = await fetch(`https://viacep.com.br/ws/${zip}/json/`)
+        const viacepData = await res.json()
+        if (!viacepData.erro) {
+          setAddress((prev) => ({
+            ...prev,
+            street: viacepData.logradouro || prev.street,
+            city: viacepData.localidade || prev.city,
+            state: viacepData.uf || prev.state,
+          }))
+        } else {
+          toast({
+            description:
+              'Nao foi possivel validar o endereco. Tente novamente ou preencha manualmente.',
+            variant: 'destructive',
+          })
+        }
+      }
+    } catch (err) {
+      if (deliveryMethod === 'brasil' && zip.length === 8) {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${zip}/json/`)
+          const viacepData = await res.json()
+          if (!viacepData.erro) {
+            setAddress((prev) => ({
+              ...prev,
+              street: viacepData.logradouro || prev.street,
+              city: viacepData.localidade || prev.city,
+              state: viacepData.uf || prev.state,
+            }))
+            return
+          }
+        } catch (e) {}
+      }
+      toast({
+        description:
+          'Nao foi possivel validar o endereco. Tente novamente ou preencha manualmente.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const validateAddress = () => {
+    if (deliveryMethod === 'coleta') return true
+
+    if (!isAddingNewAddress && selectedAddressId) {
+      return true
+    }
+
+    const zip = address.zip_code.replace(/\D/g, '')
+    const zipNum = parseInt(zip, 10)
 
     if (deliveryMethod === 'miami') {
-      if (!address.street || !address.number) {
-        toast({
-          description: 'Preencha rua e número para entrega em Miami.',
-          variant: 'destructive',
-        })
-        return
+      if (!address.street || !address.number || !zip) {
+        toast({ description: 'Preencha todos os campos obrigatórios.', variant: 'destructive' })
+        return false
       }
-    } else if (deliveryMethod === 'usa' || deliveryMethod === 'brasil') {
-      const zip = address.zip_code.replace(/\D/g, '')
-      if (!zip || zip.length < 5) {
+      if (zipNum < 33101 || zipNum > 33199 || isNaN(zipNum)) {
         toast({
           description:
-            deliveryMethod === 'usa'
-              ? 'ZIP code inválido (mínimo 5 dígitos).'
-              : 'CEP inválido (mínimo 5 dígitos).',
+            'Entrega em Miami requer um endereco em Miami. O ZIP informado nao e de Miami.',
           variant: 'destructive',
         })
-        return
+        return false
       }
     }
+
+    if (deliveryMethod === 'usa') {
+      if (
+        !address.street ||
+        !address.number ||
+        !address.city ||
+        !address.state ||
+        !zip ||
+        zip.length < 5
+      ) {
+        toast({
+          description: 'Preencha todos os campos obrigatórios e um ZIP válido.',
+          variant: 'destructive',
+        })
+        return false
+      }
+      if (zipNum >= 33101 && zipNum <= 33199) {
+        toast({
+          description:
+            'Nao e possivel usar um ZIP de Miami para entrega nos EUA. Selecione Entrega em Miami ou use um ZIP de outro estado.',
+          variant: 'destructive',
+        })
+        return false
+      }
+    }
+
+    if (deliveryMethod === 'brasil') {
+      if (
+        !address.street ||
+        !address.number ||
+        !address.city ||
+        !address.state ||
+        !zip ||
+        zip.length !== 8
+      ) {
+        toast({
+          description: 'Preencha todos os campos obrigatórios e um CEP válido.',
+          variant: 'destructive',
+        })
+        return false
+      }
+      if (zipNum < 1000000 || zipNum > 19999999 || isNaN(zipNum)) {
+        toast({
+          description:
+            'Entrega no Brasil e disponivel apenas para Sao Paulo. Seu CEP nao e de Sao Paulo. Verifique o endereco.',
+          variant: 'destructive',
+        })
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const handleCalculateFreightClick = async () => {
+    if (deliveryMethod === 'coleta') {
+      setFreight(0)
+      setCurrentStep(3)
+      return
+    }
+
+    if (!validateAddress()) return
 
     setIsLoading(true)
     try {
@@ -280,7 +475,7 @@ export default function Checkout() {
         throw new Error('Erro ao calcular frete')
       }
     } catch (err) {
-      toast({ description: 'Erro ao calcular frete. Tente novamente.', variant: 'destructive' })
+      toast({ description: 'Erro ao processar. Tente novamente.', variant: 'destructive' })
     } finally {
       setIsLoading(false)
     }
@@ -336,23 +531,28 @@ export default function Checkout() {
 
       let shippingAddressId = null
       if (deliveryMethod !== 'coleta') {
-        const { data: addrData } = await supabase
-          .from('customer_addresses')
-          .insert({
-            customer_id: customer.id,
-            address_type: 'shipping',
-            street: address.street || 'N/A',
-            number: address.number || 'S/N',
-            complement: address.complement,
-            neighborhood: 'N/A',
-            city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
-            state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
-            zip_code: address.zip_code || '00000',
-            country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
-          })
-          .select('id')
-          .single()
-        if (addrData) shippingAddressId = addrData.id
+        if (selectedAddressId && !isAddingNewAddress) {
+          shippingAddressId = selectedAddressId
+        } else {
+          const { data: addrData } = await supabase
+            .from('customer_addresses')
+            .insert({
+              customer_id: customer.id,
+              address_type: 'shipping',
+              street: address.street || 'N/A',
+              number: address.number || 'S/N',
+              complement: address.complement || null,
+              neighborhood: 'N/A',
+              city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
+              state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
+              zip_code: address.zip_code || '00000',
+              country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
+              is_default: saveNewAddress,
+            })
+            .select('id')
+            .single()
+          if (addrData) shippingAddressId = addrData.id
+        }
       }
 
       const orderNumber = `ORD-${Date.now().toString().slice(-6)}`
@@ -482,7 +682,9 @@ export default function Checkout() {
         id: 'paypal',
         label: 'PayPal',
         desc: 'Pague com sua conta PayPal',
-        icon: <CreditCard className="w-8 h-8 text-blue-600" />,
+        icon: (
+          <CreditCard className="w-8 h-8 text-[#003087] group-hover:text-[#0079C1] transition-colors" />
+        ),
       },
     ]
     if (deliveryMethod === 'brasil') {
@@ -505,6 +707,222 @@ export default function Checkout() {
       ]
     }
     return baseOptions
+  }
+
+  const renderAddresses = () => {
+    const filtered = getFilteredAddresses()
+
+    if (isAddingNewAddress || filtered.length === 0) {
+      return (
+        <div className="bg-[hsl(215,20%,96%)] p-6 rounded-2xl border border-[hsl(215,20%,90%)] space-y-5 relative mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
+          {filtered.length > 0 && (
+            <button
+              onClick={() => {
+                setIsAddingNewAddress(false)
+                if (filtered.length > 0) {
+                  const a = filtered[0]
+                  setSelectedAddressId(a.id)
+                  setAddress({
+                    street: a.street,
+                    number: a.number,
+                    complement: a.complement || '',
+                    city: a.city,
+                    state: a.state,
+                    zip_code: a.zip_code,
+                  })
+                }
+              }}
+              className="absolute top-4 right-4 text-sm font-semibold text-[hsl(215,15%,45%)] hover:text-[hsl(215,25%,15%)]"
+            >
+              Cancelar
+            </button>
+          )}
+          <h4 className="font-bold text-[hsl(215,25%,15%)] mb-2">Adicionar Novo Endereço</h4>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">ZIP Code / CEP</Label>
+              <Input
+                value={address.zip_code}
+                onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
+                onBlur={handleZipBlur}
+                className={inputClass}
+                placeholder={deliveryMethod === 'brasil' ? 'Ex: 01000-000' : 'Apenas números'}
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">Rua</Label>
+              <Input
+                value={address.street}
+                onChange={(e) => setAddress({ ...address, street: e.target.value })}
+                className={inputClass}
+                placeholder="Nome da rua"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">Número</Label>
+              <Input
+                value={address.number}
+                onChange={(e) => setAddress({ ...address, number: e.target.value })}
+                className={inputClass}
+                placeholder="Ex: 123"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">Complemento</Label>
+              <Input
+                value={address.complement}
+                onChange={(e) => setAddress({ ...address, complement: e.target.value })}
+                className={inputClass}
+                placeholder="Apto, Sala..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">Cidade</Label>
+              <Input
+                value={address.city}
+                onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                className={cn(
+                  inputClass,
+                  (deliveryMethod === 'miami' || deliveryMethod === 'brasil') &&
+                    'opacity-70 cursor-not-allowed',
+                )}
+                readOnly={deliveryMethod === 'miami' || deliveryMethod === 'brasil'}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-semibold text-[hsl(215,25%,15%)]">Estado</Label>
+              <Input
+                value={address.state}
+                onChange={(e) => setAddress({ ...address, state: e.target.value })}
+                className={cn(
+                  inputClass,
+                  (deliveryMethod === 'miami' || deliveryMethod === 'brasil') &&
+                    'opacity-70 cursor-not-allowed',
+                )}
+                readOnly={deliveryMethod === 'miami' || deliveryMethod === 'brasil'}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Checkbox
+              id="save-address"
+              checked={saveNewAddress}
+              onCheckedChange={(c) => setSaveNewAddress(c as boolean)}
+            />
+            <Label
+              htmlFor="save-address"
+              className="cursor-pointer font-medium text-[hsl(215,25%,15%)] m-0 leading-none"
+            >
+              Salvar este endereço para próximas compras
+            </Label>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {filtered.map((addr) => (
+            <div
+              key={addr.id}
+              className={cn(
+                'border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 ease-out flex flex-col justify-between',
+                selectedAddressId === addr.id
+                  ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
+                  : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
+              )}
+              onClick={() => {
+                setSelectedAddressId(addr.id)
+                setAddress({
+                  street: addr.street,
+                  number: addr.number,
+                  complement: addr.complement || '',
+                  city: addr.city,
+                  state: addr.state,
+                  zip_code: addr.zip_code,
+                })
+              }}
+            >
+              <div>
+                <p
+                  className={cn(
+                    'font-bold mb-2',
+                    selectedAddressId === addr.id
+                      ? 'text-[hsl(152,68%,25%)]'
+                      : 'text-[hsl(215,25%,15%)]',
+                  )}
+                >
+                  {addr.street}, {addr.number}
+                  {addr.complement && ` - ${addr.complement}`}
+                </p>
+                <p
+                  className={cn(
+                    'text-sm mb-4',
+                    selectedAddressId === addr.id
+                      ? 'text-[hsl(152,68%,35%)]'
+                      : 'text-[hsl(215,25%,25%)]',
+                  )}
+                >
+                  {addr.city}, {addr.state} - {addr.zip_code}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <div
+                  className={cn(
+                    'w-4 h-4 rounded-full border-2 flex items-center justify-center',
+                    selectedAddressId === addr.id
+                      ? 'border-[hsl(152,68%,40%)]'
+                      : 'border-[hsl(215,20%,90%)]',
+                  )}
+                >
+                  {selectedAddressId === addr.id && (
+                    <div className="w-2 h-2 bg-[hsl(152,68%,40%)] rounded-full" />
+                  )}
+                </div>
+                <span
+                  className={
+                    selectedAddressId === addr.id
+                      ? 'text-[hsl(152,68%,40%)]'
+                      : 'text-[hsl(215,15%,45%)]'
+                  }
+                >
+                  {selectedAddressId === addr.id ? 'Selecionado' : 'Usar este endereço'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => {
+            setIsAddingNewAddress(true)
+            setSelectedAddressId(null)
+            setAddress({
+              street: '',
+              number: '',
+              complement: '',
+              city: '',
+              state: '',
+              zip_code: '',
+            })
+            if (deliveryMethod === 'miami')
+              setAddress((a) => ({ ...a, city: 'Miami', state: 'FL' }))
+            if (deliveryMethod === 'brasil')
+              setAddress((a) => ({ ...a, city: 'Sao Paulo', state: 'SP' }))
+          }}
+          className={cn(btnSecondary, 'w-full sm:w-auto')}
+        >
+          Adicionar novo endereço
+        </button>
+      </div>
+    )
   }
 
   const renderOrderSummary = () => (
@@ -695,7 +1113,7 @@ export default function Checkout() {
           <StepWrapper step={2} currentStep={currentStep} title="Seleção de Entrega">
             <RadioGroup
               value={deliveryMethod}
-              onValueChange={setDeliveryMethod}
+              onValueChange={handleDeliveryChange}
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
             >
               {[
@@ -706,7 +1124,7 @@ export default function Checkout() {
               ].map((opt) => (
                 <div
                   key={opt.id}
-                  onClick={() => setDeliveryMethod(opt.id)}
+                  onClick={() => handleDeliveryChange(opt.id)}
                   className={cn(
                     'group border-2 rounded-xl p-4 cursor-pointer transition-all duration-200 ease-out',
                     deliveryMethod === opt.id
@@ -740,79 +1158,12 @@ export default function Checkout() {
               ))}
             </RadioGroup>
 
-            {deliveryMethod === 'miami' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-[hsl(215,20%,96%)] p-6 rounded-2xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Rua</Label>
-                  <Input
-                    value={address.street}
-                    onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                    className={inputClass}
-                    placeholder="Nome da rua"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Número</Label>
-                  <Input
-                    value={address.number}
-                    onChange={(e) => setAddress({ ...address, number: e.target.value })}
-                    className={inputClass}
-                    placeholder="Ex: 123"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">
-                    Complemento{' '}
-                    <span className="text-[hsl(215,15%,45%)] font-normal">(Opcional)</span>
-                  </Label>
-                  <Input
-                    value={address.complement}
-                    onChange={(e) => setAddress({ ...address, complement: e.target.value })}
-                    className={inputClass}
-                    placeholder="Apto, Sala..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">ZIP Code</Label>
-                  <Input
-                    value={address.zip_code}
-                    onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
-                    className={inputClass}
-                    placeholder="Apenas números"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Cidade</Label>
-                  <Input
-                    value="Miami"
-                    readOnly
-                    disabled
-                    className={cn(inputClass, 'opacity-70 cursor-not-allowed')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Estado</Label>
-                  <Input
-                    value="FL"
-                    readOnly
-                    disabled
-                    className={cn(inputClass, 'opacity-70 cursor-not-allowed')}
-                  />
-                </div>
-              </div>
-            )}
-
-            {(deliveryMethod === 'usa' || deliveryMethod === 'brasil') && (
-              <div className="space-y-3 bg-[hsl(215,20%,96%)] p-6 rounded-2xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                <Label className="font-semibold text-[hsl(215,25%,15%)] text-base">
-                  {deliveryMethod === 'usa' ? 'ZIP Code de Destino' : 'CEP de Destino'}
-                </Label>
-                <Input
-                  placeholder="Digite apenas números (mínimo 5)"
-                  value={address.zip_code}
-                  onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
-                  className={cn(inputClass, 'max-w-md text-lg font-mono')}
-                />
+            {deliveryMethod && deliveryMethod !== 'coleta' && (
+              <div className="mt-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                <h3 className="text-lg font-bold text-[hsl(215,25%,15%)] mb-4">
+                  Endereço de Entrega
+                </h3>
+                {renderAddresses()}
               </div>
             )}
 
@@ -822,8 +1173,12 @@ export default function Checkout() {
               </button>
               <button
                 className={btnPrimary}
-                onClick={handleCalculateFreight}
-                disabled={!deliveryMethod || isLoading}
+                onClick={handleCalculateFreightClick}
+                disabled={
+                  !deliveryMethod ||
+                  isLoading ||
+                  (deliveryMethod !== 'coleta' && !selectedAddressId && !isAddingNewAddress)
+                }
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
                 Calcular Frete

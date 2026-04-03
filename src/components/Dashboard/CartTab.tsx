@@ -230,87 +230,90 @@ export function CartTab({
                 'animate-in fade-in slide-in-from-bottom-4 fill-mode-both',
               )}
             >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div
-                  className="w-[80px] h-[80px] rounded-[4px] shrink-0 p-2 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity bg-muted"
-                  onClick={() => navigate(`/product/${p.id}`)}
-                >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 gap-5">
+                <div className="flex items-center gap-5 flex-1">
                   {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="w-full h-full object-contain" />
-                  ) : (
-                    <ShoppingCart className="w-8 h-8 text-muted-foreground/30" />
-                  )}
-                </div>
-
-                <div className="flex-1 pl-0 sm:pl-4">
-                  <h4
-                    className="font-bold text-foreground hover:text-primary cursor-pointer transition-colors"
-                    onClick={() => navigate(`/product/${p.id}`)}
-                  >
-                    {p.name}
-                  </h4>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    <ProductPrice
-                      originalPrice={p.price_usd}
-                      discountedPrice={discounts[p.id]?.discountedPrice}
-                      weight={p.weight}
-                      size="sm"
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate(`/product/${p.id}`)}
                     />
+                  ) : (
+                    <div
+                      className="w-20 h-20 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate(`/product/${p.id}`)}
+                    >
+                      <span className="text-xs font-medium text-slate-400">Sem Foto</span>
+                    </div>
+                  )}
+                  <div>
+                    <p
+                      className="font-bold text-slate-900 line-clamp-2 text-lg leading-tight mb-1 cursor-pointer hover:text-[hsl(152,68%,40%)] transition-colors"
+                      onClick={() => navigate(`/product/${p.id}`)}
+                    >
+                      {p.name}
+                    </p>
+                    <div className="mt-1 text-sm text-slate-500 font-medium font-mono">
+                      <ProductPrice
+                        originalPrice={p.price_usd}
+                        discountedPrice={discounts[p.id]?.discountedPrice}
+                        weight={p.weight}
+                        size="sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="w-full sm:w-auto flex flex-row items-center justify-between sm:justify-end gap-4 mt-4 sm:mt-0">
-                  <div className="flex flex-row items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      disabled={isProcessing || item.quantity <= 1}
+                <div className="flex items-center gap-5 w-full sm:w-auto justify-between sm:justify-end mt-2 sm:mt-0">
+                  <div className="flex items-center border border-[hsl(215,20%,90%)] rounded-lg overflow-hidden bg-[hsl(215,20%,96%)]">
+                    <button
                       onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                      disabled={isProcessing || item.quantity <= 1}
+                      className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)] disabled:opacity-50"
                     >
-                      <Minus className="w-3 h-3" />
-                    </Button>
-                    <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      disabled={isProcessing}
+                      -
+                    </button>
+                    <span className="px-4 py-2 border-x border-[hsl(215,20%,90%)] font-semibold text-[hsl(215,25%,15%)] min-w-[3.5rem] text-center bg-white">
+                      {item.quantity}
+                    </span>
+                    <button
                       onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                      disabled={isProcessing}
+                      className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)] disabled:opacity-50"
                     >
-                      <Plus className="w-3 h-3" />
-                    </Button>
+                      +
+                    </button>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-foreground">
+
+                  <div className="text-right w-28">
+                    <p className="font-bold text-slate-900 font-mono text-lg tracking-tight">
                       $
                       {(
                         (discounts[p.id]?.discountedPrice ?? p.price_usd ?? 0) * item.quantity
                       ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
-                </div>
-              </div>
 
-              <div className="flex flex-row gap-2 mt-3 sm:mt-4">
-                <Button
-                  variant="outline"
-                  disabled={isProcessing}
-                  onClick={() => handleMoveToFavorites(item)}
-                  className="flex-1 h-10 text-sm hover:scale-[1.02] hover:shadow-md transition-all duration-200"
-                >
-                  <Heart className="w-4 h-4 mr-2" />
-                  Mover para Favoritos
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={isProcessing}
-                  onClick={() => handleRemove(item.id)}
-                  className="flex-1 h-10 text-sm text-red-500 hover:text-red-600 hover:bg-red-500/10 hover:scale-[1.02] hover:shadow-md transition-all duration-200"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Remover
-                </Button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={isProcessing}
+                      onClick={() => handleMoveToFavorites(item)}
+                      className="p-2.5 text-slate-400 hover:text-pink-500 hover:bg-pink-50 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-500"
+                      title="Mover para Favoritos"
+                    >
+                      <Heart className="w-5 h-5" />
+                    </button>
+                    <button
+                      disabled={isProcessing}
+                      onClick={() => handleRemove(item.id)}
+                      className="p-2.5 text-[hsl(0,84%,60%)] hover:bg-red-50 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(0,84%,60%)]"
+                      title="Remover"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )
