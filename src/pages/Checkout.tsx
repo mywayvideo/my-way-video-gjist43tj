@@ -127,8 +127,12 @@ export default function Checkout() {
     state: '',
     zip_code: '',
   })
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({})
 
   const [freight, setFreight] = useState<number | null>(null)
+  const [shippingMessage, setShippingMessage] = useState<string>('')
+  const [shippingError, setShippingError] = useState<string | null>(null)
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
 
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
@@ -217,6 +221,7 @@ export default function Checkout() {
             unit_price: p.unit_price || prod.price_usd || prod.price || p.price_usd || p.price || 0,
             quantity: p.quantity || 1,
             image_url: prod.image_url || p.image_url,
+            weight: prod.weight || p.weight || 1,
           }
         })
 
@@ -408,85 +413,70 @@ export default function Checkout() {
   }
 
   const validateAddress = () => {
-    if (deliveryMethod === 'coleta') return true
+    if (deliveryMethod === 'coleta') {
+      setAddressErrors({})
+      return true
+    }
 
     if (!isAddingNewAddress && selectedAddressId) {
+      setAddressErrors({})
       return true
+    }
+
+    const errors: Record<string, string> = {}
+    let isValid = true
+
+    if (!address.street || address.street.trim().length < 3) {
+      errors.street = 'Rua deve ter no mínimo 3 caracteres.'
+      isValid = false
+    }
+    if (!address.number || address.number.trim().length < 1) {
+      errors.number = 'Número é obrigatório.'
+      isValid = false
+    }
+    if (!address.city || address.city.trim().length < 2) {
+      errors.city = 'Cidade deve ter no mínimo 2 caracteres.'
+      isValid = false
+    }
+    if (!address.state || address.state.trim().length !== 2) {
+      errors.state = 'Estado deve ter 2 caracteres.'
+      isValid = false
     }
 
     const zip = address.zip_code.replace(/\D/g, '')
     const zipNum = parseInt(zip, 10)
 
-    if (deliveryMethod === 'miami') {
-      if (!address.street || !address.number || !zip) {
-        toast({ description: 'Preencha todos os campos obrigatórios.', variant: 'destructive' })
-        return false
-      }
-      if (zipNum < 33101 || zipNum > 33199 || isNaN(zipNum)) {
-        toast({
-          description: 'Entrega em Miami requer um ZIP válido de Miami.',
-          variant: 'destructive',
-        })
-        return false
-      }
+    if (!zip) {
+      errors.zip_code = 'CEP/ZIP code é obrigatório.'
+      isValid = false
+    } else if (deliveryMethod === 'brasil' && zip.length !== 8) {
+      errors.zip_code = 'CEP deve ter 8 dígitos.'
+      isValid = false
+    } else if ((deliveryMethod === 'usa' || deliveryMethod === 'miami') && zip.length !== 5) {
+      errors.zip_code = 'ZIP code deve ter 5 dígitos.'
+      isValid = false
+    } else if (deliveryMethod === 'miami' && (zipNum < 33101 || zipNum > 33199 || isNaN(zipNum))) {
+      errors.zip_code = 'Entrega em Miami requer um ZIP válido de Miami.'
+      isValid = false
+    } else if (deliveryMethod === 'usa' && zipNum >= 33101 && zipNum <= 33199) {
+      errors.zip_code = 'ZIP de Miami. Use Entrega em Miami.'
+      isValid = false
     }
 
-    if (deliveryMethod === 'usa') {
-      if (
-        !address.street ||
-        !address.number ||
-        !address.city ||
-        !address.state ||
-        !zip ||
-        zip.length < 5
-      ) {
-        toast({
-          description: 'Preencha todos os campos obrigatórios e um ZIP válido.',
-          variant: 'destructive',
-        })
-        return false
-      }
-      if (zipNum >= 33101 && zipNum <= 33199) {
-        toast({
-          description:
-            'Não é possível usar um ZIP de Miami para entrega nos EUA. Selecione Entrega em Miami ou use um ZIP de outro estado.',
-          variant: 'destructive',
-        })
-        return false
-      }
+    setAddressErrors(errors)
+
+    if (!isValid) {
+      toast({ description: 'Verifique os erros nos campos de endereço.', variant: 'destructive' })
     }
 
-    if (deliveryMethod === 'brasil') {
-      if (
-        !address.street ||
-        !address.number ||
-        !address.city ||
-        !address.state ||
-        !zip ||
-        zip.length !== 8
-      ) {
-        toast({
-          description: 'Preencha todos os campos obrigatórios e um CEP válido.',
-          variant: 'destructive',
-        })
-        return false
-      }
-      if (zipNum < 1000000 || zipNum > 19999999 || isNaN(zipNum)) {
-        toast({
-          description:
-            'Entrega no Brasil é disponível apenas para São Paulo. Seu CEP não é de São Paulo. Verifique o endereço.',
-          variant: 'destructive',
-        })
-        return false
-      }
-    }
-
-    return true
+    return isValid
   }
 
   const handleCalculateFreightClick = async () => {
     if (deliveryMethod === 'coleta') {
       setFreight(0)
+      setShippingMessage('Coleta em Miami. Sem custos.')
+      setShippingError(null)
       setCurrentStep(3)
       return
     }
@@ -545,20 +535,72 @@ export default function Checkout() {
         }
       }
 
-      const { data, error } = await supabase.functions.invoke('calculate-freight', {
-        body: { delivery_method: deliveryMethod, address, cart_subtotal: subtotal },
-      })
-      if (error) throw error
-      if (data && typeof data.freight === 'number') {
-        setFreight(data.freight)
-        setCurrentStep(3)
-      } else {
-        throw new Error('Erro ao calcular frete')
-      }
+      setFreight(null)
+      setShippingMessage('')
+      setShippingError(null)
+      setCurrentStep(3)
     } catch (err) {
       toast({ description: 'Erro ao processar. Tente novamente.', variant: 'destructive' })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleCalculateShippingAction = async () => {
+    if (deliveryMethod === 'coleta') {
+      setFreight(0)
+      setShippingMessage('Coleta em Miami. Sem custos.')
+      setShippingError(null)
+      return
+    }
+
+    if (!validateAddress()) {
+      setCurrentStep(2)
+      return
+    }
+
+    setIsCalculatingShipping(true)
+    setShippingError(null)
+
+    try {
+      const payload = {
+        delivery_type: deliveryMethod === 'brasil' ? 'sao_paulo' : deliveryMethod,
+        address: {
+          street: address.street,
+          number: address.number,
+          city: address.city,
+          state: address.state,
+          zip_code: address.zip_code,
+          country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
+        },
+        cart_items: cartItems.map((item) => ({
+          weight_kg: item.weight || 1,
+          price_usd: item.unit_price,
+        })),
+      }
+
+      const { data, error } = await supabase.functions.invoke('calculate-shipping', {
+        body: payload,
+      })
+
+      if (error) throw error
+
+      if (data && data.error) {
+        setShippingError(data.error)
+        setFreight(null)
+      } else if (data && typeof data.shipping_cost === 'number') {
+        setFreight(data.shipping_cost)
+        setShippingMessage(data.message || '')
+        setShippingError(null)
+      } else {
+        throw new Error('Retorno inválido')
+      }
+    } catch (err: any) {
+      console.error('Erro calcular frete:', err)
+      setShippingError('Erro ao processar. Tente novamente.')
+      setFreight(null)
+    } finally {
+      setIsCalculatingShipping(false)
     }
   }
 
@@ -827,9 +869,16 @@ export default function Checkout() {
                 value={address.zip_code}
                 onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
                 onBlur={handleZipBlur}
-                className={inputClass}
+                className={cn(
+                  inputClass,
+                  addressErrors.zip_code &&
+                    'border-red-500 focus-visible:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
+                )}
                 placeholder={deliveryMethod === 'brasil' ? 'Ex: 01000-000' : 'Apenas números'}
               />
+              {addressErrors.zip_code && (
+                <p className="text-red-500 text-sm">{addressErrors.zip_code}</p>
+              )}
             </div>
 
             <div className="space-y-2 sm:col-span-2">
@@ -837,9 +886,16 @@ export default function Checkout() {
               <Input
                 value={address.street}
                 onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                className={inputClass}
+                className={cn(
+                  inputClass,
+                  addressErrors.street &&
+                    'border-red-500 focus-visible:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
+                )}
                 placeholder="Nome do logradouro"
               />
+              {addressErrors.street && (
+                <p className="text-red-500 text-sm">{addressErrors.street}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -847,9 +903,16 @@ export default function Checkout() {
               <Input
                 value={address.number}
                 onChange={(e) => setAddress({ ...address, number: e.target.value })}
-                className={inputClass}
+                className={cn(
+                  inputClass,
+                  addressErrors.number &&
+                    'border-red-500 focus-visible:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
+                )}
                 placeholder="Ex: 123"
               />
+              {addressErrors.number && (
+                <p className="text-red-500 text-sm">{addressErrors.number}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -871,9 +934,12 @@ export default function Checkout() {
                   inputClass,
                   (deliveryMethod === 'miami' || deliveryMethod === 'brasil') &&
                     'opacity-70 cursor-not-allowed',
+                  addressErrors.city &&
+                    'border-red-500 focus-visible:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
                 )}
                 readOnly={deliveryMethod === 'miami' || deliveryMethod === 'brasil'}
               />
+              {addressErrors.city && <p className="text-red-500 text-sm">{addressErrors.city}</p>}
             </div>
 
             <div className="space-y-2">
@@ -885,9 +951,12 @@ export default function Checkout() {
                   inputClass,
                   (deliveryMethod === 'miami' || deliveryMethod === 'brasil') &&
                     'opacity-70 cursor-not-allowed',
+                  addressErrors.state &&
+                    'border-red-500 focus-visible:shadow-[0_0_0_3px_rgba(239,68,68,0.2)]',
                 )}
                 readOnly={deliveryMethod === 'miami' || deliveryMethod === 'brasil'}
               />
+              {addressErrors.state && <p className="text-red-500 text-sm">{addressErrors.state}</p>}
             </div>
           </div>
 
@@ -1281,24 +1350,108 @@ export default function Checkout() {
           <StepWrapper
             step={3}
             currentStep={currentStep}
-            title="Cálculo de Frete"
+            title="Calcular Frete"
             onStepClick={setCurrentStep}
           >
-            <div className="bg-[hsl(152,68%,95%)] border-l-4 border-[hsl(152,68%,40%)] p-6 rounded-xl flex items-center justify-between">
-              <p className="text-lg font-medium text-[hsl(215,25%,15%)]">
-                Custo estimado de frete:
-              </p>
-              <p className="text-2xl font-bold font-mono text-[hsl(152,68%,40%)]">
-                {formatCurrency(freight || 0)}
-              </p>
-            </div>
-            <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
-              <button className={btnSecondary} onClick={() => setCurrentStep(2)}>
-                Voltar
-              </button>
-              <button className={btnPrimary} onClick={() => setCurrentStep(4)}>
-                Continuar para Cupom
-              </button>
+            <div className="space-y-6">
+              <div className="bg-[hsl(215,20%,96%)] p-4 rounded-xl border border-[hsl(215,20%,90%)] text-sm text-[hsl(215,25%,25%)]">
+                <p>
+                  <strong>Tipo de Entrega:</strong> {deliveryMethod.toUpperCase()}
+                </p>
+                {deliveryMethod !== 'coleta' && address.zip_code && (
+                  <p className="mt-1">
+                    <strong>Endereço:</strong> {address.street}, {address.number}{' '}
+                    {address.complement && `- ${address.complement}`} - {address.city}/
+                    {address.state} - ZIP/CEP: {address.zip_code}
+                  </p>
+                )}
+                <p className="mt-2">
+                  <strong>Resumo do Carrinho:</strong>{' '}
+                  {cartItems.reduce((acc, item) => acc + item.quantity, 0)} item(s) -{' '}
+                  {formatCurrency(subtotal)}
+                </p>
+              </div>
+
+              {isCalculatingShipping ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-xl border border-slate-200">
+                  <Loader2 className="w-8 h-8 animate-spin text-[hsl(152,68%,40%)] mb-4" />
+                  <p className="text-[hsl(215,25%,25%)] font-medium">Calculando frete...</p>
+                </div>
+              ) : shippingError ? (
+                <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-xl space-y-4">
+                  <p className="text-red-800 font-medium">{shippingError}</p>
+
+                  {shippingError.includes('perimetro maximo') && (
+                    <button
+                      onClick={() => setCurrentStep(2)}
+                      className="px-4 py-2 bg-white border border-red-200 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+                    >
+                      Voltar para Seleção de Modalidade
+                    </button>
+                  )}
+                  {shippingError.includes('nao encontrado') && (
+                    <button
+                      onClick={() => setCurrentStep(2)}
+                      className="px-4 py-2 bg-white border border-red-200 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+                    >
+                      Editar Endereço
+                    </button>
+                  )}
+
+                  {!shippingError.includes('perimetro maximo') &&
+                    !shippingError.includes('nao encontrado') && (
+                      <button
+                        onClick={handleCalculateShippingAction}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
+                      >
+                        Tentar Novamente
+                      </button>
+                    )}
+                </div>
+              ) : freight !== null ? (
+                <div className="bg-[hsl(152,68%,95%)] border-l-4 border-[hsl(152,68%,40%)] p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <p className="text-lg font-medium text-[hsl(215,25%,15%)]">Custo de frete:</p>
+                    {shippingMessage && (
+                      <p className="text-sm text-[hsl(152,68%,40%)] mt-1">{shippingMessage}</p>
+                    )}
+                  </div>
+                  <p className="text-2xl font-bold font-mono text-[hsl(152,68%,40%)] shrink-0">
+                    {formatCurrency(freight)}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 pt-4">
+                <button
+                  className={btnSecondary}
+                  onClick={() => setCurrentStep(2)}
+                  disabled={isCalculatingShipping}
+                >
+                  Voltar
+                </button>
+                {freight === null && !shippingError && deliveryMethod !== 'coleta' ? (
+                  <button
+                    className={btnPrimary}
+                    onClick={handleCalculateShippingAction}
+                    disabled={
+                      isCalculatingShipping ||
+                      !deliveryMethod ||
+                      (!selectedAddressId && !isAddingNewAddress)
+                    }
+                  >
+                    Calcular Frete
+                  </button>
+                ) : (
+                  <button
+                    className={btnPrimary}
+                    onClick={() => setCurrentStep(4)}
+                    disabled={isCalculatingShipping || freight === null || !!shippingError}
+                  >
+                    Continuar para Cupom
+                  </button>
+                )}
+              </div>
             </div>
           </StepWrapper>
 
