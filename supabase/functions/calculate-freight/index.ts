@@ -4,8 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -27,11 +26,7 @@ Deno.serve(async (req: Request) => {
       else if (delivery_method === 'brasil') settingKey = 'delivery_cost_brazil'
 
       if (settingKey) {
-        const { data } = await supabaseAdmin
-          .from('app_settings')
-          .select('setting_value')
-          .eq('setting_key', settingKey)
-          .maybeSingle()
+        const { data } = await supabaseAdmin.from('app_settings').select('setting_value').eq('setting_key', settingKey).maybeSingle()
         if (data && data.setting_value) {
           freight = parseFloat(data.setting_value) || 0
         } else {
@@ -43,13 +38,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return new Response(JSON.stringify({ freight }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ freight }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
