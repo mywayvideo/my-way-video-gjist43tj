@@ -551,6 +551,17 @@ export default function Checkout() {
     setShippingError(null)
 
     try {
+      console.log('DEBUG: Full cartItems structure', JSON.stringify(cartItems, null, 2))
+      if (cartItems.length > 0) {
+        console.log('DEBUG: First item details', cartItems[0])
+        console.log('DEBUG: First item keys', Object.keys(cartItems[0]))
+        console.log('DEBUG: First item weight field', cartItems[0].weight)
+        console.log('DEBUG: First item weight_lb field', cartItems[0].weight_lb)
+        console.log('DEBUG: First item weight_kg field', cartItems[0].weight_kg)
+        console.log('DEBUG: First item quantity field', cartItems[0].quantity)
+        console.log('DEBUG: First item unit_price field', cartItems[0].unit_price)
+      }
+
       const payload = {
         delivery_type: deliveryMethod === 'brasil' ? 'sao_paulo' : deliveryMethod,
         address:
@@ -570,6 +581,8 @@ export default function Checkout() {
           price_usd: item.unit_price,
         })),
       }
+
+      console.log('DEBUG: Payload being sent', JSON.stringify(payload, null, 2))
 
       const { data, error } = await supabase.functions.invoke('calculate-shipping', {
         body: payload,
