@@ -565,7 +565,8 @@ export default function Checkout() {
                 country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
               },
         cart_items: cartItems.map((item) => ({
-          weight_kg: item.weight || 1,
+          weight_lb: item.weight,
+          quantity: item.quantity || 1,
           price_usd: item.unit_price,
         })),
       }
