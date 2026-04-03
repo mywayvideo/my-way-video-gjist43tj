@@ -24,6 +24,6 @@
     "create-paypal-payment-intent": 1,
     "verify-paypal-payment": 1,
     "lookup-address": 4,
-    "calculate-shipping": 6
+    "calculate-shipping": 7
   }
 }
