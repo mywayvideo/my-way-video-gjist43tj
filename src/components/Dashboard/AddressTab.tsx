@@ -55,7 +55,7 @@ const addressSchema = z
 
 const MOCK_CUSTOMER_LABELS: any = {
   zip_code: 'CEP / ZIP Code',
-  street: 'Rua / Logradouro',
+  street: 'Logradouro',
   number: 'Número',
   complement: 'Complemento',
   neighborhood: 'Bairro',
@@ -95,7 +95,8 @@ export function AddressTab({
     },
   })
 
-  const LABELS = typeof CUSTOMER_LABELS !== 'undefined' ? CUSTOMER_LABELS : MOCK_CUSTOMER_LABELS
+  const baseLabels = typeof CUSTOMER_LABELS !== 'undefined' ? CUSTOMER_LABELS : MOCK_CUSTOMER_LABELS
+  const LABELS = { ...baseLabels, street: 'Logradouro' }
 
   const openModal = (address?: CustomerAddress) => {
     if (address) {
@@ -130,10 +131,13 @@ export function AddressTab({
   }
 
   const onSubmit = async (data: z.infer<typeof addressSchema>) => {
+    const finalData = { ...data }
+    if (type === 'billing') finalData.is_default = true
+
     if (editingAddress) {
-      await updateAddress(editingAddress.id, data)
+      await updateAddress(editingAddress.id, finalData)
     } else {
-      await addAddress({ ...data, address_type: type } as any)
+      await addAddress({ ...finalData, address_type: type } as any)
     }
     setIsModalOpen(false)
   }
@@ -260,7 +264,7 @@ export function AddressTab({
                   )}
                 </div>
                 <div className="flex gap-2 justify-end">
-                  {!address.is_default && (
+                  {!address.is_default && type === 'shipping' && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -323,14 +327,16 @@ export function AddressTab({
               </div>
             </div>
           ))}
-          <Button
-            variant="outline"
-            className="h-full min-h-[160px] border-dashed border-2 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-all duration-200 rounded-lg"
-            onClick={() => openModal()}
-          >
-            <Plus className="w-6 h-6 text-muted-foreground" />
-            <span>Adicionar Novo</span>
-          </Button>
+          {(type === 'shipping' || addresses.length === 0) && (
+            <Button
+              variant="outline"
+              className="h-full min-h-[160px] border-dashed border-2 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-all duration-200 rounded-lg"
+              onClick={() => openModal()}
+            >
+              <Plus className="w-6 h-6 text-muted-foreground" />
+              <span>Adicionar Novo</span>
+            </Button>
+          )}
         </div>
       )}
 
@@ -511,26 +517,28 @@ export function AddressTab({
                 </div>
               )}
 
-              <FormField
-                control={form.control}
-                name="is_default"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg border border-input p-4 mt-4">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={editingAddress?.is_default}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        {LABELS.is_default}
-                      </FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
+              {type === 'shipping' && (
+                <FormField
+                  control={form.control}
+                  name="is_default"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-lg border border-input p-4 mt-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={editingAddress?.is_default}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          {LABELS.is_default}
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
               <DialogFooter className="pt-4 flex gap-3">
                 <Button
                   type="button"
