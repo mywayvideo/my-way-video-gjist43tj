@@ -473,19 +473,11 @@ export default function Checkout() {
   }
 
   const handleCalculateFreightClick = async () => {
-    if (deliveryMethod === 'coleta') {
-      setFreight(0)
-      setShippingMessage('Coleta em Miami. Sem custos.')
-      setShippingError(null)
-      setCurrentStep(3)
-      return
-    }
-
     if (!validateAddress()) return
 
     setIsLoading(true)
     try {
-      if (isAddingNewAddress && saveNewAddress && user) {
+      if (deliveryMethod !== 'coleta' && isAddingNewAddress && saveNewAddress && user) {
         const { data: customer } = await supabase
           .from('customers')
           .select('id')
@@ -547,13 +539,6 @@ export default function Checkout() {
   }
 
   const handleCalculateShippingAction = async () => {
-    if (deliveryMethod === 'coleta') {
-      setFreight(0)
-      setShippingMessage('Coleta em Miami. Sem custos.')
-      setShippingError(null)
-      return
-    }
-
     if (!validateAddress()) {
       setCurrentStep(2)
       return
@@ -565,14 +550,17 @@ export default function Checkout() {
     try {
       const payload = {
         delivery_type: deliveryMethod === 'brasil' ? 'sao_paulo' : deliveryMethod,
-        address: {
-          street: address.street,
-          number: address.number,
-          city: address.city,
-          state: address.state,
-          zip_code: address.zip_code,
-          country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
-        },
+        address:
+          deliveryMethod === 'coleta'
+            ? {}
+            : {
+                street: address.street,
+                number: address.number,
+                city: address.city,
+                state: address.state,
+                zip_code: address.zip_code,
+                country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
+              },
         cart_items: cartItems.map((item) => ({
           weight_kg: item.weight || 1,
           price_usd: item.unit_price,
@@ -1277,7 +1265,7 @@ export default function Checkout() {
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
             >
               {[
-                { id: 'coleta', label: 'Coleta na Loja', desc: 'Retirada em Miami - USD 0.00' },
+                { id: 'coleta', label: 'Coleta na Loja', desc: 'Retirada em Miami - Grátis' },
                 { id: 'miami', label: 'Entrega em Miami', desc: 'Requer endereço completo' },
                 { id: 'usa', label: 'Entrega EUA', desc: 'Requer ZIP code' },
                 { id: 'brasil', label: 'Entrega Brasil (SP)', desc: 'Requer CEP válido' },
@@ -1430,14 +1418,14 @@ export default function Checkout() {
                 >
                   Voltar
                 </button>
-                {freight === null && !shippingError && deliveryMethod !== 'coleta' ? (
+                {freight === null && !shippingError ? (
                   <button
                     className={btnPrimary}
                     onClick={handleCalculateShippingAction}
                     disabled={
                       isCalculatingShipping ||
                       !deliveryMethod ||
-                      (!selectedAddressId && !isAddingNewAddress)
+                      (deliveryMethod !== 'coleta' && !selectedAddressId && !isAddingNewAddress)
                     }
                   >
                     Calcular Frete
