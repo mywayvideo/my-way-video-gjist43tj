@@ -65,6 +65,9 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col sm:rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Informações Técnicas</DialogTitle>
+          <DialogDescription className="sr-only">
+            Especificações técnicas detalhadas do produto
+          </DialogDescription>
         </DialogHeader>
         <div
           className="mt-2 text-foreground/90 text-sm md:text-base leading-relaxed"

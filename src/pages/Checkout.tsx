@@ -286,7 +286,9 @@ export default function Checkout() {
   const getFilteredAddresses = (method: string = deliveryMethod) => {
     if (method === 'miami') {
       return savedAddresses.filter(
-        (a) => a.city?.toLowerCase() === 'miami' && a.state?.toLowerCase() === 'fl',
+        (a) =>
+          (a.city?.toLowerCase() === 'miami' || a.city?.toLowerCase() === 'coral gables') &&
+          a.state?.toLowerCase() === 'fl',
       )
     }
     if (method === 'usa') {
@@ -326,7 +328,7 @@ export default function Checkout() {
       setSelectedAddressId(null)
       setIsAddingNewAddress(true)
       setAddress({ street: '', number: '', complement: '', city: '', state: '', zip_code: '' })
-      if (val === 'miami') setAddress((a) => ({ ...a, city: 'Miami', state: 'FL' }))
+      if (val === 'miami') setAddress((a) => ({ ...a, city: 'Coral Gables', state: 'FL' }))
       if (val === 'brasil') setAddress((a) => ({ ...a, city: 'Sao Paulo', state: 'SP' }))
     }
   }
@@ -430,10 +432,6 @@ export default function Checkout() {
       errors.street = 'Rua deve ter no mínimo 3 caracteres.'
       isValid = false
     }
-    if (!address.number || address.number.trim().length < 1) {
-      errors.number = 'Número é obrigatório.'
-      isValid = false
-    }
     if (!address.city || address.city.trim().length < 2) {
       errors.city = 'Cidade deve ter no mínimo 2 caracteres.'
       isValid = false
@@ -494,7 +492,7 @@ export default function Checkout() {
               number: address.number || 'S/N',
               complement: address.complement || null,
               neighborhood: 'N/A',
-              city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
+              city: address.city || (deliveryMethod === 'miami' ? 'Coral Gables' : 'N/A'),
               state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
               zip_code: address.zip_code || '00000',
               country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
@@ -515,7 +513,7 @@ export default function Checkout() {
                 number: address.number || 'S/N',
                 complement: address.complement || null,
                 neighborhood: 'N/A',
-                city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
+                city: address.city || (deliveryMethod === 'miami' ? 'Coral Gables' : 'N/A'),
                 state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
                 zip_code: address.zip_code || '00000',
                 country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
@@ -693,7 +691,7 @@ export default function Checkout() {
               number: address.number || 'S/N',
               complement: address.complement || null,
               neighborhood: 'N/A',
-              city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
+              city: address.city || (deliveryMethod === 'miami' ? 'Coral Gables' : 'N/A'),
               state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
               zip_code: address.zip_code || '00000',
               country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
@@ -1090,7 +1088,7 @@ export default function Checkout() {
               zip_code: '',
             })
             if (deliveryMethod === 'miami')
-              setAddress((a) => ({ ...a, city: 'Miami', state: 'FL' }))
+              setAddress((a) => ({ ...a, city: 'Coral Gables', state: 'FL' }))
             if (deliveryMethod === 'brasil')
               setAddress((a) => ({ ...a, city: 'Sao Paulo', state: 'SP' }))
           }}

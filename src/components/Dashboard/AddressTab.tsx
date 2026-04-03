@@ -331,6 +331,9 @@ export function AddressTab({
             <DialogTitle className="text-xl font-bold">
               {editingAddress ? 'Editar Endereço' : 'Novo Endereço'}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Preencha os dados do seu endereço
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">

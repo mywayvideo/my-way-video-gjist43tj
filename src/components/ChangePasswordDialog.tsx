@@ -149,6 +149,9 @@ export function ChangePasswordDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Alterar Senha</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulário para alteração de senha
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-2">
           {submitErr && (
