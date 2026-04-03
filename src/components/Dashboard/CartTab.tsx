@@ -1,20 +1,10 @@
 import { CartItem } from '@/types/customer'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Trash2,
-  ShoppingCart,
-  AlertCircle,
-  Heart,
-  Minus,
-  Plus,
-  Zap,
-  MessageCircle,
-} from 'lucide-react'
+import { Trash2, ShoppingCart, AlertCircle, Heart, Zap, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
-import { ProductPrice } from '@/components/ProductPrice'
 import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
@@ -164,25 +154,16 @@ export function CartTab({
 
   if (loading) {
     return (
-      <div className="w-full h-auto py-6 px-4 bg-transparent overflow-visible flex flex-col gap-4">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="w-full p-4 border border-border rounded-lg bg-card">
-            <div className="flex gap-4 mb-4">
-              <Skeleton className="w-[80px] h-[80px] rounded-[4px] shrink-0" />
-              <div className="flex-1 space-y-2 py-2">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/4" />
-              </div>
-              <div className="flex flex-col gap-2 shrink-0">
-                <Skeleton className="h-8 w-20" />
-              </div>
-            </div>
-            <div className="flex flex-row gap-2">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 flex-1" />
-            </div>
-          </div>
-        ))}
+      <div className="w-full h-auto py-6 bg-transparent flex flex-col lg:flex-row gap-8">
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-8 w-48 mb-4" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="w-full h-32 rounded-2xl" />
+          ))}
+        </div>
+        <div className="w-full lg:w-[400px] shrink-0">
+          <Skeleton className="w-full h-[400px] rounded-2xl" />
+        </div>
       </div>
     )
   }
@@ -203,196 +184,210 @@ export function CartTab({
   }
 
   return (
-    <div className="w-full h-auto py-6 px-4 bg-transparent overflow-visible">
-      <div className="flex flex-col gap-4">
-        {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center w-full h-auto bg-transparent overflow-visible animate-in fade-in duration-300">
-            <div className="relative mb-4 opacity-50 text-muted-foreground">
-              <ShoppingCart className="w-[48px] h-[48px]" />
-              <div className="absolute top-1/2 left-[-20%] right-[-20%] h-[3px] bg-muted-foreground -rotate-45" />
-            </div>
-            <h3 className="text-xl font-bold mb-2 text-foreground">Seu carrinho esta vazio</h3>
-            <p className="text-muted-foreground mb-6 max-w-sm">
-              Adicione produtos ao carrinho para continuar.
-            </p>
-            <Button className="w-full sm:w-auto" onClick={() => navigate('/products')}>
-              Explorar Produtos
-            </Button>
-          </div>
-        ) : (
-          items.map((item, index) => {
-            const p = item.products
-            if (!p) return null
-            const isProcessing = processing === item.id || processing === `qty-${item.id}`
-            const isRemoving = removingIds.includes(item.id)
+    <div className="w-full h-auto py-6 bg-transparent">
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Left Column: Items */}
+        <div className="flex-1 flex flex-col gap-4">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Meu Carrinho</h2>
 
-            return (
-              <div
-                key={item.id}
-                style={{ animationDelay: `${index * 50}ms` }}
-                className={cn(
-                  'w-full p-4 border border-border rounded-lg bg-card transition-all duration-300',
-                  isRemoving ? 'opacity-0 -translate-y-3' : 'opacity-100 translate-y-0',
-                  'animate-in fade-in slide-in-from-bottom-4 fill-mode-both',
-                )}
-              >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 gap-5">
-                  <div className="flex items-center gap-5 flex-1">
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center w-full bg-card rounded-2xl border border-border animate-in fade-in duration-300">
+              <div className="relative mb-4 opacity-50 text-muted-foreground">
+                <ShoppingCart className="w-[48px] h-[48px]" />
+                <div className="absolute top-1/2 left-[-20%] right-[-20%] h-[3px] bg-muted-foreground -rotate-45" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-foreground">Seu carrinho esta vazio</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm">
+                Adicione produtos ao carrinho para continuar.
+              </p>
+              <Button className="w-full sm:w-auto rounded-xl" onClick={() => navigate('/products')}>
+                Explorar Produtos
+              </Button>
+            </div>
+          ) : (
+            items.map((item, index) => {
+              const p = item.products
+              if (!p) return null
+              const isProcessing = processing === item.id || processing === `qty-${item.id}`
+              const isRemoving = removingIds.includes(item.id)
+              const unitPrice = discounts[p.id]?.discountedPrice ?? p.price_usd ?? 0
+
+              return (
+                <div
+                  key={item.id}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                  className={cn(
+                    'w-full p-4 sm:p-5 border border-border rounded-2xl bg-card flex flex-col sm:flex-row gap-5 transition-all duration-300',
+                    isRemoving ? 'opacity-0 -translate-y-3' : 'opacity-100 translate-y-0',
+                    'animate-in fade-in slide-in-from-bottom-4 fill-mode-both',
+                  )}
+                >
+                  <div
+                    className="w-24 h-24 sm:w-28 sm:h-28 bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-center p-2 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigate(`/product/${p.id}`)}
+                  >
                     {p.image_url ? (
                       <img
                         src={p.image_url}
                         alt={p.name}
-                        className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => navigate(`/product/${p.id}`)}
+                        className="max-w-full max-h-full object-contain"
                       />
                     ) : (
-                      <div
-                        className="w-20 h-20 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => navigate(`/product/${p.id}`)}
-                      >
-                        <span className="text-xs font-medium text-slate-400">Sem Foto</span>
-                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">Sem Foto</span>
                     )}
-                    <div>
-                      <p
-                        className="font-bold text-slate-900 line-clamp-2 text-lg leading-tight mb-1 cursor-pointer hover:text-[hsl(152,68%,40%)] transition-colors"
-                        onClick={() => navigate(`/product/${p.id}`)}
-                      >
-                        {p.name}
-                      </p>
-                      <div className="mt-1 text-sm text-slate-500 font-medium font-mono">
-                        <ProductPrice
-                          originalPrice={p.price_usd}
-                          discountedPrice={discounts[p.id]?.discountedPrice}
-                          weight={p.weight}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
                   </div>
 
-                  <div className="flex items-center gap-5 w-full sm:w-auto justify-between sm:justify-end mt-2 sm:mt-0">
-                    <div className="flex items-center border border-[hsl(215,20%,90%)] rounded-lg overflow-hidden bg-[hsl(215,20%,96%)]">
-                      <button
-                        onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
-                        disabled={isProcessing || item.quantity <= 1}
-                        className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)] disabled:opacity-50"
-                      >
-                        -
-                      </button>
-                      <span className="px-4 py-2 border-x border-[hsl(215,20%,90%)] font-semibold text-[hsl(215,25%,15%)] min-w-[3.5rem] text-center bg-white">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
-                        disabled={isProcessing}
-                        className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)] disabled:opacity-50"
-                      >
-                        +
-                      </button>
-                    </div>
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                      <div className="flex-1">
+                        <h4
+                          className="font-bold text-lg text-foreground leading-tight mb-2 cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => navigate(`/product/${p.id}`)}
+                        >
+                          {p.name}
+                        </h4>
+                        <p className="text-muted-foreground text-base">
+                          ${unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
 
-                    <div className="text-right w-28">
-                      <p className="font-bold text-slate-900 font-mono text-lg tracking-tight">
-                        $
-                        {(
-                          (discounts[p.id]?.discountedPrice ?? p.price_usd ?? 0) * item.quantity
-                        ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                      <div className="flex flex-col items-start sm:items-end gap-3 shrink-0">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center border border-border rounded-full h-9 bg-transparent">
+                            <button
+                              onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                              disabled={isProcessing || item.quantity <= 1}
+                              className="w-9 h-full flex items-center justify-center text-foreground hover:bg-muted transition-colors rounded-l-full disabled:opacity-50"
+                            >
+                              -
+                            </button>
+                            <span className="w-6 text-center text-sm font-semibold text-foreground">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                              disabled={isProcessing}
+                              className="w-9 h-full flex items-center justify-center text-foreground hover:bg-muted transition-colors rounded-r-full disabled:opacity-50"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="font-bold text-xl text-foreground whitespace-nowrap min-w-[80px] text-right">
+                            $
+                            {(unitPrice * item.quantity).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={isProcessing}
-                        onClick={() => handleMoveToFavorites(item)}
-                        className="p-2.5 text-slate-400 hover:text-pink-500 hover:bg-pink-50 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-500"
-                        title="Mover para Favoritos"
-                      >
-                        <Heart className="w-5 h-5" />
-                      </button>
-                      <button
-                        disabled={isProcessing}
-                        onClick={() => handleRemove(item.id)}
-                        className="p-2.5 text-[hsl(0,84%,60%)] hover:bg-red-50 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(0,84%,60%)]"
-                        title="Remover"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                        <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                          <button
+                            disabled={isProcessing}
+                            onClick={() => handleMoveToFavorites(item)}
+                            className="flex items-center px-4 h-9 border border-border rounded-full text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            <Heart className="w-4 h-4 mr-2" />
+                            Mover para Favoritos
+                          </button>
+                          <button
+                            disabled={isProcessing}
+                            onClick={() => handleRemove(item.id)}
+                            className="flex items-center justify-center w-9 h-9 border border-border rounded-full text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-
-      <div className="mt-6 p-4 bg-muted rounded-lg">
-        <div className="space-y-3 mb-6">
-          <div className="flex justify-between text-foreground font-bold">
-            <span>Subtotal ({items.reduce((a, b) => a + b.quantity, 0)} itens)</span>
-            <span>${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between font-bold text-lg pt-4 border-t border-border text-foreground">
-            <span>Total Estimado</span>
-            <span>${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-          </div>
-          <p className="text-sm text-muted-foreground">Impostos e frete calculados no checkout.</p>
-        </div>
-        <div className="flex flex-col gap-4 w-full mt-4">
-          {items.length === 0 && (
-            <p className="text-sm font-medium text-center text-muted-foreground mt-2">
-              Adicione itens ao carrinho para continuar.
-            </p>
+              )
+            })
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-            <button
-              disabled={items.length === 0}
-              onClick={() => navigate('/checkout?mode=automatizado')}
-              className={cn(
-                'flex flex-col items-center justify-center text-center p-4 rounded-xl min-h-[80px] transition-all duration-200 border-none outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[hsl(210,100%,50%)]',
-                'bg-[hsl(210,100%,50%)] text-white',
-                items.length > 0
-                  ? 'hover:bg-[hsl(210,100%,45%)] hover:shadow-md active:scale-[0.98] cursor-pointer'
-                  : 'opacity-50 cursor-not-allowed',
-              )}
-            >
-              <Zap className="w-6 h-6 mb-2 text-white" />
-              <span className="font-bold text-base leading-tight text-white">
-                Checkout Automatizado
-              </span>
-              <span className="text-sm text-white/90 mt-1 font-normal">
-                Finalize sua compra em 2 minutos
-              </span>
-            </button>
+        </div>
 
-            <button
-              disabled={items.length === 0}
-              onClick={() => navigate('/checkout?mode=especialista')}
-              className={cn(
-                'flex flex-col items-center justify-center text-center p-4 rounded-xl min-h-[80px] transition-all duration-200 border-none outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[hsl(152,68%,40%)]',
-                'bg-[hsl(152,68%,40%)] text-white',
-                items.length > 0
-                  ? 'hover:bg-[hsl(152,68%,35%)] hover:shadow-md active:scale-[0.98] cursor-pointer'
-                  : 'opacity-50 cursor-not-allowed',
+        {/* Right Column: Summary */}
+        <div className="w-full lg:w-[400px] shrink-0">
+          <div className="p-6 border border-border rounded-2xl bg-card sticky top-6">
+            <h3 className="text-xl font-bold text-foreground mb-6">Resumo</h3>
+
+            <div className="flex justify-between text-muted-foreground mb-6 text-base">
+              <span>Subtotal ({items.reduce((a, b) => a + b.quantity, 0)} itens)</span>
+              <span>${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="flex justify-between font-bold text-foreground items-center mb-8">
+              <span className="text-xl">Total Estimado</span>
+              <span className="text-2xl">
+                ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <p className="text-sm text-center text-muted-foreground mb-6">
+              Impostos e frete calculados no checkout.
+            </p>
+
+            <p className="text-sm text-center text-muted-foreground mb-4">2 opcoes de checkout</p>
+
+            <div className="flex flex-col gap-3">
+              {items.length === 0 && (
+                <p className="text-sm font-medium text-center text-destructive mb-1">
+                  Adicione itens ao carrinho para continuar.
+                </p>
               )}
-            >
-              <MessageCircle className="w-6 h-6 mb-2 text-white" />
-              <span className="font-bold text-base leading-tight text-white">
-                Checkout com Especialista
-              </span>
-              <span className="text-sm text-white/90 mt-1 font-normal">
-                Checkout com atendente humano
-              </span>
-            </button>
+
+              <button
+                disabled={items.length === 0}
+                onClick={() => navigate('/checkout?mode=automatizado')}
+                className={cn(
+                  'flex items-center p-4 rounded-xl min-h-[80px] transition-all duration-200 border-none outline-none',
+                  'bg-[#2563eb] text-white hover:bg-[#1d4ed8]',
+                  items.length === 0 && 'opacity-50 cursor-not-allowed',
+                )}
+              >
+                <div className="flex items-center justify-center w-10 h-10 shrink-0">
+                  <Zap className="w-5 h-5" fill="currentColor" />
+                </div>
+                <div className="flex flex-col items-start ml-2 text-left">
+                  <span className="font-bold text-base leading-tight mb-1">
+                    Checkout Automatizado
+                  </span>
+                  <span className="text-sm text-white/90 font-normal leading-tight">
+                    Finalize sua compra em 2 minutos
+                  </span>
+                </div>
+              </button>
+
+              <button
+                disabled={items.length === 0}
+                onClick={() => navigate('/checkout?mode=especialista')}
+                className={cn(
+                  'flex items-center p-4 rounded-xl min-h-[80px] transition-all duration-200 border-none outline-none',
+                  'bg-[#22c55e] text-white hover:bg-[#16a34a]',
+                  items.length === 0 && 'opacity-50 cursor-not-allowed',
+                )}
+              >
+                <div className="flex items-center justify-center w-10 h-10 shrink-0">
+                  <MessageCircle className="w-5 h-5" fill="currentColor" />
+                </div>
+                <div className="flex flex-col items-start ml-2 text-left">
+                  <span className="font-bold text-base leading-tight mb-1">
+                    Checkout com Especialista
+                  </span>
+                  <span className="text-sm text-white/90 font-normal leading-tight">
+                    Checkout com atendente humano
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/products')}
+                className="mt-2 w-full h-12 rounded-xl border border-border text-foreground hover:bg-muted font-medium transition-colors"
+              >
+                Continuar Comprando
+              </button>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            className="w-full h-12 text-lg hover:scale-[1.02] hover:shadow-md transition-all duration-200 mt-2"
-            onClick={() => navigate('/products')}
-          >
-            Continuar Comprando
-          </Button>
         </div>
       </div>
     </div>
