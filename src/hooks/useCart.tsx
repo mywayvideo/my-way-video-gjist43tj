@@ -9,6 +9,7 @@ interface CartItemDetail {
   price: number
   image_url: string
   quantity: number
+  weight?: number
 }
 
 interface CartContextType {
@@ -51,7 +52,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data } = await supabase
         .from('products')
-        .select('id, name, price_usd, image_url')
+        .select('id, name, price_usd, image_url, weight')
         .in(
           'id',
           items.map((i) => i.product_id),
@@ -67,6 +68,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             price: p.price_usd || 0,
             image_url: p.image_url || '',
             quantity: item.quantity,
+            weight: p.weight,
           }
         })
         .filter(Boolean) as CartItemDetail[]
