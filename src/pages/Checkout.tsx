@@ -533,9 +533,12 @@ export default function Checkout() {
       setCurrentStep(3)
     } catch (err) {
       toast({ description: 'Erro ao processar. Tente novamente.', variant: 'destructive' })
-    } finally {
       setIsLoading(false)
+      return
     }
+
+    setIsLoading(false)
+    await handleCalculateShippingAction()
   }
 
   const handleCalculateShippingAction = async () => {
@@ -571,7 +574,29 @@ export default function Checkout() {
         body: payload,
       })
 
-      if (error) throw error
+      if (error) {
+        let parsedErr = 'Erro ao processar. Tente novamente.'
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const bodyJson = await error.context.json()
+            if (bodyJson.error) parsedErr = bodyJson.error
+          } else if (error.context && typeof error.context.text === 'function') {
+            const bodyStr = await error.context.text()
+            const bodyJson = JSON.parse(bodyStr)
+            if (bodyJson.error) parsedErr = bodyJson.error
+          } else if (error.context && error.context.error) {
+            parsedErr = error.context.error
+          } else if (
+            error.message &&
+            error.message !== 'Edge Function returned a non-2xx status code'
+          ) {
+            parsedErr = error.message
+          }
+        } catch (e) {
+          // ignore
+        }
+        throw new Error(parsedErr)
+      }
 
       if (data && data.error) {
         setShippingError(data.error)
@@ -585,7 +610,7 @@ export default function Checkout() {
       }
     } catch (err: any) {
       console.error('Erro calcular frete:', err)
-      setShippingError('Erro ao processar. Tente novamente.')
+      setShippingError(err.message || 'Erro ao processar. Tente novamente.')
       setFreight(null)
     } finally {
       setIsCalculatingShipping(false)
