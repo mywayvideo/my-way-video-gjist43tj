@@ -495,6 +495,56 @@ export default function Checkout() {
 
     setIsLoading(true)
     try {
+      if (isAddingNewAddress && saveNewAddress && user) {
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (customer) {
+          const { data: newAddrData, error: addrErr } = await supabase
+            .from('customer_addresses')
+            .insert({
+              customer_id: customer.id,
+              address_type: 'shipping',
+              street: address.street || 'N/A',
+              number: address.number || 'S/N',
+              complement: address.complement || null,
+              neighborhood: 'N/A',
+              city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
+              state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
+              zip_code: address.zip_code || '00000',
+              country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
+              is_default: saveNewAddress,
+            })
+            .select('id')
+            .single()
+
+          if (!addrErr && newAddrData) {
+            setSelectedAddressId(newAddrData.id)
+            setIsAddingNewAddress(false)
+            setSavedAddresses((prev) => [
+              {
+                id: newAddrData.id,
+                customer_id: customer.id,
+                address_type: 'shipping',
+                street: address.street || 'N/A',
+                number: address.number || 'S/N',
+                complement: address.complement || null,
+                neighborhood: 'N/A',
+                city: address.city || (deliveryMethod === 'miami' ? 'Miami' : 'N/A'),
+                state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
+                zip_code: address.zip_code || '00000',
+                country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
+                is_default: saveNewAddress,
+              },
+              ...prev,
+            ])
+          }
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('calculate-freight', {
         body: { delivery_method: deliveryMethod, address, cart_subtotal: subtotal },
       })
