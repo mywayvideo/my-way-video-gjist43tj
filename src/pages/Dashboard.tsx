@@ -204,14 +204,14 @@ function DashboardContent() {
         <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md pt-4 pb-0 mb-8">
           <div className="relative">
             {/* Linha base das abas na cor primária */}
-            <div className="absolute bottom-0 left-0 w-full h-3 bg-primary rounded-full z-0"></div>
+            <div className="absolute bottom-0 left-0 w-full h-3 bg-[#f97316] rounded-full z-0"></div>
 
             <TabsList className="relative z-10 flex w-full h-auto gap-1 sm:gap-2 bg-transparent p-0 px-2 sm:px-4 overflow-x-auto justify-start hide-scrollbar">
               {[
                 { id: 'resumo', label: 'Resumo' },
                 { id: 'pessoal', label: 'Dados Pessoais' },
-                { id: 'entrega', label: 'Endereço de Entrega' },
                 { id: 'cobranca', label: 'Endereço de Cobrança' },
+                { id: 'entrega', label: 'Endereço de Entrega' },
                 { id: 'favoritos', label: 'Favoritos' },
                 { id: 'carrinho', label: 'Carrinho' },
                 { id: 'historico', label: 'Histórico de Compras' },
@@ -219,7 +219,7 @@ function DashboardContent() {
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="relative px-4 py-2.5 font-bold uppercase tracking-wider text-xs sm:text-sm whitespace-nowrap transition-all duration-200 rounded-t-xl rounded-b-none border-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-muted/80 data-[state=inactive]:hover:text-foreground shadow-[0_-2px_4px_rgba(0,0,0,0.05)] data-[state=inactive]:shadow-none"
+                  className="relative px-4 py-2.5 font-bold uppercase tracking-wider text-xs sm:text-sm whitespace-nowrap transition-all duration-200 rounded-t-xl rounded-b-none border-0 outline-none focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=active]:bg-[#f97316] data-[state=active]:text-white data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-orange-100 data-[state=inactive]:hover:text-[#f97316] shadow-[0_-2px_4px_rgba(0,0,0,0.05)] data-[state=inactive]:shadow-none"
                 >
                   {tab.label}
                 </TabsTrigger>
@@ -246,15 +246,15 @@ function DashboardContent() {
             />
           </TabsContent>
 
-          <TabsContent value="entrega" className="m-0 focus-visible:outline-none max-w-4xl mx-auto">
-            <AddressTab customerId={user.id} type="shipping" />
-          </TabsContent>
-
           <TabsContent
             value="cobranca"
             className="m-0 focus-visible:outline-none max-w-4xl mx-auto"
           >
             <AddressTab customerId={user.id} type="billing" />
+          </TabsContent>
+
+          <TabsContent value="entrega" className="m-0 focus-visible:outline-none max-w-4xl mx-auto">
+            <AddressTab customerId={user.id} type="shipping" />
           </TabsContent>
 
           <TabsContent value="favoritos" className="m-0 focus-visible:outline-none">

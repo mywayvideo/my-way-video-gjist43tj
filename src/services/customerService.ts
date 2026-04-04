@@ -21,7 +21,7 @@ export const customerService = {
 
     const { data, error } = await supabase
       .from('customers')
-      .select('id, full_name, email, phone, role, status, created_at')
+      .select('id, full_name, email, phone, role, status, created_at, profile_photo_url')
       .eq('user_id', user.id)
       .single()
 
@@ -128,7 +128,7 @@ export const customerService = {
 
     const { data, error } = await supabase
       .from('customers')
-      .select('id, full_name, email, phone, role, status, created_at')
+      .select('id, full_name, email, phone, role, status, created_at, profile_photo_url')
       .eq('user_id', user.id)
       .single()
 
