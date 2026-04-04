@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -39,6 +40,7 @@ interface Manufacturer {
 interface ProductDetails {
   id: string
   name: string
+  sku: string | null
   manufacturer_id: string | null
   category: string | null
 }
@@ -62,6 +64,10 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [selectionType, setSelectionType] = useState<
+    'product' | 'manufacturer' | 'manufacturer_category'
+  >('product')
+
   // Data states
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [dbProducts, setDbProducts] = useState<ProductDetails[]>([])
@@ -79,6 +85,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([])
   const [selectedCategories, setSelectedCategories] = useState<Record<string, string[]>>({})
   const [excludedProducts, setExcludedProducts] = useState<string[]>([])
+  const [selectedSpecificProducts, setSelectedSpecificProducts] = useState<string[]>([])
 
   const initializedRuleId = useRef<string | null>(null)
 
@@ -109,7 +116,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     const loadData = async () => {
       const [mRes, pRes] = await Promise.all([
         supabase.from('manufacturers').select('id, name').order('name'),
-        supabase.from('products').select('id, name, manufacturer_id, category').order('name'),
+        supabase.from('products').select('id, name, sku, manufacturer_id, category').order('name'),
       ])
       if (mRes.data) setManufacturers(mRes.data)
       if (pRes.data) setDbProducts(pRes.data)
@@ -127,10 +134,11 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     initializedRuleId.current = currentRuleId
 
     if (rule?.product_selection?.length) {
+      setSelectionType('manufacturer_category')
       const initialManufacturers = new Set<string>()
       const initialCategories: Record<string, Set<string>> = {}
 
-      rule.product_selection.forEach((id) => {
+      rule.product_selection.forEach((id: string) => {
         const p = dbProducts.find((prod) => prod.id === id)
         if (p && p.manufacturer_id) {
           initialManufacturers.add(p.manufacturer_id)
@@ -165,11 +173,15 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
         .map((p) => p.id)
       setExcludedProducts(excluded)
 
+      setSelectedSpecificProducts(rule.product_selection)
+
       setValue('product_selection', rule.product_selection, { shouldValidate: true })
     } else {
+      setSelectionType('product')
       setSelectedManufacturers([])
       setSelectedCategories({})
       setExcludedProducts([])
+      setSelectedSpecificProducts([])
       setValue('product_selection', [], { shouldValidate: true })
     }
   }, [dbProducts, rule, setValue])
@@ -183,16 +195,21 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
 
   // Match Products (AND logic: Manufacturer AND Category)
   const matchingProducts = useMemo(() => {
+    if (selectionType === 'product') return dbProducts
+
     return dbProducts.filter((p) => {
       if (!p.manufacturer_id) return false
       if (!selectedManufacturers.includes(p.manufacturer_id)) return false
+
+      if (selectionType === 'manufacturer') return true
+
       const catsForManuf = selectedCategories[p.manufacturer_id] || []
       if (catsForManuf.length === 0) return true
       return catsForManuf.includes(p.category || '')
     })
-  }, [dbProducts, selectedManufacturers, selectedCategories])
+  }, [dbProducts, selectedManufacturers, selectedCategories, selectionType])
 
-  // Filter Matching Products
+  // Filter Matching Products (for manufacturer/category mode)
   const filteredProducts = useMemo(() => {
     if (!debouncedProdSearch) return matchingProducts
     return matchingProducts.filter((p) =>
@@ -200,18 +217,49 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     )
   }, [matchingProducts, debouncedProdSearch])
 
+  // Filter Specific Products (for product mode)
+  const filteredSpecificProducts = useMemo(() => {
+    if (!debouncedProdSearch) return dbProducts
+    const s = debouncedProdSearch.toLowerCase()
+    return dbProducts.filter((p) => {
+      const m = manufacturers.find((m) => m.id === p.manufacturer_id)
+      const mName = m ? m.name.toLowerCase() : ''
+      return (
+        p.name.toLowerCase().includes(s) ||
+        (p.sku && p.sku.toLowerCase().includes(s)) ||
+        mName.includes(s) ||
+        (p.category && p.category.toLowerCase().includes(s))
+      )
+    })
+  }, [dbProducts, manufacturers, debouncedProdSearch])
+
   // Sync to form 'product_selection'
   useEffect(() => {
     if (initializedRuleId.current !== (rule?.id || 'new')) return
 
-    const newSelection = matchingProducts
-      .map((p) => p.id)
-      .filter((id) => !excludedProducts.includes(id))
+    if (selectionType === 'product') {
+      setValue('product_selection', selectedSpecificProducts, { shouldValidate: true })
+    } else {
+      const newSelection = matchingProducts
+        .map((p) => p.id)
+        .filter((id) => !excludedProducts.includes(id))
 
-    setValue('product_selection', newSelection, { shouldValidate: true })
-  }, [matchingProducts, excludedProducts, setValue, rule])
+      setValue('product_selection', newSelection, { shouldValidate: true })
+    }
+  }, [matchingProducts, excludedProducts, selectedSpecificProducts, selectionType, setValue, rule])
 
   // Toggle handlers
+  const handleSelectionTypeChange = (val: string) => {
+    const newType = val as 'product' | 'manufacturer' | 'manufacturer_category'
+    setSelectionType(newType)
+
+    setSelectedManufacturers([])
+    setSelectedCategories({})
+    setExcludedProducts([])
+    setSelectedSpecificProducts([])
+    setValue('product_selection', [], { shouldValidate: true })
+  }
+
   const toggleManufacturer = (mId: string, checked: boolean) => {
     setSelectedManufacturers((prev) => {
       if (checked) return [...prev, mId]
@@ -246,6 +294,13 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
       } else {
         return [...prev, pId]
       }
+    })
+  }
+
+  const toggleSpecificProduct = (pId: string, checked: boolean) => {
+    setSelectedSpecificProducts((prev) => {
+      if (checked) return [...prev, pId]
+      return prev.filter((id) => id !== pId)
     })
   }
 
@@ -361,131 +416,66 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
 
           <div className="space-y-4 pt-6 border-t">
             <Label className="text-base font-semibold">
+              Tipo de Seleção <span className="text-destructive">*</span>
+            </Label>
+            <RadioGroup
+              value={selectionType}
+              onValueChange={handleSelectionTypeChange}
+              className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-6"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="product" id="type-product" />
+                <Label htmlFor="type-product" className="cursor-pointer font-medium">
+                  Por Produto
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="manufacturer" id="type-manufacturer" />
+                <Label htmlFor="type-manufacturer" className="cursor-pointer font-medium">
+                  Por Fabricante
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="manufacturer_category" id="type-manufacturer-category" />
+                <Label htmlFor="type-manufacturer-category" className="cursor-pointer font-medium">
+                  Por Fabricante + Categoria
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-4 pt-6 border-t">
+            <Label className="text-base font-semibold">
               Seleção de Produtos <span className="text-destructive">*</span>
             </Label>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border rounded-md p-4 bg-muted/10">
-              {/* Step 1: Manufacturers */}
-              <div className="space-y-3">
+
+            {selectionType === 'product' ? (
+              <div className="border rounded-md p-4 bg-muted/10 space-y-3">
                 <div>
-                  <Label className="text-sm font-semibold">1. Fabricantes</Label>
+                  <Label className="text-sm font-semibold">Produtos Específicos</Label>
                   <p className="text-xs text-muted-foreground">
-                    {selectedManufacturers.length} fabricante(s) selecionado(s)
+                    {selectedSpecificProducts.length} produto(s) selecionado(s)
                   </p>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar fabricante..."
-                    value={manufSearch}
-                    onChange={(e) => setManufSearch(e.target.value)}
-                    className="pl-9 h-9"
-                  />
-                </div>
-                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
-                  {filteredManufacturers.map((m) => (
-                    <label
-                      key={m.id}
-                      className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
-                    >
-                      <Checkbox
-                        checked={selectedManufacturers.includes(m.id)}
-                        onCheckedChange={(c) => toggleManufacturer(m.id, !!c)}
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm font-medium">{m.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Step 2: Categories */}
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-sm font-semibold">2. Categorias</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {Object.values(selectedCategories).flat().length} categoria(s) selecionada(s)
-                  </p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar categoria..."
-                    value={catSearch}
-                    onChange={(e) => setCatSearch(e.target.value)}
-                    className="pl-9 h-9"
-                  />
-                </div>
-                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-3">
-                  {selectedManufacturers.length === 0 ? (
-                    <div className="text-sm text-muted-foreground p-4 text-center">
-                      Selecione um fabricante primeiro
-                    </div>
-                  ) : (
-                    selectedManufacturers.map((mId) => {
-                      const m = manufacturers.find((x) => x.id === mId)
-                      if (!m) return null
-                      const mCats = Array.from(
-                        new Set(
-                          dbProducts
-                            .filter((p) => p.manufacturer_id === mId && p.category)
-                            .map((p) => p.category as string),
-                        ),
-                      ).sort()
-                      const filteredMCats = mCats.filter((c) =>
-                        c.toLowerCase().includes(debouncedCatSearch.toLowerCase()),
-                      )
-                      if (filteredMCats.length === 0) return null
-
-                      return (
-                        <div key={mId} className="space-y-1">
-                          <div className="text-xs font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/30 rounded">
-                            {m.name}
-                          </div>
-                          {filteredMCats.map((c) => (
-                            <label
-                              key={`${mId}-${c}`}
-                              className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors ml-1"
-                            >
-                              <Checkbox
-                                checked={(selectedCategories[mId] || []).includes(c)}
-                                onCheckedChange={(checked) => toggleCategory(mId, c, !!checked)}
-                                className="mt-0.5"
-                              />
-                              <span className="text-sm font-medium">{c}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Step 3: Products */}
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-sm font-semibold">3. Produtos</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {matchingProducts.length - excludedProducts.length} produto(s) selecionado(s)
-                  </p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar produto..."
+                    placeholder="Buscar por nome, SKU, fabricante ou categoria..."
                     value={prodSearch}
                     onChange={(e) => setProdSearch(e.target.value)}
                     className="pl-9 h-9"
                   />
                 </div>
                 <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
-                  {matchingProducts.length === 0 ? (
+                  {filteredSpecificProducts.length === 0 ? (
                     <div className="text-sm text-muted-foreground p-4 text-center">
                       Nenhum produto correspondente
                     </div>
                   ) : (
-                    filteredProducts.map((p) => {
-                      const isIncluded = !excludedProducts.includes(p.id)
+                    filteredSpecificProducts.map((p) => {
+                      const m = manufacturers.find((x) => x.id === p.manufacturer_id)
+                      const mName = m ? m.name : 'N/A'
+                      const isIncluded = selectedSpecificProducts.includes(p.id)
                       return (
                         <label
                           key={p.id}
@@ -493,17 +483,172 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                         >
                           <Checkbox
                             checked={isIncluded}
-                            onCheckedChange={(checked) => toggleProduct(p.id, !!checked)}
-                            className="mt-0.5 shrink-0"
+                            onCheckedChange={(checked) => toggleSpecificProduct(p.id, !!checked)}
+                            className="mt-1 shrink-0"
                           />
-                          <span className="text-sm font-medium leading-tight">{p.name}</span>
+                          <div className="flex flex-col leading-tight">
+                            <span className="text-sm font-medium">{p.name}</span>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              SKU: {p.sku || 'N/A'} • Fab: {mName} • Cat: {p.category || 'N/A'}
+                            </span>
+                          </div>
                         </label>
                       )
                     })
                   )}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div
+                className={`grid grid-cols-1 gap-6 border rounded-md p-4 bg-muted/10 ${selectionType === 'manufacturer' ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}
+              >
+                {/* Step 1: Manufacturers */}
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-semibold">1. Fabricantes</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedManufacturers.length} fabricante(s) selecionado(s)
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar fabricante..."
+                      value={manufSearch}
+                      onChange={(e) => setManufSearch(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+                  <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                    {filteredManufacturers.map((m) => (
+                      <label
+                        key={m.id}
+                        className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedManufacturers.includes(m.id)}
+                          onCheckedChange={(c) => toggleManufacturer(m.id, !!c)}
+                          className="mt-0.5"
+                        />
+                        <span className="text-sm font-medium">{m.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Step 2: Categories (Hidden if 'manufacturer') */}
+                {selectionType === 'manufacturer_category' && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-sm font-semibold">2. Categorias</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {Object.values(selectedCategories).flat().length} categoria(s)
+                        selecionada(s)
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar categoria..."
+                        value={catSearch}
+                        onChange={(e) => setCatSearch(e.target.value)}
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                    <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-3">
+                      {selectedManufacturers.length === 0 ? (
+                        <div className="text-sm text-muted-foreground p-4 text-center">
+                          Selecione um fabricante primeiro
+                        </div>
+                      ) : (
+                        selectedManufacturers.map((mId) => {
+                          const m = manufacturers.find((x) => x.id === mId)
+                          if (!m) return null
+                          const mCats = Array.from(
+                            new Set(
+                              dbProducts
+                                .filter((p) => p.manufacturer_id === mId && p.category)
+                                .map((p) => p.category as string),
+                            ),
+                          ).sort()
+                          const filteredMCats = mCats.filter((c) =>
+                            c.toLowerCase().includes(debouncedCatSearch.toLowerCase()),
+                          )
+                          if (filteredMCats.length === 0) return null
+
+                          return (
+                            <div key={mId} className="space-y-1">
+                              <div className="text-xs font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/30 rounded">
+                                {m.name}
+                              </div>
+                              {filteredMCats.map((c) => (
+                                <label
+                                  key={`${mId}-${c}`}
+                                  className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors ml-1"
+                                >
+                                  <Checkbox
+                                    checked={(selectedCategories[mId] || []).includes(c)}
+                                    onCheckedChange={(checked) => toggleCategory(mId, c, !!checked)}
+                                    className="mt-0.5"
+                                  />
+                                  <span className="text-sm font-medium">{c}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Products */}
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-semibold">
+                      {selectionType === 'manufacturer' ? '2. Produtos' : '3. Produtos'}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {matchingProducts.length - excludedProducts.length} produto(s) selecionado(s)
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar produto..."
+                      value={prodSearch}
+                      onChange={(e) => setProdSearch(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+                  <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                    {matchingProducts.length === 0 ? (
+                      <div className="text-sm text-muted-foreground p-4 text-center">
+                        Nenhum produto correspondente
+                      </div>
+                    ) : (
+                      filteredProducts.map((p) => {
+                        const isIncluded = !excludedProducts.includes(p.id)
+                        return (
+                          <label
+                            key={p.id}
+                            className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                          >
+                            <Checkbox
+                              checked={isIncluded}
+                              onCheckedChange={(checked) => toggleProduct(p.id, !!checked)}
+                              className="mt-0.5 shrink-0"
+                            />
+                            <span className="text-sm font-medium leading-tight">{p.name}</span>
+                          </label>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {errors.product_selection && (
               <p className="text-sm text-destructive font-medium mt-2">
                 {errors.product_selection.message}
