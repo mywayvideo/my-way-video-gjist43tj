@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -40,7 +40,7 @@ import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
 import { useApplyDiscount } from '@/hooks/useApplyDiscount'
-import { useCalculatePriceBRL } from '@/hooks/useCalculatePriceBRL'
+import { useAppSettingsRealtime } from '@/hooks/useAppSettingsRealtime'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
 import { useAuthState } from '@/hooks/useAuthState'
@@ -159,11 +159,64 @@ export default function Product() {
 
   const effectiveDiscountPercentage = discountPercentage || 0
 
-  const { calculatedPrice: finalBrl, loading: calculatingBrl } = useCalculatePriceBRL(
-    product?.price_usd,
-    product?.weight,
-    effectiveDiscountPercentage,
+  const {
+    pricePerKg,
+    percentageValue,
+    additionalWeightKg,
+    isLoading,
+    error: settingsError,
+  } = useAppSettingsRealtime()
+
+  useEffect(() => {
+    console.log('App settings updated:', { pricePerKg, percentageValue, additionalWeightKg })
+  }, [pricePerKg, percentageValue, additionalWeightKg])
+
+  const [exchangeRate, setExchangeRate] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchExchange = async () => {
+      const { data } = await supabase
+        .from('price_settings')
+        .select('exchange_rate, exchange_spread')
+        .limit(1)
+        .maybeSingle()
+      if (data) {
+        setExchangeRate((data.exchange_rate || 0) + (data.exchange_spread || 0))
+      }
+    }
+    fetchExchange()
+  }, [])
+
+  const calculatePriceBRL = useCallback(
+    (prod: { price_usd: number; weight_lb: number }) => {
+      if (!prod.price_usd || exchangeRate === 0) return null
+
+      const weight_kg = prod.weight_lb / 2.204
+      const total_weight_kg = weight_kg + additionalWeightKg
+      const freight_usd = total_weight_kg * pricePerKg
+      const percentage_charge = (prod.price_usd * percentageValue) / 100
+      const total_usd = prod.price_usd + freight_usd + percentage_charge
+
+      const total_brl = total_usd * exchangeRate
+      const freight_brl = freight_usd * exchangeRate
+      const product_brl = prod.price_usd * exchangeRate
+
+      return { total_brl, freight_brl, product_brl }
+    },
+    [pricePerKg, additionalWeightKg, percentageValue, exchangeRate],
   )
+
+  const priceBrlResult = useMemo(() => {
+    if (!product) return null
+    const result = calculatePriceBRL({
+      price_usd: product.price_usd || 0,
+      weight_lb: product.weight || 0,
+    })
+    if (result) {
+      console.log('Price calculated:', result)
+    }
+    return result
+  }, [calculatePriceBRL, product])
 
   const handleToggleFavorite = async () => {
     if (!product) return
@@ -543,6 +596,7 @@ export default function Product() {
                       variant="secondary"
                       className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
                       onClick={() => setIsBrlModalOpen(true)}
+                      disabled={isLoading}
                     >
                       <span className="flex items-center gap-2 text-foreground font-medium">
                         <Calculator className="w-4 h-4 text-green-500" />
@@ -558,7 +612,7 @@ export default function Product() {
             <div className="order-3 lg:order-none w-full mb-10 lg:mb-0 flex gap-4">
               <Button
                 size="lg"
-                disabled={product.is_discontinued}
+                disabled={product.is_discontinued || isLoading}
                 aria-label={
                   product.is_discontinued
                     ? 'Produto descontinuado. Nao disponivel para adicionar.'
@@ -641,7 +695,12 @@ export default function Product() {
                   </p>
                 </div>
 
-                <Button className="w-full mt-6" size="lg" onClick={() => setIsAiChatOpen(true)}>
+                <Button
+                  className="w-full mt-6"
+                  size="lg"
+                  onClick={() => setIsAiChatOpen(true)}
+                  disabled={isLoading}
+                >
                   Fazer Pergunta
                 </Button>
               </div>
@@ -791,9 +850,12 @@ export default function Product() {
             </DialogHeader>
 
             <div className="py-6 flex flex-col items-center justify-center">
-              {calculatingBrl ? (
-                <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-              ) : finalBrl === null ? (
+              {isLoading || exchangeRate === 0 ? (
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+                  <div className="h-10 w-48 bg-muted animate-pulse rounded" />
+                </div>
+              ) : priceBrlResult === null ? (
                 <div className="flex flex-col items-center text-center gap-2">
                   <HelpCircle className="w-10 h-10 text-muted-foreground opacity-50 mb-2" />
                   <p className="text-lg font-semibold text-foreground uppercase tracking-wider">
@@ -804,16 +866,23 @@ export default function Product() {
                   </p>
                 </div>
               ) : (
-                <div className="text-center animate-in fade-in zoom-in-95 duration-300">
+                <div className="text-center animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
+                  {settingsError && (
+                    <div className="text-sm font-medium text-destructive mb-4">{settingsError}</div>
+                  )}
                   <span className="text-sm font-semibold text-green-500 uppercase tracking-wider block mb-2">
                     Preço Final BRL
                   </span>
                   <p className="text-4xl font-mono font-extrabold text-green-500 drop-shadow-sm">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      finalBrl,
+                      priceBrlResult.total_brl,
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-4 max-w-[280px] mx-auto leading-relaxed">
+                    Produto R$ {priceBrlResult.product_brl.toFixed(2)} + Frete R${' '}
+                    {priceBrlResult.freight_brl.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2 max-w-[280px] mx-auto leading-relaxed">
                     * Referencial dinâmico sujeito a variação cambial
                   </p>
                 </div>
