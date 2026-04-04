@@ -29,13 +29,16 @@ export function SaoPauloFormulaSection() {
       if (data) {
         data.forEach((item) => {
           if (item.setting_key === 'shipping_sao_paulo_price_per_kg') {
-            setPricePerKg(item.setting_value_numeric ?? Number(item.setting_value) ?? 120)
+            const val = item.setting_value !== null ? Number(item.setting_value) : NaN
+            setPricePerKg(item.setting_value_numeric ?? (isNaN(val) ? 120 : val))
           }
           if (item.setting_key === 'shipping_sao_paulo_additional_weight_kg') {
-            setAdditionalWeight(item.setting_value_numeric ?? Number(item.setting_value) ?? 0.5)
+            const val = item.setting_value !== null ? Number(item.setting_value) : NaN
+            setAdditionalWeight(item.setting_value_numeric ?? (isNaN(val) ? 0.5 : val))
           }
           if (item.setting_key === 'shipping_sao_paulo_percentage_value') {
-            setPercentageValue(item.setting_value_numeric ?? Number(item.setting_value) ?? 10)
+            const val = item.setting_value !== null ? Number(item.setting_value) : NaN
+            setPercentageValue(item.setting_value_numeric ?? (isNaN(val) ? 10 : val))
           }
         })
       }
