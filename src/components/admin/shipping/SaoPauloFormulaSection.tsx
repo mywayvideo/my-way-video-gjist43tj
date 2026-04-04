@@ -147,9 +147,9 @@ export function SaoPauloFormulaSection() {
             />
           </div>
         </div>
-        <div className="p-3 bg-secondary/50 rounded text-sm text-muted-foreground">
-          Formula: Frete = (Valor Total x Percentual) + ((Peso Total + Peso Adicional) x Preco por
-          kg)
+        <div className="p-3 bg-secondary/50 rounded text-sm text-muted-foreground font-mono">
+          Fórmula: Frete USD = (Valor Produto USD x Percentual) + ((Peso em kg + Peso Adicional em
+          kg) x Preço por kg)
         </div>
         <Button onClick={handleSave} disabled={isSaving}>
           Salvar Formula
