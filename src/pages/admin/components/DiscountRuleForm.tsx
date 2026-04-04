@@ -18,17 +18,41 @@ import * as z from 'zod'
 import { Search, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 
-const schema = z.object({
-  name: z.string().min(3, 'Mínimo de 3 caracteres'),
-  discount_type: z.enum(['margin_percentage', 'price_usa_percentage'], {
-    required_error: 'Tipo de desconto é obrigatório',
-  }),
-  discount_value: z.coerce.number().min(0.01, 'Valor deve ser maior que 0'),
-  product_selection: z.array(z.string()).min(1, 'Selecione pelo menos um produto.'),
-  status: z.enum(['active', 'inactive']),
-  start_date: z.string().optional().nullable(),
-  end_date: z.string().optional().nullable(),
-})
+const schema = z
+  .object({
+    name: z.string().min(3, 'Mínimo de 3 caracteres'),
+    discount_type: z.enum(['margin_percentage', 'price_usa_percentage'], {
+      required_error: 'Tipo de desconto é obrigatório',
+    }),
+    discount_value: z.coerce.number().min(0.01, 'Valor deve ser maior que 0'),
+    product_selection: z.array(z.string()).min(1, 'Selecione pelo menos um produto.'),
+    status: z.enum(['active', 'inactive']),
+    start_date: z.string().optional().nullable(),
+    end_date: z.string().optional().nullable(),
+    application_type: z.enum(['all', 'rule', 'specific_customers'], {
+      required_error: 'Tipo de beneficiário é obrigatório',
+    }),
+    customer_role: z.string().optional().nullable(),
+    customer_selection: z.array(z.string()).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.application_type === 'rule' && !data.customer_role) return false
+      return true
+    },
+    { message: 'Selecione uma regra', path: ['customer_role'] },
+  )
+  .refine(
+    (data) => {
+      if (
+        data.application_type === 'specific_customers' &&
+        (!data.customer_selection || data.customer_selection.length === 0)
+      )
+        return false
+      return true
+    },
+    { message: 'Selecione pelo menos um cliente', path: ['customer_selection'] },
+  )
 
 type FormData = z.infer<typeof schema>
 
@@ -43,6 +67,13 @@ interface ProductDetails {
   sku: string | null
   manufacturer_id: string | null
   category: string | null
+}
+
+interface CustomerDetails {
+  id: string
+  full_name: string | null
+  email: string | null
+  role: string
 }
 
 interface Props {
@@ -71,15 +102,19 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
   // Data states
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [dbProducts, setDbProducts] = useState<ProductDetails[]>([])
+  const [customers, setCustomers] = useState<CustomerDetails[]>([])
+  const [customerRoles, setCustomerRoles] = useState<string[]>([])
 
   // Search states
   const [manufSearch, setManufSearch] = useState('')
   const [catSearch, setCatSearch] = useState('')
   const [prodSearch, setProdSearch] = useState('')
+  const [custSearch, setCustSearch] = useState('')
 
   const debouncedManufSearch = useDebounce(manufSearch, 300)
   const debouncedCatSearch = useDebounce(catSearch, 300)
   const debouncedProdSearch = useDebounce(prodSearch, 300)
+  const debouncedCustSearch = useDebounce(custSearch, 300)
 
   // Selection states
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([])
@@ -106,20 +141,32 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
       status: rule ? (rule.is_active ? 'active' : 'inactive') : 'active',
       start_date: rule?.start_date ? new Date(rule.start_date).toISOString().split('T')[0] : '',
       end_date: rule?.end_date ? new Date(rule.end_date).toISOString().split('T')[0] : '',
+      application_type:
+        (rule as any)?.application_type || (rule?.customer_application_type as any) || 'all',
+      customer_role: (rule as any)?.role || rule?.customer_role || '',
+      customer_selection: rule?.customers || [],
     },
   })
 
   const selectedProducts = watch('product_selection') || []
+  const applicationType = watch('application_type')
+  const selectedCustomerSelection = watch('customer_selection') || []
 
   // Fetch required data from Supabase
   useEffect(() => {
     const loadData = async () => {
-      const [mRes, pRes] = await Promise.all([
+      const [mRes, pRes, cRes] = await Promise.all([
         supabase.from('manufacturers').select('id, name').order('name'),
         supabase.from('products').select('id, name, sku, manufacturer_id, category').order('name'),
+        supabase.from('customers').select('id, full_name, email, role').order('full_name'),
       ])
       if (mRes.data) setManufacturers(mRes.data)
       if (pRes.data) setDbProducts(pRes.data)
+      if (cRes.data) {
+        setCustomers(cRes.data)
+        const roles = Array.from(new Set(cRes.data.map((c) => c.role).filter(Boolean)))
+        setCustomerRoles(roles.sort())
+      }
     }
     loadData()
   }, [])
@@ -217,6 +264,18 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     )
   }, [matchingProducts, debouncedProdSearch])
 
+  // Filter Customers
+  const filteredCustomers = useMemo(() => {
+    if (!debouncedCustSearch) return customers
+    const s = debouncedCustSearch.toLowerCase()
+    return customers.filter(
+      (c) =>
+        (c.full_name && c.full_name.toLowerCase().includes(s)) ||
+        (c.email && c.email.toLowerCase().includes(s)) ||
+        (c.role && c.role.toLowerCase().includes(s)),
+    )
+  }, [customers, debouncedCustSearch])
+
   // Filter Specific Products (for product mode)
   const filteredSpecificProducts = useMemo(() => {
     if (!debouncedProdSearch) return dbProducts
@@ -304,6 +363,19 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     })
   }
 
+  const toggleCustomer = (cId: string, checked: boolean) => {
+    const current = watch('customer_selection') || []
+    if (checked) {
+      setValue('customer_selection', [...current, cId], { shouldValidate: true })
+    } else {
+      setValue(
+        'customer_selection',
+        current.filter((id) => id !== cId),
+        { shouldValidate: true },
+      )
+    }
+  }
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
     try {
@@ -315,6 +387,9 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
         is_active: data.status === 'active',
         start_date: data.start_date || null,
         end_date: data.end_date || null,
+        application_type: data.application_type,
+        role: data.application_type === 'rule' ? data.customer_role : null,
+        customers: data.application_type === 'specific_customers' ? data.customer_selection : [],
       })
     } finally {
       setIsSubmitting(false)
@@ -653,6 +728,159 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
               <p className="text-sm text-destructive font-medium mt-2">
                 {errors.product_selection.message}
               </p>
+            )}
+          </div>
+
+          <div className="space-y-4 pt-6 border-t">
+            <Label className="text-base font-semibold">
+              Seleção de Beneficiários <span className="text-destructive">*</span>
+            </Label>
+            <Controller
+              name="application_type"
+              control={control}
+              render={({ field }) => (
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={(val) => {
+                    field.onChange(val)
+                    if (val !== 'rule') setValue('customer_role', null, { shouldValidate: true })
+                    if (val !== 'specific_customers')
+                      setValue('customer_selection', [], { shouldValidate: true })
+                  }}
+                  className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="app-all" />
+                    <Label htmlFor="app-all" className="cursor-pointer font-medium">
+                      Todo o Site
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="rule" id="app-rule" />
+                    <Label htmlFor="app-rule" className="cursor-pointer font-medium">
+                      Por Regra de Cliente
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="specific_customers" id="app-specific" />
+                    <Label htmlFor="app-specific" className="cursor-pointer font-medium">
+                      Por Clientes Específicos
+                    </Label>
+                  </div>
+                </RadioGroup>
+              )}
+            />
+            {errors.application_type && (
+              <p className="text-sm text-destructive font-medium">
+                {errors.application_type.message}
+              </p>
+            )}
+
+            {applicationType === 'all' && (
+              <div className="border rounded-md p-4 bg-muted/10 text-sm text-muted-foreground">
+                Este desconto será aplicado a todos os clientes.
+              </div>
+            )}
+
+            {applicationType === 'rule' && (
+              <div className="border rounded-md p-4 bg-muted/10 space-y-4">
+                <div className="space-y-2 max-w-sm">
+                  <Label>
+                    Regra <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="customer_role"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma regra..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customerRoles.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.customer_role && (
+                    <p className="text-sm text-destructive font-medium">
+                      {errors.customer_role.message}
+                    </p>
+                  )}
+                </div>
+                {watch('customer_role') && (
+                  <p className="text-sm text-muted-foreground">
+                    Este desconto será aplicado a todos os clientes com a regra{' '}
+                    <span className="font-semibold">{watch('customer_role')}</span>.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {applicationType === 'specific_customers' && (
+              <div className="border rounded-md p-4 bg-muted/10 space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">
+                    Clientes Específicos <span className="text-destructive">*</span>
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCustomerSelection.length} cliente(s) selecionado(s)
+                  </p>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, email ou regra..."
+                    value={custSearch}
+                    onChange={(e) => setCustSearch(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                  {filteredCustomers.length === 0 ? (
+                    <div className="text-sm text-muted-foreground p-4 text-center">
+                      Nenhum cliente correspondente
+                    </div>
+                  ) : (
+                    filteredCustomers.map((c) => {
+                      const isIncluded = selectedCustomerSelection.includes(c.id)
+                      return (
+                        <label
+                          key={c.id}
+                          className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                        >
+                          <Checkbox
+                            checked={isIncluded}
+                            onCheckedChange={(checked) => toggleCustomer(c.id, !!checked)}
+                            className="mt-1 shrink-0"
+                          />
+                          <div className="flex flex-col leading-tight">
+                            <span className="text-sm font-medium">{c.full_name || 'Sem Nome'}</span>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              {c.email || 'Sem Email'} • Regra: {c.role}
+                            </span>
+                          </div>
+                        </label>
+                      )
+                    })
+                  )}
+                </div>
+                {errors.customer_selection && (
+                  <p className="text-sm text-destructive font-medium">
+                    {errors.customer_selection.message}
+                  </p>
+                )}
+                {selectedCustomerSelection.length > 0 && (
+                  <p className="text-sm text-muted-foreground pt-2 border-t">
+                    Este desconto será aplicado a {selectedCustomerSelection.length} clientes
+                    selecionados.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
