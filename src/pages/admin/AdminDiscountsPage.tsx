@@ -165,7 +165,11 @@ export default function AdminDiscountsPage() {
                     typeof editingRule === 'string'
                       ? await createDiscount(payload)
                       : await updateDiscount(editingRule.id, payload)
-                  if (success) setEditingRule(null)
+                  if (success) {
+                    setEditingRule(null)
+                    return true
+                  }
+                  return false
                 }}
               />
             )}

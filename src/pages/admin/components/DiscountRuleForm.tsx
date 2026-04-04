@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Search, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { toast } from '@/hooks/use-toast'
 
 const schema = z
   .object({
@@ -80,7 +81,7 @@ interface Props {
   rule?: Discount
   products: { id: string; name: string }[]
   onClose: () => void
-  onSave: (data: any) => Promise<void>
+  onSave: (data: any) => Promise<boolean | void>
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -376,13 +377,28 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     }
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const isFormValid = !!(
+    watch('name') &&
+    watch('name').length >= 3 &&
+    watch('discount_type') &&
+    watch('discount_value') > 0 &&
+    selectedProducts.length > 0 &&
+    watch('application_type') &&
+    (watch('application_type') !== 'rule' || watch('customer_role')) &&
+    (watch('application_type') !== 'specific_customers' || selectedCustomerSelection.length > 0)
+  )
+
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
+    setSaveError(null)
     try {
-      await onSave({
+      const payload = {
         name: data.name,
         discount_type: data.discount_type,
         discount_value: data.discount_value,
+        status: data.status,
         product_selection: data.product_selection,
         is_active: data.status === 'active',
         start_date: data.start_date || null,
@@ -390,6 +406,31 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
         application_type: data.application_type,
         role: data.application_type === 'rule' ? data.customer_role : null,
         customers: data.application_type === 'specific_customers' ? data.customer_selection : [],
+        product_selection_type: selectionType,
+        selected_products: data.product_selection,
+        excluded_products: excludedProducts,
+        beneficiary_type: data.application_type,
+        selected_rule: data.application_type === 'rule' ? data.customer_role : null,
+        selected_customers:
+          data.application_type === 'specific_customers' ? data.customer_selection : null,
+      }
+      const success = await onSave(payload)
+      if (success === false) {
+        setSaveError('Nao foi possivel salvar o desconto.')
+        toast({
+          title: 'Erro',
+          description: 'Nao foi possivel salvar o desconto.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({ title: 'Sucesso', description: 'Desconto salvo com sucesso!' })
+      }
+    } catch (err) {
+      setSaveError('Nao foi possivel salvar o desconto.')
+      toast({
+        title: 'Erro',
+        description: 'Nao foi possivel salvar o desconto.',
+        variant: 'destructive',
       })
     } finally {
       setIsSubmitting(false)
@@ -884,23 +925,120 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-4 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || selectedProducts.length === 0}
-              className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
-                </>
-              ) : (
-                'Salvar Regra'
+          <div className="space-y-4 pt-6 border-t">
+            <div className="border rounded-lg p-6 bg-card shadow-sm space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold">Resumo do Desconto</h3>
+                <p className="text-sm text-muted-foreground">
+                  Confira as configurações antes de salvar.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Nome da Regra</span>
+                  <span className="text-foreground">{watch('name') || '-'}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Tipo de Desconto</span>
+                  <span className="text-foreground">
+                    {watch('discount_type') === 'margin_percentage'
+                      ? 'Margem %'
+                      : watch('discount_type') === 'price_usa_percentage'
+                        ? 'Price USA %'
+                        : '-'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Valor do Desconto</span>
+                  <span className="text-foreground">{watch('discount_value') || 0}%</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Status</span>
+                  <span className="text-foreground">
+                    {watch('status') === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Período</span>
+                  <span className="text-foreground">
+                    {watch('start_date')
+                      ? new Date(watch('start_date')! + 'T00:00:00').toLocaleDateString()
+                      : 'Imediato'}
+                    {' até '}
+                    {watch('end_date')
+                      ? new Date(watch('end_date')! + 'T00:00:00').toLocaleDateString()
+                      : 'Indeterminado'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">
+                    Produtos Selecionados
+                  </span>
+                  <span className="text-foreground">{selectedProducts.length} produto(s)</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Tipo de Seleção</span>
+                  <span className="text-foreground">
+                    {selectionType === 'product'
+                      ? 'Por Produto'
+                      : selectionType === 'manufacturer'
+                        ? 'Por Fabricante'
+                        : 'Por Fabricante + Categoria'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Beneficiários</span>
+                  <span className="text-foreground">
+                    {watch('application_type') === 'all' && 'Todo o Site'}
+                    {watch('application_type') === 'rule' &&
+                      `Por Regra: ${watch('customer_role') || '-'}`}
+                    {watch('application_type') === 'specific_customers' &&
+                      `${selectedCustomerSelection.length} cliente(s) selecionado(s)`}
+                    {!watch('application_type') && '-'}
+                  </span>
+                </div>
+              </div>
+
+              {saveError && (
+                <div className="p-3 bg-destructive/10 text-destructive rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <span className="text-sm font-medium">{saveError}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSubmit(onSubmit)}
+                    className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    Tentar Novamente
+                  </Button>
+                </div>
               )}
-            </Button>
+
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !isFormValid}
+                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px] w-full sm:w-auto"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                    </>
+                  ) : (
+                    'Salvar Desconto'
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </fieldset>
       </form>
