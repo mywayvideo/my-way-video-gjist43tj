@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Discount } from '@/types/discount'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Search, Loader2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 const schema = z.object({
   name: z.string().min(3, 'Mínimo de 3 caracteres'),
@@ -30,6 +31,18 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
+interface Manufacturer {
+  id: string
+  name: string
+}
+
+interface ProductDetails {
+  id: string
+  name: string
+  manufacturer_id: string | null
+  category: string | null
+}
+
 interface Props {
   rule?: Discount
   products: { id: string; name: string }[]
@@ -37,14 +50,43 @@ interface Props {
   onSave: (data: any) => Promise<void>
 }
 
-export default function DiscountRuleForm({ rule, products, onClose, onSave }: Props) {
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+  return debouncedValue
+}
+
+export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+
+  // Data states
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
+  const [dbProducts, setDbProducts] = useState<ProductDetails[]>([])
+
+  // Search states
+  const [manufSearch, setManufSearch] = useState('')
+  const [catSearch, setCatSearch] = useState('')
+  const [prodSearch, setProdSearch] = useState('')
+
+  const debouncedManufSearch = useDebounce(manufSearch, 300)
+  const debouncedCatSearch = useDebounce(catSearch, 300)
+  const debouncedProdSearch = useDebounce(prodSearch, 300)
+
+  // Selection states
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<Record<string, string[]>>({})
+  const [excludedProducts, setExcludedProducts] = useState<string[]>([])
+
+  const initializedRuleId = useRef<string | null>(null)
 
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<FormData>({
@@ -61,9 +103,151 @@ export default function DiscountRuleForm({ rule, products, onClose, onSave }: Pr
   })
 
   const selectedProducts = watch('product_selection') || []
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+
+  // Fetch required data from Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      const [mRes, pRes] = await Promise.all([
+        supabase.from('manufacturers').select('id, name').order('name'),
+        supabase.from('products').select('id, name, manufacturer_id, category').order('name'),
+      ])
+      if (mRes.data) setManufacturers(mRes.data)
+      if (pRes.data) setDbProducts(pRes.data)
+    }
+    loadData()
+  }, [])
+
+  // Initialize states if editing an existing rule
+  useEffect(() => {
+    if (dbProducts.length === 0) return
+
+    const currentRuleId = rule?.id || 'new'
+    if (initializedRuleId.current === currentRuleId) return
+
+    initializedRuleId.current = currentRuleId
+
+    if (rule?.product_selection?.length) {
+      const initialManufacturers = new Set<string>()
+      const initialCategories: Record<string, Set<string>> = {}
+
+      rule.product_selection.forEach((id) => {
+        const p = dbProducts.find((prod) => prod.id === id)
+        if (p && p.manufacturer_id) {
+          initialManufacturers.add(p.manufacturer_id)
+          if (p.category) {
+            if (!initialCategories[p.manufacturer_id]) {
+              initialCategories[p.manufacturer_id] = new Set()
+            }
+            initialCategories[p.manufacturer_id].add(p.category)
+          }
+        }
+      })
+
+      const mArr = Array.from(initialManufacturers)
+      setSelectedManufacturers(mArr)
+
+      const cObj: Record<string, string[]> = {}
+      for (const mId of mArr) {
+        cObj[mId] = initialCategories[mId] ? Array.from(initialCategories[mId]) : []
+      }
+      setSelectedCategories(cObj)
+
+      const matching = dbProducts.filter((p) => {
+        if (!p.manufacturer_id) return false
+        if (!mArr.includes(p.manufacturer_id)) return false
+        const cats = cObj[p.manufacturer_id] || []
+        if (cats.length === 0) return true
+        return cats.includes(p.category || '')
+      })
+
+      const excluded = matching
+        .filter((p) => !rule.product_selection.includes(p.id))
+        .map((p) => p.id)
+      setExcludedProducts(excluded)
+
+      setValue('product_selection', rule.product_selection, { shouldValidate: true })
+    } else {
+      setSelectedManufacturers([])
+      setSelectedCategories({})
+      setExcludedProducts([])
+      setValue('product_selection', [], { shouldValidate: true })
+    }
+  }, [dbProducts, rule, setValue])
+
+  // Filter Manufacturers
+  const filteredManufacturers = useMemo(() => {
+    return manufacturers.filter((m) =>
+      m.name.toLowerCase().includes(debouncedManufSearch.toLowerCase()),
+    )
+  }, [manufacturers, debouncedManufSearch])
+
+  // Match Products (AND logic: Manufacturer AND Category)
+  const matchingProducts = useMemo(() => {
+    return dbProducts.filter((p) => {
+      if (!p.manufacturer_id) return false
+      if (!selectedManufacturers.includes(p.manufacturer_id)) return false
+      const catsForManuf = selectedCategories[p.manufacturer_id] || []
+      if (catsForManuf.length === 0) return true
+      return catsForManuf.includes(p.category || '')
+    })
+  }, [dbProducts, selectedManufacturers, selectedCategories])
+
+  // Filter Matching Products
+  const filteredProducts = useMemo(() => {
+    if (!debouncedProdSearch) return matchingProducts
+    return matchingProducts.filter((p) =>
+      p.name.toLowerCase().includes(debouncedProdSearch.toLowerCase()),
+    )
+  }, [matchingProducts, debouncedProdSearch])
+
+  // Sync to form 'product_selection'
+  useEffect(() => {
+    if (initializedRuleId.current !== (rule?.id || 'new')) return
+
+    const newSelection = matchingProducts
+      .map((p) => p.id)
+      .filter((id) => !excludedProducts.includes(id))
+
+    setValue('product_selection', newSelection, { shouldValidate: true })
+  }, [matchingProducts, excludedProducts, setValue, rule])
+
+  // Toggle handlers
+  const toggleManufacturer = (mId: string, checked: boolean) => {
+    setSelectedManufacturers((prev) => {
+      if (checked) return [...prev, mId]
+      return prev.filter((id) => id !== mId)
+    })
+    if (!checked) {
+      setSelectedCategories((prev) => {
+        const next = { ...prev }
+        delete next[mId]
+        return next
+      })
+    }
+  }
+
+  const toggleCategory = (mId: string, cat: string, checked: boolean) => {
+    setSelectedCategories((prev) => {
+      const next = { ...prev }
+      const mCats = next[mId] || []
+      if (checked) {
+        next[mId] = [...mCats, cat]
+      } else {
+        next[mId] = mCats.filter((c) => c !== cat)
+      }
+      return next
+    })
+  }
+
+  const toggleProduct = (pId: string, checked: boolean) => {
+    setExcludedProducts((prev) => {
+      if (checked) {
+        return prev.filter((id) => id !== pId)
+      } else {
+        return [...prev, pId]
+      }
+    })
+  }
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
@@ -140,7 +324,9 @@ export default function DiscountRuleForm({ rule, products, onClose, onSave }: Pr
                   )}
                 </div>
               </div>
+            </div>
 
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Controller
@@ -171,65 +357,158 @@ export default function DiscountRuleForm({ rule, products, onClose, onSave }: Pr
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>
-                    Seleção de Produtos <span className="text-destructive">*</span>
-                  </Label>
-                  <span className="text-xs font-medium bg-muted px-2 py-1 rounded-full">
-                    {selectedProducts.length} selecionado(s)
-                  </span>
+          <div className="space-y-4 pt-6 border-t">
+            <Label className="text-base font-semibold">
+              Seleção de Produtos <span className="text-destructive">*</span>
+            </Label>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border rounded-md p-4 bg-muted/10">
+              {/* Step 1: Manufacturers */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">1. Fabricantes</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedManufacturers.length} fabricante(s) selecionado(s)
+                  </p>
                 </div>
-
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar produtos..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
+                    placeholder="Buscar fabricante..."
+                    value={manufSearch}
+                    onChange={(e) => setManufSearch(e.target.value)}
+                    className="pl-9 h-9"
                   />
                 </div>
+                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                  {filteredManufacturers.map((m) => (
+                    <label
+                      key={m.id}
+                      className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                    >
+                      <Checkbox
+                        checked={selectedManufacturers.includes(m.id)}
+                        onCheckedChange={(c) => toggleManufacturer(m.id, !!c)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm font-medium">{m.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-                <div className="border rounded-md overflow-hidden bg-background">
-                  <div className="h-[280px] overflow-y-auto p-2">
-                    <Controller
-                      name="product_selection"
-                      control={control}
-                      render={({ field }) => (
-                        <div className="space-y-1">
-                          {filteredProducts.map((product) => (
+              {/* Step 2: Categories */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">2. Categorias</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {Object.values(selectedCategories).flat().length} categoria(s) selecionada(s)
+                  </p>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar categoria..."
+                    value={catSearch}
+                    onChange={(e) => setCatSearch(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-3">
+                  {selectedManufacturers.length === 0 ? (
+                    <div className="text-sm text-muted-foreground p-4 text-center">
+                      Selecione um fabricante primeiro
+                    </div>
+                  ) : (
+                    selectedManufacturers.map((mId) => {
+                      const m = manufacturers.find((x) => x.id === mId)
+                      if (!m) return null
+                      const mCats = Array.from(
+                        new Set(
+                          dbProducts
+                            .filter((p) => p.manufacturer_id === mId && p.category)
+                            .map((p) => p.category as string),
+                        ),
+                      ).sort()
+                      const filteredMCats = mCats.filter((c) =>
+                        c.toLowerCase().includes(debouncedCatSearch.toLowerCase()),
+                      )
+                      if (filteredMCats.length === 0) return null
+
+                      return (
+                        <div key={mId} className="space-y-1">
+                          <div className="text-xs font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/30 rounded">
+                            {m.name}
+                          </div>
+                          {filteredMCats.map((c) => (
                             <label
-                              key={product.id}
-                              className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                              key={`${mId}-${c}`}
+                              className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors ml-1"
                             >
                               <Checkbox
-                                checked={field.value.includes(product.id)}
-                                onCheckedChange={(checked) => {
-                                  const current = new Set(field.value)
-                                  if (checked) current.add(product.id)
-                                  else current.delete(product.id)
-                                  field.onChange(Array.from(current))
-                                }}
+                                checked={(selectedCategories[mId] || []).includes(c)}
+                                onCheckedChange={(checked) => toggleCategory(mId, c, !!checked)}
                                 className="mt-0.5"
                               />
-                              <span className="text-sm font-medium">{product.name}</span>
+                              <span className="text-sm font-medium">{c}</span>
                             </label>
                           ))}
                         </div>
-                      )}
-                    />
-                  </div>
+                      )
+                    })
+                  )}
                 </div>
-                {errors.product_selection && (
-                  <p className="text-sm text-destructive font-medium mt-2">
-                    Selecione pelo menos um produto para aplicar o desconto.
+              </div>
+
+              {/* Step 3: Products */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">3. Produtos</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {matchingProducts.length - excludedProducts.length} produto(s) selecionado(s)
                   </p>
-                )}
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar produto..."
+                    value={prodSearch}
+                    onChange={(e) => setProdSearch(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                  {matchingProducts.length === 0 ? (
+                    <div className="text-sm text-muted-foreground p-4 text-center">
+                      Nenhum produto correspondente
+                    </div>
+                  ) : (
+                    filteredProducts.map((p) => {
+                      const isIncluded = !excludedProducts.includes(p.id)
+                      return (
+                        <label
+                          key={p.id}
+                          className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                        >
+                          <Checkbox
+                            checked={isIncluded}
+                            onCheckedChange={(checked) => toggleProduct(p.id, !!checked)}
+                            className="mt-0.5 shrink-0"
+                          />
+                          <span className="text-sm font-medium leading-tight">{p.name}</span>
+                        </label>
+                      )
+                    })
+                  )}
+                </div>
               </div>
             </div>
+            {errors.product_selection && (
+              <p className="text-sm text-destructive font-medium mt-2">
+                {errors.product_selection.message}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-4 pt-6 border-t">
