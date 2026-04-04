@@ -1,44 +1,105 @@
-import { useState, useRef } from 'react'
-import { SaoPauloFormula } from '@/hooks/useShippingConfig'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/client'
 
-interface Props {
-  formula: SaoPauloFormula
-  setFormula: (f: SaoPauloFormula) => void
-  onSave: (f: SaoPauloFormula) => Promise<boolean>
-}
-
-export function SaoPauloFormulaSection({ formula, setFormula, onSave }: Props) {
+export function SaoPauloFormulaSection() {
   const { toast } = useToast()
   const [isSaving, setIsSaving] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const handleSave = () => {
-    if (formula.weight_price_per_kg < 0 || formula.value_percentage < 0) {
+  const [pricePerKg, setPricePerKg] = useState(120)
+  const [additionalWeight, setAdditionalWeight] = useState(0.5)
+  const [percentageValue, setPercentageValue] = useState(10)
+
+  useEffect(() => {
+    async function loadSettings() {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('setting_key, setting_value, setting_value_numeric')
+        .in('setting_key', [
+          'shipping_sao_paulo_price_per_kg',
+          'shipping_sao_paulo_additional_weight_kg',
+          'shipping_sao_paulo_percentage_value',
+        ])
+
+      if (data) {
+        data.forEach((item) => {
+          if (item.setting_key === 'shipping_sao_paulo_price_per_kg') {
+            setPricePerKg(item.setting_value_numeric ?? Number(item.setting_value) ?? 120)
+          }
+          if (item.setting_key === 'shipping_sao_paulo_additional_weight_kg') {
+            setAdditionalWeight(item.setting_value_numeric ?? Number(item.setting_value) ?? 0.5)
+          }
+          if (item.setting_key === 'shipping_sao_paulo_percentage_value') {
+            setPercentageValue(item.setting_value_numeric ?? Number(item.setting_value) ?? 10)
+          }
+        })
+      }
+      setIsLoading(false)
+    }
+    loadSettings()
+  }, [])
+
+  const handleSave = async () => {
+    if (pricePerKg < 0 || percentageValue < 0 || additionalWeight < 0) {
       toast({ title: 'Valores devem ser positivos.', variant: 'destructive' })
       return
     }
 
-    if (timerRef.current) clearTimeout(timerRef.current)
     setIsSaving(true)
 
-    timerRef.current = setTimeout(async () => {
-      const success = await onSave({
-        weight_price_per_kg: Number(formula.weight_price_per_kg.toFixed(2)),
-        value_percentage: Number(formula.value_percentage.toFixed(2)),
-      })
-      setIsSaving(false)
-      if (success) {
-        toast({ title: 'Formula de frete atualizada com sucesso!' })
-      } else {
-        toast({ title: 'Erro ao processar. Tente novamente.', variant: 'destructive' })
+    try {
+      const settings = [
+        {
+          setting_key: 'shipping_sao_paulo_price_per_kg',
+          setting_value: String(pricePerKg),
+          setting_value_numeric: pricePerKg,
+        },
+        {
+          setting_key: 'shipping_sao_paulo_additional_weight_kg',
+          setting_value: String(additionalWeight),
+          setting_value_numeric: additionalWeight,
+        },
+        {
+          setting_key: 'shipping_sao_paulo_percentage_value',
+          setting_value: String(percentageValue),
+          setting_value_numeric: percentageValue,
+        },
+      ]
+
+      for (const setting of settings) {
+        const { data: existing } = await supabase
+          .from('app_settings')
+          .select('id')
+          .eq('setting_key', setting.setting_key)
+          .maybeSingle()
+
+        if (existing) {
+          await supabase
+            .from('app_settings')
+            .update({
+              setting_value: setting.setting_value,
+              setting_value_numeric: setting.setting_value_numeric,
+            })
+            .eq('id', existing.id)
+        } else {
+          await supabase.from('app_settings').insert(setting)
+        }
       }
-    }, 500)
+
+      toast({ title: 'Formula de frete atualizada com sucesso!' })
+    } catch (e) {
+      toast({ title: 'Erro ao processar. Tente novamente.', variant: 'destructive' })
+    } finally {
+      setIsSaving(false)
+    }
   }
+
+  if (isLoading) return null
 
   return (
     <Card>
@@ -46,33 +107,46 @@ export function SaoPauloFormulaSection({ formula, setFormula, onSave }: Props) {
         <CardTitle>Frete Internacional (Sao Paulo)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>Preco por kg (USD)</Label>
             <Input
               type="number"
+              min="0"
               step="0.01"
-              value={formula.weight_price_per_kg}
-              onChange={(e) =>
-                setFormula({ ...formula, weight_price_per_kg: parseFloat(e.target.value) || 0 })
-              }
+              value={pricePerKg}
+              onChange={(e) => setPricePerKg(parseFloat(e.target.value) || 0)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Peso Adicional (kg)</Label>
+            <Input
+              type="number"
+              min="0"
+              max="50"
+              step="0.1"
+              value={additionalWeight}
+              onChange={(e) => setAdditionalWeight(parseFloat(e.target.value) || 0)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Peso da caixa master ou embalagem adicional
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Percentual sobre valor (%)</Label>
             <Input
               type="number"
-              step="0.01"
-              value={formula.value_percentage}
-              onChange={(e) =>
-                setFormula({ ...formula, value_percentage: parseFloat(e.target.value) || 0 })
-              }
+              min="0"
+              max="100"
+              step="0.1"
+              value={percentageValue}
+              onChange={(e) => setPercentageValue(parseFloat(e.target.value) || 0)}
             />
           </div>
         </div>
         <div className="p-3 bg-secondary/50 rounded text-sm text-muted-foreground">
-          Formula: Frete = (Valor Total x {formula.value_percentage}%) + (Peso Total x{' '}
-          {formula.weight_price_per_kg})
+          Formula: Frete = (Valor Total x Percentual) + ((Peso Total + Peso Adicional) x Preco por
+          kg)
         </div>
         <Button onClick={handleSave} disabled={isSaving}>
           Salvar Formula

@@ -40,11 +40,7 @@ export default function ShippingConfigPage() {
         setRanges={setMiamiRanges}
         onSave={(val) => saveSetting('shipping_miami_ranges', val)}
       />
-      <SaoPauloFormulaSection
-        formula={spFormula}
-        setFormula={setSpFormula}
-        onSave={(val) => saveSetting('shipping_sao_paulo_formula', val)}
-      />
+      <SaoPauloFormulaSection />
     </div>
   )
 }
