@@ -73,7 +73,7 @@ export function ProductPrice({
           </span>
           {originalPrice - discountedPrice! > 0 && (
             <div className="mt-1.5 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-1">
-              <span className="text-[12px] font-medium text-green-600 dark:text-green-400">
+              <span className="text-[12px] font-medium text-green-600 dark:text-green-400 animate-pulse">
                 Economize {formatUSD(originalPrice - discountedPrice!)}
               </span>
               {ruleName && (

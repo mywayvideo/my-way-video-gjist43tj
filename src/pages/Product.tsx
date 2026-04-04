@@ -878,10 +878,6 @@ export default function Product() {
                       priceBrlResult.total_brl,
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-4 max-w-[280px] mx-auto leading-relaxed">
-                    Produto R$ {priceBrlResult.product_brl.toFixed(2)} + Frete R${' '}
-                    {priceBrlResult.freight_brl.toFixed(2)}
-                  </p>
                   <p className="text-xs text-muted-foreground mt-2 max-w-[280px] mx-auto leading-relaxed">
                     * Referencial dinâmico sujeito a variação cambial
                   </p>
