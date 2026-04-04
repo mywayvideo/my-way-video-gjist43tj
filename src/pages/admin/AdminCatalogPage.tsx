@@ -167,7 +167,9 @@ export default function AdminCatalogPage() {
           window.scrollTo({ left: x, top: y, behavior: 'smooth' })
           sessionStorage.removeItem('admin-products-scroll-position')
         }, 100)
-      } catch (e) {}
+      } catch (e) {
+        console.error('Failed to parse scroll position', e)
+      }
     }
   }
 
