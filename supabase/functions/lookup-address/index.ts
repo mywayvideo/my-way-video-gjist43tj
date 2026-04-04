@@ -26,7 +26,7 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-
+      
       const data = await response.json()
       if (data.erro) {
         return new Response(JSON.stringify({ error: 'CEP não encontrado' }), {
@@ -41,29 +41,29 @@ Deno.serve(async (req: Request) => {
           neighborhood: data.bairro || '',
           city: data.localidade || '',
           state: data.uf || '',
-          country: 'Brasil',
+          country: 'Brasil'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
       // US Zipcode lookup
       const response = await fetch(`https://api.zippopotam.us/us/${cleanZip}`)
       if (!response.ok) {
-        if (response.status === 404) {
-          return new Response(JSON.stringify({ error: 'ZIP não encontrado' }), {
-            status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          })
-        }
-        return new Response(JSON.stringify({ error: 'Erro ao consultar ZIP' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+         if (response.status === 404) {
+           return new Response(JSON.stringify({ error: 'ZIP não encontrado' }), {
+             status: 404,
+             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+           })
+         }
+         return new Response(JSON.stringify({ error: 'Erro ao consultar ZIP' }), {
+           status: 400,
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+         })
       }
-
+      
       const data = await response.json()
       const place = data.places && data.places[0]
-
+      
       if (!place) {
         return new Response(JSON.stringify({ error: 'Local não encontrado' }), {
           status: 404,
@@ -77,9 +77,9 @@ Deno.serve(async (req: Request) => {
           neighborhood: '',
           city: place['place name'] || '',
           state: place['state abbreviation'] || '',
-          country: 'USA',
+          country: 'USA'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
   } catch (error: any) {
