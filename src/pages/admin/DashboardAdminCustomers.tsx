@@ -234,7 +234,12 @@ export function DashboardAdminCustomers(props: any) {
     actionWrapper(async () => {
       if (!addressForm) return
       const form = addressForm
-      if (form.zip_code && form.country === 'Brasil' && !/^\d{5}-\d{3}$/.test(form.zip_code)) return
+      if (
+        form.zip_code &&
+        (form.country === 'Brasil' || form.country === 'Brazil') &&
+        !/^\d{5}-\d{3}$/.test(form.zip_code)
+      )
+        return
 
       const normalizeStr = (str: string | null) =>
         str
@@ -244,20 +249,27 @@ export function DashboardAdminCustomers(props: any) {
               .replace(/[\u0300-\u036f]/g, '')
               .trim()
           : ''
-      const isBr =
-        normalizeStr(form.country) === 'brasil' || normalizeStr(form.country) === 'brazil'
 
-      // Auto lookup lat/lng if USA/Miami
+      // Auto lookup lat/lng if USA/Miami or Brasil
       let lat = form.latitude,
         lng = form.longitude
-      if (!isBr) {
-        const { data } = await supabase.functions.invoke('lookup-address', {
-          body: { cep_or_zip: form.zip_code, country: form.country },
-        })
-        if (data && data.latitude) {
-          lat = data.latitude
-          lng = data.longitude
+      try {
+        const cleanZip = form.zip_code.replace(/\D/g, '')
+        if (cleanZip) {
+          const { data } = await supabase.functions.invoke('lookup-address', {
+            body: { cep_or_zip: cleanZip, country: form.country },
+          })
+          if (data && data.latitude !== null && data.latitude !== undefined) {
+            lat = data.latitude
+            lng = data.longitude
+
+            // Optionally autofill missing fields if API returns them
+            if (!form.city && data.city) form.city = data.city
+            if (!form.state && data.state) form.state = data.state
+          }
         }
+      } catch (e) {
+        console.error('Geocoding fetch failed during admin address save', e)
       }
 
       const payload = {
@@ -270,7 +282,7 @@ export function DashboardAdminCustomers(props: any) {
         city: form.city,
         state: form.state,
         zip_code: form.zip_code,
-        country: form.country,
+        country: form.country || 'USA',
         latitude: lat,
         longitude: lng,
         is_default: form.is_default || false,
@@ -829,9 +841,9 @@ export function DashboardAdminCustomers(props: any) {
                       {customerAddresses.map((addr) => (
                         <div
                           key={addr.id}
-                          className="p-4 border rounded-lg bg-card shadow-sm flex flex-col gap-2 relative"
+                          className="p-4 border rounded-lg bg-card shadow-sm flex flex-col gap-1.5 relative group hover:border-primary/50 transition-colors"
                         >
-                          <div className="absolute top-2 right-2 flex gap-1">
+                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -849,16 +861,35 @@ export function DashboardAdminCustomers(props: any) {
                               <Trash2 className="w-3.5 h-3.5 text-red-500" />
                             </Button>
                           </div>
-                          <Badge className="w-fit mb-1">
-                            {addr.address_type === 'billing' ? 'Cobrança' : 'Entrega'}
-                          </Badge>
-                          <p className="font-medium text-sm pr-12">
-                            {addr.street}, {addr.number}
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge
+                              variant={addr.address_type === 'billing' ? 'secondary' : 'default'}
+                              className="text-[10px] h-5"
+                            >
+                              {addr.address_type === 'billing' ? 'Cobrança' : 'Entrega'}
+                            </Badge>
+                            {addr.latitude && addr.longitude && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-5 font-mono text-muted-foreground"
+                              >
+                                Geolocalizado
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="font-medium text-sm pr-16 leading-tight">
+                            {addr.street}, {addr.number}{' '}
+                            {addr.complement ? `- ${addr.complement}` : ''}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {addr.city}, {addr.state} - {addr.zip_code}
+                            {addr.neighborhood && addr.neighborhood !== 'N/A'
+                              ? `${addr.neighborhood} • `
+                              : ''}
+                            {addr.city}/{addr.state}
                           </p>
-                          <p className="text-xs text-muted-foreground">{addr.country}</p>
+                          <p className="text-xs text-muted-foreground font-medium">
+                            CEP/ZIP: {addr.zip_code} • {addr.country}
+                          </p>
                         </div>
                       ))}
                     </div>

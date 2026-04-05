@@ -14,14 +14,10 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
-import { Search, ArrowLeft, Trash2, ShoppingCart, X } from 'lucide-react'
+import { Search, ArrowLeft, Trash2, ShoppingCart, X, Loader2, MapPin } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useShippingConfig } from '@/hooks/useShippingConfig'
-import {
-  getApplicableDiscounts,
-  getBestDiscount,
-  DiscountCalculation,
-} from '@/services/discountApplicationService'
+import { getBestDiscount } from '@/services/discountApplicationService'
 
 function calculateHaversineDistance(
   lat1: number,
@@ -30,7 +26,7 @@ function calculateHaversineDistance(
   lon2: number,
 ): number {
   const toRad = (value: number) => (value * Math.PI) / 180
-  const R = 6371 // Earth radius in km
+  const R = 6371
   const dLat = toRad(lat2 - lat1)
   const dLon = toRad(lon2 - lon1)
   const a =
@@ -53,7 +49,6 @@ export default function AssistedCheckoutPage() {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
 
-  // Novas states para Cupom e Metodo de Pagamento
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string
@@ -75,6 +70,10 @@ export default function AssistedCheckoutPage() {
   const [availableAddresses, setAvailableAddresses] = useState<any[]>([])
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false)
   const [addressError, setAddressError] = useState<string | null>(null)
+
+  const [shippingCost, setShippingCost] = useState<number | null>(null)
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
+  const [shippingErrorMsg, setShippingErrorMsg] = useState<string | null>(null)
 
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
@@ -99,7 +98,6 @@ export default function AssistedCheckoutPage() {
       if (custRes.data?.role === 'vip') setDiscountRate(10)
       if (custRes.data?.role === 'reseller') setDiscountRate(15)
 
-      // Load Cart (Directly from cart_items filtering by user_id as previously fixed)
       if (custRes.data?.user_id) {
         const { data: cartItemsData, error: itemsError } = await supabase
           .from('cart_items')
@@ -113,7 +111,6 @@ export default function AssistedCheckoutPage() {
             .filter((item: any) => item.products)
             .map((item: any) => {
               const prod = item.products
-              // Apply dynamic discount if applicable
               const bestDiscount = getBestDiscount(
                 discRes.data || [],
                 prod.id,
@@ -155,15 +152,13 @@ export default function AssistedCheckoutPage() {
             toast({
               title: 'Desconto Aplicado!',
               description:
-                'Oba! Detectamos um novo desconto aplicável. O valor do carrinho foi atualizado!',
-              variant: 'default',
+                'Detectamos um novo desconto aplicável. O valor do carrinho foi atualizado!',
               className: 'bg-green-600 text-white border-green-700',
             })
           }
         }
       }
     } catch (e: any) {
-      console.error(e)
       setError(e.message || 'Erro ao carregar dados.')
       toast({
         title: 'Erro',
@@ -199,12 +194,7 @@ export default function AssistedCheckoutPage() {
 
         if (error) throw error
 
-        // Handle is_active conceptually (if it exists)
-        const activeData = (data || []).filter(
-          (a) => a.is_active === undefined || a.is_active === true,
-        )
-
-        let filtered = activeData
+        let filtered = data || []
         const normalizeStr = (str: string | null) =>
           str
             ? str
@@ -229,6 +219,7 @@ export default function AssistedCheckoutPage() {
               a.latitude,
               a.longitude,
             )
+            a._distance = dist
             return dist <= 50
           })
         } else if (selectedShippingMethod === 'usa') {
@@ -238,7 +229,12 @@ export default function AssistedCheckoutPage() {
               normalizeStr(a.country) === 'eua' ||
               normalizeStr(a.country) === 'estados unidos' ||
               normalizeStr(a.country) === 'united states'
-            if (!isUs) return false
+
+            const isBr =
+              normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil'
+
+            if (isBr) return false
+            if (!isUs && !a.country) return false
 
             if (!a.latitude || !a.longitude) {
               return normalizeStr(a.city) !== 'miami' && normalizeStr(a.city) !== 'coral gables'
@@ -249,6 +245,7 @@ export default function AssistedCheckoutPage() {
               a.latitude,
               a.longitude,
             )
+            a._distance = dist
             return dist > 50
           })
         } else if (selectedShippingMethod === 'brasil') {
@@ -273,7 +270,71 @@ export default function AssistedCheckoutPage() {
     }
 
     fetchAddresses()
-  }, [selectedShippingMethod, customerId])
+  }, [selectedShippingMethod, customerId, warehouse])
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout
+    const calculateShipping = async () => {
+      if (!selectedShippingMethod || cart.length === 0) {
+        setShippingCost(null)
+        setShippingErrorMsg(null)
+        return
+      }
+
+      if (selectedShippingMethod === 'coleta') {
+        setShippingCost(0)
+        setShippingErrorMsg(null)
+        return
+      }
+
+      if (!selectedAddressId) {
+        setShippingCost(null)
+        setShippingErrorMsg(null)
+        return
+      }
+
+      const addr = availableAddresses.find((a) => a.id === selectedAddressId)
+      if (!addr) return
+
+      setIsCalculatingShipping(true)
+      setShippingErrorMsg(null)
+
+      try {
+        const payload = {
+          delivery_type: selectedShippingMethod === 'brasil' ? 'sao_paulo' : selectedShippingMethod,
+          address: {
+            street: addr.street,
+            number: addr.number,
+            city: addr.city,
+            state: addr.state,
+            zip_code: addr.zip_code,
+            country: addr.country,
+          },
+          cart_items: cart.map((item) => ({
+            weight_lb: item.product.weight || 1,
+            quantity: item.quantity,
+            price_usd: item.product.price_usd || 0,
+          })),
+        }
+
+        const { data, error } = await supabase.functions.invoke('calculate-shipping', {
+          body: payload,
+        })
+        if (error) throw error
+        if (data?.error) throw new Error(data.error)
+
+        setShippingCost(data.shipping_cost || 0)
+      } catch (e: any) {
+        setShippingErrorMsg(e.message || 'Erro ao calcular frete')
+        setShippingCost(null)
+      } finally {
+        setIsCalculatingShipping(false)
+      }
+    }
+
+    timerId = setTimeout(calculateShipping, 500)
+    return () => clearTimeout(timerId)
+  }, [selectedShippingMethod, selectedAddressId, cart, availableAddresses])
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -300,7 +361,7 @@ export default function AssistedCheckoutPage() {
       }
     }, 300)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [search, activeDiscounts, customer])
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('en-US', {
@@ -317,29 +378,26 @@ export default function AssistedCheckoutPage() {
   const couponDiscountUsd = appliedCoupon ? appliedCoupon.discount_amount : 0
   const totalDiscountUsd = discount + couponDiscountUsd
 
-  const totalUsd = Math.max(0, subtotal - totalDiscountUsd)
+  const totalUsd = Math.max(0, subtotal - totalDiscountUsd) + (shippingCost || 0)
 
   const handleGenerateCoupon = async () => {
     const val = Number(couponValue)
     if (!val || val <= 0) {
-      toast({
+      return toast({
         title: 'Erro',
         description: 'Valor deve ser maior que zero.',
         variant: 'destructive',
       })
-      return
     }
 
     let discount_amount = val
     if (couponType === 'percentage') {
-      if (val > 100) {
-        toast({
+      if (val > 100)
+        return toast({
           title: 'Erro',
           description: 'Percentual não pode ser maior que 100%.',
           variant: 'destructive',
         })
-        return
-      }
       discount_amount = subtotal * (val / 100)
     }
 
@@ -374,12 +432,11 @@ export default function AssistedCheckoutPage() {
 
   const handleApplyCoupon = async () => {
     if (!couponCode || couponCode.length < 3) {
-      toast({
+      return toast({
         title: 'Erro',
-        description: 'Digite um código de cupom válido.',
+        description: 'Digite um código válido.',
         variant: 'destructive',
       })
-      return
     }
 
     setValidating(true)
@@ -417,11 +474,7 @@ export default function AssistedCheckoutPage() {
         variant: 'destructive',
       })
     if (selectedShippingMethod !== 'coleta' && !selectedAddressId)
-      return toast({
-        title: 'Erro',
-        description: 'Selecione um endereço de entrega.',
-        variant: 'destructive',
-      })
+      return toast({ title: 'Erro', description: 'Selecione um endereço.', variant: 'destructive' })
 
     setSaving(true)
     try {
@@ -432,16 +485,20 @@ export default function AssistedCheckoutPage() {
             : 'paypal'
           : paymentMethod
 
+      let dbShippingMethod = 'usa_cargo'
+      if (selectedShippingMethod === 'coleta') dbShippingMethod = 'miami_pickup'
+      if (selectedShippingMethod === 'brasil') dbShippingMethod = 'brazil_delivery'
+
       const orderPayload: any = {
         customer_id: customerId,
         order_number: `ORD-${Date.now().toString().slice(-6)}`,
         status: 'pending',
         subtotal,
         discount_amount: totalDiscountUsd,
-        shipping_cost: 0,
+        shipping_cost: shippingCost || 0,
         total: totalUsd,
         payment_method_type: paymentMethodType,
-        shipping_method: selectedShippingMethod,
+        shipping_method: dbShippingMethod,
       }
 
       if (selectedShippingMethod !== 'coleta' && selectedAddressId) {
@@ -453,7 +510,6 @@ export default function AssistedCheckoutPage() {
         .insert(orderPayload)
         .select()
         .single()
-
       if (orderErr) throw orderErr
 
       const items = cart.map((i) => ({
@@ -469,6 +525,16 @@ export default function AssistedCheckoutPage() {
 
       if (customer?.user_id) {
         await supabase.from('cart_items').delete().eq('user_id', customer.user_id)
+      }
+
+      if (appliedCoupon) {
+        await supabase.functions.invoke('apply-discount-coupon', {
+          body: {
+            coupon_code: appliedCoupon.code,
+            order_id: order.id,
+            discount_amount: appliedCoupon.discount_amount,
+          },
+        })
       }
 
       toast({
@@ -527,7 +593,6 @@ export default function AssistedCheckoutPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Lado Esquerdo - Produtos */}
         <Card className="flex flex-col h-[75vh] min-h-[600px]">
           <CardHeader className="pb-3">
             <CardTitle>Selecionar Produtos</CardTitle>
@@ -601,7 +666,6 @@ export default function AssistedCheckoutPage() {
           </ScrollArea>
         </Card>
 
-        {/* Lado Direito - Resumo do Pedido */}
         <Card className="flex flex-col h-[75vh] min-h-[600px] border-primary/20 shadow-md">
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
@@ -624,7 +688,7 @@ export default function AssistedCheckoutPage() {
                       {item.quantity}x USD {formatCurrency(item.product.price_usd || 0)}
                       {item.product.original_price && (
                         <span className="ml-2 text-xs text-green-600 font-medium">
-                          (Desconto Aplicado)
+                          (Desc. Aplicado)
                         </span>
                       )}
                     </p>
@@ -636,7 +700,7 @@ export default function AssistedCheckoutPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8"
+                      className="text-destructive h-8 w-8"
                       onClick={() => setCart(cart.filter((i) => i.product.id !== item.product.id))}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -648,12 +712,10 @@ export default function AssistedCheckoutPage() {
                 <div className="text-center py-12 text-muted-foreground flex flex-col items-center justify-center">
                   <ShoppingCart className="w-16 h-16 mb-4 opacity-20" />
                   <p>Carrinho vazio</p>
-                  <p className="text-sm opacity-70">Adicione produtos na lista ao lado.</p>
                 </div>
               )}
             </div>
 
-            {/* Método de Entrega */}
             <div className="p-4 border rounded-lg bg-card space-y-4 mt-6 mx-6 mb-4">
               <h3 className="font-semibold text-sm">Método de Entrega</h3>
               <div className="space-y-3">
@@ -666,7 +728,7 @@ export default function AssistedCheckoutPage() {
                     onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
                     className="w-4 h-4 text-primary"
                   />
-                  <span className="text-sm font-medium">Miami (Entrega em Miami)</span>
+                  <span className="text-sm font-medium">Miami (Até 50km do Galpão)</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -677,7 +739,7 @@ export default function AssistedCheckoutPage() {
                     onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
                     className="w-4 h-4 text-primary"
                   />
-                  <span className="text-sm font-medium">EUA (Entrega nos Estados Unidos)</span>
+                  <span className="text-sm font-medium">EUA (Fora do raio de 50km)</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -688,9 +750,7 @@ export default function AssistedCheckoutPage() {
                     onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
                     className="w-4 h-4 text-primary"
                   />
-                  <span className="text-sm font-medium">
-                    Brasil - São Paulo (Entrega no Brasil - São Paulo)
-                  </span>
+                  <span className="text-sm font-medium">Brasil - São Paulo</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -701,7 +761,7 @@ export default function AssistedCheckoutPage() {
                     onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
                     className="w-4 h-4 text-primary"
                   />
-                  <span className="text-sm font-medium">Coleta Local (Coleta Local)</span>
+                  <span className="text-sm font-medium">Coleta Local (Miami)</span>
                 </label>
               </div>
 
@@ -709,7 +769,9 @@ export default function AssistedCheckoutPage() {
                 <div className="mt-4 pt-4 border-t space-y-4 animate-in slide-in-from-top-2">
                   <h4 className="text-sm font-medium">Endereço de Entrega</h4>
                   {isLoadingAddresses ? (
-                    <p className="text-sm text-muted-foreground">Carregando endereços...</p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Carregando endereços...
+                    </p>
                   ) : addressError ? (
                     <div className="space-y-2">
                       <p className="text-sm text-destructive">{addressError}</p>
@@ -734,13 +796,22 @@ export default function AssistedCheckoutPage() {
                               value={addr.id}
                               className="py-3 cursor-pointer"
                             >
-                              <div className="flex flex-col text-left gap-0.5">
-                                <span className="font-medium text-sm">
+                              <div className="flex flex-col text-left gap-1">
+                                <span className="font-medium text-sm flex items-center gap-2">
                                   {addr.street}, {addr.number}{' '}
                                   {addr.complement ? `- ${addr.complement}` : ''}
+                                  {addr._distance !== undefined && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] py-0 px-1.5 h-4 bg-muted flex items-center gap-1 font-mono"
+                                    >
+                                      <MapPin className="w-2 h-2" /> {addr._distance.toFixed(1)} km
+                                    </Badge>
+                                  )}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
-                                  {addr.neighborhood} • {addr.city}/{addr.state} ({addr.zip_code})
+                                  {addr.neighborhood} • {addr.city}/{addr.state} ({addr.zip_code}) -{' '}
+                                  {addr.country}
                                 </span>
                               </div>
                             </SelectItem>
@@ -754,7 +825,8 @@ export default function AssistedCheckoutPage() {
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Nenhum endereço disponível para este método. Adicione um novo endereço.
+                        Nenhum endereço compatível com {selectedShippingMethod.toUpperCase()}{' '}
+                        disponível.
                       </p>
                       <Button variant="outline" size="sm">
                         Adicionar novo endereço
@@ -765,23 +837,21 @@ export default function AssistedCheckoutPage() {
               )}
             </div>
 
-            {/* Cupom de Desconto */}
             <div className="p-4 border rounded-lg bg-card space-y-3 mx-6 mb-4">
               <h3 className="font-semibold text-sm">Cupom de Desconto (Opcional)</h3>
               {appliedCoupon ? (
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md">
-                  <div className="text-sm text-green-700 dark:text-green-400 font-medium">
-                    Cupom <span className="font-bold">{appliedCoupon.code}</span> aplicado: -USD{' '}
+                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
+                  <div className="text-sm text-green-700 font-medium">
+                    Cupom <span className="font-bold">{appliedCoupon.code}</span>: -USD{' '}
                     {formatCurrency(appliedCoupon.discount_amount)}
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-green-700 hover:text-green-800 hover:bg-green-100"
+                    className="h-8 w-8 text-green-700"
                     onClick={() => {
                       setAppliedCoupon(null)
                       setCouponCode('')
-                      toast({ description: 'Cupom removido' })
                     }}
                   >
                     <X className="w-4 h-4" />
@@ -790,7 +860,7 @@ export default function AssistedCheckoutPage() {
               ) : (
                 <div className="space-y-3">
                   <Input
-                    placeholder="Digite o código do cupom"
+                    placeholder="Código do cupom"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
                   />
@@ -801,7 +871,7 @@ export default function AssistedCheckoutPage() {
                       onClick={handleApplyCoupon}
                       disabled={validating || !couponCode}
                     >
-                      {validating ? 'Aplicando...' : 'Aplicar Cupom'}
+                      {validating ? 'Aplicando...' : 'Aplicar'}
                     </Button>
                     <Button
                       variant="secondary"
@@ -815,32 +885,51 @@ export default function AssistedCheckoutPage() {
               )}
             </div>
 
-            {/* Resumo Subtotal/Total (Comprimido) */}
-            <div className="mx-6 mb-4 p-2.5 border rounded-lg bg-muted/20 space-y-1">
-              <div className="flex justify-between text-[11px] text-muted-foreground">
+            <div className="mx-6 mb-4 p-4 border-2 border-primary/10 rounded-xl bg-muted/10 space-y-2.5">
+              <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Subtotal:</span>
-                <span>USD {formatCurrency(subtotal)}</span>
+                <span className="font-mono">USD {formatCurrency(subtotal)}</span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-[11px] text-green-600 font-medium">
-                  <span>Desconto ({discountRate}%):</span>
-                  <span>- USD {formatCurrency(discount)}</span>
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span>Desconto Cliente ({discountRate}%):</span>
+                  <span className="font-mono">- USD {formatCurrency(discount)}</span>
                 </div>
               )}
               {appliedCoupon && (
-                <div className="flex justify-between text-[11px] text-green-600 font-medium">
+                <div className="flex justify-between text-sm text-green-600 font-medium">
                   <span>Desconto Cupom:</span>
-                  <span>- USD {formatCurrency(appliedCoupon.discount_amount)}</span>
+                  <span className="font-mono">
+                    - USD {formatCurrency(appliedCoupon.discount_amount)}
+                  </span>
                 </div>
               )}
-              <div className="w-full h-px bg-border my-0.5" />
-              <div className="flex justify-between font-bold text-xs pt-0.5">
-                <span>Total:</span>
-                <span className="text-primary">USD {formatCurrency(totalUsd)}</span>
+              <div className="flex justify-between text-sm items-center">
+                <span className="text-muted-foreground">Frete:</span>
+                {isCalculatingShipping ? (
+                  <span className="flex items-center gap-2 text-primary font-medium text-xs">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Calculando...
+                  </span>
+                ) : shippingCost !== null ? (
+                  <span className="font-mono font-medium">USD {formatCurrency(shippingCost)}</span>
+                ) : (
+                  <span className="text-muted-foreground/60 text-xs">Pendente</span>
+                )}
+              </div>
+              {shippingErrorMsg && (
+                <div className="text-xs text-destructive text-right font-medium">
+                  {shippingErrorMsg}
+                </div>
+              )}
+              <div className="w-full h-px bg-border/60 my-2" />
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-lg">Total do Pedido:</span>
+                <span className="text-primary font-bold text-2xl tracking-tight font-mono">
+                  USD {formatCurrency(totalUsd)}
+                </span>
               </div>
             </div>
 
-            {/* Metodo de Pagamento */}
             <div className="p-4 border rounded-lg bg-card space-y-4 mx-6 mb-6">
               <h3 className="font-semibold text-sm">Método de Pagamento</h3>
               <div className="space-y-3">
@@ -875,72 +964,35 @@ export default function AssistedCheckoutPage() {
                     onChange={(e) => setPaymentMethod(e.target.value as any)}
                     className="w-4 h-4 text-primary"
                   />
-                  <span className="text-sm font-medium">Depósito em Conta</span>
+                  <span className="text-sm font-medium">Transferência / Zelle</span>
                 </label>
               </div>
-
               {paymentMethod === 'credit_card' && (
                 <div className="pl-7 space-y-4 animate-in slide-in-from-top-2">
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Selecione o gateway:
-                    </p>
-                    <div className="flex gap-6">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="gateway"
-                          value="stripe"
-                          checked={creditCardGateway === 'stripe'}
-                          onChange={(e) => setCreditCardGateway(e.target.value as any)}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-sm">Stripe</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="gateway"
-                          value="paypal"
-                          checked={creditCardGateway === 'paypal'}
-                          onChange={(e) => setCreditCardGateway(e.target.value as any)}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-sm">PayPal</span>
-                      </label>
-                    </div>
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gateway"
+                        value="stripe"
+                        checked={creditCardGateway === 'stripe'}
+                        onChange={(e) => setCreditCardGateway(e.target.value as any)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">Stripe</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="gateway"
+                        value="paypal"
+                        checked={creditCardGateway === 'paypal'}
+                        onChange={(e) => setCreditCardGateway(e.target.value as any)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">PayPal</span>
+                    </label>
                   </div>
-
-                  {creditCardGateway === 'stripe' && (
-                    <div className="space-y-3 mt-4">
-                      <Input placeholder="Número do Cartão" />
-                      <div className="grid grid-cols-2 gap-3">
-                        <Input placeholder="MM/AA" />
-                        <Input placeholder="CVC" />
-                      </div>
-                      <Input placeholder="Nome no Cartão" />
-                    </div>
-                  )}
-
-                  {creditCardGateway === 'paypal' && (
-                    <div className="p-3 mt-4 bg-muted/50 rounded-md border text-sm text-muted-foreground">
-                      Você será redirecionado para PayPal
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {paymentMethod === 'pix' && (
-                <div className="pl-7 space-y-1 animate-in slide-in-from-top-2 text-sm text-muted-foreground">
-                  <p>• Cliente receberá link para confirmar pagamento via Pix</p>
-                  <p>• Dados Pix serão enviados por email</p>
-                </div>
-              )}
-
-              {paymentMethod === 'transfer' && (
-                <div className="pl-7 space-y-1 animate-in slide-in-from-top-2 text-sm text-muted-foreground">
-                  <p>• Cliente receberá link para confirmar pagamento</p>
-                  <p>• Dados bancários serão enviados por email</p>
                 </div>
               )}
             </div>
@@ -956,17 +1008,20 @@ export default function AssistedCheckoutPage() {
                 Cancelar
               </Button>
               <Button
-                className="flex-1"
+                className="flex-1 text-lg font-bold shadow-md"
+                size="lg"
                 onClick={handleSave}
                 disabled={
                   saving ||
                   !cart.length ||
                   !paymentMethod ||
                   !selectedShippingMethod ||
-                  (selectedShippingMethod !== 'coleta' && !selectedAddressId)
+                  (selectedShippingMethod !== 'coleta' && !selectedAddressId) ||
+                  isCalculatingShipping ||
+                  shippingErrorMsg !== null
                 }
               >
-                {saving ? 'Salvando...' : 'Salvar Pedido'}
+                {saving ? 'Finalizando...' : 'Concluir Pedido'}
               </Button>
             </div>
           </div>
@@ -977,7 +1032,7 @@ export default function AssistedCheckoutPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-md animate-in zoom-in-95">
             <CardHeader>
-              <CardTitle>Gerar Cupom de Desconto</CardTitle>
+              <CardTitle>Gerar Cupom</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex gap-6">
@@ -1004,9 +1059,7 @@ export default function AssistedCheckoutPage() {
                 type="number"
                 value={couponValue}
                 onChange={(e) => setCouponValue(e.target.value ? Number(e.target.value) : '')}
-                placeholder={
-                  couponType === 'percentage' ? 'Valor em % (ex: 10)' : 'Valor em USD (ex: 50.00)'
-                }
+                placeholder={couponType === 'percentage' ? 'Valor em %' : 'Valor em USD'}
               />
             </CardContent>
             <CardFooter className="flex justify-end gap-3 pt-4 border-t">
