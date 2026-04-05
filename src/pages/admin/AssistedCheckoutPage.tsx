@@ -19,9 +19,7 @@ export default function AssistedCheckoutPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [exRate, setExRate] = useState(5.0)
   const [discountRate, setDiscountRate] = useState(0)
-  const [freightRate, setFreightRate] = useState(0)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -45,24 +43,15 @@ export default function AssistedCheckoutPage() {
     setLoading(true)
     setError(null)
     try {
-      const [custRes, exRes, prodRes, freightRes] = await Promise.all([
+      const [custRes, prodRes] = await Promise.all([
         supabase.from('customers').select('*').eq('id', customerId).single(),
-        supabase
-          .from('exchange_rate')
-          .select('usd_to_brl')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single(),
         supabase.from('products').select('*, manufacturers(name)').limit(20),
-        supabase.from('price_settings').select('freight_per_kg_usd').limit(1).single(),
       ])
 
       if (custRes.error) throw custRes.error
 
       setCustomer(custRes.data)
-      if (exRes.data) setExRate(exRes.data.usd_to_brl)
       if (prodRes.data) setProducts(prodRes.data)
-      if (freightRes.data) setFreightRate(freightRes.data.freight_per_kg_usd)
 
       if (custRes.data?.role === 'vip') setDiscountRate(10)
       if (custRes.data?.role === 'reseller') setDiscountRate(15)
@@ -123,6 +112,13 @@ export default function AssistedCheckoutPage() {
     return () => clearTimeout(timer)
   }, [search])
 
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  }
+
   const subtotal = cart.reduce(
     (sum, item) => sum + (item.product.price_usd || 0) * item.quantity,
     0,
@@ -131,14 +127,7 @@ export default function AssistedCheckoutPage() {
   const couponDiscountUsd = appliedCoupon ? appliedCoupon.discount_amount : 0
   const totalDiscountUsd = discount + couponDiscountUsd
 
-  const totalWeightKg = cart.reduce(
-    (sum, item) => sum + (item.product.weight || 0) * item.quantity,
-    0,
-  )
-  const shippingCostUsd = totalWeightKg * freightRate
-
-  const totalUsd = Math.max(0, subtotal - totalDiscountUsd + shippingCostUsd)
-  const totalBrl = totalUsd * exRate
+  const totalUsd = Math.max(0, subtotal - totalDiscountUsd)
 
   const handleGenerateCoupon = async () => {
     const val = Number(couponValue)
@@ -249,7 +238,7 @@ export default function AssistedCheckoutPage() {
           status: 'pending',
           subtotal,
           discount_amount: totalDiscountUsd,
-          shipping_cost: shippingCostUsd,
+          shipping_cost: 0,
           total: totalUsd,
           payment_method_type: paymentMethodType,
         })
@@ -356,7 +345,7 @@ export default function AssistedCheckoutPage() {
                       SKU: {p.sku || 'N/A'} | {p.manufacturers?.name || 'Genérico'}
                     </p>
                     <p className="text-sm font-semibold mt-1">
-                      USD {p.price_usd?.toFixed(2) || '0.00'}
+                      USD {formatCurrency(p.price_usd || 0)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -416,12 +405,12 @@ export default function AssistedCheckoutPage() {
                   <div className="flex-1 pr-4">
                     <p className="font-medium line-clamp-1">{item.product.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {item.quantity}x USD {item.product.price_usd?.toFixed(2)}
+                      {item.quantity}x USD {formatCurrency(item.product.price_usd || 0)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-sm">
-                      USD {(item.quantity * (item.product.price_usd || 0)).toFixed(2)}
+                      USD {formatCurrency(item.quantity * (item.product.price_usd || 0))}
                     </span>
                     <Button
                       variant="ghost"
@@ -450,7 +439,7 @@ export default function AssistedCheckoutPage() {
                 <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md">
                   <div className="text-sm text-green-700 dark:text-green-400 font-medium">
                     Cupom <span className="font-bold">{appliedCoupon.code}</span> aplicado: -USD{' '}
-                    {appliedCoupon.discount_amount.toFixed(2)}
+                    {formatCurrency(appliedCoupon.discount_amount)}
                   </div>
                   <Button
                     variant="ghost"
@@ -602,28 +591,24 @@ export default function AssistedCheckoutPage() {
           <div className="p-6 border-t bg-muted/10 space-y-3">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal:</span>
-              <span>USD {subtotal.toFixed(2)}</span>
+              <span>USD {formatCurrency(subtotal)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-sm text-green-600 font-medium">
                 <span>Desconto ({discountRate}%):</span>
-                <span>- USD {discount.toFixed(2)}</span>
+                <span>- USD {formatCurrency(discount)}</span>
               </div>
             )}
             {appliedCoupon && (
               <div className="flex justify-between text-sm text-green-600 font-medium">
                 <span>Desconto Cupom:</span>
-                <span>- USD {appliedCoupon.discount_amount.toFixed(2)}</span>
+                <span>- USD {formatCurrency(appliedCoupon.discount_amount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Frete ({totalWeightKg.toFixed(2)} kg):</span>
-              <span>USD {shippingCostUsd.toFixed(2)}</span>
-            </div>
             <div className="w-full h-px bg-border my-2" />
             <div className="flex justify-between font-bold text-xl pt-1">
-              <span>Total Estimado:</span>
-              <span className="text-primary">R$ {totalBrl.toFixed(2)}</span>
+              <span>Total:</span>
+              <span className="text-primary">USD {formatCurrency(totalUsd)}</span>
             </div>
 
             <div className="flex gap-3 pt-4">
