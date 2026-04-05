@@ -142,9 +142,17 @@ export function DashboardAdminCustomers(props: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [activeTab, setActiveTab] = useState('basic')
-  const [billingForm, setBillingForm] = useState<any>({ country: 'Brasil' })
-  const [shippingForm, setShippingForm] = useState<any>({ country: 'Brasil' })
+  const [customerAddresses, setCustomerAddresses] = useState<any[]>([])
+  const [addressForm, setAddressForm] = useState<any>(null)
   const navigate = useNavigate()
+
+  const loadAddresses = async (customerId: string) => {
+    const { data } = await supabase
+      .from('customer_addresses')
+      .select('*')
+      .eq('customer_id', customerId)
+    if (data) setCustomerAddresses(data)
+  }
 
   const handleCheckoutAssistido = (e: React.MouseEvent, customerId: string) => {
     const url = `/admin/checkout-assistido/${customerId}`
@@ -165,8 +173,8 @@ export function DashboardAdminCustomers(props: any) {
       role: customer.role || 'customer',
       status: customer.status || 'ativo',
     })
-    setBillingForm(customer.billing_address || { country: 'Brasil' })
-    setShippingForm(customer.shipping_address || { country: 'Brasil' })
+    loadAddresses(customer.id)
+    setAddressForm(null)
     setActiveTab('basic')
     setIsEditModalOpen(true)
   }
@@ -222,19 +230,69 @@ export function DashboardAdminCustomers(props: any) {
       fetchCustomers(1, limit, debouncedSearch, statusFilter)
     })
 
-  const handleSaveAddress = (type: 'billing' | 'shipping') =>
+  const handleSaveAddress = () =>
     actionWrapper(async () => {
-      const form = type === 'billing' ? billingForm : shippingForm
-      if (form.zipcode && !/^\d{5}-\d{3}$/.test(form.zipcode)) return
-      if (type === 'billing') {
-        await updateBillingAddress(selectedCustomer.id, form)
-        setSelectedCustomer((prev: any) => ({ ...prev, billing_address: form }))
-      } else {
-        await updateShippingAddress(selectedCustomer.id, form)
-        setSelectedCustomer((prev: any) => ({ ...prev, shipping_address: form }))
+      if (!addressForm) return
+      const form = addressForm
+      if (form.zip_code && form.country === 'Brasil' && !/^\d{5}-\d{3}$/.test(form.zip_code)) return
+
+      const normalizeStr = (str: string | null) =>
+        str
+          ? str
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .trim()
+          : ''
+      const isBr =
+        normalizeStr(form.country) === 'brasil' || normalizeStr(form.country) === 'brazil'
+
+      // Auto lookup lat/lng if USA/Miami
+      let lat = form.latitude,
+        lng = form.longitude
+      if (!isBr) {
+        const { data } = await supabase.functions.invoke('lookup-address', {
+          body: { cep_or_zip: form.zip_code, country: form.country },
+        })
+        if (data && data.latitude) {
+          lat = data.latitude
+          lng = data.longitude
+        }
       }
-      fetchCustomers(page, limit, debouncedSearch, statusFilter)
+
+      const payload = {
+        customer_id: selectedCustomer.id,
+        address_type: form.address_type || 'shipping',
+        street: form.street,
+        number: form.number || 'S/N',
+        complement: form.complement,
+        neighborhood: form.neighborhood || 'N/A',
+        city: form.city,
+        state: form.state,
+        zip_code: form.zip_code,
+        country: form.country,
+        latitude: lat,
+        longitude: lng,
+        is_default: form.is_default || false,
+      }
+
+      if (form.id) {
+        await supabase.from('customer_addresses').update(payload).eq('id', form.id)
+      } else {
+        await supabase.from('customer_addresses').insert(payload)
+      }
+
+      toast.success('Endereço salvo com sucesso')
+      setAddressForm(null)
+      loadAddresses(selectedCustomer.id)
     })
+
+  const handleDeleteAddress = async (id: string) => {
+    if (!window.confirm('Deseja excluir este endereço?')) return
+    await supabase.from('customer_addresses').delete().eq('id', id)
+    toast.success('Endereço excluído')
+    loadAddresses(selectedCustomer.id)
+  }
 
   const handleSaveEdit = () =>
     actionWrapper(async () => {
@@ -600,8 +658,7 @@ export function DashboardAdminCustomers(props: any) {
             {[
               { id: 'basic', label: 'Informações Básicas' },
               { id: 'access', label: 'Acesso e Permissões' },
-              { id: 'billing', label: 'Endereço de Cobrança' },
-              { id: 'shipping', label: 'Endereço de Entrega' },
+              { id: 'addresses', label: 'Endereços' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -747,148 +804,172 @@ export function DashboardAdminCustomers(props: any) {
               </div>
             )}
 
-            {(activeTab === 'billing' || activeTab === 'shipping') &&
-              (() => {
-                const isBilling = activeTab === 'billing'
-                const form = isBilling ? billingForm : shippingForm
-                const setForm = isBilling ? setBillingForm : setShippingForm
-                const cepErr = form.zipcode ? !/^\d{5}-\d{3}$/.test(form.zipcode) : false
-                const brStates = [
-                  'AC',
-                  'AL',
-                  'AP',
-                  'AM',
-                  'BA',
-                  'CE',
-                  'DF',
-                  'ES',
-                  'GO',
-                  'MA',
-                  'MT',
-                  'MS',
-                  'MG',
-                  'PA',
-                  'PB',
-                  'PR',
-                  'PE',
-                  'PI',
-                  'RJ',
-                  'RN',
-                  'RS',
-                  'RO',
-                  'RR',
-                  'SC',
-                  'SP',
-                  'TO',
-                ]
-
-                return (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <Field l="Rua/Avenida">
-                          <Input
-                            value={form.street || ''}
-                            onChange={(e) => setForm({ ...form, street: e.target.value })}
-                            maxLength={100}
-                          />
-                        </Field>
-                        <div className="flex gap-4">
-                          <div className="w-1/3">
-                            <Field l="Número">
-                              <Input
-                                value={form.number || ''}
-                                onChange={(e) => setForm({ ...form, number: e.target.value })}
-                                maxLength={10}
-                              />
-                            </Field>
-                          </div>
-                          <div className="w-2/3">
-                            <Field l="Complemento">
-                              <Input
-                                value={form.complement || ''}
-                                onChange={(e) => setForm({ ...form, complement: e.target.value })}
-                                maxLength={100}
-                              />
-                            </Field>
-                          </div>
-                        </div>
-                        <Field l="Bairro">
-                          <Input
-                            value={form.neighborhood || ''}
-                            onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
-                            maxLength={50}
-                          />
-                        </Field>
-                      </div>
-                      <div className="space-y-4">
-                        <Field l="Cidade">
-                          <Input
-                            value={form.city || ''}
-                            onChange={(e) => setForm({ ...form, city: e.target.value })}
-                            maxLength={50}
-                          />
-                        </Field>
-                        <div className="flex gap-4">
-                          <div className="w-1/2">
-                            <Field l="Estado/UF">
-                              <Select
-                                value={form.state || ''}
-                                onValueChange={(v) => setForm({ ...form, state: v })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {brStates.map((st) => (
-                                    <SelectItem key={st} value={st}>
-                                      {st}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </Field>
-                          </div>
-                          <div className="w-1/2">
-                            <Field l="CEP">
-                              <Input
-                                value={form.zipcode || ''}
-                                onChange={(e) => setForm({ ...form, zipcode: e.target.value })}
-                                placeholder="XXXXX-XXX"
-                                className={cepErr ? 'border-red-500' : ''}
-                              />
-                              {cepErr && (
-                                <span className="text-xs text-red-500">
-                                  Formato de CEP inválido. Use XXXXX-XXX.
-                                </span>
-                              )}
-                            </Field>
-                          </div>
-                        </div>
-                        <Field l="País">
-                          <Input
-                            value={form.country || ''}
-                            onChange={(e) => setForm({ ...form, country: e.target.value })}
-                            maxLength={50}
-                          />
-                        </Field>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-4 border-t">
-                      <Button variant="outline" onClick={() => setForm({ country: 'Brasil' })}>
-                        Limpar
-                      </Button>
+            {activeTab === 'addresses' && (
+              <div className="space-y-4">
+                {!addressForm ? (
+                  <>
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <h3 className="font-semibold text-lg">Endereços Cadastrados</h3>
                       <Button
+                        size="sm"
+                        onClick={() =>
+                          setAddressForm({ country: 'Brasil', address_type: 'shipping' })
+                        }
                         className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleSaveAddress(isBilling ? 'billing' : 'shipping')}
-                        disabled={isSubmitting || cepErr}
                       >
-                        Salvar Endereço
+                        <Plus className="w-4 h-4 mr-1" /> Novo
                       </Button>
                     </div>
-                  </div>
-                )
-              })()}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {customerAddresses.length === 0 && (
+                        <p className="text-muted-foreground text-sm col-span-2">
+                          Nenhum endereço cadastrado.
+                        </p>
+                      )}
+                      {customerAddresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          className="p-4 border rounded-lg bg-card shadow-sm flex flex-col gap-2 relative"
+                        >
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setAddressForm(addr)}
+                            >
+                              <Edit className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleDeleteAddress(addr.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            </Button>
+                          </div>
+                          <Badge className="w-fit mb-1">
+                            {addr.address_type === 'billing' ? 'Cobrança' : 'Entrega'}
+                          </Badge>
+                          <p className="font-medium text-sm pr-12">
+                            {addr.street}, {addr.number}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {addr.city}, {addr.state} - {addr.zip_code}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{addr.country}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  (() => {
+                    const form = addressForm
+                    const setForm = setAddressForm
+                    const isBr = form.country === 'Brasil' || form.country === 'Brazil'
+                    const cepErr =
+                      isBr && form.zip_code ? !/^\d{5}-\d{3}$/.test(form.zip_code) : false
+
+                    return (
+                      <div className="space-y-4 border p-4 rounded-lg bg-muted/10">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-semibold">
+                            {form.id ? 'Editar Endereço' : 'Novo Endereço'}
+                          </h4>
+                          <Button variant="ghost" size="sm" onClick={() => setAddressForm(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Field l="Tipo de Endereço">
+                            <Select
+                              value={form.address_type || 'shipping'}
+                              onValueChange={(v) => setForm({ ...form, address_type: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="shipping">Entrega</SelectItem>
+                                <SelectItem value="billing">Cobrança</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field l="País">
+                            <Input
+                              value={form.country || ''}
+                              onChange={(e) => setForm({ ...form, country: e.target.value })}
+                            />
+                          </Field>
+                          <Field l="CEP / ZIP">
+                            <Input
+                              value={form.zip_code || ''}
+                              onChange={(e) => setForm({ ...form, zip_code: e.target.value })}
+                              className={cepErr ? 'border-red-500' : ''}
+                            />
+                            {cepErr && (
+                              <span className="text-xs text-red-500">Formato inválido</span>
+                            )}
+                          </Field>
+                          <Field l="Rua / Avenida">
+                            <Input
+                              value={form.street || ''}
+                              onChange={(e) => setForm({ ...form, street: e.target.value })}
+                            />
+                          </Field>
+                          <div className="flex gap-4">
+                            <div className="w-1/3">
+                              <Field l="Número">
+                                <Input
+                                  value={form.number || ''}
+                                  onChange={(e) => setForm({ ...form, number: e.target.value })}
+                                />
+                              </Field>
+                            </div>
+                            <div className="w-2/3">
+                              <Field l="Complemento">
+                                <Input
+                                  value={form.complement || ''}
+                                  onChange={(e) => setForm({ ...form, complement: e.target.value })}
+                                />
+                              </Field>
+                            </div>
+                          </div>
+                          <Field l="Bairro">
+                            <Input
+                              value={form.neighborhood || ''}
+                              onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+                            />
+                          </Field>
+                          <Field l="Cidade">
+                            <Input
+                              value={form.city || ''}
+                              onChange={(e) => setForm({ ...form, city: e.target.value })}
+                            />
+                          </Field>
+                          <Field l="Estado / UF">
+                            <Input
+                              value={form.state || ''}
+                              onChange={(e) => setForm({ ...form, state: e.target.value })}
+                            />
+                          </Field>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                          <Button
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={handleSaveAddress}
+                            disabled={isSubmitting || cepErr || !form.street || !form.city}
+                          >
+                            Salvar Endereço
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })()
+                )}
+              </div>
+            )}
           </div>
 
           {(activeTab === 'basic' || activeTab === 'access') && (

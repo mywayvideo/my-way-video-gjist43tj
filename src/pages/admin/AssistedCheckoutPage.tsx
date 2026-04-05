@@ -16,6 +16,29 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Search, ArrowLeft, Trash2, ShoppingCart, X } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useShippingConfig } from '@/hooks/useShippingConfig'
+import {
+  getApplicableDiscounts,
+  getBestDiscount,
+  DiscountCalculation,
+} from '@/services/discountApplicationService'
+
+function calculateHaversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const toRad = (value: number) => (value * Math.PI) / 180
+  const R = 6371 // Earth radius in km
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
 
 export default function AssistedCheckoutPage() {
   const { customerId } = useParams()
@@ -53,19 +76,24 @@ export default function AssistedCheckoutPage() {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false)
   const [addressError, setAddressError] = useState<string | null>(null)
 
+  const { warehouse } = useShippingConfig()
+  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
+
   const loadData = async () => {
     if (!customerId) return
     setLoading(true)
     setError(null)
     try {
-      const [custRes, prodRes] = await Promise.all([
+      const [custRes, prodRes, discRes] = await Promise.all([
         supabase.from('customers').select('*').eq('id', customerId).single(),
         supabase.from('products').select('*, manufacturers(name)').limit(20),
+        supabase.from('discounts').select('*').eq('is_active', true),
       ])
 
       if (custRes.error) throw custRes.error
 
       setCustomer(custRes.data)
+      if (discRes.data) setActiveDiscounts(discRes.data)
       if (prodRes.data) setProducts(prodRes.data)
 
       if (custRes.data?.role === 'vip') setDiscountRate(10)
@@ -83,13 +111,37 @@ export default function AssistedCheckoutPage() {
         if (cartItemsData) {
           const loadedCart = cartItemsData
             .filter((item: any) => item.products)
-            .map((item: any) => ({
-              product: item.products,
-              quantity: item.quantity,
-            }))
+            .map((item: any) => {
+              const prod = item.products
+              // Apply dynamic discount if applicable
+              const bestDiscount = getBestDiscount(
+                discRes.data || [],
+                prod.id,
+                custRes.data?.id || null,
+                custRes.data?.role || null,
+                prod.price_usd || 0,
+                prod.price_cost || 0,
+              )
+              const finalPrice = bestDiscount.discountedPrice
+
+              if (finalPrice < (prod.price_usd || 0)) {
+                prod.original_price = prod.price_usd
+                prod.price_usd = finalPrice
+              }
+
+              return {
+                product: prod,
+                quantity: item.quantity,
+              }
+            })
 
           const cartMap = new Map()
+          let hasNewDiscount = false
+
           loadedCart.forEach((item) => {
+            if (item.product.original_price) {
+              hasNewDiscount = true
+            }
             if (cartMap.has(item.product.id)) {
               const existing = cartMap.get(item.product.id)
               existing.quantity += item.quantity
@@ -98,6 +150,16 @@ export default function AssistedCheckoutPage() {
             }
           })
           setCart(Array.from(cartMap.values()))
+
+          if (hasNewDiscount) {
+            toast({
+              title: 'Desconto Aplicado!',
+              description:
+                'Oba! Detectamos um novo desconto aplicável. O valor do carrinho foi atualizado!',
+              variant: 'default',
+              className: 'bg-green-600 text-white border-green-700',
+            })
+          }
         }
       }
     } catch (e: any) {
@@ -153,25 +215,47 @@ export default function AssistedCheckoutPage() {
             : ''
 
         if (selectedShippingMethod === 'miami') {
-          filtered = filtered.filter(
-            (a) =>
-              (normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil') &&
-              normalizeStr(a.city) === 'miami',
-          )
+          filtered = filtered.filter((a) => {
+            const isBr =
+              normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil'
+            if (isBr) return false
+
+            if (!a.latitude || !a.longitude) {
+              return normalizeStr(a.city) === 'miami' || normalizeStr(a.city) === 'coral gables'
+            }
+            const dist = calculateHaversineDistance(
+              warehouse.latitude || 25.7617,
+              warehouse.longitude || -80.1918,
+              a.latitude,
+              a.longitude,
+            )
+            return dist <= 50
+          })
         } else if (selectedShippingMethod === 'usa') {
-          filtered = filtered.filter(
-            (a) =>
-              (normalizeStr(a.country) === 'usa' ||
-                normalizeStr(a.country) === 'eua' ||
-                normalizeStr(a.country) === 'estados unidos' ||
-                normalizeStr(a.country) === 'united states') &&
-              normalizeStr(a.city) !== 'miami',
-          )
+          filtered = filtered.filter((a) => {
+            const isUs =
+              normalizeStr(a.country) === 'usa' ||
+              normalizeStr(a.country) === 'eua' ||
+              normalizeStr(a.country) === 'estados unidos' ||
+              normalizeStr(a.country) === 'united states'
+            if (!isUs) return false
+
+            if (!a.latitude || !a.longitude) {
+              return normalizeStr(a.city) !== 'miami' && normalizeStr(a.city) !== 'coral gables'
+            }
+            const dist = calculateHaversineDistance(
+              warehouse.latitude || 25.7617,
+              warehouse.longitude || -80.1918,
+              a.latitude,
+              a.longitude,
+            )
+            return dist > 50
+          })
         } else if (selectedShippingMethod === 'brasil') {
           filtered = filtered.filter(
             (a) =>
               (normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil') &&
-              normalizeStr(a.city) === 'sao paulo',
+              normalizeStr(a.state) === 'sp',
           )
         }
 
@@ -196,7 +280,24 @@ export default function AssistedCheckoutPage() {
       const q = supabase.from('products').select('*, manufacturers(name)').limit(20)
       if (search) q.ilike('name', `%${search}%`)
       const { data } = await q
-      if (data) setProducts(data)
+      if (data) {
+        const p = data.map((prod) => {
+          const bestDiscount = getBestDiscount(
+            activeDiscounts,
+            prod.id,
+            customer?.id || null,
+            customer?.role || null,
+            prod.price_usd || 0,
+            prod.price_cost || 0,
+          )
+          if (bestDiscount.discountedPrice < (prod.price_usd || 0)) {
+            prod.original_price = prod.price_usd
+            prod.price_usd = bestDiscount.discountedPrice
+          }
+          return prod
+        })
+        setProducts(p)
+      }
     }, 300)
     return () => clearTimeout(timer)
   }, [search])
@@ -452,8 +553,15 @@ export default function AssistedCheckoutPage() {
                     <p className="text-sm text-muted-foreground">
                       SKU: {p.sku || 'N/A'} | {p.manufacturers?.name || 'Genérico'}
                     </p>
-                    <p className="text-sm font-semibold mt-1">
-                      USD {formatCurrency(p.price_usd || 0)}
+                    <p className="text-sm font-semibold mt-1 flex items-center gap-2">
+                      {p.original_price && (
+                        <span className="line-through text-muted-foreground font-normal text-xs">
+                          USD {formatCurrency(p.original_price)}
+                        </span>
+                      )}
+                      <span className={p.original_price ? 'text-green-600' : ''}>
+                        USD {formatCurrency(p.price_usd || 0)}
+                      </span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -514,6 +622,11 @@ export default function AssistedCheckoutPage() {
                     <p className="font-medium line-clamp-1">{item.product.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {item.quantity}x USD {formatCurrency(item.product.price_usd || 0)}
+                      {item.product.original_price && (
+                        <span className="ml-2 text-xs text-green-600 font-medium">
+                          (Desconto Aplicado)
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -614,7 +727,7 @@ export default function AssistedCheckoutPage() {
                         <SelectTrigger className="h-auto py-3">
                           <SelectValue placeholder="Selecione o endereço de entrega" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-[300px]">
                           {availableAddresses.map((addr) => (
                             <SelectItem
                               key={addr.id}
@@ -703,25 +816,25 @@ export default function AssistedCheckoutPage() {
             </div>
 
             {/* Resumo Subtotal/Total (Comprimido) */}
-            <div className="mx-6 mb-4 p-3 border rounded-lg bg-muted/20 space-y-1.5">
-              <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="mx-6 mb-4 p-2.5 border rounded-lg bg-muted/20 space-y-1">
+              <div className="flex justify-between text-[11px] text-muted-foreground">
                 <span>Subtotal:</span>
                 <span>USD {formatCurrency(subtotal)}</span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-xs text-green-600 font-medium">
+                <div className="flex justify-between text-[11px] text-green-600 font-medium">
                   <span>Desconto ({discountRate}%):</span>
                   <span>- USD {formatCurrency(discount)}</span>
                 </div>
               )}
               {appliedCoupon && (
-                <div className="flex justify-between text-xs text-green-600 font-medium">
+                <div className="flex justify-between text-[11px] text-green-600 font-medium">
                   <span>Desconto Cupom:</span>
                   <span>- USD {formatCurrency(appliedCoupon.discount_amount)}</span>
                 </div>
               )}
-              <div className="w-full h-px bg-border my-1" />
-              <div className="flex justify-between font-bold text-sm pt-0.5">
+              <div className="w-full h-px bg-border my-0.5" />
+              <div className="flex justify-between font-bold text-xs pt-0.5">
                 <span>Total:</span>
                 <span className="text-primary">USD {formatCurrency(totalUsd)}</span>
               </div>

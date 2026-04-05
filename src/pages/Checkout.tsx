@@ -4,6 +4,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/hooks/useCart'
+import { useShippingConfig } from '@/hooks/useShippingConfig'
+import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -145,6 +147,9 @@ export default function Checkout() {
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [orderConfirmed, setOrderConfirmed] = useState(false)
 
+  const { warehouse } = useShippingConfig()
+  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('cancel') === 'paypal') {
@@ -163,32 +168,36 @@ export default function Checkout() {
       navigate('/login?redirect=/checkout')
       return
     }
-    loadCart()
-    fetchAddresses()
+    fetchAddressesAndDiscounts()
   }, [user, loading, cartContext])
 
-  const fetchAddresses = async () => {
+  const fetchAddressesAndDiscounts = async () => {
     if (!user) return
     try {
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-      if (customer) {
+      const [custRes, discRes] = await Promise.all([
+        supabase.from('customers').select('id, role').eq('user_id', user.id).single(),
+        supabase.from('discounts').select('*').eq('is_active', true),
+      ])
+
+      if (discRes.data) setActiveDiscounts(discRes.data)
+
+      if (custRes.data) {
         const { data: addresses } = await supabase
           .from('customer_addresses')
           .select('*')
-          .eq('customer_id', customer.id)
+          .eq('customer_id', custRes.data.id)
           .eq('address_type', 'shipping')
         if (addresses) setSavedAddresses(addresses)
       }
+
+      loadCart(discRes.data || [], custRes.data)
     } catch (e) {
-      console.error('Error fetching addresses:', e)
+      console.error('Error fetching init data:', e)
+      loadCart([], null)
     }
   }
 
-  const loadCart = () => {
+  const loadCart = async (discounts: any[] = [], customer: any = null) => {
     try {
       let itemsArray = cartContext?.items || cartContext?.cartItems || cartContext?.cart || []
 
@@ -212,18 +221,47 @@ export default function Checkout() {
       }
 
       if (itemsArray && itemsArray.length > 0) {
-        const formatted = itemsArray.map((p: any) => {
-          const prod = p.product || p
-          return {
-            id: p.id || prod.id,
-            product_id: prod.id || p.product_id || p.id,
-            name: prod.name || p.name,
-            unit_price: p.unit_price || prod.price_usd || prod.price || p.price_usd || p.price || 0,
-            quantity: p.quantity || 1,
-            image_url: prod.image_url || p.image_url,
-            weight: prod.weight || p.weight || 1,
-          }
-        })
+        const formatted = await Promise.all(
+          itemsArray.map(async (p: any) => {
+            const prod = p.product || p
+            let price = p.unit_price || prod.price_usd || prod.price || p.price_usd || p.price || 0
+
+            let hasDiscount = false
+            if (discounts.length > 0) {
+              const { data: prodData } = await supabase
+                .from('products')
+                .select('price_cost')
+                .eq('id', prod.id || p.product_id || p.id)
+                .single()
+
+              const bestDiscount = getBestDiscount(
+                discounts,
+                prod.id || p.product_id || p.id,
+                customer?.id || null,
+                customer?.role || null,
+                price,
+                prodData?.price_cost || 0,
+              )
+              if (bestDiscount.discountedPrice < price) {
+                price = bestDiscount.discountedPrice
+                hasDiscount = true
+              }
+            }
+
+            return {
+              id: p.id || prod.id,
+              product_id: prod.id || p.product_id || p.id,
+              name: prod.name || p.name,
+              unit_price: price,
+              quantity: p.quantity || 1,
+              image_url: prod.image_url || p.image_url,
+              weight: prod.weight || p.weight || 1,
+              has_discount: hasDiscount,
+            }
+          }),
+        )
+
+        const hasNewDiscount = formatted.some((i) => i.has_discount)
 
         const currentIds = cartItems.map((i: any) => `${i.id}-${i.quantity}`).join(',')
         const newIds = formatted.map((i: any) => `${i.id}-${i.quantity}`).join(',')
@@ -231,6 +269,16 @@ export default function Checkout() {
         if (currentIds !== newIds) {
           setCartItems(formatted)
           calculateSubtotal(formatted)
+
+          if (hasNewDiscount) {
+            toast({
+              title: 'Desconto Aplicado!',
+              description:
+                'Oba! Detectamos um novo desconto aplicável. O valor do carrinho foi atualizado!',
+              variant: 'default',
+              className: 'bg-emerald-600 text-white border-emerald-700',
+            })
+          }
         }
         return
       }
@@ -284,23 +332,74 @@ export default function Checkout() {
   const total = subtotal - discountAmount + (freight || 0)
 
   const getFilteredAddresses = (method: string = deliveryMethod) => {
+    const normalizeStr = (str: string | null) =>
+      str
+        ? str
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+        : ''
+
     if (method === 'miami') {
-      return savedAddresses.filter(
-        (a) =>
-          (a.city?.toLowerCase() === 'miami' || a.city?.toLowerCase() === 'coral gables') &&
-          a.state?.toLowerCase() === 'fl',
-      )
+      return savedAddresses.filter((a) => {
+        const isBr = normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil'
+        if (isBr) return false
+
+        if (!a.latitude || !a.longitude) {
+          return normalizeStr(a.city) === 'miami' || normalizeStr(a.city) === 'coral gables'
+        }
+
+        const toRad = (value: number) => (value * Math.PI) / 180
+        const R = 6371
+        const lat1 = warehouse.latitude || 25.7617,
+          lon1 = warehouse.longitude || -80.1918
+        const lat2 = a.latitude,
+          lon2 = a.longitude
+        const dLat = toRad(lat2 - lat1)
+        const dLon = toRad(lon2 - lon1)
+        const distA =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        const dist = R * (2 * Math.atan2(Math.sqrt(distA), Math.sqrt(1 - distA)))
+
+        return dist <= 50
+      })
     }
     if (method === 'usa') {
-      return savedAddresses.filter(
-        (a) =>
-          (a.country?.toLowerCase() === 'usa' || a.country?.toLowerCase() === 'estados unidos') &&
-          a.state?.toLowerCase() !== 'fl',
-      )
+      return savedAddresses.filter((a) => {
+        const isUs =
+          normalizeStr(a.country) === 'usa' ||
+          normalizeStr(a.country) === 'eua' ||
+          normalizeStr(a.country) === 'estados unidos' ||
+          normalizeStr(a.country) === 'united states'
+        if (!isUs) return false
+
+        if (!a.latitude || !a.longitude) {
+          return normalizeStr(a.city) !== 'miami' && normalizeStr(a.city) !== 'coral gables'
+        }
+
+        const toRad = (value: number) => (value * Math.PI) / 180
+        const R = 6371
+        const lat1 = warehouse.latitude || 25.7617,
+          lon1 = warehouse.longitude || -80.1918
+        const lat2 = a.latitude,
+          lon2 = a.longitude
+        const dLat = toRad(lat2 - lat1)
+        const dLon = toRad(lon2 - lon1)
+        const distA =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        const dist = R * (2 * Math.atan2(Math.sqrt(distA), Math.sqrt(1 - distA)))
+
+        return dist > 50
+      })
     }
     if (method === 'brasil') {
       return savedAddresses.filter(
-        (a) => a.country?.toLowerCase() === 'brasil' && a.state?.toUpperCase() === 'SP',
+        (a) =>
+          (normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil') &&
+          normalizeStr(a.state) === 'sp',
       )
     }
     return []
