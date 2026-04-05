@@ -53,37 +53,51 @@ export default function AssistedCheckoutPage() {
       if (custRes.data?.role === 'reseller') setDiscountRate(15)
 
       // Load Cart
-      const { data: cartData, error: cartError } = await supabase
+      const { data: cartData } = await supabase
         .from('shopping_carts')
         .select('id')
         .eq('customer_id', customerId)
         .maybeSingle()
 
-      if (cartError && cartError.code !== 'PGRST116') {
-        console.error('Error fetching cart:', cartError)
-        throw new Error('Nao foi possivel carregar o carrinho.')
+      let query = supabase.from('cart_items').select('quantity, products(*, manufacturers(name))')
+
+      if (cartData && custRes.data?.user_id) {
+        query = query.or(`user_id.eq.${custRes.data.user_id},cart_id.eq.${cartData.id}`)
+      } else if (custRes.data?.user_id) {
+        query = query.eq('user_id', custRes.data.user_id)
+      } else if (cartData) {
+        query = query.eq('cart_id', cartData.id)
+      } else {
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000') // prevent full scan
       }
 
-      if (cartData) {
-        const { data: cartItemsData, error: itemsError } = await supabase
-          .from('cart_items')
-          .select('quantity, products(*, manufacturers(name))')
-          .eq('cart_id', cartData.id)
+      const { data: cartItemsData, error: itemsError } = await query
 
-        if (itemsError) {
-          console.error('Error fetching cart items:', itemsError)
-          throw new Error('Nao foi possivel carregar os itens do carrinho.')
-        }
+      if (itemsError) {
+        console.error('Error fetching cart items:', itemsError)
+        throw new Error('Nao foi possivel carregar os itens do carrinho.')
+      }
 
-        if (cartItemsData) {
-          const loadedCart = cartItemsData
-            .filter((item: any) => item.products)
-            .map((item: any) => ({
-              product: item.products,
-              quantity: item.quantity,
-            }))
-          setCart(loadedCart)
-        }
+      if (cartItemsData) {
+        const loadedCart = cartItemsData
+          .filter((item: any) => item.products)
+          .map((item: any) => ({
+            product: item.products,
+            quantity: item.quantity,
+          }))
+
+        // Deduplicate items by product id (merging quantities)
+        const cartMap = new Map()
+        loadedCart.forEach((item) => {
+          if (cartMap.has(item.product.id)) {
+            const existing = cartMap.get(item.product.id)
+            existing.quantity += item.quantity
+          } else {
+            cartMap.set(item.product.id, item)
+          }
+        })
+
+        setCart(Array.from(cartMap.values()))
       }
     } catch (e: any) {
       console.error(e)
@@ -166,6 +180,9 @@ export default function AssistedCheckoutPage() {
       }
 
       // Clean cart after successful order creation
+      if (customer?.user_id) {
+        await supabase.from('cart_items').delete().eq('user_id', customer.user_id)
+      }
       const { data: existingCart } = await supabase
         .from('shopping_carts')
         .select('id')
