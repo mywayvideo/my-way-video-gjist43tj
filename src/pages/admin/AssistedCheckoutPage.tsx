@@ -60,6 +60,7 @@ export default function AssistedCheckoutPage() {
         .maybeSingle()
 
       if (cartError && cartError.code !== 'PGRST116') {
+        console.error('Error fetching cart:', cartError)
         throw new Error('Nao foi possivel carregar o carrinho.')
       }
 
@@ -69,7 +70,10 @@ export default function AssistedCheckoutPage() {
           .select('quantity, products(*, manufacturers(name))')
           .eq('cart_id', cartData.id)
 
-        if (itemsError) throw new Error('Nao foi possivel carregar os itens do carrinho.')
+        if (itemsError) {
+          console.error('Error fetching cart items:', itemsError)
+          throw new Error('Nao foi possivel carregar os itens do carrinho.')
+        }
 
         if (cartItemsData) {
           const loadedCart = cartItemsData
@@ -142,7 +146,10 @@ export default function AssistedCheckoutPage() {
         .select()
         .single()
 
-      if (orderErr) throw orderErr
+      if (orderErr) {
+        console.error('Error creating order:', orderErr)
+        throw orderErr
+      }
 
       const items = cart.map((i) => ({
         order_id: order.id,
@@ -153,7 +160,10 @@ export default function AssistedCheckoutPage() {
       }))
 
       const { error: itemsErr } = await supabase.from('order_items').insert(items)
-      if (itemsErr) throw itemsErr
+      if (itemsErr) {
+        console.error('Error creating order items:', itemsErr)
+        throw itemsErr
+      }
 
       // Clean cart after successful order creation
       const { data: existingCart } = await supabase
