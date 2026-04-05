@@ -540,58 +540,8 @@ export default function AssistedCheckoutPage() {
               )}
             </div>
 
-            {/* Cupom de Desconto */}
-            <div className="p-4 border rounded-lg bg-card space-y-3 mt-6 mx-6 mb-4">
-              <h3 className="font-semibold text-sm">Cupom de Desconto (Opcional)</h3>
-              {appliedCoupon ? (
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md">
-                  <div className="text-sm text-green-700 dark:text-green-400 font-medium">
-                    Cupom <span className="font-bold">{appliedCoupon.code}</span> aplicado: -USD{' '}
-                    {formatCurrency(appliedCoupon.discount_amount)}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-green-700 hover:text-green-800 hover:bg-green-100"
-                    onClick={() => {
-                      setAppliedCoupon(null)
-                      setCouponCode('')
-                      toast({ description: 'Cupom removido' })
-                    }}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Digite o código do cupom"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={handleApplyCoupon}
-                      disabled={validating || !couponCode}
-                    >
-                      {validating ? 'Aplicando...' : 'Aplicar Cupom'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="flex-1"
-                      onClick={() => setIsGeneratingCoupon(true)}
-                    >
-                      Gerar Cupom
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Método de Entrega */}
-            <div className="p-4 border rounded-lg bg-card space-y-4 mx-6 mb-4">
+            <div className="p-4 border rounded-lg bg-card space-y-4 mt-6 mx-6 mb-4">
               <h3 className="font-semibold text-sm">Método de Entrega</h3>
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -643,7 +593,7 @@ export default function AssistedCheckoutPage() {
               </div>
 
               {selectedShippingMethod && selectedShippingMethod !== 'coleta' && (
-                <div className="mt-4 pt-4 border-t space-y-3 animate-in slide-in-from-top-2">
+                <div className="mt-4 pt-4 border-t space-y-4 animate-in slide-in-from-top-2">
                   <h4 className="text-sm font-medium">Endereço de Entrega</h4>
                   {isLoadingAddresses ? (
                     <p className="text-sm text-muted-foreground">Carregando endereços...</p>
@@ -659,16 +609,27 @@ export default function AssistedCheckoutPage() {
                       </Button>
                     </div>
                   ) : availableAddresses.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Select value={selectedAddressId || ''} onValueChange={setSelectedAddressId}>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-auto py-3">
                           <SelectValue placeholder="Selecione o endereço de entrega" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableAddresses.map((addr) => (
-                            <SelectItem key={addr.id} value={addr.id}>
-                              {addr.street}, {addr.number} - {addr.city}/{addr.state} (
-                              {addr.zip_code})
+                            <SelectItem
+                              key={addr.id}
+                              value={addr.id}
+                              className="py-3 cursor-pointer"
+                            >
+                              <div className="flex flex-col text-left gap-0.5">
+                                <span className="font-medium text-sm">
+                                  {addr.street}, {addr.number}{' '}
+                                  {addr.complement ? `- ${addr.complement}` : ''}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {addr.neighborhood} • {addr.city}/{addr.state} ({addr.zip_code})
+                                </span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -689,6 +650,81 @@ export default function AssistedCheckoutPage() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Cupom de Desconto */}
+            <div className="p-4 border rounded-lg bg-card space-y-3 mx-6 mb-4">
+              <h3 className="font-semibold text-sm">Cupom de Desconto (Opcional)</h3>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-md">
+                  <div className="text-sm text-green-700 dark:text-green-400 font-medium">
+                    Cupom <span className="font-bold">{appliedCoupon.code}</span> aplicado: -USD{' '}
+                    {formatCurrency(appliedCoupon.discount_amount)}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-green-700 hover:text-green-800 hover:bg-green-100"
+                    onClick={() => {
+                      setAppliedCoupon(null)
+                      setCouponCode('')
+                      toast({ description: 'Cupom removido' })
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Digite o código do cupom"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleApplyCoupon}
+                      disabled={validating || !couponCode}
+                    >
+                      {validating ? 'Aplicando...' : 'Aplicar Cupom'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => setIsGeneratingCoupon(true)}
+                    >
+                      Gerar Cupom
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Resumo Subtotal/Total (Comprimido) */}
+            <div className="mx-6 mb-4 p-3 border rounded-lg bg-muted/20 space-y-1.5">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Subtotal:</span>
+                <span>USD {formatCurrency(subtotal)}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-xs text-green-600 font-medium">
+                  <span>Desconto ({discountRate}%):</span>
+                  <span>- USD {formatCurrency(discount)}</span>
+                </div>
+              )}
+              {appliedCoupon && (
+                <div className="flex justify-between text-xs text-green-600 font-medium">
+                  <span>Desconto Cupom:</span>
+                  <span>- USD {formatCurrency(appliedCoupon.discount_amount)}</span>
+                </div>
+              )}
+              <div className="w-full h-px bg-border my-1" />
+              <div className="flex justify-between font-bold text-sm pt-0.5">
+                <span>Total:</span>
+                <span className="text-primary">USD {formatCurrency(totalUsd)}</span>
+              </div>
             </div>
 
             {/* Metodo de Pagamento */}
@@ -797,30 +833,8 @@ export default function AssistedCheckoutPage() {
             </div>
           </ScrollArea>
 
-          <div className="p-6 border-t bg-muted/10 space-y-3">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Subtotal:</span>
-              <span>USD {formatCurrency(subtotal)}</span>
-            </div>
-            {discount > 0 && (
-              <div className="flex justify-between text-sm text-green-600 font-medium">
-                <span>Desconto ({discountRate}%):</span>
-                <span>- USD {formatCurrency(discount)}</span>
-              </div>
-            )}
-            {appliedCoupon && (
-              <div className="flex justify-between text-sm text-green-600 font-medium">
-                <span>Desconto Cupom:</span>
-                <span>- USD {formatCurrency(appliedCoupon.discount_amount)}</span>
-              </div>
-            )}
-            <div className="w-full h-px bg-border my-2" />
-            <div className="flex justify-between font-bold text-xl pt-1">
-              <span>Total:</span>
-              <span className="text-primary">USD {formatCurrency(totalUsd)}</span>
-            </div>
-
-            <div className="flex gap-3 pt-4">
+          <div className="p-4 border-t bg-card">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
                 className="flex-1"
