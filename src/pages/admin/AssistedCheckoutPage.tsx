@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { Search, ArrowLeft, Trash2, ShoppingCart, X } from 'lucide-react'
@@ -37,6 +44,14 @@ export default function AssistedCheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix' | 'transfer' | ''>('')
   const [creditCardGateway, setCreditCardGateway] = useState<'stripe' | 'paypal'>('stripe')
+
+  const [selectedShippingMethod, setSelectedShippingMethod] = useState<
+    'miami' | 'usa' | 'brasil' | 'coleta' | ''
+  >('')
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [availableAddresses, setAvailableAddresses] = useState<any[]>([])
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false)
+  const [addressError, setAddressError] = useState<string | null>(null)
 
   const loadData = async () => {
     if (!customerId) return
@@ -101,6 +116,80 @@ export default function AssistedCheckoutPage() {
   useEffect(() => {
     loadData()
   }, [customerId])
+
+  useEffect(() => {
+    if (!customerId || !selectedShippingMethod || selectedShippingMethod === 'coleta') {
+      setAvailableAddresses([])
+      setSelectedAddressId(null)
+      return
+    }
+
+    const fetchAddresses = async () => {
+      setIsLoadingAddresses(true)
+      setAddressError(null)
+      try {
+        const { data, error } = await supabase
+          .from('customer_addresses')
+          .select('*')
+          .eq('customer_id', customerId)
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        // Handle is_active conceptually (if it exists)
+        const activeData = (data || []).filter(
+          (a) => a.is_active === undefined || a.is_active === true,
+        )
+
+        let filtered = activeData
+        const normalizeStr = (str: string | null) =>
+          str
+            ? str
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim()
+            : ''
+
+        if (selectedShippingMethod === 'miami') {
+          filtered = filtered.filter(
+            (a) =>
+              (normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil') &&
+              normalizeStr(a.city) === 'miami',
+          )
+        } else if (selectedShippingMethod === 'usa') {
+          filtered = filtered.filter(
+            (a) =>
+              (normalizeStr(a.country) === 'usa' ||
+                normalizeStr(a.country) === 'eua' ||
+                normalizeStr(a.country) === 'estados unidos' ||
+                normalizeStr(a.country) === 'united states') &&
+              normalizeStr(a.city) !== 'miami',
+          )
+        } else if (selectedShippingMethod === 'brasil') {
+          filtered = filtered.filter(
+            (a) =>
+              (normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil') &&
+              normalizeStr(a.city) === 'sao paulo',
+          )
+        }
+
+        setAvailableAddresses(filtered)
+        if (filtered.length > 0) {
+          setSelectedAddressId(filtered[0].id)
+        } else {
+          setSelectedAddressId(null)
+        }
+      } catch (e: any) {
+        setAddressError('Não foi possível carregar os endereços.')
+      } finally {
+        setIsLoadingAddresses(false)
+      }
+    }
+
+    fetchAddresses()
+  }, [selectedShippingMethod, customerId])
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -220,6 +309,18 @@ export default function AssistedCheckoutPage() {
         description: 'Selecione um método de pagamento.',
         variant: 'destructive',
       })
+    if (!selectedShippingMethod)
+      return toast({
+        title: 'Erro',
+        description: 'Selecione um método de entrega.',
+        variant: 'destructive',
+      })
+    if (selectedShippingMethod !== 'coleta' && !selectedAddressId)
+      return toast({
+        title: 'Erro',
+        description: 'Selecione um endereço de entrega.',
+        variant: 'destructive',
+      })
 
     setSaving(true)
     try {
@@ -230,18 +331,25 @@ export default function AssistedCheckoutPage() {
             : 'paypal'
           : paymentMethod
 
+      const orderPayload: any = {
+        customer_id: customerId,
+        order_number: `ORD-${Date.now().toString().slice(-6)}`,
+        status: 'pending',
+        subtotal,
+        discount_amount: totalDiscountUsd,
+        shipping_cost: 0,
+        total: totalUsd,
+        payment_method_type: paymentMethodType,
+        shipping_method: selectedShippingMethod,
+      }
+
+      if (selectedShippingMethod !== 'coleta' && selectedAddressId) {
+        orderPayload.shipping_address_id = selectedAddressId
+      }
+
       const { data: order, error: orderErr } = await supabase
         .from('orders')
-        .insert({
-          customer_id: customerId,
-          order_number: `ORD-${Date.now().toString().slice(-6)}`,
-          status: 'pending',
-          subtotal,
-          discount_amount: totalDiscountUsd,
-          shipping_cost: 0,
-          total: totalUsd,
-          payment_method_type: paymentMethodType,
-        })
+        .insert(orderPayload)
         .select()
         .single()
 
@@ -482,6 +590,107 @@ export default function AssistedCheckoutPage() {
               )}
             </div>
 
+            {/* Método de Entrega */}
+            <div className="p-4 border rounded-lg bg-card space-y-4 mx-6 mb-4">
+              <h3 className="font-semibold text-sm">Método de Entrega</h3>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="shippingMethod"
+                    value="miami"
+                    checked={selectedShippingMethod === 'miami'}
+                    onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
+                    className="w-4 h-4 text-primary"
+                  />
+                  <span className="text-sm font-medium">Miami (Entrega em Miami)</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="shippingMethod"
+                    value="usa"
+                    checked={selectedShippingMethod === 'usa'}
+                    onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
+                    className="w-4 h-4 text-primary"
+                  />
+                  <span className="text-sm font-medium">EUA (Entrega nos Estados Unidos)</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="shippingMethod"
+                    value="brasil"
+                    checked={selectedShippingMethod === 'brasil'}
+                    onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
+                    className="w-4 h-4 text-primary"
+                  />
+                  <span className="text-sm font-medium">
+                    Brasil - São Paulo (Entrega no Brasil - São Paulo)
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="shippingMethod"
+                    value="coleta"
+                    checked={selectedShippingMethod === 'coleta'}
+                    onChange={(e) => setSelectedShippingMethod(e.target.value as any)}
+                    className="w-4 h-4 text-primary"
+                  />
+                  <span className="text-sm font-medium">Coleta Local (Coleta Local)</span>
+                </label>
+              </div>
+
+              {selectedShippingMethod && selectedShippingMethod !== 'coleta' && (
+                <div className="mt-4 pt-4 border-t space-y-3 animate-in slide-in-from-top-2">
+                  <h4 className="text-sm font-medium">Endereço de Entrega</h4>
+                  {isLoadingAddresses ? (
+                    <p className="text-sm text-muted-foreground">Carregando endereços...</p>
+                  ) : addressError ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-destructive">{addressError}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedShippingMethod(selectedShippingMethod)}
+                      >
+                        Tentar novamente
+                      </Button>
+                    </div>
+                  ) : availableAddresses.length > 0 ? (
+                    <div className="space-y-2">
+                      <Select value={selectedAddressId || ''} onValueChange={setSelectedAddressId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o endereço de entrega" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableAddresses.map((addr) => (
+                            <SelectItem key={addr.id} value={addr.id}>
+                              {addr.street}, {addr.number} - {addr.city}/{addr.state} (
+                              {addr.zip_code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button variant="link" className="px-0 h-auto text-sm">
+                        Adicionar novo endereço
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum endereço disponível para este método. Adicione um novo endereço.
+                      </p>
+                      <Button variant="outline" size="sm">
+                        Adicionar novo endereço
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Metodo de Pagamento */}
             <div className="p-4 border rounded-lg bg-card space-y-4 mx-6 mb-6">
               <h3 className="font-semibold text-sm">Método de Pagamento</h3>
@@ -622,7 +831,13 @@ export default function AssistedCheckoutPage() {
               <Button
                 className="flex-1"
                 onClick={handleSave}
-                disabled={saving || !cart.length || !paymentMethod}
+                disabled={
+                  saving ||
+                  !cart.length ||
+                  !paymentMethod ||
+                  !selectedShippingMethod ||
+                  (selectedShippingMethod !== 'coleta' && !selectedAddressId)
+                }
               >
                 {saving ? 'Salvando...' : 'Salvar Pedido'}
               </Button>
