@@ -20,6 +20,7 @@ import ShippingConfigPage from './pages/admin/ShippingConfigPage'
 import Dashboard from './pages/Dashboard'
 import DashboardAdmin from './pages/DashboardAdmin'
 import AdminDiscountsPage from './pages/admin/AdminDiscountsPage'
+import AssistedCheckoutPage from './pages/admin/AssistedCheckoutPage'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -86,6 +87,10 @@ const App = () => {
                 <Route path="/admin/settings" element={<SettingsPage />} />
                 <Route path="/admin/shipping-config" element={<ShippingConfigPage />} />
                 <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
+                <Route
+                  path="/admin/checkout-assistido/:customerId"
+                  element={<AssistedCheckoutPage />}
+                />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard-admin" element={<DashboardAdmin />} />
                 <Route path="/login" element={<Login />} />
