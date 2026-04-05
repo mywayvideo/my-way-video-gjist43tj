@@ -21,35 +21,81 @@ export default function AssistedCheckoutPage() {
   const [saving, setSaving] = useState(false)
   const [exRate, setExRate] = useState(5.0)
   const [discountRate, setDiscountRate] = useState(0)
+  const [freightRate, setFreightRate] = useState(0)
   const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  const loadData = async () => {
+    if (!customerId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const [custRes, exRes, prodRes, freightRes] = await Promise.all([
+        supabase.from('customers').select('*').eq('id', customerId).single(),
+        supabase
+          .from('exchange_rate')
+          .select('usd_to_brl')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single(),
+        supabase.from('products').select('*, manufacturers(name)').limit(20),
+        supabase.from('price_settings').select('freight_per_kg_usd').limit(1).single(),
+      ])
+
+      if (custRes.error) throw custRes.error
+
+      setCustomer(custRes.data)
+      if (exRes.data) setExRate(exRes.data.usd_to_brl)
+      if (prodRes.data) setProducts(prodRes.data)
+      if (freightRes.data) setFreightRate(freightRes.data.freight_per_kg_usd)
+
+      if (custRes.data?.role === 'vip') setDiscountRate(10)
+      if (custRes.data?.role === 'reseller') setDiscountRate(15)
+
+      // Load Cart
+      const { data: cartData, error: cartError } = await supabase
+        .from('shopping_carts')
+        .select('id')
+        .eq('customer_id', customerId)
+        .maybeSingle()
+
+      if (cartError && cartError.code !== 'PGRST116') {
+        throw new Error('Nao foi possivel carregar o carrinho.')
+      }
+
+      if (cartData) {
+        const { data: cartItemsData, error: itemsError } = await supabase
+          .from('cart_items')
+          .select('quantity, products(*, manufacturers(name))')
+          .eq('cart_id', cartData.id)
+
+        if (itemsError) throw new Error('Nao foi possivel carregar os itens do carrinho.')
+
+        if (cartItemsData) {
+          const loadedCart = cartItemsData
+            .filter((item: any) => item.products)
+            .map((item: any) => ({
+              product: item.products,
+              quantity: item.quantity,
+            }))
+          setCart(loadedCart)
+        }
+      }
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message || 'Erro ao carregar dados.')
+      toast({
+        title: 'Erro',
+        description: e.message || 'Erro ao carregar dados.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [custRes, exRes, prodRes] = await Promise.all([
-          supabase.from('customers').select('*').eq('id', customerId).single(),
-          supabase
-            .from('exchange_rate')
-            .select('usd_to_brl')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single(),
-          supabase.from('products').select('*, manufacturers(name)').limit(20),
-        ])
-
-        setCustomer(custRes.data)
-        if (exRes.data) setExRate(exRes.data.usd_to_brl)
-        if (prodRes.data) setProducts(prodRes.data)
-
-        if (custRes.data?.role === 'vip') setDiscountRate(10)
-        if (custRes.data?.role === 'reseller') setDiscountRate(15)
-      } catch (e) {
-        toast({ title: 'Erro', description: 'Erro ao carregar dados.', variant: 'destructive' })
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    loadData()
   }, [customerId])
 
   useEffect(() => {
@@ -67,7 +113,14 @@ export default function AssistedCheckoutPage() {
     0,
   )
   const discount = subtotal * (discountRate / 100)
-  const totalUsd = subtotal - discount
+
+  const totalWeightKg = cart.reduce(
+    (sum, item) => sum + (item.product.weight || 0) * item.quantity,
+    0,
+  )
+  const shippingCostUsd = totalWeightKg * freightRate
+
+  const totalUsd = subtotal - discount + shippingCostUsd
   const totalBrl = totalUsd * exRate
 
   const handleSave = async () => {
@@ -83,6 +136,7 @@ export default function AssistedCheckoutPage() {
           status: 'pending',
           subtotal,
           discount_amount: discount,
+          shipping_cost: shippingCostUsd,
           total: totalUsd,
         })
         .select()
@@ -101,11 +155,21 @@ export default function AssistedCheckoutPage() {
       const { error: itemsErr } = await supabase.from('order_items').insert(items)
       if (itemsErr) throw itemsErr
 
+      // Clean cart after successful order creation
+      const { data: existingCart } = await supabase
+        .from('shopping_carts')
+        .select('id')
+        .eq('customer_id', customerId)
+        .maybeSingle()
+      if (existingCart) {
+        await supabase.from('cart_items').delete().eq('cart_id', existingCart.id)
+      }
+
       toast({
         title: 'Sucesso',
         description: `Pedido criado com sucesso para ${customer.full_name || customer.email}!`,
       })
-      navigate('/dashboard-admin')
+      navigate('/admin/gerenciar-clientes')
     } catch (e) {
       toast({
         title: 'Erro',
@@ -124,13 +188,22 @@ export default function AssistedCheckoutPage() {
         <Skeleton className="h-[600px] w-full" />
       </div>
     )
+
+  if (error)
+    return (
+      <div className="p-8 flex flex-col items-center justify-center space-y-4 max-w-7xl mx-auto min-h-[50vh]">
+        <p className="text-destructive font-bold text-lg">{error}</p>
+        <Button onClick={loadData}>Tentar Novamente</Button>
+      </div>
+    )
+
   if (!customer)
-    return <div className="p-8 text-center text-red-500 font-bold">Cliente nao encontrado</div>
+    return <div className="p-8 text-center text-destructive font-bold">Cliente nao encontrado</div>
 
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-7xl space-y-6">
       <div className="flex items-center gap-4 border-b pb-4">
-        <Button variant="outline" size="icon" onClick={() => navigate('/dashboard-admin')}>
+        <Button variant="outline" size="icon" onClick={() => navigate('/admin/gerenciar-clientes')}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
@@ -219,7 +292,7 @@ export default function AssistedCheckoutPage() {
             <CardTitle className="flex justify-between items-center">
               <span>Resumo do Pedido</span>
               <Badge variant="secondary" className="text-sm">
-                {cart.length} itens
+                {cart.length} {cart.length === 1 ? 'item' : 'itens'}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -273,8 +346,8 @@ export default function AssistedCheckoutPage() {
               </div>
             )}
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Frete:</span>
-              <span>Calculado no Checkout</span>
+              <span>Frete ({totalWeightKg.toFixed(2)} kg):</span>
+              <span>USD {shippingCostUsd.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-bold text-xl pt-3 border-t mt-2">
               <span>Total Estimado:</span>
@@ -285,7 +358,7 @@ export default function AssistedCheckoutPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => navigate('/dashboard-admin')}
+                onClick={() => navigate('/admin/gerenciar-clientes')}
               >
                 Cancelar
               </Button>
