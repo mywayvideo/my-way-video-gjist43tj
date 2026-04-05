@@ -29,11 +29,12 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Search, Edit, Trash2, KeyRound, ShieldOff, Mail, Plus } from 'lucide-react'
+import { Search, Edit, Trash2, KeyRound, ShieldOff, Mail, Plus, ShoppingCart } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useNavigate } from 'react-router-dom'
 
 const Field = ({ l, children }: { l: string; children: React.ReactNode }) => (
   <div className="space-y-1">
@@ -143,6 +144,16 @@ export function DashboardAdminCustomers(props: any) {
   const [activeTab, setActiveTab] = useState('basic')
   const [billingForm, setBillingForm] = useState<any>({ country: 'Brasil' })
   const [shippingForm, setShippingForm] = useState<any>({ country: 'Brasil' })
+  const navigate = useNavigate()
+
+  const handleCheckoutAssistido = (e: React.MouseEvent, customerId: string) => {
+    const url = `/admin/checkout-assistido/${customerId}`
+    if (e.ctrlKey || e.shiftKey || e.metaKey) {
+      window.open(url, '_blank')
+    } else {
+      navigate(url)
+    }
+  }
 
   const handleEditClick = (customer: any) => {
     setSelectedCustomer(customer)
@@ -335,6 +346,15 @@ export function DashboardAdminCustomers(props: any) {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={(e) => handleCheckoutAssistido(e, c.id)}
+                        title="Checkout Assistido"
+                        className="hover:bg-green-50"
+                      >
+                        <ShoppingCart className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => {
                           setSelectedCustomer(c)
                           setIsDeleteDialogOpen(true)
@@ -399,6 +419,15 @@ export function DashboardAdminCustomers(props: any) {
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEditClick(c)}>
                         <Edit className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => handleCheckoutAssistido(e, c.id)}
+                        title="Checkout Assistido"
+                        className="hover:bg-green-50"
+                      >
+                        <ShoppingCart className="h-4 w-4 text-green-600" />
                       </Button>
                       <Button
                         variant="ghost"
