@@ -16,10 +16,7 @@ Deno.serve(async (req: Request) => {
     const { order_id, user_id } = body
 
     if (!order_id || !user_id) {
-      return new Response(JSON.stringify({ error: 'Campos obrigatorios ausentes.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Campos obrigatorios ausentes.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const token = crypto.randomUUID()
@@ -30,23 +27,18 @@ Deno.serve(async (req: Request) => {
       order_id,
       user_id,
       valid_until: validUntil,
-      is_used: false,
+      is_used: false
     })
 
     if (error) throw error
 
-    return new Response(
-      JSON.stringify({
-        payment_token: token,
-        payment_link: `https://my-way-beta-ia.goskip.app/payment?token=${token}`,
-      }),
-      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return new Response(JSON.stringify({ 
+      payment_token: token,
+      payment_link: `https://my-way-beta-ia.goskip.app/payment?token=${token}`
+    }), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
   } catch (error: any) {
     console.error('Error in generate-payment-token:', error)
-    return new Response(JSON.stringify({ error: 'Erro interno ao gerar token de pagamento.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Erro interno ao gerar token de pagamento.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
