@@ -18,13 +18,16 @@
     "create-discount-coupon": 6,
     "validate-discount-coupon": 5,
     "apply-discount-coupon": 5,
+    "generate-payment-token": 5,
     "validate-payment-token": 5,
     "create-payment-intent": 5,
     "create-paypal-payment-intent": 5,
+    "verify-paypal-payment": 5,
     "lookup-address": 10,
     "calculate-shipping": 16,
     "ups-get-token": 4,
     "ups-calculate-rate": 4,
-    "extract-product-bhphoto": 2
+    "extract-product-bhphoto": 2,
+    "calculate-price-brl": 1
   }
 }
