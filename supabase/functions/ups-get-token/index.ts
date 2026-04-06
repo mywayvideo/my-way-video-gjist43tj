@@ -1,105 +1,78 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const clientId = Deno.env.get('UPS_CLIENT_ID')
+    const clientSecret = Deno.env.get('UPS_CLIENT_SECRET')
+    const environment = Deno.env.get('UPS_ENVIRONMENT')
 
-    if (!supabaseUrl || !supabaseKey) {
-      return new Response(
-        JSON.stringify({
-          error: "Configuração do Supabase não encontrada",
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+    if (!clientId || !clientSecret || !environment) {
+      return new Response(JSON.stringify({ error: 'Credenciais UPS nao configuradas.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const upsClientId = await supabase
-      .from("secrets")
-      .select("value")
-      .eq("name", "UPS_CLIENT_ID")
-      .single();
-
-    const upsClientSecret = await supabase
-      .from("secrets")
-      .select("value")
-      .eq("name", "UPS_CLIENT_SECRET")
-      .single();
-
-    const upsEnvironment = await supabase
-      .from("secrets")
-      .select("value")
-      .eq("name", "UPS_ENVIRONMENT")
-      .single();
-
-    if (!upsClientId.data || !upsClientSecret.data || !upsEnvironment.data) {
-      return new Response(
-        JSON.stringify({
-          error: "Credenciais UPS não configuradas no Supabase",
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const clientId = upsClientId.data.value;
-    const clientSecret = upsClientSecret.data.value;
-    const environment = upsEnvironment.data.value;
 
     const oauthEndpoint =
-      environment === "sandbox"
-        ? "https://onlinetools-cie.ups.com/security/v1/oauth/token"
-        : "https://onlinetools.ups.com/security/v1/oauth/token";
+      environment === 'production'
+        ? 'https://onlinetools.ups.com/security/v1/oauth/token'
+        : 'https://onlinetools-cie.ups.com/security/v1/oauth/token'
 
-    const authString = btoa(`${clientId}:${clientSecret}`);
+    const params = new URLSearchParams()
+    params.append('grant_type', 'client_credentials')
+    params.append('client_id', clientId)
+    params.append('client_secret', clientSecret)
 
     const tokenResponse = await fetch(oauthEndpoint, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${authString}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
       },
-      body: "grant_type=client_credentials",
-    });
+      body: params.toString(),
+    })
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error("UPS OAuth Error:", errorText);
-      return new Response(
-        JSON.stringify({
-          error: "Não foi possível autenticar com UPS",
-          details: errorText,
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+      const errorText = await tokenResponse.text()
+      console.error(`UPS OAuth Error (${tokenResponse.status}):`, errorText)
+      return new Response(JSON.stringify({ error: 'Nao foi possivel autenticar com UPS.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await tokenResponse.json()
 
-    return new Response(JSON.stringify(tokenData), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
-  } catch (error) {
-    console.error("Error:", error);
     return new Response(
       JSON.stringify({
-        error: "Erro ao obter token UPS",
-        message: error.message,
+        access_token: tokenData.access_token,
+        expires_in: tokenData.expires_in,
+        token_type: tokenData.token_type,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
+  } catch (error: any) {
+    console.error('Unhandled error in ups-get-token:', error)
+    return new Response(JSON.stringify({ error: 'Nao foi possivel autenticar com UPS.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
-});
+})
