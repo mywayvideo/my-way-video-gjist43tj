@@ -327,7 +327,14 @@ export default function AssistedCheckoutPage() {
         const { data, error } = await supabase.functions.invoke('calculate-shipping', {
           body: payload,
         })
-        if (error) throw error
+        if (error) {
+          let errMessage = error.message
+          try {
+            const parsed = JSON.parse(error.message)
+            if (parsed && parsed.error) errMessage = parsed.error
+          } catch (e) {}
+          throw new Error(errMessage)
+        }
         if (data?.error) throw new Error(data.error)
 
         setShippingCost(data.shipping_cost || 0)
@@ -422,7 +429,14 @@ export default function AssistedCheckoutPage() {
         },
       })
 
-      if (error) throw error
+      if (error) {
+        let errMessage = error.message
+        try {
+          const parsed = JSON.parse(error.message)
+          if (parsed && parsed.error) errMessage = parsed.error
+        } catch (e) {}
+        throw new Error(errMessage)
+      }
       if (data?.error) throw new Error(data.error)
 
       setCouponCode(data.code)
@@ -432,7 +446,7 @@ export default function AssistedCheckoutPage() {
       toast({ title: 'Sucesso', description: 'Cupom gerado com sucesso!' })
     } catch (e: any) {
       toast({
-        title: 'Erro',
+        title: 'Erro ao gerar cupom',
         description: e.message || 'Não foi possível gerar o cupom.',
         variant: 'destructive',
       })
@@ -456,7 +470,14 @@ export default function AssistedCheckoutPage() {
         body: { coupon_code: couponCode, subtotal },
       })
 
-      if (error) throw error
+      if (error) {
+        let errMessage = error.message
+        try {
+          const parsed = JSON.parse(error.message)
+          if (parsed && parsed.error) errMessage = parsed.error
+        } catch (e) {}
+        throw new Error(errMessage)
+      }
       if (data?.error) throw new Error(data.error)
 
       setAppliedCoupon({ code: data.code, discount_amount: data.discount_amount })
@@ -539,13 +560,21 @@ export default function AssistedCheckoutPage() {
       }
 
       if (appliedCoupon) {
-        await supabase.functions.invoke('apply-discount-coupon', {
+        const { error: applyError } = await supabase.functions.invoke('apply-discount-coupon', {
           body: {
             coupon_code: appliedCoupon.code,
             order_id: order.id,
             discount_amount: appliedCoupon.discount_amount,
           },
         })
+        if (applyError) {
+          let errMessage = applyError.message
+          try {
+            const parsed = JSON.parse(applyError.message)
+            if (parsed && parsed.error) errMessage = parsed.error
+          } catch (e) {}
+          throw new Error(errMessage)
+        }
       }
 
       toast({
@@ -553,10 +582,10 @@ export default function AssistedCheckoutPage() {
         description: `Pedido criado com sucesso para ${customer.full_name || customer.email}!`,
       })
       navigate('/admin/gerenciar-clientes')
-    } catch (e) {
+    } catch (e: any) {
       toast({
-        title: 'Erro',
-        description: 'Não foi possível salvar o pedido.',
+        title: 'Erro ao salvar pedido',
+        description: e.message || 'Não foi possível salvar o pedido.',
         variant: 'destructive',
       })
     } finally {
@@ -624,8 +653,20 @@ export default function AssistedCheckoutPage() {
                   key={p.id}
                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-4 bg-card hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex-1">
-                    <p className="font-medium line-clamp-1">{p.name}</p>
+                  <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-medium line-clamp-1" title={p.name}>
+                        {p.name}
+                      </p>
+                      {p.is_discontinued && (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] h-4 px-1.5 uppercase shrink-0 font-bold"
+                        >
+                          Descontinuado
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       SKU: {p.sku || 'N/A'} | {p.manufacturers?.name || 'Genérico'}
                     </p>
@@ -693,8 +734,20 @@ export default function AssistedCheckoutPage() {
                   key={item.product.id}
                   className="flex justify-between items-center p-3 bg-muted/40 rounded-lg border border-muted"
                 >
-                  <div className="flex-1 pr-4">
-                    <p className="font-medium line-clamp-1">{item.product.name}</p>
+                  <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-medium line-clamp-1" title={item.product.name}>
+                        {item.product.name}
+                      </p>
+                      {item.product.is_discontinued && (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] h-4 px-1.5 uppercase shrink-0 font-bold"
+                        >
+                          Descontinuado
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {item.quantity}x USD {formatCurrency(item.product.price_usd || 0)}
                       {item.product.original_price && (
