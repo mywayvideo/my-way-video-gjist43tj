@@ -3,7 +3,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -14,7 +15,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
@@ -25,22 +26,22 @@ Deno.serve(async (req: Request) => {
     if (!description || typeof description !== 'string' || description.trim().length < 10) {
       return new Response(JSON.stringify({ error: 'Descricao invalida. Minimo 10 caracteres.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const apiKey = Deno.env.get('COSMOS_BLUESOFT_API_KEY')
     const userAgent = Deno.env.get('COSMOS_BLUESOFT_USER_AGENT') || 'MyWayVideo/1.0'
-    
+
     // Extract key technical terms from description
     const terms = description
       .toLowerCase()
       .replace(/[^\w\s]/g, '')
       .split(/\s+/)
-      .filter(w => w.length > 3)
+      .filter((w) => w.length > 3)
       .slice(0, 6)
       .join(' ')
-      
+
     const queryStr = encodeURIComponent(description.substring(0, 100))
 
     let attempt = 0
@@ -55,45 +56,45 @@ Deno.serve(async (req: Request) => {
         try {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 10000)
-          
+
           const res = await fetch(`https://api.cosmos.bluesoft.com.br/search?q=${queryStr}`, {
-             method: 'GET',
-             headers: {
-               'X-Cosmos-Token': apiKey,
-               'User-Agent': userAgent,
-               'Content-Type': 'application/json'
-             },
-             signal: controller.signal
+            method: 'GET',
+            headers: {
+              'X-Cosmos-Token': apiKey,
+              'User-Agent': userAgent,
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
           })
           clearTimeout(timeoutId)
 
           if (res.ok) {
-             apiResponse = await res.json()
-             success = true
+            apiResponse = await res.json()
+            success = true
           } else if (res.status === 503 || res.status === 429) {
-             attempt++
-             if (attempt < maxAttempts) {
-               await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt - 1]))
-             } else {
-               useFallback = true
-             }
+            attempt++
+            if (attempt < maxAttempts) {
+              await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt - 1]))
+            } else {
+              useFallback = true
+            }
           } else {
-             // Do not retry on 400/401/404
-             console.error(`Cosmos API Error: Status ${res.status}`)
-             useFallback = true
+            // Do not retry on 400/401/404
+            console.error(`Cosmos API Error: Status ${res.status}`)
+            useFallback = true
           }
         } catch (err: any) {
-           if (err.name === 'AbortError') {
-               attempt++
-               if (attempt < maxAttempts) {
-                   await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt - 1]))
-               } else {
-                   useFallback = true
-               }
-           } else {
-               console.error("Fetch error:", err)
-               useFallback = true
-           }
+          if (err.name === 'AbortError') {
+            attempt++
+            if (attempt < maxAttempts) {
+              await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt - 1]))
+            } else {
+              useFallback = true
+            }
+          } else {
+            console.error('Fetch error:', err)
+            useFallback = true
+          }
         }
       }
     } else {
@@ -115,18 +116,22 @@ Deno.serve(async (req: Request) => {
         results = apiResponse.products
       }
 
-      suggestions = results.map((item: any, index: number) => {
-         const code = item.code || item.ncm || item.ncm_code || (typeof item === 'string' ? item : '')
-         const desc = item.description || item.nome || item.name || 'Descricao nao disponivel'
-         const confidence = item.confidence !== undefined ? item.confidence : Math.max(10, 95 - (index * 15))
-         
-         return {
-           ncm: String(code).replace(/\D/g, '').substring(0, 8),
-           description: desc,
-           confidence: confidence,
-           source: 'cosmos'
-         }
-      }).filter(item => item.ncm.length > 0)
+      suggestions = results
+        .map((item: any, index: number) => {
+          const code =
+            item.code || item.ncm || item.ncm_code || (typeof item === 'string' ? item : '')
+          const desc = item.description || item.nome || item.name || 'Descricao nao disponivel'
+          const confidence =
+            item.confidence !== undefined ? item.confidence : Math.max(10, 95 - index * 15)
+
+          return {
+            ncm: String(code).replace(/\D/g, '').substring(0, 8),
+            description: desc,
+            confidence: confidence,
+            source: 'cosmos',
+          }
+        })
+        .filter((item) => item.ncm.length > 0)
     }
 
     if (suggestions.length === 0) {
@@ -135,34 +140,58 @@ Deno.serve(async (req: Request) => {
 
     if (useFallback) {
       const fallbackRules = [
-        { ncm: "85291000", desc: "Aparelhos de captura de video", conf: 90, keywords: ['camera', 'video', 'capture', 'gravacao'] },
-        { ncm: "90069090", desc: "Instrumentos de medida e controle", conf: 85, keywords: ['converter', 'adapter', 'transformador'] },
-        { ncm: "85044090", desc: "Circuitos integrados", conf: 80, keywords: ['processor', 'chip', 'circuito', 'processador'] },
-        { ncm: "85299090", desc: "Partes e acessorios", conf: 75, keywords: ['accessory', 'cable', 'stand', 'suporte', 'cabo'] },
-        { ncm: "49019900", desc: "Livros e publicacoes", conf: 70, keywords: ['software', 'manual', 'guide', 'guia'] },
-        { ncm: "85176290", desc: "Aparelhos de som", conf: 85, keywords: ['audio', 'speaker', 'microphone', 'microfone', 'som'] }
-      ];
+        {
+          ncm: '85291000',
+          desc: 'Aparelhos de captura de video',
+          conf: 90,
+          keywords: ['camera', 'video', 'capture', 'gravacao'],
+        },
+        {
+          ncm: '90069090',
+          desc: 'Instrumentos de medida e controle',
+          conf: 85,
+          keywords: ['converter', 'adapter', 'transformador'],
+        },
+        {
+          ncm: '85044090',
+          desc: 'Circuitos integrados',
+          conf: 80,
+          keywords: ['processor', 'chip', 'circuito', 'processador'],
+        },
+        {
+          ncm: '85299090',
+          desc: 'Partes e acessorios',
+          conf: 75,
+          keywords: ['accessory', 'cable', 'stand', 'suporte', 'cabo'],
+        },
+        {
+          ncm: '49019900',
+          desc: 'Livros e publicacoes',
+          conf: 70,
+          keywords: ['software', 'manual', 'guide', 'guia'],
+        },
+        {
+          ncm: '85176290',
+          desc: 'Aparelhos de som',
+          conf: 85,
+          keywords: ['audio', 'speaker', 'microphone', 'microfone', 'som'],
+        },
+      ]
 
-      const descLower = description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const descLower = description
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
 
       for (const rule of fallbackRules) {
-        if (rule.keywords.some(kw => descLower.includes(kw))) {
+        if (rule.keywords.some((kw) => descLower.includes(kw))) {
           suggestions.push({
             ncm: rule.ncm,
             description: rule.desc,
             confidence: rule.conf,
-            source: "fallback"
-          });
+            source: 'fallback',
+          })
         }
-      }
-
-      if (suggestions.length === 0) {
-        suggestions.push({
-          ncm: "85299020",
-          description: "Outras partes e acessorios",
-          confidence: 40,
-          source: "fallback"
-        });
       }
     }
 
@@ -171,28 +200,33 @@ Deno.serve(async (req: Request) => {
     suggestions = suggestions.slice(0, 3)
 
     if (suggestions.length === 0) {
-       return new Response(JSON.stringify({ error: 'Nao foi possivel sugerir NCM. Tente novamente.' }), {
-         status: 500,
-         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-       })
+      return new Response(
+        JSON.stringify({ error: 'Nao foi possivel sugerir NCM. Tente novamente.' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    const allBelow50 = suggestions.every(s => s.confidence < 50)
-    
+    const allBelow50 = suggestions.every((s) => s.confidence < 50)
+
     if (allBelow50 && suggestions.length > 0) {
-       suggestions[0].note = "Nao conseguimos identificar o NCM com certeza. Valide manualmente."
+      suggestions[0].note = 'Nao conseguimos identificar o NCM com certeza. Valide manualmente.'
     }
 
     return new Response(JSON.stringify(suggestions), {
-       status: 200,
-       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-
   } catch (error: any) {
     console.error('Unhandled error in validate-ncm-suggestion:', error)
-    return new Response(JSON.stringify({ error: 'Nao foi possivel sugerir NCM. Tente novamente.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    return new Response(
+      JSON.stringify({ error: 'Nao foi possivel sugerir NCM. Tente novamente.' }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   }
 })
