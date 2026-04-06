@@ -74,6 +74,7 @@ export default function AssistedCheckoutPage() {
   const [shippingCost, setShippingCost] = useState<number | null>(null)
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
   const [shippingErrorMsg, setShippingErrorMsg] = useState<string | null>(null)
+  const [usingFallbacks, setUsingFallbacks] = useState(false)
 
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
@@ -284,12 +285,14 @@ export default function AssistedCheckoutPage() {
       if (selectedShippingMethod === 'coleta') {
         setShippingCost(0)
         setShippingErrorMsg(null)
+        setUsingFallbacks(false)
         return
       }
 
       if (!selectedAddressId) {
         setShippingCost(null)
         setShippingErrorMsg(null)
+        setUsingFallbacks(false)
         return
       }
 
@@ -311,7 +314,8 @@ export default function AssistedCheckoutPage() {
             country: addr.country,
           },
           cart_items: cart.map((item) => ({
-            weight_lb: item.product.weight || 1,
+            weight_lb: item.product.weight,
+            dimensions: item.product.dimensions,
             quantity: item.quantity,
             price_usd: item.product.price_usd || 0,
           })),
@@ -324,9 +328,11 @@ export default function AssistedCheckoutPage() {
         if (data?.error) throw new Error(data.error)
 
         setShippingCost(data.shipping_cost || 0)
+        setUsingFallbacks(!!data.using_fallbacks)
       } catch (e: any) {
         setShippingErrorMsg(e.message || 'Erro ao calcular frete')
         setShippingCost(null)
+        setUsingFallbacks(false)
       } finally {
         setIsCalculatingShipping(false)
       }
@@ -916,6 +922,12 @@ export default function AssistedCheckoutPage() {
                   <span className="text-muted-foreground/60 text-xs">Pendente</span>
                 )}
               </div>
+              {usingFallbacks && (
+                <div className="text-[11px] text-amber-600 bg-amber-500/10 p-2 rounded border border-amber-500/20 mt-1 leading-tight">
+                  Atenção: Alguns produtos não possuem peso/dimensões. O frete foi calculado com
+                  valores padrão.
+                </div>
+              )}
               {shippingErrorMsg && (
                 <div className="text-xs text-destructive text-right font-medium">
                   {shippingErrorMsg}
