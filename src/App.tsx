@@ -81,6 +81,7 @@ const App = () => {
                 <Route path="/admin/ai" element={<AdminAIPage />} />
                 <Route path="/admin/catalog" element={<AdminCatalogPage />} />
                 <Route path="/products/new" element={<NewProductPage />} />
+                <Route path="/products/edit/:id" element={<NewProductPage />} />
                 <Route path="/admin/pricing" element={<AdminPricingPage />} />
                 <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
                 <Route path="/admin/product-cache" element={<AdminProductCache />} />

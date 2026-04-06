@@ -92,9 +92,6 @@ export default function AdminCatalogPage() {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [search, setSearch] = useState('')
   const [filterNoImage, setFilterNoImage] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [isDeletingBulk, setIsDeletingBulk] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -147,20 +144,9 @@ export default function AdminCatalogPage() {
     if (user) fetchProductsData()
   }, [user, sortColumn, sortDirection])
 
-  const handleEditProduct = (p: Product) => {
-    sessionStorage.setItem(
-      'admin-products-scroll-position',
-      JSON.stringify({ x: window.scrollX, y: window.scrollY }),
-    )
-    setEditingProduct(p)
-    setIsDialogOpen(true)
-  }
-
-  const handleProductFormSuccess = async () => {
-    setIsDialogOpen(false)
+  useEffect(() => {
     const pos = sessionStorage.getItem('admin-products-scroll-position')
-    await fetchData()
-    if (pos) {
+    if (pos && products.length > 0) {
       try {
         const { x, y } = JSON.parse(pos)
         setTimeout(() => {
@@ -171,7 +157,7 @@ export default function AdminCatalogPage() {
         console.error('Failed to parse scroll position', e)
       }
     }
-  }
+  }, [products.length])
 
   if (authLoading)
     return (
@@ -373,43 +359,20 @@ export default function AdminCatalogPage() {
               onSuccess={fetchData}
               onAddManufacturer={fetchData}
             />
-            <Dialog
-              open={isDialogOpen}
-              onOpenChange={(open) => {
-                setIsDialogOpen(open)
-                if (!open) {
-                  setEditingProduct(null)
-                  sessionStorage.removeItem('admin-products-scroll-position')
-                }
+            <Button
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+              onClick={() => {
+                sessionStorage.setItem(
+                  'admin-products-scroll-position',
+                  JSON.stringify({ x: window.scrollX, y: window.scrollY }),
+                )
               }}
+              asChild
             >
-              <DialogTrigger asChild>
-                <Button
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-                  onClick={() => {
-                    sessionStorage.setItem(
-                      'admin-products-scroll-position',
-                      JSON.stringify({ x: window.scrollX, y: window.scrollY }),
-                    )
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" /> Novo Equipamento
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-card border-border/50">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingProduct ? 'Editar Equipamento' : 'Novo Equipamento'}
-                  </DialogTitle>
-                </DialogHeader>
-                <AdminProductForm
-                  initialData={editingProduct}
-                  manufacturers={manufacturers}
-                  onSuccess={handleProductFormSuccess}
-                  onAddManufacturer={fetchData}
-                />
-              </DialogContent>
-            </Dialog>
+              <Link to="/products/new">
+                <Plus className="w-4 h-4 mr-2" /> Novo Equipamento
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -626,10 +589,18 @@ export default function AdminCatalogPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEditProduct(p)}
+                        onClick={() => {
+                          sessionStorage.setItem(
+                            'admin-products-scroll-position',
+                            JSON.stringify({ x: window.scrollX, y: window.scrollY }),
+                          )
+                        }}
                         className="hover:bg-accent/10 hover:text-accent transition-colors"
+                        asChild
                       >
-                        <Edit className="w-4 h-4" />
+                        <Link to={`/products/edit/${p.id}`}>
+                          <Edit className="w-4 h-4" />
+                        </Link>
                       </Button>
                       <Button
                         variant="ghost"

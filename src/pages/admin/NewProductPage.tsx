@@ -20,18 +20,28 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowLeft, Download, Loader2, Sparkles } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, Sparkles, Plus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 export default function NewProductPage() {
   const navigate = useNavigate()
   const [importUrl, setImportUrl] = useState('')
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   const {
     form,
     categories,
     isLoadingCategories,
+    isLoadingProduct,
     isExtracting,
     isSaving,
     handleExtractUrl,
@@ -40,9 +50,11 @@ export default function NewProductPage() {
     setNcmSuggestions,
     isSuggestingNcm,
     onSubmit,
+    isEditMode,
+    handleAddCategory,
   } = useProductForm()
 
-  if (isLoadingCategories) {
+  if (isLoadingCategories || isLoadingProduct) {
     return (
       <div className="container mx-auto py-8 max-w-4xl space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -54,6 +66,15 @@ export default function NewProductPage() {
 
   const isBusy = isExtracting || isSaving
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return
+    const success = await handleAddCategory(newCategoryName.trim())
+    if (success) {
+      setNewCategoryName('')
+      setIsCategoryDialogOpen(false)
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 max-w-4xl space-y-6 px-4">
       <div className="flex items-center space-x-4">
@@ -63,8 +84,10 @@ export default function NewProductPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Novo Produto</h1>
-          <p className="text-sm text-muted-foreground">Catálogo / Adicionar novo produto</p>
+          <h1 className="text-2xl font-bold">{isEditMode ? 'Editar Produto' : 'Novo Produto'}</h1>
+          <p className="text-sm text-muted-foreground">
+            Catálogo / {isEditMode ? 'Editar' : 'Adicionar'} produto
+          </p>
         </div>
       </div>
 
@@ -123,7 +146,7 @@ export default function NewProductPage() {
                     <FormItem>
                       <FormLabel>SKU *</FormLabel>
                       <FormControl>
-                        <Input {...field} disabled={isBusy} />
+                        <Input {...field} disabled={isEditMode || isBusy} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -134,7 +157,18 @@ export default function NewProductPage() {
                   name="category_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoria *</FormLabel>
+                      <FormLabel className="flex justify-between items-center">
+                        <span>Categoria *</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => setIsCategoryDialogOpen(true)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value} disabled={isBusy}>
                         <FormControl>
                           <SelectTrigger>
@@ -415,13 +449,37 @@ export default function NewProductPage() {
                   disabled={isBusy}
                   className="sm:w-auto w-full bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salvar Produto
+                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{' '}
+                  {isEditMode ? 'Atualizar Produto' : 'Salvar Produto'}
                 </Button>
               </div>
             </form>
           </Form>
         </CardContent>
       </Card>
+
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Categoria</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Nome da categoria"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateCategory} disabled={!newCategoryName.trim()}>
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

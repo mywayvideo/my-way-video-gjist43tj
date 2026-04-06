@@ -4,17 +4,22 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { productSchema, ProductFormData } from '@/types/product'
 import { productService } from '@/services/productService'
 import { useToast } from '@/hooks/use-toast'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { supabase } from '@/lib/supabase/client'
 
 export function useProductForm() {
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
   const [categories, setCategories] = useState<any[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [isExtracting, setIsExtracting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoadingProduct, setIsLoadingProduct] = useState(!!id)
   const [ncmSuggestions, setNcmSuggestions] = useState<any[]>([])
   const [isSuggestingNcm, setIsSuggestingNcm] = useState(false)
+
+  const isEditMode = !!id
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -37,13 +42,57 @@ export function useProductForm() {
     },
   })
 
+  const loadCategories = async () => {
+    try {
+      const cats = await productService.getCategories()
+      setCategories(cats)
+    } catch {
+      toast({ description: 'Erro ao carregar categorias', variant: 'destructive' })
+    } finally {
+      setIsLoadingCategories(false)
+    }
+  }
+
   useEffect(() => {
-    productService
-      .getCategories()
-      .then(setCategories)
-      .catch(() => toast({ description: 'Erro ao carregar categorias', variant: 'destructive' }))
-      .finally(() => setIsLoadingCategories(false))
+    loadCategories()
   }, [toast])
+
+  useEffect(() => {
+    if (id) {
+      const loadProduct = async () => {
+        setIsLoadingProduct(true)
+        try {
+          const { data, error } = await supabase.from('products').select('*').eq('id', id).single()
+          if (error) throw error
+          if (data) {
+            form.reset({
+              name: data.name || '',
+              sku: data.sku || '',
+              price_cost: data.price_cost || 0,
+              price_usa: data.price_usd || 0,
+              price_brl: data.price_brl || 0,
+              stock: data.stock || 0,
+              category_id: data.category_id || '',
+              description: data.description || '',
+              weight: data.weight || 0,
+              dimensions: data.dimensions || '',
+              image_url: data.image_url || '',
+              ncm: data.ncm || '',
+              is_special: data.is_special || false,
+              technical_info: data.technical_info || '',
+              is_discontinued: data.is_discontinued || false,
+            })
+          }
+        } catch (e) {
+          toast({ description: 'Erro ao carregar produto', variant: 'destructive' })
+          navigate('/admin/catalog')
+        } finally {
+          setIsLoadingProduct(false)
+        }
+      }
+      loadProduct()
+    }
+  }, [id, form, navigate, toast])
 
   const price_usa = form.watch('price_usa')
   const weight = form.watch('weight')
@@ -69,6 +118,9 @@ export function useProductForm() {
     setIsExtracting(true)
     try {
       const data = await productService.extractFromUrl(url)
+      if (data.error) {
+        throw new Error(data.error)
+      }
       if (data.name) form.setValue('name', data.name)
       if (data.sku) form.setValue('sku', data.sku)
       if (data.description) form.setValue('description', data.description)
@@ -86,7 +138,10 @@ export function useProductForm() {
       form.setValue('is_special', data.is_special === 'true')
       toast({ description: 'Dados extraídos com sucesso!' })
     } catch (err: any) {
-      toast({ description: 'Não foi possível extrair dados', variant: 'destructive' })
+      toast({
+        description: err.message || 'Não foi possível extrair dados da URL fornecida.',
+        variant: 'destructive',
+      })
     } finally {
       setIsExtracting(false)
     }
@@ -107,17 +162,56 @@ export function useProductForm() {
     }
   }
 
+  const handleAddCategory = async (name: string) => {
+    try {
+      const { data, error } = await supabase.from('categories').insert({ name }).select().single()
+      if (error) throw error
+      await loadCategories()
+      form.setValue('category_id', data.id)
+      toast({ description: 'Categoria adicionada com sucesso!' })
+      return true
+    } catch (e) {
+      toast({ description: 'Erro ao adicionar categoria', variant: 'destructive' })
+      return false
+    }
+  }
+
   const onSubmit = async (data: ProductFormData) => {
     setIsSaving(true)
     try {
-      const exists = await productService.checkSkuExists(data.sku)
-      if (exists) {
-        form.setError('sku', { type: 'manual', message: 'Este SKU já existe' })
-        setIsSaving(false)
-        return
+      if (!isEditMode) {
+        const exists = await productService.checkSkuExists(data.sku)
+        if (exists) {
+          form.setError('sku', { type: 'manual', message: 'Este SKU já existe' })
+          setIsSaving(false)
+          return
+        }
+        await productService.createProduct(data)
+        toast({ description: 'Produto salvo com sucesso!' })
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .update({
+            name: data.name,
+            sku: data.sku,
+            price_usd: data.price_usa,
+            price_cost: data.price_cost,
+            price_brl: data.price_brl,
+            weight: data.weight,
+            dimensions: data.dimensions,
+            stock: data.stock,
+            ncm: data.ncm,
+            image_url: data.image_url,
+            description: data.description,
+            technical_info: data.technical_info,
+            is_special: data.is_special,
+            is_discontinued: data.is_discontinued,
+            category_id: data.category_id,
+          })
+          .eq('id', id!)
+        if (error) throw error
+        toast({ description: 'Produto atualizado com sucesso!' })
       }
-      await productService.createProduct(data)
-      toast({ description: 'Produto salvo com sucesso!' })
       setTimeout(() => navigate('/admin/catalog'), 2000)
     } catch (err) {
       toast({ description: 'Não foi possível salvar o produto', variant: 'destructive' })
@@ -130,6 +224,7 @@ export function useProductForm() {
     form,
     categories,
     isLoadingCategories,
+    isLoadingProduct,
     isExtracting,
     isSaving,
     handleExtractUrl,
@@ -138,5 +233,7 @@ export function useProductForm() {
     setNcmSuggestions,
     isSuggestingNcm,
     onSubmit,
+    isEditMode,
+    handleAddCategory,
   }
 }
