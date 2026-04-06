@@ -26,12 +26,16 @@ async function extractEdgeFunctionError(error: any): Promise<string> {
       const res = typeof error.context.clone === 'function' ? error.context.clone() : error.context
       const errData = await res.json()
       if (errData && errData.error) errMessage = errData.error
-    } catch (e) {}
+    } catch (e) {
+      // ignore JSON parse errors and keep original message
+    }
   } else {
     try {
       const parsed = JSON.parse(errMessage)
       if (parsed && parsed.error) errMessage = parsed.error
-    } catch (e) {}
+    } catch (e) {
+      // ignore JSON parse errors and keep original message
+    }
   }
   return errMessage
 }
