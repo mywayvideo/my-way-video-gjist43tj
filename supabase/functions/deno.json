@@ -15,7 +15,7 @@
     "create-customer-public": 7,
     "enrich-product-specs": 5,
     "generate-cart-whatsapp-message": 5,
-    "create-discount-coupon": 5,
+    "create-discount-coupon": 6,
     "validate-discount-coupon": 5,
     "apply-discount-coupon": 5,
     "generate-payment-token": 5,
