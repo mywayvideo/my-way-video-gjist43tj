@@ -19,6 +19,23 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getBestDiscount } from '@/services/discountApplicationService'
 
+async function extractEdgeFunctionError(error: any): Promise<string> {
+  let errMessage = error?.message || 'Erro desconhecido'
+  if (error?.context && typeof error.context.json === 'function') {
+    try {
+      const res = typeof error.context.clone === 'function' ? error.context.clone() : error.context
+      const errData = await res.json()
+      if (errData && errData.error) errMessage = errData.error
+    } catch (e) {}
+  } else {
+    try {
+      const parsed = JSON.parse(errMessage)
+      if (parsed && parsed.error) errMessage = parsed.error
+    } catch (e) {}
+  }
+  return errMessage
+}
+
 function calculateHaversineDistance(
   lat1: number,
   lon1: number,
@@ -328,13 +345,7 @@ export default function AssistedCheckoutPage() {
           body: payload,
         })
         if (error) {
-          let errMessage = error.message
-          try {
-            const parsed = JSON.parse(error.message)
-            if (parsed && parsed.error) errMessage = parsed.error
-          } catch (e) {
-            // Ignore parse error
-          }
+          const errMessage = await extractEdgeFunctionError(error)
           throw new Error(errMessage)
         }
         if (data?.error) throw new Error(data.error)
@@ -432,13 +443,7 @@ export default function AssistedCheckoutPage() {
       })
 
       if (error) {
-        let errMessage = error.message
-        try {
-          const parsed = JSON.parse(error.message)
-          if (parsed && parsed.error) errMessage = parsed.error
-        } catch (e) {
-          // Ignore parse error
-        }
+        const errMessage = await extractEdgeFunctionError(error)
         throw new Error(errMessage)
       }
       if (data?.error) throw new Error(data.error)
@@ -475,13 +480,7 @@ export default function AssistedCheckoutPage() {
       })
 
       if (error) {
-        let errMessage = error.message
-        try {
-          const parsed = JSON.parse(error.message)
-          if (parsed && parsed.error) errMessage = parsed.error
-        } catch (e) {
-          // Ignore parse error
-        }
+        const errMessage = await extractEdgeFunctionError(error)
         throw new Error(errMessage)
       }
       if (data?.error) throw new Error(data.error)
@@ -574,13 +573,7 @@ export default function AssistedCheckoutPage() {
           },
         })
         if (applyError) {
-          let errMessage = applyError.message
-          try {
-            const parsed = JSON.parse(applyError.message)
-            if (parsed && parsed.error) errMessage = parsed.error
-          } catch (e) {
-            // Ignore parse error
-          }
+          const errMessage = await extractEdgeFunctionError(applyError)
           throw new Error(errMessage)
         }
       }
