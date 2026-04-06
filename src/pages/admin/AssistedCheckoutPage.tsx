@@ -332,7 +332,9 @@ export default function AssistedCheckoutPage() {
           try {
             const parsed = JSON.parse(error.message)
             if (parsed && parsed.error) errMessage = parsed.error
-          } catch (e) {}
+          } catch (e) {
+            // Ignore parse error
+          }
           throw new Error(errMessage)
         }
         if (data?.error) throw new Error(data.error)
@@ -434,7 +436,9 @@ export default function AssistedCheckoutPage() {
         try {
           const parsed = JSON.parse(error.message)
           if (parsed && parsed.error) errMessage = parsed.error
-        } catch (e) {}
+        } catch (e) {
+          // Ignore parse error
+        }
         throw new Error(errMessage)
       }
       if (data?.error) throw new Error(data.error)
@@ -475,7 +479,9 @@ export default function AssistedCheckoutPage() {
         try {
           const parsed = JSON.parse(error.message)
           if (parsed && parsed.error) errMessage = parsed.error
-        } catch (e) {}
+        } catch (e) {
+          // Ignore parse error
+        }
         throw new Error(errMessage)
       }
       if (data?.error) throw new Error(data.error)
@@ -572,7 +578,9 @@ export default function AssistedCheckoutPage() {
           try {
             const parsed = JSON.parse(applyError.message)
             if (parsed && parsed.error) errMessage = parsed.error
-          } catch (e) {}
+          } catch (e) {
+            // Ignore parse error
+          }
           throw new Error(errMessage)
         }
       }
