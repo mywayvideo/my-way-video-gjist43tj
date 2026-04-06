@@ -26,6 +26,6 @@
     "lookup-address": 10,
     "calculate-shipping": 16,
     "ups-get-token": 4,
-    "ups-calculate-rate": 3
+    "ups-calculate-rate": 4
   }
 }
