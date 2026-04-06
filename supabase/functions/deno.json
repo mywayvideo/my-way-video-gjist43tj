@@ -27,7 +27,7 @@
     "calculate-shipping": 19,
     "ups-get-token": 7,
     "ups-calculate-rate": 7,
-    "extract-product-bhphoto": 6,
+    "extract-product-bhphoto": 7,
     "calculate-price-brl": 4,
     "validate-ncm-suggestion": 6
   }
