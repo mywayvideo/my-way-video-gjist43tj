@@ -1,6 +1,5 @@
 {
   "imports": {
-    "npm:cheerio": "npm:cheerio@1.0.0-rc.12",
     "npm:@supabase/supabase-js": "npm:@supabase/supabase-js@2.39.3"
   }
 }
