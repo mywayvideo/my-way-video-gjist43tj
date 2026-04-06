@@ -15,6 +15,7 @@ import AdminAISystemPrompt from './pages/AdminAISystemPrompt'
 import AdminAIPage from './pages/admin/AdminAIPage'
 import AdminCatalogPage from './pages/admin/AdminCatalogPage'
 import AdminPricingPage from './pages/admin/AdminPricingPage'
+import NewProductPage from './pages/admin/NewProductPage'
 import SettingsPage from './pages/admin/SettingsPage'
 import ShippingConfigPage from './pages/admin/ShippingConfigPage'
 import Dashboard from './pages/Dashboard'
@@ -79,6 +80,7 @@ const App = () => {
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/admin/ai" element={<AdminAIPage />} />
                 <Route path="/admin/catalog" element={<AdminCatalogPage />} />
+                <Route path="/products/new" element={<NewProductPage />} />
                 <Route path="/admin/pricing" element={<AdminPricingPage />} />
                 <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
                 <Route path="/admin/product-cache" element={<AdminProductCache />} />

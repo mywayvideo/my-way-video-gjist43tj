@@ -1,0 +1,427 @@
+import { useState } from 'react'
+import { useProductForm } from '@/hooks/useProductForm'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ArrowLeft, Download, Loader2, Sparkles } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Skeleton } from '@/components/ui/skeleton'
+
+export default function NewProductPage() {
+  const navigate = useNavigate()
+  const [importUrl, setImportUrl] = useState('')
+
+  const {
+    form,
+    categories,
+    isLoadingCategories,
+    isExtracting,
+    isSaving,
+    handleExtractUrl,
+    handleSuggestNcm,
+    ncmSuggestions,
+    setNcmSuggestions,
+    isSuggestingNcm,
+    onSubmit,
+  } = useProductForm()
+
+  if (isLoadingCategories) {
+    return (
+      <div className="container mx-auto py-8 max-w-4xl space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  const isBusy = isExtracting || isSaving
+
+  return (
+    <div className="container mx-auto py-8 max-w-4xl space-y-6 px-4">
+      <div className="flex items-center space-x-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/admin/catalog">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Novo Produto</h1>
+          <p className="text-sm text-muted-foreground">Catálogo / Adicionar novo produto</p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Download className="w-5 h-5" /> Importar da URL (Opcional)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 flex-col sm:flex-row">
+            <Input
+              placeholder="Cole a URL (ex: https://www.bhphotovideo.com/c/product/...)"
+              value={importUrl}
+              onChange={(e) => setImportUrl(e.target.value)}
+              disabled={isBusy}
+              className="flex-1"
+            />
+            <Button
+              onClick={() => handleExtractUrl(importUrl)}
+              disabled={!importUrl || isBusy}
+              className="whitespace-nowrap"
+            >
+              {isExtracting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Extrair
+              Dados
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Formulário de Produto</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Nome do Produto *</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU *</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isBusy}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="price_usa"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preço USD *</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="price_cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preço Custo USD</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="weight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Peso (lbs) *</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="price_brl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preço BRL Estimado</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          readOnly
+                          disabled
+                          className="bg-muted"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dimensions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Dimensões (ex: 10x10x10) *</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estoque</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="ncm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex justify-between items-center">
+                        NCM (8 dígitos) *
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-primary"
+                          onClick={handleSuggestNcm}
+                          disabled={isSuggestingNcm || isBusy}
+                        >
+                          {isSuggestingNcm ? (
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3 h-3 mr-1" />
+                          )}{' '}
+                          Sugerir
+                        </Button>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} maxLength={8} disabled={isBusy} />
+                      </FormControl>
+                      {ncmSuggestions.length > 0 && (
+                        <div className="mt-2 p-3 border rounded-md bg-muted/30 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Sugestões:
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 text-xs px-2"
+                              onClick={() => setNcmSuggestions([])}
+                            >
+                              Limpar
+                            </Button>
+                          </div>
+                          {ncmSuggestions[0]?.note && (
+                            <p className="text-xs text-amber-600 bg-amber-50 p-1.5 rounded">
+                              {ncmSuggestions[0].note}
+                            </p>
+                          )}
+                          <div className="space-y-1">
+                            {ncmSuggestions.map((sug, idx) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between items-center text-sm p-1.5 hover:bg-muted cursor-pointer rounded border hover:border-border transition-colors"
+                                onClick={() => {
+                                  form.setValue('ncm', sug.ncm)
+                                  setNcmSuggestions([])
+                                }}
+                              >
+                                <div className="flex items-center flex-1 min-w-0">
+                                  <span className="font-mono text-primary font-medium shrink-0">
+                                    {sug.ncm}
+                                  </span>
+                                  <span className="truncate ml-3 text-xs text-muted-foreground">
+                                    {sug.description}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded shrink-0 ml-2">
+                                  {sug.confidence}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="image_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL da Imagem</FormLabel>
+                      <FormControl>
+                        <Input {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Descrição *</FormLabel>
+                      <FormControl>
+                        <Textarea className="min-h-[80px]" {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="technical_info"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Especificações Técnicas</FormLabel>
+                      <FormControl>
+                        <Textarea className="min-h-[80px]" {...field} disabled={isBusy} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="md:col-span-2 flex flex-col sm:flex-row gap-6 p-4 border rounded-lg bg-muted/10">
+                  <FormField
+                    control={form.control}
+                    name="is_special"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isBusy}
+                          />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Destaque Especial</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="is_discontinued"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isBusy}
+                          />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer">Descontinuado</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    form.reset()
+                    setImportUrl('')
+                    setNcmSuggestions([])
+                  }}
+                  disabled={isBusy}
+                >
+                  Limpar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/admin/catalog')}
+                  disabled={isBusy}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isBusy}
+                  className="sm:w-auto w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salvar Produto
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
