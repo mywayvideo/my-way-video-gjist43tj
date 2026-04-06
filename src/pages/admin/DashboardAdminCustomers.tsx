@@ -234,12 +234,17 @@ export function DashboardAdminCustomers(props: any) {
     actionWrapper(async () => {
       if (!addressForm) return
       const form = addressForm
-      if (
-        form.zip_code &&
-        (form.country === 'Brasil' || form.country === 'Brazil') &&
-        !/^\d{5}-\d{3}$/.test(form.zip_code)
-      )
+      const cleanZip = form.zip_code ? form.zip_code.replace(/\D/g, '') : ''
+      if (cleanZip && cleanZip.length !== 8 && cleanZip.length !== 5 && cleanZip.length !== 9)
         return
+
+      const hasBilling = customerAddresses.some(
+        (a) => a.address_type === 'billing' && a.id !== form.id,
+      )
+      if (form.address_type === 'billing' && hasBilling) {
+        toast.error('Este cliente já possui um endereço de cobrança.')
+        return
+      }
 
       const normalizeStr = (str: string | null) =>
         str
@@ -298,6 +303,36 @@ export function DashboardAdminCustomers(props: any) {
       setAddressForm(null)
       loadAddresses(selectedCustomer.id)
     })
+
+  const handleZipBlur = async () => {
+    if (!addressForm || !addressForm.zip_code) return
+    const cleanZip = addressForm.zip_code.replace(/\D/g, '')
+    if (cleanZip.length !== 8 && cleanZip.length !== 5 && cleanZip.length !== 9) return
+
+    let guessCountry = addressForm.country || 'USA'
+    if (cleanZip.length === 8) guessCountry = 'Brasil'
+    else if (cleanZip.length === 5 || cleanZip.length === 9) guessCountry = 'USA'
+
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-address', {
+        body: { cep_or_zip: cleanZip, country: guessCountry },
+      })
+      if (data && !error && !data.error) {
+        setAddressForm((prev: any) => ({
+          ...prev,
+          street: data.street || prev.street,
+          neighborhood: data.neighborhood || prev.neighborhood,
+          city: data.city || prev.city,
+          state: data.state || prev.state,
+          country: data.country || guessCountry,
+          latitude: data.latitude || prev.latitude,
+          longitude: data.longitude || prev.longitude,
+        }))
+      }
+    } catch (err) {
+      console.error('Error looking up address', err)
+    }
+  }
 
   const handleDeleteAddress = async (id: string) => {
     if (!window.confirm('Deseja excluir este endereço?')) return
@@ -898,9 +933,14 @@ export function DashboardAdminCustomers(props: any) {
                   (() => {
                     const form = addressForm
                     const setForm = setAddressForm
-                    const isBr = form.country === 'Brasil' || form.country === 'Brazil'
-                    const cepErr =
-                      isBr && form.zip_code ? !/^\d{5}-\d{3}$/.test(form.zip_code) : false
+                    const cleanZip = form.zip_code ? form.zip_code.replace(/\D/g, '') : ''
+                    const cepErr = form.zip_code
+                      ? cleanZip.length !== 8 && cleanZip.length !== 5 && cleanZip.length !== 9
+                      : false
+
+                    const hasBilling = customerAddresses.some(
+                      (a) => a.address_type === 'billing' && a.id !== form.id,
+                    )
 
                     return (
                       <div className="space-y-4 border p-4 rounded-lg bg-muted/10">
@@ -923,7 +963,9 @@ export function DashboardAdminCustomers(props: any) {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="shipping">Entrega</SelectItem>
-                                <SelectItem value="billing">Cobrança</SelectItem>
+                                <SelectItem value="billing" disabled={hasBilling}>
+                                  Cobrança
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </Field>
@@ -937,13 +979,14 @@ export function DashboardAdminCustomers(props: any) {
                             <Input
                               value={form.zip_code || ''}
                               onChange={(e) => setForm({ ...form, zip_code: e.target.value })}
+                              onBlur={handleZipBlur}
                               className={cepErr ? 'border-red-500' : ''}
                             />
                             {cepErr && (
                               <span className="text-xs text-red-500">Formato inválido</span>
                             )}
                           </Field>
-                          <Field l="Rua / Avenida">
+                          <Field l="Logradouro">
                             <Input
                               value={form.street || ''}
                               onChange={(e) => setForm({ ...form, street: e.target.value })}
