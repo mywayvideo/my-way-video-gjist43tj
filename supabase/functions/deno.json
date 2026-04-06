@@ -24,8 +24,8 @@
     "create-paypal-payment-intent": 5,
     "verify-paypal-payment": 5,
     "lookup-address": 10,
-    "calculate-shipping": 15,
-    "ups-get-token": 3,
-    "ups-calculate-rate": 2
+    "calculate-shipping": 16,
+    "ups-get-token": 4,
+    "ups-calculate-rate": 3
   }
 }

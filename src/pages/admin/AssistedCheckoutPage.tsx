@@ -75,6 +75,7 @@ export default function AssistedCheckoutPage() {
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false)
   const [shippingErrorMsg, setShippingErrorMsg] = useState<string | null>(null)
   const [usingFallbacks, setUsingFallbacks] = useState(false)
+  const [upsFailed, setUpsFailed] = useState(false)
 
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
@@ -286,6 +287,7 @@ export default function AssistedCheckoutPage() {
         setShippingCost(0)
         setShippingErrorMsg(null)
         setUsingFallbacks(false)
+        setUpsFailed(false)
         return
       }
 
@@ -293,6 +295,7 @@ export default function AssistedCheckoutPage() {
         setShippingCost(null)
         setShippingErrorMsg(null)
         setUsingFallbacks(false)
+        setUpsFailed(false)
         return
       }
 
@@ -329,10 +332,12 @@ export default function AssistedCheckoutPage() {
 
         setShippingCost(data.shipping_cost || 0)
         setUsingFallbacks(!!data.using_fallbacks)
+        setUpsFailed(!!data.ups_failed)
       } catch (e: any) {
         setShippingErrorMsg(e.message || 'Erro ao calcular frete')
         setShippingCost(null)
         setUsingFallbacks(false)
+        setUpsFailed(false)
       } finally {
         setIsCalculatingShipping(false)
       }
@@ -922,10 +927,16 @@ export default function AssistedCheckoutPage() {
                   <span className="text-muted-foreground/60 text-xs">Pendente</span>
                 )}
               </div>
-              {usingFallbacks && (
+              {usingFallbacks && !upsFailed && (
                 <div className="text-[11px] text-amber-600 bg-amber-500/10 p-2 rounded border border-amber-500/20 mt-1 leading-tight">
                   Atenção: Alguns produtos não possuem peso/dimensões. O frete foi calculado com
                   valores padrão.
+                </div>
+              )}
+              {upsFailed && (
+                <div className="text-[11px] text-amber-600 bg-amber-500/10 p-2 rounded border border-amber-500/20 mt-1 leading-tight">
+                  O frete está sendo calculado com base na tabela de contingência devido à
+                  indisponibilidade temporária da transportadora.
                 </div>
               )}
               {shippingErrorMsg && (

@@ -1,19 +1,18 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const body = await req.json();
-    console.log("[ups-calculate-rate] Request body:", JSON.stringify(body));
+    const body = await req.json()
+    console.log('[ups-calculate-rate] Request body:', JSON.stringify(body))
 
     const {
       origin_zip,
@@ -25,7 +24,7 @@ serve(async (req) => {
       width_in,
       height_in,
       service_type,
-    } = body;
+    } = body
 
     if (
       !origin_zip ||
@@ -36,55 +35,60 @@ serve(async (req) => {
       !width_in ||
       !height_in
     ) {
-      console.error("[ups-calculate-rate] Invalid parameters:", JSON.stringify(body));
+      console.error('[ups-calculate-rate] Invalid parameters:', JSON.stringify(body))
       return new Response(
         JSON.stringify({
-          error: "Parâmetros inválidos para cálculo de frete",
+          error: 'Parâmetros inválidos para cálculo de frete',
         }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      )
     }
 
-    console.log("[ups-calculate-rate] Invoking ups-get-token...");
+    console.log('[ups-calculate-rate] Invoking ups-get-token...')
     const tokenResponse = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/functions/v1/ups-get-token`,
+      `${Deno.env.get('SUPABASE_URL')}/functions/v1/ups-get-token`,
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
         },
-        body: "{}",
-      }
-    );
+        body: '{}',
+      },
+    )
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error("[ups-calculate-rate] Failed to authenticate with UPS:", errorText, "Status:", tokenResponse.status);
+      const errorText = await tokenResponse.text()
+      console.error(
+        '[ups-calculate-rate] Failed to authenticate with UPS:',
+        errorText,
+        'Status:',
+        tokenResponse.status,
+      )
       return new Response(
         JSON.stringify({
-          error: "Não foi possível autenticar com UPS",
-          details: errorText
+          error: 'Não foi possível autenticar com UPS',
+          details: errorText,
         }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      )
     }
 
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-    console.log("[ups-calculate-rate] Token obtained successfully.");
+    const tokenData = await tokenResponse.json()
+    const accessToken = tokenData.access_token
+    console.log('[ups-calculate-rate] Token obtained successfully.')
 
     const ratePayload = {
       RateRequest: {
         Request: {
-          RequestOption: "Rate",
-          SubVersion: "2205",
+          RequestOption: 'Rate',
+          SubVersion: '2205',
         },
         Shipment: {
           Shipper: {
             Address: {
               PostalCode: origin_zip,
-              CountryCode: "US",
+              CountryCode: 'US',
             },
           },
           ShipTo: {
@@ -95,11 +99,11 @@ serve(async (req) => {
           },
           Package: {
             PackagingType: {
-              Code: "02",
+              Code: '02',
             },
             Dimensions: {
               UnitOfMeasurement: {
-                Code: "IN",
+                Code: 'IN',
               },
               Length: length_in.toString(),
               Width: width_in.toString(),
@@ -107,71 +111,73 @@ serve(async (req) => {
             },
             PackageWeight: {
               UnitOfMeasurement: {
-                Code: "LBS",
+                Code: 'LBS',
               },
               Weight: weight_lbs.toString(),
             },
           },
         },
       },
-    };
-
-    const environment = Deno.env.get("UPS_ENVIRONMENT") || "sandbox";
-    const rateEndpoint =
-      environment === "sandbox"
-        ? "https://onlinetools-cie.ups.com/rating/v2/Shop"
-        : "https://onlinetools.ups.com/rating/v2/Shop";
-
-    console.log("[ups-calculate-rate] Calling UPS Rate API endpoint:", rateEndpoint);
-    console.log("[ups-calculate-rate] Rate payload:", JSON.stringify(ratePayload));
-
-    const rateResponse = await fetch(rateEndpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(ratePayload),
-    });
-
-    if (!rateResponse.ok) {
-      const errorText = await rateResponse.text();
-      console.error("[ups-calculate-rate] UPS Rate API Error:", errorText, "Status:", rateResponse.status);
-      return new Response(
-        JSON.stringify({
-          error: "Não foi possível calcular frete UPS",
-          details: errorText,
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
     }
 
-    const rateData = await rateResponse.json();
-    console.log("[ups-calculate-rate] UPS Rate API Response received.");
+    const environment = Deno.env.get('UPS_ENVIRONMENT') || 'sandbox'
+    const rateEndpoint =
+      environment === 'sandbox'
+        ? 'https://wwwcie.ups.com/rating/v2/Shop'
+        : 'https://onlinetools.ups.com/rating/v2/Shop'
 
-    const services = rateData.RateResponse?.RatedShipment?.map(
-      (shipment: any) => ({
+    console.log('[ups-calculate-rate] Calling UPS Rate API endpoint:', rateEndpoint)
+    console.log('[ups-calculate-rate] Rate payload:', JSON.stringify(ratePayload))
+
+    const rateResponse = await fetch(rateEndpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ratePayload),
+    })
+
+    if (!rateResponse.ok) {
+      const errorText = await rateResponse.text()
+      console.error(
+        '[ups-calculate-rate] UPS Rate API Error:',
+        errorText,
+        'Status:',
+        rateResponse.status,
+      )
+      return new Response(
+        JSON.stringify({
+          error: 'Não foi possível calcular frete UPS',
+          details: errorText,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    const rateData = await rateResponse.json()
+    console.log('[ups-calculate-rate] UPS Rate API Response received.')
+
+    const services =
+      rateData.RateResponse?.RatedShipment?.map((shipment: any) => ({
         code: shipment.Service?.Code,
         name: shipment.Service?.Description,
-        charge_usd: parseFloat(
-          shipment.TotalCharges?.MonetaryValue || "0"
-        ),
-      })
-    ) || [];
+        charge_usd: parseFloat(shipment.TotalCharges?.MonetaryValue || '0'),
+      })) || []
 
-    console.log("[ups-calculate-rate] Extracted services:", JSON.stringify(services));
+    console.log('[ups-calculate-rate] Extracted services:', JSON.stringify(services))
     return new Response(JSON.stringify({ services }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    })
   } catch (error: any) {
-    console.error("[ups-calculate-rate] Unhandled error:", error);
+    console.error('[ups-calculate-rate] Unhandled error:', error)
     return new Response(
       JSON.stringify({
-        error: "Erro ao calcular frete UPS",
+        error: 'Erro ao calcular frete UPS',
         message: error.message,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )
   }
-});
+})
