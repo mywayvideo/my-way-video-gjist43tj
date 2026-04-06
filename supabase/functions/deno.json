@@ -1,31 +1,5 @@
 {
   "_versions": {
-    "ai-search": 47,
-    "functions": 14,
-    "validate-ai-provider": 20,
-    "call-ai-agent": 36,
-    "update-exchange-rate": 14,
-    "validate-image-url": 6,
-    "change-admin-password": 6,
-    "toggle-2fa": 6,
-    "change-customer-password": 6,
-    "send-confirmation-email": 6,
-    "create-customer": 8,
-    "send-welcome-email": 6,
-    "create-customer-public": 7,
-    "enrich-product-specs": 5,
-    "generate-cart-whatsapp-message": 5,
-    "create-discount-coupon": 6,
-    "validate-discount-coupon": 5,
-    "apply-discount-coupon": 5,
-    "generate-payment-token": 5,
-    "validate-payment-token": 5,
-    "create-payment-intent": 5,
-    "create-paypal-payment-intent": 5,
-    "verify-paypal-payment": 5,
-    "lookup-address": 10,
-    "calculate-shipping": 16,
-    "ups-get-token": 4,
-    "ups-calculate-rate": 4
+    "ai-search": 13
   }
 }
