@@ -294,9 +294,22 @@ export function DashboardAdminCustomers(props: any) {
       }
 
       if (form.id) {
-        await supabase.from('customer_addresses').update(payload).eq('id', form.id)
+        const { error } = await supabase
+          .from('customer_addresses')
+          .update(payload)
+          .eq('id', form.id)
+        if (error) {
+          console.error('Update error:', error)
+          toast.error('Erro ao atualizar endereço: ' + error.message)
+          return
+        }
       } else {
-        await supabase.from('customer_addresses').insert(payload)
+        const { error } = await supabase.from('customer_addresses').insert(payload)
+        if (error) {
+          console.error('Insert error:', error)
+          toast.error('Erro ao salvar endereço: ' + error.message)
+          return
+        }
       }
 
       toast.success('Endereço salvo com sucesso')
@@ -336,7 +349,12 @@ export function DashboardAdminCustomers(props: any) {
 
   const handleDeleteAddress = async (id: string) => {
     if (!window.confirm('Deseja excluir este endereço?')) return
-    await supabase.from('customer_addresses').delete().eq('id', id)
+    const { error } = await supabase.from('customer_addresses').delete().eq('id', id)
+    if (error) {
+      console.error('Delete error:', error)
+      toast.error('Erro ao excluir endereço: ' + error.message)
+      return
+    }
     toast.success('Endereço excluído')
     loadAddresses(selectedCustomer.id)
   }
