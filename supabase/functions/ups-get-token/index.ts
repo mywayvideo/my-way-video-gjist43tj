@@ -12,36 +12,35 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { 
+      status: 405, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
   }
 
   try {
-    console.log('[ups-get-token] Starting token request...')
+    console.log("[ups-get-token] Starting token request...");
     const clientId = Deno.env.get('UPS_CLIENT_ID')
     const clientSecret = Deno.env.get('UPS_CLIENT_SECRET')
     const environment = Deno.env.get('UPS_ENVIRONMENT')
 
-    console.log(`[ups-get-token] Environment: ${environment}`)
-    console.log(`[ups-get-token] Client ID exists: ${!!clientId}`)
-    console.log(`[ups-get-token] Client Secret exists: ${!!clientSecret}`)
+    console.log(`[ups-get-token] Environment: ${environment}`);
+    console.log(`[ups-get-token] Client ID exists: ${!!clientId}`);
+    console.log(`[ups-get-token] Client Secret exists: ${!!clientSecret}`);
 
     if (!clientId || !clientSecret || !environment) {
-      console.error('[ups-get-token] Missing required environment variables.')
-      return new Response(JSON.stringify({ error: 'Credenciais UPS nao configuradas.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      console.error("[ups-get-token] Missing required environment variables.");
+      return new Response(
+        JSON.stringify({ error: 'Credenciais UPS nao configuradas.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    const oauthEndpoint =
-      environment === 'production'
-        ? 'https://onlinetools.ups.com/security/v1/oauth/token'
-        : 'https://onlinetools-cie.ups.com/security/v1/oauth/token'
+    const oauthEndpoint = environment === 'production'
+      ? 'https://onlinetools.ups.com/security/v1/oauth/token'
+      : 'https://onlinetools-cie.ups.com/security/v1/oauth/token'
 
-    console.log(`[ups-get-token] Calling OAuth endpoint: ${oauthEndpoint}`)
+    console.log(`[ups-get-token] Calling OAuth endpoint: ${oauthEndpoint}`);
 
     const params = new URLSearchParams()
     params.append('grant_type', 'client_credentials')
@@ -52,9 +51,9 @@ Deno.serve(async (req: Request) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+        'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`
       },
-      body: params.toString(),
+      body: params.toString()
     })
 
     if (!tokenResponse.ok) {
@@ -62,26 +61,26 @@ Deno.serve(async (req: Request) => {
       console.error(`[ups-get-token] UPS OAuth Error (${tokenResponse.status}):`, errorText)
       return new Response(
         JSON.stringify({ error: 'Nao foi possivel autenticar com UPS.', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const tokenData = await tokenResponse.json()
-    console.log('[ups-get-token] Successfully obtained token.')
+    console.log("[ups-get-token] Successfully obtained token.");
 
     return new Response(
       JSON.stringify({
         access_token: tokenData.access_token,
         expires_in: tokenData.expires_in,
-        token_type: tokenData.token_type,
+        token_type: tokenData.token_type
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: any) {
     console.error('[ups-get-token] Unhandled error:', error)
     return new Response(
       JSON.stringify({ error: 'Nao foi possivel autenticar com UPS.', details: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
