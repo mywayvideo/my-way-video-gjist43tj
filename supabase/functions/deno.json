@@ -28,6 +28,7 @@
     "ups-get-token": 4,
     "ups-calculate-rate": 4,
     "extract-product-bhphoto": 2,
-    "calculate-price-brl": 1
+    "calculate-price-brl": 1,
+    "validate-ncm-suggestion": 1
   }
 }
