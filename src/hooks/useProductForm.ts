@@ -54,7 +54,9 @@ export function useProductForm() {
         try {
           const brl = await productService.calculateBrl(price_usa, weight)
           form.setValue('price_brl', brl)
-        } catch (e) {}
+        } catch (e) {
+          console.error('Failed to calculate BRL price', e)
+        }
       }
     }
     const debounce = setTimeout(updateBrl, 800)
