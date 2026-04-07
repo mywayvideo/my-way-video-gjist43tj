@@ -29,6 +29,8 @@
     "ups-calculate-rate": 14,
     "extract-product-bhphoto": 17,
     "calculate-price-brl": 11,
-    "validate-ncm-suggestion": 13
+    "validate-ncm-suggestion": 13,
+    "cancel-stripe-charge": 1,
+    "notify-admin-refund": 1
   }
 }
