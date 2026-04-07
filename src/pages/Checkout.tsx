@@ -8,6 +8,8 @@ import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
 import { useStripePayment } from '@/hooks/useStripePayment'
 import {
+  createPaymentIntent,
+  confirmCardPayment,
   createOrderAfterPayment,
   clearCartFromLocalStorage,
   clearCartFromSupabase,
@@ -156,13 +158,7 @@ export default function Checkout() {
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
 
-  const {
-    mountCardElement,
-    state: stripeState,
-    processPaymentIntent,
-    confirmPayment,
-    resetState: resetStripeState,
-  } = useStripePayment()
+  const { mountCardElement, stripe, cardElement } = useStripePayment()
 
   const cardContainerRef = useRef<HTMLDivElement>(null)
   const [stripeName, setStripeName] = useState('')
@@ -782,6 +778,32 @@ export default function Checkout() {
     }
   }
 
+  const ensureShippingAddress = async (customerId: string) => {
+    if (deliveryMethod === 'coleta') return null
+    if (selectedAddressId && !isAddingNewAddress) return selectedAddressId
+
+    const { data: addrData, error } = await supabase
+      .from('customer_addresses')
+      .insert({
+        customer_id: customerId,
+        address_type: 'shipping',
+        street: address.street || 'N/A',
+        number: address.number || 'S/N',
+        complement: address.complement || null,
+        neighborhood: 'N/A',
+        city: address.city || (deliveryMethod === 'miami' ? 'Coral Gables' : 'N/A'),
+        state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
+        zip_code: address.zip_code || '00000',
+        country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
+        is_default: saveNewAddress,
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return addrData?.id || null
+  }
+
   const getDBShippingMethod = (method: string) => {
     if (method === 'coleta') return 'miami_pickup'
     if (method === 'miami' || method === 'usa') return 'usa_cargo'
@@ -806,31 +828,7 @@ export default function Checkout() {
         .single()
       if (!customer) throw new Error('Cliente não encontrado')
 
-      let shippingAddressId = null
-      if (deliveryMethod !== 'coleta') {
-        if (selectedAddressId && !isAddingNewAddress) {
-          shippingAddressId = selectedAddressId
-        } else {
-          const { data: addrData } = await supabase
-            .from('customer_addresses')
-            .insert({
-              customer_id: customer.id,
-              address_type: 'shipping',
-              street: address.street || 'N/A',
-              number: address.number || 'S/N',
-              complement: address.complement || null,
-              neighborhood: 'N/A',
-              city: address.city || (deliveryMethod === 'miami' ? 'Coral Gables' : 'N/A'),
-              state: address.state || (deliveryMethod === 'miami' ? 'FL' : 'N/A'),
-              zip_code: address.zip_code || '00000',
-              country: deliveryMethod === 'brasil' ? 'Brasil' : 'USA',
-              is_default: saveNewAddress,
-            })
-            .select('id')
-            .single()
-          if (addrData) shippingAddressId = addrData.id
-        }
-      }
+      const shippingAddressId = await ensureShippingAddress(customer.id)
 
       const orderNumber = `ORD-${Date.now().toString().slice(-6)}`
       const { data: order, error: orderErr } = await supabase
@@ -871,20 +869,7 @@ export default function Checkout() {
 
       setCreatedOrderId(order.id)
 
-      if (paymentMethod === 'stripe') {
-        const { data: stripeData, error: stripeErr } = await supabase.functions.invoke(
-          'create-payment-intent',
-          {
-            body: { order_id: order.id, amount: Math.round(total * 100) },
-          },
-        )
-        if (stripeErr) throw stripeErr
-        if (stripeData?.payment_link) {
-          if (cartContext?.clearCart) cartContext.clearCart()
-          localStorage.removeItem('cart')
-          window.location.href = stripeData.payment_link
-        }
-      } else if (paymentMethod === 'paypal') {
+      if (paymentMethod === 'paypal') {
         const { data: paypalData, error: paypalErr } = await supabase.functions.invoke(
           'create-paypal-payment-intent',
           {
@@ -1674,87 +1659,98 @@ export default function Checkout() {
             onStepClick={setCurrentStep}
           >
             {paymentMethod === 'stripe' ? (
-              <>
-                <div
-                  className={cn(
-                    'bg-slate-50 rounded-2xl p-8 text-center border-2 border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-6 duration-500',
-                    !stripeState.confirmationStep && 'hidden',
-                  )}
-                >
-                  <h3 className="text-2xl font-bold text-slate-900 mb-6">
-                    Tudo certo para finalizar?
-                  </h3>
-                  <div className="text-left bg-white p-6 rounded-xl border border-slate-200 mb-8 max-w-md mx-auto space-y-4">
-                    <div className="flex justify-between border-b border-slate-100 pb-2">
-                      <span className="text-slate-500">Subtotal</span>
-                      <span className="font-semibold text-slate-900 font-mono">
-                        {formatCurrency(subtotal)}
-                      </span>
-                    </div>
-                    {discountAmount > 0 && (
-                      <div className="flex justify-between border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Desconto</span>
-                        <span className="font-semibold text-emerald-600 font-mono">
-                          -{formatCurrency(discountAmount)}
-                        </span>
-                      </div>
-                    )}
-                    {freight !== null && (
-                      <div className="flex justify-between border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Frete</span>
-                        <span className="font-semibold text-slate-900 font-mono">
-                          {formatCurrency(freight)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-lg pt-2">
-                      <span className="text-slate-900">Total a Pagar</span>
-                      <span className="text-emerald-600 font-mono text-xl">
-                        {formatCurrency(total)}
-                      </span>
-                    </div>
-                    <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg mt-4">
-                      <p>
-                        <strong>Entrega:</strong> {deliveryMethod.toUpperCase()}{' '}
-                        {address.zip_code && `- ${address.zip_code}`}
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <h3 className="text-xl font-bold text-[hsl(215,25%,15%)] mb-1">
+                  Informações do Cartão de Crédito
+                </h3>
+                <p className="text-sm text-[hsl(215,15%,45%)] mb-6">Pagamento seguro via Stripe</p>
+
+                <div className="space-y-5 bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)]">
+                  <div>
+                    <Label className="text-[hsl(215,25%,15%)] font-semibold">Nome no Cartão</Label>
+                    <Input
+                      value={stripeName}
+                      onChange={(e) => setStripeName(e.target.value)}
+                      className={inputClass}
+                      placeholder="Nome completo"
+                    />
+                    {stripeName.length > 0 && stripeName.length < 5 && (
+                      <p className="text-red-500 text-sm mt-1">
+                        Nome deve ter pelo menos 5 caracteres
                       </p>
-                      <p>
-                        <strong>Pagamento:</strong> Cartão de Crédito (Stripe)
-                      </p>
-                    </div>
+                    )}
                   </div>
+                  <div>
+                    <Label className="text-[hsl(215,25%,15%)] font-semibold">Email</Label>
+                    <Input
+                      type="email"
+                      value={stripeEmail}
+                      onChange={(e) => setStripeEmail(e.target.value)}
+                      className={inputClass}
+                      placeholder="seu@email.com"
+                    />
+                    {stripeEmail.length > 0 && !stripeEmail.includes('@') && (
+                      <p className="text-red-500 text-sm mt-1">Email invalido</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-[hsl(215,25%,15%)] font-semibold">Dados do Cartão</Label>
+                    <div
+                      ref={cardContainerRef}
+                      className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
+                    />
+                  </div>
+                </div>
 
-                  {stripeState.errorMessage && (
-                    <p className="text-red-500 text-sm mb-4 font-medium">
-                      {stripeState.errorMessage}
-                    </p>
-                  )}
+                <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
+                  <button
+                    className={btnSecondary}
+                    onClick={() => {
+                      setPaymentMethod('')
+                    }}
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    className={btnPrimary}
+                    onClick={async () => {
+                      setIsLoading(true)
+                      try {
+                        const { data: customer } = await supabase
+                          .from('customers')
+                          .select('id')
+                          .eq('user_id', user!.id)
+                          .single()
+                        if (!customer) throw new Error('Cliente não encontrado')
 
-                  <div className="flex flex-col-reverse sm:flex-row gap-4 justify-center max-w-md mx-auto">
-                    <button
-                      className={cn(btnSecondary, 'flex-1')}
-                      onClick={() => resetStripeState()}
-                      disabled={stripeState.status === 'confirming'}
-                    >
-                      Voltar
-                    </button>
-                    <button
-                      className={cn(btnPrimary, 'flex-1 shadow-lg shadow-[hsl(152,68%,10%)]')}
-                      onClick={async () => {
-                        const paymentIntent = await confirmPayment(stripeName, stripeEmail)
-                        if (paymentIntent) {
-                          try {
+                        const shippingAddressId = await ensureShippingAddress(customer.id)
+
+                        const tempOrderId = `ORD-${Date.now().toString().slice(-6)}`
+                        const { client_secret } = await createPaymentIntent(
+                          Math.round(total * 100),
+                          'usd',
+                          stripeEmail,
+                          stripeName,
+                          tempOrderId,
+                        )
+
+                        if (stripe && cardElement && client_secret) {
+                          const paymentIntent = await confirmCardPayment(
+                            stripe,
+                            client_secret,
+                            cardElement,
+                            stripeName,
+                            stripeEmail,
+                          )
+
+                          if (paymentIntent) {
                             await createOrderAfterPayment(
                               paymentIntent.id,
                               total,
                               cartItems,
                               stripeEmail,
                               user!.id,
-                              deliveryMethod !== 'coleta' &&
-                                selectedAddressId &&
-                                !isAddingNewAddress
-                                ? selectedAddressId
-                                : null,
+                              shippingAddressId,
                               getDBShippingMethod(deliveryMethod),
                               freight,
                               discountAmount,
@@ -1772,121 +1768,29 @@ export default function Checkout() {
                             setTimeout(() => {
                               navigate('/my-orders')
                             }, 1000)
-                          } catch (err: any) {
-                            toast({
-                              description: 'Nao foi possivel criar pedido. Tente novamente.',
-                              variant: 'destructive',
-                            })
                           }
                         }
-                      }}
-                      disabled={stripeState.status === 'confirming'}
-                    >
-                      {stripeState.status === 'confirming' ? (
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      ) : (
-                        <CheckCircle2 className="w-5 h-5 mr-2" />
-                      )}
-                      Confirmar Pedido
-                    </button>
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    'animate-in fade-in slide-in-from-bottom-4 duration-300',
-                    stripeState.confirmationStep && 'hidden',
-                  )}
-                >
-                  <h3 className="text-xl font-bold text-[hsl(215,25%,15%)] mb-1">
-                    Informações do Cartão de Crédito
-                  </h3>
-                  <p className="text-sm text-[hsl(215,15%,45%)] mb-6">
-                    Pagamento seguro via Stripe
-                  </p>
-
-                  <div className="space-y-5 bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)]">
-                    <div>
-                      <Label className="text-[hsl(215,25%,15%)] font-semibold">
-                        Nome no Cartão
-                      </Label>
-                      <Input
-                        value={stripeName}
-                        onChange={(e) => setStripeName(e.target.value)}
-                        className={inputClass}
-                        placeholder="Nome completo"
-                      />
-                      {stripeName.length > 0 && stripeName.length < 5 && (
-                        <p className="text-red-500 text-sm mt-1">
-                          Nome deve ter pelo menos 5 caracteres
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-[hsl(215,25%,15%)] font-semibold">Email</Label>
-                      <Input
-                        type="email"
-                        value={stripeEmail}
-                        onChange={(e) => setStripeEmail(e.target.value)}
-                        className={inputClass}
-                        placeholder="seu@email.com"
-                      />
-                      {stripeEmail.length > 0 && !stripeEmail.includes('@') && (
-                        <p className="text-red-500 text-sm mt-1">Email invalido</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-[hsl(215,25%,15%)] font-semibold">
-                        Dados do Cartão
-                      </Label>
-                      <div
-                        ref={cardContainerRef}
-                        className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
-                      />
-                    </div>
-                  </div>
-
-                  {stripeState.errorMessage && (
-                    <p className="text-red-500 text-sm mt-4 font-medium px-2">
-                      {stripeState.errorMessage}
-                    </p>
-                  )}
-
-                  <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
-                    <button
-                      className={btnSecondary}
-                      onClick={() => {
-                        setPaymentMethod('')
-                        resetStripeState()
-                      }}
-                    >
-                      Voltar
-                    </button>
-                    <button
-                      className={btnPrimary}
-                      onClick={() => {
-                        const tempOrderId = `PENDING-${Date.now().toString().slice(-6)}`
-                        processPaymentIntent(
-                          Math.round(total * 100),
-                          stripeEmail,
-                          stripeName,
-                          tempOrderId,
-                        )
-                      }}
-                      disabled={
-                        stripeState.status === 'loading' ||
-                        stripeName.length < 5 ||
-                        !stripeEmail.includes('@')
+                      } catch (err: any) {
+                        toast({
+                          description:
+                            err.message || 'Nao foi possivel processar pagamento. Tente novamente.',
+                          variant: 'destructive',
+                        })
+                      } finally {
+                        setIsLoading(false)
                       }
-                    >
-                      {stripeState.status === 'loading' ? (
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      ) : null}
-                      Processar Pagamento
-                    </button>
-                  </div>
+                    }}
+                    disabled={isLoading || stripeName.length < 5 || !stripeEmail.includes('@')}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                    )}
+                    Confirmar Pedido
+                  </button>
                 </div>
-              </>
+              </div>
             ) : (
               <>
                 <RadioGroup
@@ -1940,50 +1844,20 @@ export default function Checkout() {
                   </button>
                   <button
                     className={btnPrimary}
-                    onClick={() => setCurrentStep(6)}
-                    disabled={!paymentMethod}
+                    onClick={handleConfirmOrder}
+                    disabled={!paymentMethod || isLoading}
                   >
-                    Continuar para Resumo
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                    )}
+                    Confirmar Pedido
                   </button>
                 </div>
               </>
             )}
           </StepWrapper>
-
-          {/* STEP 6 */}
-          {currentStep === 6 && (
-            <div className="bg-slate-50 rounded-2xl p-8 text-center border-2 border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-6 duration-500">
-              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-3">Tudo certo para finalizar?</h3>
-              <p className="text-slate-600 mb-8 max-w-md mx-auto leading-relaxed text-lg">
-                Revise os dados da sua entrega e o resumo do pedido. Ao confirmar, seu pedido será
-                gerado com segurança.
-              </p>
-
-              <div className="flex flex-col-reverse sm:flex-row gap-4 justify-center max-w-lg mx-auto">
-                <button className={cn(btnSecondary, 'flex-1')} onClick={() => setCurrentStep(5)}>
-                  Voltar
-                </button>
-                <button
-                  className={cn(
-                    btnPrimary,
-                    'flex-1 text-lg py-4 shadow-lg shadow-[hsl(152,68%,10%)]',
-                  )}
-                  onClick={handleConfirmOrder}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                  ) : (
-                    <CheckCircle2 className="w-6 h-6 mr-2" />
-                  )}
-                  Confirmar Pedido
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Column Summary - Desktop Only */}
