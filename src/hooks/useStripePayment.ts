@@ -7,6 +7,7 @@ export const useStripePayment = () => {
   const [stripe, setStripe] = useState<any>(null)
   const [elements, setElements] = useState<any>(null)
   const [cardElement, setCardElement] = useState<any>(null)
+  const [isCardReady, setIsCardReady] = useState(false)
 
   useEffect(() => {
     if (!window.Stripe) {
@@ -50,6 +51,11 @@ export const useStripePayment = () => {
               },
             },
           })
+
+          card.on('ready', () => {
+            setIsCardReady(true)
+          })
+
           card.mount(node)
           cardRef.current = card
           setCardElement(card)
@@ -74,6 +80,7 @@ export const useStripePayment = () => {
       cardRef.current.destroy()
       cardRef.current = null
       setCardElement(null)
+      setIsCardReady(false)
     }
   }, [])
 
@@ -81,6 +88,7 @@ export const useStripePayment = () => {
     stripe,
     elements,
     cardElement,
+    isCardReady,
     mountCardElement,
     unmountCardElement,
   }

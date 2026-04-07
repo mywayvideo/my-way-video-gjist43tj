@@ -158,7 +158,8 @@ export default function Checkout() {
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
 
-  const { mountCardElement, stripe, cardElement, unmountCardElement } = useStripePayment()
+  const { mountCardElement, stripe, cardElement, unmountCardElement, isCardReady } =
+    useStripePayment()
 
   const [stripeName, setStripeName] = useState('')
   const [stripeEmail, setStripeEmail] = useState('')
@@ -888,7 +889,10 @@ export default function Checkout() {
         setShowManualPaymentDialog(true)
       }
     } catch (err: any) {
-      toast({ description: 'Erro ao processar pedido. Tente novamente.', variant: 'destructive' })
+      toast({
+        description: err.message || 'Erro ao processar pedido. Tente novamente.',
+        variant: 'destructive',
+      })
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -1723,6 +1727,11 @@ export default function Checkout() {
                         const shippingAddressId = await ensureShippingAddress(customer.id)
 
                         const tempOrderId = `ORD-${Date.now().toString().slice(-6)}`
+
+                        if (!isCardReady) {
+                          throw new Error('Aguarde o carregamento do formulário de cartão')
+                        }
+
                         const { client_secret } = await createPaymentIntent(
                           Math.round(total * 100),
                           'usd',
@@ -1731,7 +1740,7 @@ export default function Checkout() {
                           tempOrderId,
                         )
 
-                        if (stripe && cardElement && client_secret) {
+                        if (stripe && cardElement && client_secret && isCardReady) {
                           const paymentIntent = await confirmCardPayment(
                             stripe,
                             client_secret,
@@ -1777,7 +1786,12 @@ export default function Checkout() {
                         setIsLoading(false)
                       }
                     }}
-                    disabled={isLoading || stripeName.length < 5 || !stripeEmail.includes('@')}
+                    disabled={
+                      isLoading ||
+                      stripeName.length < 5 ||
+                      !stripeEmail.includes('@') ||
+                      !isCardReady
+                    }
                   >
                     {isLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
