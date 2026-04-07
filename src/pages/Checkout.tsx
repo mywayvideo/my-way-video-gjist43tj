@@ -6,6 +6,12 @@ import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/hooks/useCart'
 import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
+import { useStripePayment } from '@/hooks/useStripePayment'
+import {
+  createOrderAfterPayment,
+  clearCartFromLocalStorage,
+  clearCartFromSupabase,
+} from '@/services/stripeService'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -150,6 +156,26 @@ export default function Checkout() {
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
 
+  const {
+    mountCardElement,
+    state: stripeState,
+    processPaymentIntent,
+    confirmPayment,
+    resetState: resetStripeState,
+  } = useStripePayment()
+
+  const cardContainerRef = useRef<HTMLDivElement>(null)
+  const [stripeName, setStripeName] = useState('')
+  const [stripeEmail, setStripeEmail] = useState('')
+
+  useEffect(() => {
+    if (paymentMethod === 'stripe' && !stripeState.confirmationStep) {
+      if (cardContainerRef.current) {
+        mountCardElement(cardContainerRef.current)
+      }
+    }
+  }, [paymentMethod, stripeState.confirmationStep, mountCardElement])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('cancel') === 'paypal') {
@@ -168,6 +194,9 @@ export default function Checkout() {
       navigate('/login?redirect=/checkout')
       return
     }
+    if (user.email && !stripeEmail) {
+      setStripeEmail(user.email)
+    }
     fetchAddressesAndDiscounts()
   }, [user, loading, cartContext])
 
@@ -182,6 +211,7 @@ export default function Checkout() {
       if (discRes.data) setActiveDiscounts(discRes.data)
 
       if (custRes.data) {
+        setStripeName(custRes.data.full_name || '')
         const { data: addresses } = await supabase
           .from('customer_addresses')
           .select('*')
@@ -1643,63 +1673,271 @@ export default function Checkout() {
             title="Seleção de Pagamento"
             onStepClick={setCurrentStep}
           >
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={setPaymentMethod}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-            >
-              {getPaymentOptions().map((opt) => (
-                <div
-                  key={opt.id}
-                  onClick={() => setPaymentMethod(opt.id)}
-                  className={cn(
-                    'group border-2 rounded-2xl p-6 cursor-pointer transition-all duration-200 ease-out flex flex-col items-center text-center',
-                    paymentMethod === opt.id
-                      ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
-                      : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
-                  )}
-                >
-                  <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
-                  <div className="mb-4 transform transition-transform group-hover:scale-110 duration-300">
-                    {opt.icon}
+            {paymentMethod === 'stripe' ? (
+              stripeState.confirmationStep ? (
+                <div className="bg-slate-50 rounded-2xl p-8 text-center border-2 border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-6 duration-500">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-6">
+                    Tudo certo para finalizar?
+                  </h3>
+                  <div className="text-left bg-white p-6 rounded-xl border border-slate-200 mb-8 max-w-md mx-auto space-y-4">
+                    <div className="flex justify-between border-b border-slate-100 pb-2">
+                      <span className="text-slate-500">Subtotal</span>
+                      <span className="font-semibold text-slate-900 font-mono">
+                        {formatCurrency(subtotal)}
+                      </span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">Desconto</span>
+                        <span className="font-semibold text-emerald-600 font-mono">
+                          -{formatCurrency(discountAmount)}
+                        </span>
+                      </div>
+                    )}
+                    {freight !== null && (
+                      <div className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">Frete</span>
+                        <span className="font-semibold text-slate-900 font-mono">
+                          {formatCurrency(freight)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg pt-2">
+                      <span className="text-slate-900">Total a Pagar</span>
+                      <span className="text-emerald-600 font-mono text-xl">
+                        {formatCurrency(total)}
+                      </span>
+                    </div>
+                    <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg mt-4">
+                      <p>
+                        <strong>Entrega:</strong> {deliveryMethod.toUpperCase()}{' '}
+                        {address.zip_code && `- ${address.zip_code}`}
+                      </p>
+                      <p>
+                        <strong>Pagamento:</strong> Cartão de Crédito (Stripe)
+                      </p>
+                    </div>
                   </div>
-                  <Label
-                    htmlFor={opt.id}
-                    className={cn(
-                      'cursor-pointer block text-lg font-bold mb-1 transition-colors',
-                      paymentMethod === opt.id
-                        ? 'text-[hsl(152,68%,25%)]'
-                        : 'text-[hsl(215,25%,15%)]',
-                    )}
-                  >
-                    {opt.label}
-                  </Label>
-                  <span
-                    className={cn(
-                      'block text-sm font-medium transition-colors',
-                      paymentMethod === opt.id
-                        ? 'text-[hsl(152,68%,35%)]'
-                        : 'text-[hsl(215,25%,25%)]',
-                    )}
-                  >
-                    {opt.desc}
-                  </span>
-                </div>
-              ))}
-            </RadioGroup>
 
-            <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
-              <button className={btnSecondary} onClick={() => setCurrentStep(4)}>
-                Voltar
-              </button>
-              <button
-                className={btnPrimary}
-                onClick={() => setCurrentStep(6)}
-                disabled={!paymentMethod}
-              >
-                Continuar para Resumo
-              </button>
-            </div>
+                  {stripeState.errorMessage && (
+                    <p className="text-red-500 text-sm mb-4 font-medium">
+                      {stripeState.errorMessage}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col-reverse sm:flex-row gap-4 justify-center max-w-md mx-auto">
+                    <button
+                      className={cn(btnSecondary, 'flex-1')}
+                      onClick={() => resetStripeState()}
+                      disabled={stripeState.status === 'confirming'}
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      className={cn(btnPrimary, 'flex-1 shadow-lg shadow-[hsl(152,68%,10%)]')}
+                      onClick={async () => {
+                        const paymentIntent = await confirmPayment(stripeName, stripeEmail)
+                        if (paymentIntent) {
+                          try {
+                            await createOrderAfterPayment(
+                              paymentIntent.id,
+                              total,
+                              cartItems,
+                              stripeEmail,
+                              user!.id,
+                              deliveryMethod !== 'coleta' &&
+                                selectedAddressId &&
+                                !isAddingNewAddress
+                                ? selectedAddressId
+                                : null,
+                              getDBShippingMethod(deliveryMethod),
+                              freight,
+                              discountAmount,
+                            )
+
+                            clearCartFromLocalStorage()
+                            await clearCartFromSupabase(user!.id)
+                            if (cartContext?.clearCart) cartContext.clearCart()
+
+                            toast({
+                              description: 'Pagamento confirmado! Redirecionando para pedidos...',
+                              className: 'bg-emerald-600 text-white border-emerald-700',
+                            })
+
+                            setTimeout(() => {
+                              navigate('/my-orders')
+                            }, 1000)
+                          } catch (err: any) {
+                            toast({
+                              description: 'Nao foi possivel criar pedido. Tente novamente.',
+                              variant: 'destructive',
+                            })
+                          }
+                        }
+                      }}
+                      disabled={stripeState.status === 'confirming'}
+                    >
+                      {stripeState.status === 'confirming' ? (
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                      )}
+                      Confirmar Pedido
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <h3 className="text-xl font-bold text-[hsl(215,25%,15%)] mb-1">
+                    Informações do Cartão de Crédito
+                  </h3>
+                  <p className="text-sm text-[hsl(215,15%,45%)] mb-6">
+                    Pagamento seguro via Stripe
+                  </p>
+
+                  <div className="space-y-5 bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)]">
+                    <div>
+                      <Label className="text-[hsl(215,25%,15%)] font-semibold">
+                        Nome no Cartão
+                      </Label>
+                      <Input
+                        value={stripeName}
+                        onChange={(e) => setStripeName(e.target.value)}
+                        className={inputClass}
+                        placeholder="Nome completo"
+                      />
+                      {stripeName.length > 0 && stripeName.length < 5 && (
+                        <p className="text-red-500 text-sm mt-1">
+                          Nome deve ter pelo menos 5 caracteres
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-[hsl(215,25%,15%)] font-semibold">Email</Label>
+                      <Input
+                        type="email"
+                        value={stripeEmail}
+                        onChange={(e) => setStripeEmail(e.target.value)}
+                        className={inputClass}
+                        placeholder="seu@email.com"
+                      />
+                      {stripeEmail.length > 0 && !stripeEmail.includes('@') && (
+                        <p className="text-red-500 text-sm mt-1">Email invalido</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-[hsl(215,25%,15%)] font-semibold">
+                        Dados do Cartão
+                      </Label>
+                      <div
+                        ref={cardContainerRef}
+                        className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
+                      />
+                    </div>
+                  </div>
+
+                  {stripeState.errorMessage && (
+                    <p className="text-red-500 text-sm mt-4 font-medium px-2">
+                      {stripeState.errorMessage}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
+                    <button
+                      className={btnSecondary}
+                      onClick={() => {
+                        setPaymentMethod('')
+                        resetStripeState()
+                      }}
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      className={btnPrimary}
+                      onClick={() => {
+                        const tempOrderId = `PENDING-${Date.now().toString().slice(-6)}`
+                        processPaymentIntent(
+                          Math.round(total * 100),
+                          stripeEmail,
+                          stripeName,
+                          tempOrderId,
+                        )
+                      }}
+                      disabled={
+                        stripeState.status === 'loading' ||
+                        stripeName.length < 5 ||
+                        !stripeEmail.includes('@')
+                      }
+                    >
+                      {stripeState.status === 'loading' ? (
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      ) : null}
+                      Processar Pagamento
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <>
+                <RadioGroup
+                  value={paymentMethod}
+                  onValueChange={setPaymentMethod}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                >
+                  {getPaymentOptions().map((opt) => (
+                    <div
+                      key={opt.id}
+                      onClick={() => setPaymentMethod(opt.id)}
+                      className={cn(
+                        'group border-2 rounded-2xl p-6 cursor-pointer transition-all duration-200 ease-out flex flex-col items-center text-center',
+                        paymentMethod === opt.id
+                          ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
+                          : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
+                      )}
+                    >
+                      <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
+                      <div className="mb-4 transform transition-transform group-hover:scale-110 duration-300">
+                        {opt.icon}
+                      </div>
+                      <Label
+                        htmlFor={opt.id}
+                        className={cn(
+                          'cursor-pointer block text-lg font-bold mb-1 transition-colors',
+                          paymentMethod === opt.id
+                            ? 'text-[hsl(152,68%,25%)]'
+                            : 'text-[hsl(215,25%,15%)]',
+                        )}
+                      >
+                        {opt.label}
+                      </Label>
+                      <span
+                        className={cn(
+                          'block text-sm font-medium transition-colors',
+                          paymentMethod === opt.id
+                            ? 'text-[hsl(152,68%,35%)]'
+                            : 'text-[hsl(215,25%,25%)]',
+                        )}
+                      >
+                        {opt.desc}
+                      </span>
+                    </div>
+                  ))}
+                </RadioGroup>
+
+                <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
+                  <button className={btnSecondary} onClick={() => setCurrentStep(4)}>
+                    Voltar
+                  </button>
+                  <button
+                    className={btnPrimary}
+                    onClick={() => setCurrentStep(6)}
+                    disabled={!paymentMethod}
+                  >
+                    Continuar para Resumo
+                  </button>
+                </div>
+              </>
+            )}
           </StepWrapper>
 
           {/* STEP 6 */}
