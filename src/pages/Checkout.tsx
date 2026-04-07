@@ -1288,9 +1288,14 @@ export default function Checkout() {
             Seu pedido foi recebido com sucesso e está aguardando a confirmação do pagamento manual.
             Entraremos em contato em breve.
           </p>
-          <button onClick={() => navigate('/')} className={cn(btnPrimary, 'w-full')}>
-            Voltar à Loja
-          </button>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => navigate('/dashboard')} className={cn(btnPrimary, 'w-full')}>
+              Acompanhar Pedido
+            </button>
+            <button onClick={() => navigate('/')} className={cn(btnSecondary, 'w-full')}>
+              Voltar à Loja
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1772,7 +1777,7 @@ export default function Checkout() {
                             })
 
                             setTimeout(() => {
-                              navigate('/my-orders')
+                              navigate('/dashboard')
                             }, 1000)
                           }
                         }
