@@ -19,7 +19,11 @@ export const initiatePayPalPayment = async (amount: number, email: string, order
   return data.paypal_approval_url
 }
 
-export const generateBankDepositDetails = (orderId: string, amount: number, country: 'EUA' | 'Brasil'): BankDetails => {
+export const generateBankDepositDetails = (
+  orderId: string,
+  amount: number,
+  country: 'EUA' | 'Brasil',
+): BankDetails => {
   if (country === 'EUA') {
     return {
       bankName: 'Miami International Bank',
@@ -63,7 +67,7 @@ export const createPendingOrder = async (
   discountAmount: number,
   freight: number | null,
   shippingAddressId: string | null,
-  orderNumber: string
+  orderNumber: string,
 ) => {
   let paymentMethodType = 'transfer'
   if (paymentMethod === 'stripe') paymentMethodType = 'card'
@@ -84,7 +88,7 @@ export const createPendingOrder = async (
       shipping_cost: freight,
       total,
       shipping_method: shippingMethod,
-      payment_data: paymentData
+      payment_data: paymentData,
     } as any)
     .select('id, order_number')
     .single()

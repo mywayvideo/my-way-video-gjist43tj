@@ -28,7 +28,7 @@ import {
   Trash2,
   CheckCircle2,
   ShoppingBag,
-  Copy
+  Copy,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -109,7 +109,7 @@ function StepWrapper({
 const CopyBtn = ({ text }: { text: string }) => {
   const { toast } = useToast()
   return (
-    <button 
+    <button
       type="button"
       onClick={(e) => {
         e.preventDefault()
@@ -139,7 +139,7 @@ export default function Checkout() {
     generatePIXQRCode,
     generateZelleDetails,
     createPendingOrder,
-    getAvailablePaymentMethods
+    getAvailablePaymentMethods,
   } = useAlternativePayments()
 
   const [currentStep, setCurrentStep] = useState(1)
@@ -173,7 +173,7 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
   const [tempOrderNumber, setTempOrderNumber] = useState('')
-  const [pixData, setPixData] = useState<{pixKey: string, qrCodeUrl: string} | null>(null)
+  const [pixData, setPixData] = useState<{ pixKey: string; qrCodeUrl: string } | null>(null)
 
   const [isLoading, setIsLoading] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
@@ -872,7 +872,7 @@ export default function Checkout() {
         discountAmount,
         freight,
         shippingAddressId,
-        tempOrderNumber
+        tempOrderNumber,
       )
 
       supabase.functions.invoke('notify-admin-payment', {
@@ -884,17 +884,16 @@ export default function Checkout() {
           paymentMethod,
           shippingMethod: dbShippingMethod,
           amount: total,
-          paymentData
-        }
+          paymentData,
+        },
       })
 
       if (cartContext?.clearCart) cartContext.clearCart()
       localStorage.removeItem('cart')
       setCreatedOrderId(order_id)
       setOrderConfirmed(true)
-      
+
       toast({ description: 'Pedido criado! Aguardando confirmação do pagamento.' })
-      
     } catch (err: any) {
       toast({
         description: err.message || 'Erro ao processar pedido. Tente novamente.',
@@ -931,7 +930,7 @@ export default function Checkout() {
         discountAmount,
         freight,
         shippingAddressId,
-        tempOrderNumber
+        tempOrderNumber,
       )
 
       await handlePayPalFlow(total, stripeEmail || user!.email || '', order_id)
@@ -1015,31 +1014,39 @@ export default function Checkout() {
   const getPaymentOptions = () => {
     const dbShippingMethod = getDBShippingMethod(deliveryMethod)
     const availableIds = getAvailablePaymentMethods(dbShippingMethod)
-    
+
     const allOptions = [
       {
         id: 'stripe',
         label: 'Cartão de Crédito',
         desc: 'Pagamento seguro via Stripe',
-        icon: <CreditCard className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
+        icon: (
+          <CreditCard className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+        ),
       },
       {
         id: 'transferencia_miami',
         label: 'Transferência (EUA)',
         desc: 'Conta em Miami (USD)',
-        icon: <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
+        icon: (
+          <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+        ),
       },
       {
         id: 'zelle',
         label: 'Zelle',
         desc: 'Transferência via Zelle',
-        icon: <Smartphone className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
+        icon: (
+          <Smartphone className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+        ),
       },
       {
         id: 'paypal',
         label: 'PayPal',
         desc: 'Pague com sua conta PayPal',
-        icon: <CreditCard className="w-8 h-8 text-[#003087] group-hover:text-[#0079C1] transition-colors" />,
+        icon: (
+          <CreditCard className="w-8 h-8 text-[#003087] group-hover:text-[#0079C1] transition-colors" />
+        ),
       },
       {
         id: 'pix',
@@ -1051,11 +1058,13 @@ export default function Checkout() {
         id: 'transferencia_brasil',
         label: 'Transferência (Brasil)',
         desc: 'Conta no Brasil (BRL)',
-        icon: <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
+        icon: (
+          <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+        ),
       },
     ]
 
-    return allOptions.filter(opt => availableIds.includes(opt.id as PaymentMethod))
+    return allOptions.filter((opt) => availableIds.includes(opt.id as PaymentMethod))
   }
 
   const renderAddresses = () => {
@@ -1366,102 +1375,165 @@ export default function Checkout() {
       const details = generateBankDepositDetails(tempOrderNumber, total, isEUA ? 'EUA' : 'Brasil')
       return (
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
-          <h4 className="font-bold text-lg text-slate-900">Dados para Depósito ({isEUA ? 'EUA' : 'Brasil'})</h4>
-          <p className="text-sm text-slate-600 mb-4">Favor transferir o valor exato abaixo. Seu pedido será processado após a confirmação do depósito.</p>
-          
+          <h4 className="font-bold text-lg text-slate-900">
+            Dados para Depósito ({isEUA ? 'EUA' : 'Brasil'})
+          </h4>
+          <p className="text-sm text-slate-600 mb-4">
+            Favor transferir o valor exato abaixo. Seu pedido será processado após a confirmação do
+            depósito.
+          </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-slate-500 text-xs">Banco</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.bankName}</span> <CopyBtn text={details.bankName} /></div>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                <span className="flex-1 font-mono text-sm">{details.bankName}</span>{' '}
+                <CopyBtn text={details.bankName} />
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-slate-500 text-xs">Conta</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.accountNumber}</span> <CopyBtn text={details.accountNumber} /></div>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                <span className="flex-1 font-mono text-sm">{details.accountNumber}</span>{' '}
+                <CopyBtn text={details.accountNumber} />
+              </div>
             </div>
             {details.routingNumber && (
               <div className="space-y-1">
                 <Label className="text-slate-500 text-xs">Routing Number</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.routingNumber}</span> <CopyBtn text={details.routingNumber} /></div>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                  <span className="flex-1 font-mono text-sm">{details.routingNumber}</span>{' '}
+                  <CopyBtn text={details.routingNumber} />
+                </div>
               </div>
             )}
             {details.agencyNumber && (
               <div className="space-y-1">
                 <Label className="text-slate-500 text-xs">Agência</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.agencyNumber}</span> <CopyBtn text={details.agencyNumber} /></div>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                  <span className="flex-1 font-mono text-sm">{details.agencyNumber}</span>{' '}
+                  <CopyBtn text={details.agencyNumber} />
+                </div>
               </div>
             )}
             <div className="space-y-1">
               <Label className="text-slate-500 text-xs">Titular</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.accountHolder}</span> <CopyBtn text={details.accountHolder} /></div>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                <span className="flex-1 font-mono text-sm">{details.accountHolder}</span>{' '}
+                <CopyBtn text={details.accountHolder} />
+              </div>
             </div>
             {details.swiftCode && (
               <div className="space-y-1">
                 <Label className="text-slate-500 text-xs">SWIFT Code</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.swiftCode}</span> <CopyBtn text={details.swiftCode} /></div>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                  <span className="flex-1 font-mono text-sm">{details.swiftCode}</span>{' '}
+                  <CopyBtn text={details.swiftCode} />
+                </div>
               </div>
             )}
             {details.cpfCnpj && (
               <div className="space-y-1">
                 <Label className="text-slate-500 text-xs">CPF/CNPJ</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.cpfCnpj}</span> <CopyBtn text={details.cpfCnpj} /></div>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                  <span className="flex-1 font-mono text-sm">{details.cpfCnpj}</span>{' '}
+                  <CopyBtn text={details.cpfCnpj} />
+                </div>
               </div>
             )}
             <div className="space-y-1 sm:col-span-2">
               <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
-              <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold text-emerald-700">{formatCurrency(total)}</span> <CopyBtn text={total.toString()} /></div>
+              <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+                <span className="flex-1 font-mono font-bold text-emerald-700">
+                  {formatCurrency(total)}
+                </span>{' '}
+                <CopyBtn text={total.toString()} />
+              </div>
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <Label className="text-slate-500 text-xs">Número do Pedido (Inclua na descrição)</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold">{tempOrderNumber}</span> <CopyBtn text={tempOrderNumber} /></div>
+              <Label className="text-slate-500 text-xs">
+                Número do Pedido (Inclua na descrição)
+              </Label>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+                <span className="flex-1 font-mono font-bold">{tempOrderNumber}</span>{' '}
+                <CopyBtn text={tempOrderNumber} />
+              </div>
             </div>
           </div>
         </div>
       )
     }
-  
+
     if (paymentMethod === 'pix' && pixData) {
       return (
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
           <h4 className="font-bold text-lg text-slate-900">Pagamento via PIX</h4>
-          <p className="text-sm text-slate-600 mb-4">Escaneie o código ou copie a chave PIX para pagar.</p>
-          
-          <img src={pixData.qrCodeUrl} alt="PIX QR Code" className="w-48 h-48 mx-auto border border-slate-200 rounded-xl shadow-sm" />
-          
+          <p className="text-sm text-slate-600 mb-4">
+            Escaneie o código ou copie a chave PIX para pagar.
+          </p>
+
+          <img
+            src={pixData.qrCodeUrl}
+            alt="PIX QR Code"
+            className="w-48 h-48 mx-auto border border-slate-200 rounded-xl shadow-sm"
+          />
+
           <div className="max-w-xs mx-auto space-y-1 text-left mt-4">
             <Label className="text-slate-500 text-xs">Chave PIX</Label>
-            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm overflow-hidden text-ellipsis">{pixData.pixKey}</span> <CopyBtn text={pixData.pixKey} /></div>
+            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+              <span className="flex-1 font-mono text-sm overflow-hidden text-ellipsis">
+                {pixData.pixKey}
+              </span>{' '}
+              <CopyBtn text={pixData.pixKey} />
+            </div>
           </div>
           <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
             <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
-            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold text-emerald-700">{formatCurrency(total)}</span></div>
+            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+              <span className="flex-1 font-mono font-bold text-emerald-700">
+                {formatCurrency(total)}
+              </span>
+            </div>
           </div>
         </div>
       )
     }
-  
+
     if (paymentMethod === 'zelle') {
       const details = generateZelleDetails(tempOrderNumber, total)
       return (
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
           <h4 className="font-bold text-lg text-slate-900">Pagamento via Zelle</h4>
-          <p className="text-sm text-slate-600 mb-4">Use o email abaixo para enviar o pagamento via Zelle.</p>
-          
+          <p className="text-sm text-slate-600 mb-4">
+            Use o email abaixo para enviar o pagamento via Zelle.
+          </p>
+
           <div className="max-w-xs mx-auto space-y-1 text-left mt-4">
             <Label className="text-slate-500 text-xs">Email Zelle</Label>
-            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.email}</span> <CopyBtn text={details.email} /></div>
+            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+              <span className="flex-1 font-mono text-sm">{details.email}</span>{' '}
+              <CopyBtn text={details.email} />
+            </div>
           </div>
           <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
             <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
-            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold text-emerald-700">{formatCurrency(total)}</span></div>
+            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+              <span className="flex-1 font-mono font-bold text-emerald-700">
+                {formatCurrency(total)}
+              </span>
+            </div>
           </div>
           <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
             <Label className="text-slate-500 text-xs">Número do Pedido (Inclua no memo)</Label>
-            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold">{tempOrderNumber}</span> <CopyBtn text={tempOrderNumber} /></div>
+            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
+              <span className="flex-1 font-mono font-bold">{tempOrderNumber}</span>{' '}
+              <CopyBtn text={tempOrderNumber} />
+            </div>
           </div>
         </div>
       )
     }
-  
+
     return null
   }
 
@@ -1476,8 +1548,8 @@ export default function Checkout() {
             Pedido Confirmado!
           </h1>
           <p className="text-slate-600 mb-8 leading-relaxed">
-            Seu pedido foi recebido com sucesso e está aguardando a confirmação do pagamento.
-            Você será notificado assim que o processo for concluído.
+            Seu pedido foi recebido com sucesso e está aguardando a confirmação do pagamento. Você
+            será notificado assim que o processo for concluído.
           </p>
           <div className="flex flex-col gap-3">
             <button onClick={() => navigate('/dashboard')} className={cn(btnPrimary, 'w-full')}>
@@ -1945,9 +2017,10 @@ export default function Checkout() {
                   else handleConfirmManualPayment()
                 }}
                 disabled={
-                  !paymentMethod || 
-                  isGlobalLoading || 
-                  (paymentMethod === 'stripe' && (!isCardReady || stripeName.length < 5 || !stripeEmail.includes('@')))
+                  !paymentMethod ||
+                  isGlobalLoading ||
+                  (paymentMethod === 'stripe' &&
+                    (!isCardReady || stripeName.length < 5 || !stripeEmail.includes('@')))
                 }
               >
                 {isGlobalLoading ? (
@@ -1955,11 +2028,15 @@ export default function Checkout() {
                 ) : (
                   <CheckCircle2 className="w-5 h-5 mr-2" />
                 )}
-                {paymentMethod === 'paypal' ? 'Pagar com PayPal' :
-                 paymentMethod === 'zelle' ? 'Confirmar Pagamento Zelle' :
-                 paymentMethod === 'pix' ? 'Confirmar Pagamento PIX' :
-                 paymentMethod.startsWith('transferencia') ? 'Confirmar Depósito' :
-                 'Confirmar Pedido'}
+                {paymentMethod === 'paypal'
+                  ? 'Pagar com PayPal'
+                  : paymentMethod === 'zelle'
+                    ? 'Confirmar Pagamento Zelle'
+                    : paymentMethod === 'pix'
+                      ? 'Confirmar Pagamento PIX'
+                      : paymentMethod.startsWith('transferencia')
+                        ? 'Confirmar Depósito'
+                        : 'Confirmar Pedido'}
               </button>
             </div>
           </StepWrapper>

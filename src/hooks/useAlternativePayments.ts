@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
-import { 
-  initiatePayPalPayment, 
-  createPendingOrder, 
-  generateBankDepositDetails, 
-  generatePIXQRCode, 
+import {
+  initiatePayPalPayment,
+  createPendingOrder,
+  generateBankDepositDetails,
+  generatePIXQRCode,
   generateZelleDetails,
-  getAvailablePaymentMethods
+  getAvailablePaymentMethods,
 } from '@/services/paymentService'
 
 export const useAlternativePayments = () => {
@@ -43,6 +43,6 @@ export const useAlternativePayments = () => {
     generatePIXQRCode,
     generateZelleDetails,
     createPendingOrder,
-    getAvailablePaymentMethods
+    getAvailablePaymentMethods,
   }
 }
