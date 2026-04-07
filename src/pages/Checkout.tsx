@@ -7,6 +7,8 @@ import { useCart } from '@/hooks/useCart'
 import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
 import { useStripePayment } from '@/hooks/useStripePayment'
+import { useAlternativePayments } from '@/hooks/useAlternativePayments'
+import { PaymentMethod } from '@/types/payment'
 import {
   createPaymentIntent,
   confirmCardPayment,
@@ -26,17 +28,8 @@ import {
   Trash2,
   CheckCircle2,
   ShoppingBag,
+  Copy
 } from 'lucide-react'
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
@@ -113,11 +106,41 @@ function StepWrapper({
   )
 }
 
+const CopyBtn = ({ text }: { text: string }) => {
+  const { toast } = useToast()
+  return (
+    <button 
+      type="button"
+      onClick={(e) => {
+        e.preventDefault()
+        navigator.clipboard.writeText(text)
+        toast({ description: 'Copiado para a área de transferência.' })
+      }}
+      className="p-2 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors"
+      title="Copiar"
+    >
+      <Copy className="w-4 h-4" />
+    </button>
+  )
+}
+
 export default function Checkout() {
   const { user, loading } = useAuth()
   const cartContext = useCart() as any
   const { toast } = useToast()
   const navigate = useNavigate()
+
+  const {
+    isLoading: altIsLoading,
+    setIsLoading: setAltIsLoading,
+    validateShippingMethod,
+    handlePayPalFlow,
+    generateBankDepositDetails,
+    generatePIXQRCode,
+    generateZelleDetails,
+    createPendingOrder,
+    getAvailablePaymentMethods
+  } = useAlternativePayments()
 
   const [currentStep, setCurrentStep] = useState(1)
   const [cartItems, setCartItems] = useState<any[]>([])
@@ -148,10 +171,11 @@ export default function Checkout() {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null)
   const [discountAmount, setDiscountAmount] = useState(0)
 
-  const [paymentMethod, setPaymentMethod] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
+  const [tempOrderNumber, setTempOrderNumber] = useState('')
+  const [pixData, setPixData] = useState<{pixKey: string, qrCodeUrl: string} | null>(null)
 
   const [isLoading, setIsLoading] = useState(false)
-  const [showManualPaymentDialog, setShowManualPaymentDialog] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [orderConfirmed, setOrderConfirmed] = useState(false)
 
@@ -164,11 +188,19 @@ export default function Checkout() {
   const [stripeName, setStripeName] = useState('')
   const [stripeEmail, setStripeEmail] = useState('')
 
+  const isGlobalLoading = isLoading || altIsLoading
+
   useEffect(() => {
     if (paymentMethod !== 'stripe' && unmountCardElement) {
       unmountCardElement()
     }
   }, [paymentMethod, unmountCardElement])
+
+  useEffect(() => {
+    if (currentStep === 5 && !tempOrderNumber) {
+      setTempOrderNumber(`ORD-${Date.now().toString().slice(-6)}`)
+    }
+  }, [currentStep, tempOrderNumber])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -193,6 +225,14 @@ export default function Checkout() {
     }
     fetchAddressesAndDiscounts()
   }, [user, loading, cartContext])
+
+  const total = subtotal - discountAmount + (freight || 0)
+
+  useEffect(() => {
+    if (paymentMethod === 'pix' && tempOrderNumber && total > 0) {
+      generatePIXQRCode(tempOrderNumber, total).then(setPixData)
+    }
+  }, [paymentMethod, tempOrderNumber, total, generatePIXQRCode])
 
   const fetchAddressesAndDiscounts = async () => {
     if (!user) return
@@ -353,7 +393,12 @@ export default function Checkout() {
     }
   }
 
-  const total = subtotal - discountAmount + (freight || 0)
+  const getDBShippingMethod = (method: string) => {
+    if (method === 'coleta') return 'miami_pickup'
+    if (method === 'miami' || method === 'usa') return 'usa_cargo'
+    if (method === 'brasil') return 'brazil_delivery'
+    return 'usa_cargo'
+  }
 
   const getFilteredAddresses = (method: string = deliveryMethod) => {
     const normalizeStr = (str: string | null) =>
@@ -432,6 +477,7 @@ export default function Checkout() {
   const handleDeliveryChange = (val: string) => {
     setDeliveryMethod(val)
     setFreight(null)
+    setPaymentMethod('')
 
     if (val === 'coleta') return
 
@@ -672,17 +718,6 @@ export default function Checkout() {
     setShippingError(null)
 
     try {
-      console.log('DEBUG: Full cartItems structure', JSON.stringify(cartItems, null, 2))
-      if (cartItems.length > 0) {
-        console.log('DEBUG: First item details', cartItems[0])
-        console.log('DEBUG: First item keys', Object.keys(cartItems[0]))
-        console.log('DEBUG: First item weight field', cartItems[0].weight)
-        console.log('DEBUG: First item weight_lb field', cartItems[0].weight_lb)
-        console.log('DEBUG: First item weight_kg field', cartItems[0].weight_kg)
-        console.log('DEBUG: First item quantity field', cartItems[0].quantity)
-        console.log('DEBUG: First item unit_price field', cartItems[0].unit_price)
-      }
-
       const payload = {
         delivery_type: deliveryMethod === 'brasil' ? 'sao_paulo' : deliveryMethod,
         address:
@@ -702,8 +737,6 @@ export default function Checkout() {
           price_usd: item.unit_price,
         })),
       }
-
-      console.log('DEBUG: Payload being sent', JSON.stringify(payload, null, 2))
 
       const { data, error } = await supabase.functions.invoke('calculate-shipping', {
         body: payload,
@@ -802,21 +835,10 @@ export default function Checkout() {
     return addrData?.id || null
   }
 
-  const getDBShippingMethod = (method: string) => {
-    if (method === 'coleta') return 'miami_pickup'
-    if (method === 'miami' || method === 'usa') return 'usa_cargo'
-    if (method === 'brasil') return 'brazil_delivery'
-    return 'usa_cargo'
-  }
+  const handleConfirmManualPayment = async () => {
+    const dbShippingMethod = getDBShippingMethod(deliveryMethod)
+    if (!validateShippingMethod(dbShippingMethod)) return
 
-  const getDBPaymentMethod = (method: string) => {
-    if (method === 'stripe') return 'card'
-    if (method === 'pix') return 'pix'
-    if (method === 'paypal') return 'paypal'
-    return 'transfer'
-  }
-
-  const handleConfirmOrder = async () => {
     setIsLoading(true)
     try {
       const { data: customer } = await supabase
@@ -828,148 +850,212 @@ export default function Checkout() {
 
       const shippingAddressId = await ensureShippingAddress(customer.id)
 
-      const orderNumber = `ORD-${Date.now().toString().slice(-6)}`
-      const { data: order, error: orderErr } = await supabase
-        .from('orders')
-        .insert({
-          customer_id: customer.id,
-          order_number: orderNumber,
-          status: 'pending',
-          shipping_address_id: shippingAddressId,
-          payment_method_type: getDBPaymentMethod(paymentMethod),
-          subtotal,
-          discount_amount: discountAmount,
-          shipping_cost: freight,
-          total,
-          shipping_method: getDBShippingMethod(deliveryMethod),
-        })
-        .select('id')
-        .single()
-
-      if (orderErr) throw orderErr
-
-      const itemsToInsert = cartItems.map((item) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.unit_price * item.quantity,
-      }))
-
-      const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert)
-      if (itemsErr) throw itemsErr
-
-      if (appliedCoupon) {
-        await supabase.functions.invoke('apply-discount-coupon', {
-          body: { coupon_code: appliedCoupon, order_id: order.id, discount_amount: discountAmount },
-        })
+      let paymentData = null
+      if (paymentMethod === 'transferencia_miami') {
+        paymentData = generateBankDepositDetails(tempOrderNumber, total, 'EUA')
+      } else if (paymentMethod === 'transferencia_brasil') {
+        paymentData = generateBankDepositDetails(tempOrderNumber, total, 'Brasil')
+      } else if (paymentMethod === 'pix') {
+        paymentData = pixData
+      } else if (paymentMethod === 'zelle') {
+        paymentData = generateZelleDetails(tempOrderNumber, total)
       }
 
-      setCreatedOrderId(order.id)
+      const { order_id } = await createPendingOrder(
+        customer.id,
+        cartItems,
+        paymentMethod as PaymentMethod,
+        paymentData,
+        dbShippingMethod,
+        total,
+        subtotal,
+        discountAmount,
+        freight,
+        shippingAddressId,
+        tempOrderNumber
+      )
 
-      if (paymentMethod === 'paypal') {
-        const { data: paypalData, error: paypalErr } = await supabase.functions.invoke(
-          'create-paypal-payment-intent',
-          {
-            body: { order_id: order.id, amount: Math.round(total * 100) },
-          },
-        )
-        if (paypalErr || !paypalData?.paypal_approval_url) {
-          toast({
-            description: 'Erro ao conectar com PayPal. Tente novamente.',
-            variant: 'destructive',
-          })
-          setIsLoading(false)
-          return
+      supabase.functions.invoke('notify-admin-payment', {
+        body: {
+          orderId: order_id,
+          orderNumber: tempOrderNumber,
+          customerName: user!.user_metadata?.name || '',
+          customerEmail: user!.email || '',
+          paymentMethod,
+          shippingMethod: dbShippingMethod,
+          amount: total,
+          paymentData
         }
-        if (cartContext?.clearCart) cartContext.clearCart()
-        localStorage.removeItem('cart')
-        window.location.href = paypalData.paypal_approval_url
-      } else {
-        setShowManualPaymentDialog(true)
-      }
+      })
+
+      if (cartContext?.clearCart) cartContext.clearCart()
+      localStorage.removeItem('cart')
+      setCreatedOrderId(order_id)
+      setOrderConfirmed(true)
+      
+      toast({ description: 'Pedido criado! Aguardando confirmação do pagamento.' })
+      
     } catch (err: any) {
       toast({
         description: err.message || 'Erro ao processar pedido. Tente novamente.',
         variant: 'destructive',
       })
-      console.error(err)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const completeManualPayment = async () => {
-    if (!createdOrderId) return
+  const handlePayPalSubmit = async () => {
+    const dbShippingMethod = getDBShippingMethod(deliveryMethod)
+    if (!validateShippingMethod(dbShippingMethod)) return
+
     setIsLoading(true)
     try {
-      await supabase.from('orders').update({ status: 'pending_payment' }).eq('id', createdOrderId)
-      if (cartContext?.clearCart) cartContext.clearCart()
-      localStorage.removeItem('cart')
-      setOrderConfirmed(true)
-      setShowManualPaymentDialog(false)
-    } catch (e) {
-      console.error(e)
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user!.id)
+        .single()
+      if (!customer) throw new Error('Cliente não encontrado')
+
+      const shippingAddressId = await ensureShippingAddress(customer.id)
+
+      const { order_id } = await createPendingOrder(
+        customer.id,
+        cartItems,
+        'paypal',
+        null,
+        dbShippingMethod,
+        total,
+        subtotal,
+        discountAmount,
+        freight,
+        shippingAddressId,
+        tempOrderNumber
+      )
+
+      await handlePayPalFlow(total, stripeEmail || user!.email || '', order_id)
+    } catch (err: any) {
+      toast({ description: err.message || 'Erro ao criar pedido PayPal.', variant: 'destructive' })
+      setIsLoading(false)
+    }
+  }
+
+  const handleStripeSubmit = async () => {
+    setIsLoading(true)
+    try {
+      const dbShippingMethod = getDBShippingMethod(deliveryMethod)
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user!.id)
+        .single()
+      if (!customer) throw new Error('Cliente não encontrado')
+
+      const shippingAddressId = await ensureShippingAddress(customer.id)
+
+      if (!isCardReady) {
+        throw new Error('Aguarde o carregamento do formulário de cartão')
+      }
+
+      const { client_secret } = await createPaymentIntent(
+        Math.round(total * 100),
+        'usd',
+        stripeEmail,
+        stripeName,
+        tempOrderNumber,
+      )
+
+      if (stripe && cardElement && client_secret && isCardReady) {
+        const paymentIntent = await confirmCardPayment(
+          stripe,
+          client_secret,
+          cardElement,
+          stripeName,
+          stripeEmail,
+        )
+
+        if (paymentIntent) {
+          await createOrderAfterPayment(
+            paymentIntent.id,
+            total,
+            cartItems,
+            stripeEmail,
+            user!.id,
+            shippingAddressId,
+            dbShippingMethod,
+            freight || null,
+            discountAmount,
+          )
+
+          clearCartFromLocalStorage()
+          await clearCartFromSupabase(user!.id)
+          if (cartContext?.clearCart) cartContext.clearCart()
+
+          toast({
+            description: 'Pagamento confirmado! Redirecionando para pedidos...',
+            className: 'bg-emerald-600 text-white border-emerald-700',
+          })
+
+          setTimeout(() => {
+            navigate('/dashboard')
+          }, 1000)
+        }
+      }
+    } catch (err: any) {
+      toast({
+        description: err.message || 'Nao foi possivel processar pagamento. Tente novamente.',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   const getPaymentOptions = () => {
-    const baseOptions = [
+    const dbShippingMethod = getDBShippingMethod(deliveryMethod)
+    const availableIds = getAvailablePaymentMethods(dbShippingMethod)
+    
+    const allOptions = [
       {
         id: 'stripe',
         label: 'Cartão de Crédito',
         desc: 'Pagamento seguro via Stripe',
-        icon: (
-          <CreditCard className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
-        ),
+        icon: <CreditCard className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
       },
       {
         id: 'transferencia_miami',
         label: 'Transferência (EUA)',
         desc: 'Conta em Miami (USD)',
-        icon: (
-          <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
-        ),
+        icon: <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
       },
       {
         id: 'zelle',
         label: 'Zelle',
         desc: 'Transferência via Zelle',
-        icon: (
-          <Smartphone className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
-        ),
+        icon: <Smartphone className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
       },
       {
         id: 'paypal',
         label: 'PayPal',
         desc: 'Pague com sua conta PayPal',
-        icon: (
-          <CreditCard className="w-8 h-8 text-[#003087] group-hover:text-[#0079C1] transition-colors" />
-        ),
+        icon: <CreditCard className="w-8 h-8 text-[#003087] group-hover:text-[#0079C1] transition-colors" />,
+      },
+      {
+        id: 'pix',
+        label: 'PIX',
+        desc: 'Pagamento instantâneo',
+        icon: <Smartphone className="w-8 h-8 text-emerald-600" />,
+      },
+      {
+        id: 'transferencia_brasil',
+        label: 'Transferência (Brasil)',
+        desc: 'Conta no Brasil (BRL)',
+        icon: <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />,
       },
     ]
-    if (deliveryMethod === 'brasil') {
-      return [
-        ...baseOptions,
-        {
-          id: 'pix',
-          label: 'PIX',
-          desc: 'Pagamento instantâneo',
-          icon: <Smartphone className="w-8 h-8 text-emerald-600" />,
-        },
-        {
-          id: 'transferencia_brasil',
-          label: 'Transferência (Brasil)',
-          desc: 'Conta no Brasil (BRL)',
-          icon: (
-            <Landmark className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
-          ),
-        },
-      ]
-    }
-    return baseOptions
+
+    return allOptions.filter(opt => availableIds.includes(opt.id as PaymentMethod))
   }
 
   const renderAddresses = () => {
@@ -1274,6 +1360,111 @@ export default function Checkout() {
     </div>
   )
 
+  const renderManualPaymentDetails = () => {
+    if (paymentMethod === 'transferencia_miami' || paymentMethod === 'transferencia_brasil') {
+      const isEUA = paymentMethod === 'transferencia_miami'
+      const details = generateBankDepositDetails(tempOrderNumber, total, isEUA ? 'EUA' : 'Brasil')
+      return (
+        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
+          <h4 className="font-bold text-lg text-slate-900">Dados para Depósito ({isEUA ? 'EUA' : 'Brasil'})</h4>
+          <p className="text-sm text-slate-600 mb-4">Favor transferir o valor exato abaixo. Seu pedido será processado após a confirmação do depósito.</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-slate-500 text-xs">Banco</Label>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.bankName}</span> <CopyBtn text={details.bankName} /></div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-slate-500 text-xs">Conta</Label>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.accountNumber}</span> <CopyBtn text={details.accountNumber} /></div>
+            </div>
+            {details.routingNumber && (
+              <div className="space-y-1">
+                <Label className="text-slate-500 text-xs">Routing Number</Label>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.routingNumber}</span> <CopyBtn text={details.routingNumber} /></div>
+              </div>
+            )}
+            {details.agencyNumber && (
+              <div className="space-y-1">
+                <Label className="text-slate-500 text-xs">Agência</Label>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.agencyNumber}</span> <CopyBtn text={details.agencyNumber} /></div>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-slate-500 text-xs">Titular</Label>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.accountHolder}</span> <CopyBtn text={details.accountHolder} /></div>
+            </div>
+            {details.swiftCode && (
+              <div className="space-y-1">
+                <Label className="text-slate-500 text-xs">SWIFT Code</Label>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.swiftCode}</span> <CopyBtn text={details.swiftCode} /></div>
+              </div>
+            )}
+            {details.cpfCnpj && (
+              <div className="space-y-1">
+                <Label className="text-slate-500 text-xs">CPF/CNPJ</Label>
+                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.cpfCnpj}</span> <CopyBtn text={details.cpfCnpj} /></div>
+              </div>
+            )}
+            <div className="space-y-1 sm:col-span-2">
+              <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
+              <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold text-emerald-700">{formatCurrency(total)}</span> <CopyBtn text={total.toString()} /></div>
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label className="text-slate-500 text-xs">Número do Pedido (Inclua na descrição)</Label>
+              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold">{tempOrderNumber}</span> <CopyBtn text={tempOrderNumber} /></div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  
+    if (paymentMethod === 'pix' && pixData) {
+      return (
+        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
+          <h4 className="font-bold text-lg text-slate-900">Pagamento via PIX</h4>
+          <p className="text-sm text-slate-600 mb-4">Escaneie o código ou copie a chave PIX para pagar.</p>
+          
+          <img src={pixData.qrCodeUrl} alt="PIX QR Code" className="w-48 h-48 mx-auto border border-slate-200 rounded-xl shadow-sm" />
+          
+          <div className="max-w-xs mx-auto space-y-1 text-left mt-4">
+            <Label className="text-slate-500 text-xs">Chave PIX</Label>
+            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm overflow-hidden text-ellipsis">{pixData.pixKey}</span> <CopyBtn text={pixData.pixKey} /></div>
+          </div>
+          <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
+            <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
+            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold text-emerald-700">{formatCurrency(total)}</span></div>
+          </div>
+        </div>
+      )
+    }
+  
+    if (paymentMethod === 'zelle') {
+      const details = generateZelleDetails(tempOrderNumber, total)
+      return (
+        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
+          <h4 className="font-bold text-lg text-slate-900">Pagamento via Zelle</h4>
+          <p className="text-sm text-slate-600 mb-4">Use o email abaixo para enviar o pagamento via Zelle.</p>
+          
+          <div className="max-w-xs mx-auto space-y-1 text-left mt-4">
+            <Label className="text-slate-500 text-xs">Email Zelle</Label>
+            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono text-sm">{details.email}</span> <CopyBtn text={details.email} /></div>
+          </div>
+          <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
+            <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
+            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold text-emerald-700">{formatCurrency(total)}</span></div>
+          </div>
+          <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
+            <Label className="text-slate-500 text-xs">Número do Pedido (Inclua no memo)</Label>
+            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg"><span className="flex-1 font-mono font-bold">{tempOrderNumber}</span> <CopyBtn text={tempOrderNumber} /></div>
+          </div>
+        </div>
+      )
+    }
+  
+    return null
+  }
+
   if (orderConfirmed) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 font-sans">
@@ -1285,8 +1476,8 @@ export default function Checkout() {
             Pedido Confirmado!
           </h1>
           <p className="text-slate-600 mb-8 leading-relaxed">
-            Seu pedido foi recebido com sucesso e está aguardando a confirmação do pagamento manual.
-            Entraremos em contato em breve.
+            Seu pedido foi recebido com sucesso e está aguardando a confirmação do pagamento.
+            Você será notificado assim que o processo for concluído.
           </p>
           <div className="flex flex-col gap-3">
             <button onClick={() => navigate('/dashboard')} className={cn(btnPrimary, 'w-full')}>
@@ -1664,215 +1855,113 @@ export default function Checkout() {
             title="Seleção de Pagamento"
             onStepClick={setCurrentStep}
           >
-            {paymentMethod === 'stripe' ? (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <h3 className="text-xl font-bold text-[hsl(215,25%,15%)] mb-1">
-                  Informações do Cartão de Crédito
-                </h3>
-                <p className="text-sm text-[hsl(215,15%,45%)] mb-6">Pagamento seguro via Stripe</p>
-
-                <div className="space-y-5 bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)]">
-                  <div>
-                    <Label className="text-[hsl(215,25%,15%)] font-semibold">Nome no Cartão</Label>
-                    <Input
-                      value={stripeName}
-                      onChange={(e) => setStripeName(e.target.value)}
-                      className={inputClass}
-                      placeholder="Nome completo"
-                    />
-                    {stripeName.length > 0 && stripeName.length < 5 && (
-                      <p className="text-red-500 text-sm mt-1">
-                        Nome deve ter pelo menos 5 caracteres
-                      </p>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              {getPaymentOptions().map((opt) => (
+                <div
+                  key={opt.id}
+                  onClick={() => setPaymentMethod(opt.id as PaymentMethod)}
+                  className={cn(
+                    'group border-2 rounded-2xl p-6 cursor-pointer transition-all duration-200 ease-out flex flex-col items-center text-center',
+                    paymentMethod === opt.id
+                      ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
+                      : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
+                  )}
+                >
+                  <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
+                  <div className="mb-4 transform transition-transform group-hover:scale-110 duration-300">
+                    {opt.icon}
+                  </div>
+                  <Label
+                    htmlFor={opt.id}
+                    className={cn(
+                      'cursor-pointer block text-lg font-bold mb-1 transition-colors',
+                      paymentMethod === opt.id
+                        ? 'text-[hsl(152,68%,25%)]'
+                        : 'text-[hsl(215,25%,15%)]',
                     )}
-                  </div>
-                  <div>
-                    <Label className="text-[hsl(215,25%,15%)] font-semibold">Email</Label>
-                    <Input
-                      type="email"
-                      value={stripeEmail}
-                      onChange={(e) => setStripeEmail(e.target.value)}
-                      className={inputClass}
-                      placeholder="seu@email.com"
-                    />
-                    {stripeEmail.length > 0 && !stripeEmail.includes('@') && (
-                      <p className="text-red-500 text-sm mt-1">Email invalido</p>
+                  >
+                    {opt.label}
+                  </Label>
+                  <span
+                    className={cn(
+                      'block text-sm font-medium transition-colors',
+                      paymentMethod === opt.id
+                        ? 'text-[hsl(152,68%,35%)]'
+                        : 'text-[hsl(215,25%,25%)]',
                     )}
-                  </div>
-                  <div>
-                    <Label className="text-[hsl(215,25%,15%)] font-semibold">Dados do Cartão</Label>
-                    <div
-                      ref={mountCardElement}
-                      className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
-                    />
-                  </div>
+                  >
+                    {opt.desc}
+                  </span>
                 </div>
+              ))}
+            </RadioGroup>
 
-                <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
-                  <button
-                    className={btnSecondary}
-                    onClick={() => {
-                      setPaymentMethod('')
-                    }}
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    className={btnPrimary}
-                    onClick={async () => {
-                      setIsLoading(true)
-                      try {
-                        const { data: customer } = await supabase
-                          .from('customers')
-                          .select('id')
-                          .eq('user_id', user!.id)
-                          .single()
-                        if (!customer) throw new Error('Cliente não encontrado')
+            {renderManualPaymentDetails()}
 
-                        const shippingAddressId = await ensureShippingAddress(customer.id)
-
-                        const tempOrderId = `ORD-${Date.now().toString().slice(-6)}`
-
-                        if (!isCardReady) {
-                          throw new Error('Aguarde o carregamento do formulário de cartão')
-                        }
-
-                        const { client_secret } = await createPaymentIntent(
-                          Math.round(total * 100),
-                          'usd',
-                          stripeEmail,
-                          stripeName,
-                          tempOrderId,
-                        )
-
-                        if (stripe && cardElement && client_secret && isCardReady) {
-                          const paymentIntent = await confirmCardPayment(
-                            stripe,
-                            client_secret,
-                            cardElement,
-                            stripeName,
-                            stripeEmail,
-                          )
-
-                          if (paymentIntent) {
-                            await createOrderAfterPayment(
-                              paymentIntent.id,
-                              total,
-                              cartItems,
-                              stripeEmail,
-                              user!.id,
-                              shippingAddressId,
-                              getDBShippingMethod(deliveryMethod),
-                              freight || null,
-                              discountAmount,
-                            )
-
-                            clearCartFromLocalStorage()
-                            await clearCartFromSupabase(user!.id)
-                            if (cartContext?.clearCart) cartContext.clearCart()
-
-                            toast({
-                              description: 'Pagamento confirmado! Redirecionando para pedidos...',
-                              className: 'bg-emerald-600 text-white border-emerald-700',
-                            })
-
-                            setTimeout(() => {
-                              navigate('/dashboard')
-                            }, 1000)
-                          }
-                        }
-                      } catch (err: any) {
-                        toast({
-                          description:
-                            err.message || 'Nao foi possivel processar pagamento. Tente novamente.',
-                          variant: 'destructive',
-                        })
-                      } finally {
-                        setIsLoading(false)
-                      }
-                    }}
-                    disabled={
-                      isLoading ||
-                      stripeName.length < 5 ||
-                      !stripeEmail.includes('@') ||
-                      !isCardReady
-                    }
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 mr-2" />
-                    )}
-                    Confirmar Pedido
-                  </button>
+            {paymentMethod === 'stripe' && (
+              <div className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in duration-300 space-y-5">
+                <div>
+                  <Label className="text-[hsl(215,25%,15%)] font-semibold">Nome no Cartão</Label>
+                  <Input
+                    value={stripeName}
+                    onChange={(e) => setStripeName(e.target.value)}
+                    className={inputClass}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[hsl(215,25%,15%)] font-semibold">Email</Label>
+                  <Input
+                    type="email"
+                    value={stripeEmail}
+                    onChange={(e) => setStripeEmail(e.target.value)}
+                    className={inputClass}
+                    placeholder="seu@email.com"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[hsl(215,25%,15%)] font-semibold">Dados do Cartão</Label>
+                  <div
+                    ref={mountCardElement}
+                    className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
+                  />
                 </div>
               </div>
-            ) : (
-              <>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={setPaymentMethod}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                >
-                  {getPaymentOptions().map((opt) => (
-                    <div
-                      key={opt.id}
-                      onClick={() => setPaymentMethod(opt.id)}
-                      className={cn(
-                        'group border-2 rounded-2xl p-6 cursor-pointer transition-all duration-200 ease-out flex flex-col items-center text-center',
-                        paymentMethod === opt.id
-                          ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
-                          : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
-                      )}
-                    >
-                      <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
-                      <div className="mb-4 transform transition-transform group-hover:scale-110 duration-300">
-                        {opt.icon}
-                      </div>
-                      <Label
-                        htmlFor={opt.id}
-                        className={cn(
-                          'cursor-pointer block text-lg font-bold mb-1 transition-colors',
-                          paymentMethod === opt.id
-                            ? 'text-[hsl(152,68%,25%)]'
-                            : 'text-[hsl(215,25%,15%)]',
-                        )}
-                      >
-                        {opt.label}
-                      </Label>
-                      <span
-                        className={cn(
-                          'block text-sm font-medium transition-colors',
-                          paymentMethod === opt.id
-                            ? 'text-[hsl(152,68%,35%)]'
-                            : 'text-[hsl(215,25%,25%)]',
-                        )}
-                      >
-                        {opt.desc}
-                      </span>
-                    </div>
-                  ))}
-                </RadioGroup>
-
-                <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
-                  <button className={btnSecondary} onClick={() => setCurrentStep(4)}>
-                    Voltar
-                  </button>
-                  <button
-                    className={btnPrimary}
-                    onClick={handleConfirmOrder}
-                    disabled={!paymentMethod || isLoading}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 mr-2" />
-                    )}
-                    Confirmar Pedido
-                  </button>
-                </div>
-              </>
             )}
+
+            <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 mt-8">
+              <button className={btnSecondary} onClick={() => setCurrentStep(4)}>
+                Voltar
+              </button>
+              <button
+                className={btnPrimary}
+                onClick={() => {
+                  if (paymentMethod === 'stripe') handleStripeSubmit()
+                  else if (paymentMethod === 'paypal') handlePayPalSubmit()
+                  else handleConfirmManualPayment()
+                }}
+                disabled={
+                  !paymentMethod || 
+                  isGlobalLoading || 
+                  (paymentMethod === 'stripe' && (!isCardReady || stripeName.length < 5 || !stripeEmail.includes('@')))
+                }
+              >
+                {isGlobalLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                )}
+                {paymentMethod === 'paypal' ? 'Pagar com PayPal' :
+                 paymentMethod === 'zelle' ? 'Confirmar Pagamento Zelle' :
+                 paymentMethod === 'pix' ? 'Confirmar Pagamento PIX' :
+                 paymentMethod.startsWith('transferencia') ? 'Confirmar Depósito' :
+                 'Confirmar Pedido'}
+              </button>
+            </div>
           </StepWrapper>
         </div>
 
@@ -1914,96 +2003,6 @@ export default function Checkout() {
           </SheetContent>
         </Sheet>
       </div>
-
-      <AlertDialog open={showManualPaymentDialog} onOpenChange={setShowManualPaymentDialog}>
-        <AlertDialogContent className="rounded-3xl border-0 shadow-2xl sm:max-w-lg bg-white p-8">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-3xl font-bold text-slate-900 mb-2">
-              Instruções de Pagamento
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-lg text-slate-600">
-              Realize o pagamento de{' '}
-              <strong className="text-emerald-600 font-mono font-bold">
-                {formatCurrency(total)}
-              </strong>{' '}
-              utilizando as informações abaixo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-4 py-6 text-base text-slate-700">
-            {paymentMethod === 'zelle' && (
-              <div className="bg-slate-50 border-l-4 border-emerald-600 p-5 rounded-xl">
-                <p className="font-medium text-slate-500 mb-1">Envie o Zelle para:</p>
-                <strong className="block text-slate-900 text-xl">payments@mywayvideo.com</strong>
-              </div>
-            )}
-            {paymentMethod === 'transferencia_miami' && (
-              <div className="bg-slate-50 border-l-4 border-emerald-600 p-5 rounded-xl space-y-2">
-                <p>
-                  <strong className="text-slate-900 w-32 inline-block">Bank:</strong> Bank of
-                  America
-                </p>
-                <p>
-                  <strong className="text-slate-900 w-32 inline-block">Routing (ABA):</strong>{' '}
-                  <span className="font-mono">123456789</span>
-                </p>
-                <p>
-                  <strong className="text-slate-900 w-32 inline-block">Account:</strong>{' '}
-                  <span className="font-mono">987654321</span>
-                </p>
-                <p>
-                  <strong className="text-slate-900 w-32 inline-block">Name:</strong> My Way
-                  Business LLC
-                </p>
-              </div>
-            )}
-            {paymentMethod === 'pix' && (
-              <div className="bg-slate-50 border-l-4 border-emerald-600 p-5 rounded-xl">
-                <p className="font-medium text-slate-500 mb-1">Chave PIX (CNPJ):</p>
-                <strong className="block text-slate-900 text-xl font-mono tracking-wide">
-                  12.345.678/0001-99
-                </strong>
-              </div>
-            )}
-            {paymentMethod === 'transferencia_brasil' && (
-              <div className="bg-slate-50 border-l-4 border-emerald-600 p-5 rounded-xl space-y-2">
-                <p>
-                  <strong className="text-slate-900 w-24 inline-block">Banco:</strong> Itaú
-                </p>
-                <p>
-                  <strong className="text-slate-900 w-24 inline-block">Agência:</strong>{' '}
-                  <span className="font-mono">0001</span>
-                </p>
-                <p>
-                  <strong className="text-slate-900 w-24 inline-block">Conta:</strong>{' '}
-                  <span className="font-mono">12345-6</span>
-                </p>
-                <p>
-                  <strong className="text-slate-900 w-24 inline-block">CNPJ:</strong>{' '}
-                  <span className="font-mono">12.345.678/0001-99</span>
-                </p>
-              </div>
-            )}
-            <p className="mt-8 text-sm text-amber-800 bg-amber-50 border border-amber-200 p-4 rounded-xl leading-relaxed font-medium">
-              * Por favor, inclua o código do pedido na descrição da transferência. Seu pedido só
-              será processado após a confirmação do recebimento pela nossa equipe.
-            </p>
-          </div>
-          <AlertDialogFooter className="gap-3 sm:gap-4 mt-4">
-            <AlertDialogCancel
-              onClick={() => setShowManualPaymentDialog(false)}
-              className={cn(btnSecondary, 'py-4 px-6')}
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={completeManualPayment}
-              className={cn(btnPrimary, 'py-4 px-8 shadow-lg shadow-[hsl(152,68%,10%)]')}
-            >
-              Completei a Transferência
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
