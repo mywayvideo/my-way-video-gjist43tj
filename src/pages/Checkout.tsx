@@ -169,12 +169,12 @@ export default function Checkout() {
   const [stripeEmail, setStripeEmail] = useState('')
 
   useEffect(() => {
-    if (paymentMethod === 'stripe' && !stripeState.confirmationStep) {
+    if (paymentMethod === 'stripe') {
       if (cardContainerRef.current) {
         mountCardElement(cardContainerRef.current)
       }
     }
-  }, [paymentMethod, stripeState.confirmationStep, mountCardElement])
+  }, [paymentMethod, mountCardElement])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -1674,8 +1674,13 @@ export default function Checkout() {
             onStepClick={setCurrentStep}
           >
             {paymentMethod === 'stripe' ? (
-              stripeState.confirmationStep ? (
-                <div className="bg-slate-50 rounded-2xl p-8 text-center border-2 border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-6 duration-500">
+              <>
+                <div
+                  className={cn(
+                    'bg-slate-50 rounded-2xl p-8 text-center border-2 border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-6 duration-500',
+                    !stripeState.confirmationStep && 'hidden',
+                  )}
+                >
                   <h3 className="text-2xl font-bold text-slate-900 mb-6">
                     Tudo certo para finalizar?
                   </h3>
@@ -1786,8 +1791,13 @@ export default function Checkout() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+
+                <div
+                  className={cn(
+                    'animate-in fade-in slide-in-from-bottom-4 duration-300',
+                    stripeState.confirmationStep && 'hidden',
+                  )}
+                >
                   <h3 className="text-xl font-bold text-[hsl(215,25%,15%)] mb-1">
                     Informações do Cartão de Crédito
                   </h3>
@@ -1876,7 +1886,7 @@ export default function Checkout() {
                     </button>
                   </div>
                 </div>
-              )
+              </>
             ) : (
               <>
                 <RadioGroup
