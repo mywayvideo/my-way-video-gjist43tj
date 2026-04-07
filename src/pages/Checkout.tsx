@@ -158,19 +158,16 @@ export default function Checkout() {
   const { warehouse } = useShippingConfig()
   const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
 
-  const { mountCardElement, stripe, cardElement } = useStripePayment()
+  const { mountCardElement, stripe, cardElement, unmountCardElement } = useStripePayment()
 
-  const cardContainerRef = useRef<HTMLDivElement>(null)
   const [stripeName, setStripeName] = useState('')
   const [stripeEmail, setStripeEmail] = useState('')
 
   useEffect(() => {
-    if (paymentMethod === 'stripe') {
-      if (cardContainerRef.current) {
-        mountCardElement(cardContainerRef.current)
-      }
+    if (paymentMethod !== 'stripe' && unmountCardElement) {
+      unmountCardElement()
     }
-  }, [paymentMethod, mountCardElement])
+  }, [paymentMethod, unmountCardElement])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -1696,7 +1693,7 @@ export default function Checkout() {
                   <div>
                     <Label className="text-[hsl(215,25%,15%)] font-semibold">Dados do Cartão</Label>
                     <div
-                      ref={cardContainerRef}
+                      ref={mountCardElement}
                       className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
                     />
                   </div>
@@ -1752,7 +1749,7 @@ export default function Checkout() {
                               user!.id,
                               shippingAddressId,
                               getDBShippingMethod(deliveryMethod),
-                              freight,
+                              freight || null,
                               discountAmount,
                             )
 

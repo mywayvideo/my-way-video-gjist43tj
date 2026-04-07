@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const STRIPE_PK =
   'pk_test_51TJNpuCdgoPTpkApWlzlJzlPeqsTHmrbITutsHkVq8zI9yeux7hVXYGN1ygGKTu9vFZUguDO3muKjI2E7ezvI8vw00APSiHyYh'
@@ -28,34 +28,60 @@ export const useStripePayment = () => {
     }
   }, [])
 
+  const cardRef = useRef<any>(null)
+
   const mountCardElement = useCallback(
-    (container: HTMLDivElement) => {
-      if (elements && container && !cardElement) {
-        const card = elements.create('card', {
-          style: {
-            base: {
-              fontSize: '16px',
-              color: '#334155',
-              '::placeholder': {
-                color: '#94a3b8',
+    (node: HTMLDivElement | null) => {
+      if (!elements) return
+
+      if (node) {
+        if (!cardRef.current) {
+          const card = elements.create('card', {
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#334155',
+                '::placeholder': {
+                  color: '#94a3b8',
+                },
+              },
+              invalid: {
+                color: '#ef4444',
               },
             },
-            invalid: {
-              color: '#ef4444',
-            },
-          },
-        })
-        card.mount(container)
-        setCardElement(card)
+          })
+          card.mount(node)
+          cardRef.current = card
+          setCardElement(card)
+        } else {
+          try {
+            cardRef.current.mount(node)
+          } catch (e) {
+            // Ignore if already mounted
+          }
+        }
+      } else {
+        if (cardRef.current) {
+          cardRef.current.unmount()
+        }
       }
     },
-    [elements, cardElement],
+    [elements],
   )
+
+  const unmountCardElement = useCallback(() => {
+    if (cardRef.current) {
+      cardRef.current.destroy()
+      cardRef.current = null
+      setCardElement(null)
+    }
+  }, [])
 
   return {
     stripe,
     elements,
     cardElement,
     mountCardElement,
+    unmountCardElement,
   }
 }

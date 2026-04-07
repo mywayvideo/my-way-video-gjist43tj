@@ -6,16 +6,13 @@ export const createPaymentIntent = async (
   customer_email: string,
   customer_name: string,
   order_id: string,
-  metadata: any = {},
 ) => {
   const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-    body: { amount, currency, customer_email, customer_name, order_id, metadata },
+    body: { amount, currency, customer_email, customer_name, order_id },
   })
-
   if (error) throw error
-  if (data?.error) throw new Error(data.error)
-
-  return data
+  if (data.error) throw new Error(data.error)
+  return data // { client_secret, payment_intent_id, status }
 }
 
 export const confirmCardPayment = async (
@@ -25,7 +22,10 @@ export const confirmCardPayment = async (
   name: string,
   email: string,
 ) => {
-  const result = await stripe.confirmCardPayment(clientSecret, {
+  if (!stripe || !cardElement) {
+    throw new Error('Stripe ou CardElement não inicializado')
+  }
+  const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
     payment_method: {
       card: cardElement,
       billing_details: {
@@ -34,12 +34,8 @@ export const confirmCardPayment = async (
       },
     },
   })
-
-  if (result.error) {
-    throw new Error(result.error.message || 'Cartão inválido')
-  }
-
-  return result.paymentIntent
+  if (error) throw new Error(error.message)
+  return paymentIntent
 }
 
 export const createOrderAfterPayment = async (
@@ -49,82 +45,89 @@ export const createOrderAfterPayment = async (
   userEmail: string,
   userId: string,
   shippingAddressId: string | null,
-  shippingMethod: string | null,
-  freight: number | null,
-  discountAmount: number | null,
+  shippingMethod: string,
+  shippingCost: number | null,
+  discountAmount: number,
 ) => {
+  // Get customer id from user_id
   const { data: customer } = await supabase
     .from('customers')
     .select('id')
     .eq('user_id', userId)
     .single()
-
   if (!customer) throw new Error('Cliente não encontrado')
 
   const orderNumber = `ORD-${Date.now().toString().slice(-6)}`
 
+  // Calculate subtotal from items
+  const subtotal = items.reduce((acc, item) => acc + item.unit_price * item.quantity, 0)
+
+  // Insert order
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
       customer_id: customer.id,
       order_number: orderNumber,
-      status: 'paid',
+      status: 'paid', // Use 'paid' as requested
       shipping_address_id: shippingAddressId,
       payment_method_type: 'card',
-      subtotal: orderTotal - (freight || 0) + (discountAmount || 0),
+      subtotal,
       discount_amount: discountAmount,
-      shipping_cost: freight,
+      shipping_cost: shippingCost,
       total: orderTotal,
       shipping_method: shippingMethod,
     })
     .select('id')
     .single()
 
-  if (orderErr) throw orderErr
+  if (orderErr) throw new Error(`Erro ao criar pedido: ${orderErr.message}`)
 
-  const itemsToInsert = items.map((item) => ({
+  // Insert items
+  const orderItems = items.map((item) => ({
     order_id: order.id,
-    product_id: item.product_id,
+    product_id: item.product_id || item.id, // handle case where item.product_id is missing
     quantity: item.quantity,
     unit_price: item.unit_price,
     total_price: item.unit_price * item.quantity,
   }))
 
-  const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert)
-  if (itemsErr) throw itemsErr
+  const { error: itemsErr } = await supabase.from('order_items').insert(orderItems)
+  if (itemsErr) throw new Error(`Erro ao salvar itens do pedido: ${itemsErr.message}`)
 
+  // Insert status history
   const { error: historyErr } = await supabase.from('order_status_history').insert({
     order_id: order.id,
     new_status: 'paid',
+    old_status: null,
+    changed_by: customer.id,
   })
-  if (historyErr) throw historyErr
+
+  if (historyErr) throw new Error(`Erro ao salvar histórico do pedido: ${historyErr.message}`)
 
   return order.id
 }
 
 export const clearCartFromLocalStorage = () => {
   localStorage.removeItem('cart')
-  localStorage.removeItem('shopping-cart')
-  localStorage.removeItem('cartItems')
-  localStorage.removeItem('cart-storage')
 }
 
 export const clearCartFromSupabase = async (userId: string) => {
-  await supabase.from('cart_items').delete().eq('user_id', userId)
-
-  const { data: cust } = await supabase
+  // Find customer
+  const { data: customer } = await supabase
     .from('customers')
     .select('id')
     .eq('user_id', userId)
-    .maybeSingle()
-  if (cust) {
-    const { data: cart } = await supabase
-      .from('shopping_carts')
-      .select('id')
-      .eq('customer_id', cust.id)
-      .maybeSingle()
-    if (cart) {
-      await supabase.from('cart_items').delete().eq('cart_id', cart.id)
-    }
-  }
+    .single()
+  if (!customer) return
+
+  // Find cart
+  const { data: cart } = await supabase
+    .from('shopping_carts')
+    .select('id')
+    .eq('customer_id', customer.id)
+    .single()
+  if (!cart) return
+
+  // Delete items
+  await supabase.from('cart_items').delete().eq('cart_id', cart.id)
 }
