@@ -31,6 +31,7 @@
     "calculate-price-brl": 11,
     "validate-ncm-suggestion": 13,
     "cancel-stripe-charge": 1,
-    "notify-admin-refund": 1
+    "notify-admin-refund": 1,
+    "initiate-paypal-payment": 1
   }
 }
