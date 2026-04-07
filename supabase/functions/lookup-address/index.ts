@@ -25,8 +25,8 @@ Deno.serve(async (req: Request) => {
       state: '',
       country: country || 'USA',
       latitude: null,
-      longitude: null
-    };
+      longitude: null,
+    }
 
     if (country?.toLowerCase() === 'brasil' || country?.toLowerCase() === 'brazil') {
       const response = await fetch(`https://viacep.com.br/ws/${cleanZip}/json/`)
@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
-      
+
       const data = await response.json()
       if (data.erro) {
         return new Response(JSON.stringify({ error: 'CEP não encontrado' }), {
@@ -52,8 +52,8 @@ Deno.serve(async (req: Request) => {
         state: data.uf || '',
         country: 'Brasil',
         latitude: null,
-        longitude: null
-      };
+        longitude: null,
+      }
     } else {
       // US Zipcode lookup
       const response = await fetch(`https://api.zippopotam.us/us/${cleanZip}`)
@@ -61,39 +61,42 @@ Deno.serve(async (req: Request) => {
         const data = await response.json()
         const place = data.places && data.places[0]
         if (place) {
-          result.city = place['place name'] || '';
-          result.state = place['state abbreviation'] || '';
-          result.latitude = parseFloat(place['latitude']);
-          result.longitude = parseFloat(place['longitude']);
+          result.city = place['place name'] || ''
+          result.state = place['state abbreviation'] || ''
+          result.latitude = parseFloat(place['latitude'])
+          result.longitude = parseFloat(place['longitude'])
         }
       }
     }
 
     // Try to get precise lat/lng using Google Geocoding API if not found or if we want exact
-    const apiKey = Deno.env.get('GOOGLE_GEOCODING_API_KEY');
+    const apiKey = Deno.env.get('GOOGLE_GEOCODING_API_KEY')
     if (apiKey) {
       try {
-        const addrStr = `${result.street}, ${result.city}, ${result.state} ${cleanZip} ${result.country}`;
-        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addrStr)}&key=${apiKey}`);
+        const addrStr = `${result.street}, ${result.city}, ${result.state} ${cleanZip} ${result.country}`
+        const geoRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addrStr)}&key=${apiKey}`,
+        )
         if (geoRes.ok) {
-          const geoData = await geoRes.json();
+          const geoData = await geoRes.json()
           if (geoData.status === 'OK' && geoData.results?.[0]?.geometry?.location) {
-            result.latitude = geoData.results[0].geometry.location.lat;
-            result.longitude = geoData.results[0].geometry.location.lng;
-            
+            result.latitude = geoData.results[0].geometry.location.lat
+            result.longitude = geoData.results[0].geometry.location.lng
+
             // Also refine street/city if empty
             if (!result.street || !result.city) {
-               const components = geoData.results[0].address_components;
-               for (const comp of components) {
-                  if (comp.types.includes('route') && !result.street) result.street = comp.long_name;
-                  if (comp.types.includes('locality') && !result.city) result.city = comp.long_name;
-                  if (comp.types.includes('administrative_area_level_1') && !result.state) result.state = comp.short_name;
-               }
+              const components = geoData.results[0].address_components
+              for (const comp of components) {
+                if (comp.types.includes('route') && !result.street) result.street = comp.long_name
+                if (comp.types.includes('locality') && !result.city) result.city = comp.long_name
+                if (comp.types.includes('administrative_area_level_1') && !result.state)
+                  result.state = comp.short_name
+              }
             }
           }
         }
-      } catch(e) {
-        console.error("Geocoding fallback failed", e);
+      } catch (e) {
+        console.error('Geocoding fallback failed', e)
       }
     }
 
@@ -104,10 +107,9 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
