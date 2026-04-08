@@ -1509,6 +1509,34 @@ export default function Checkout() {
                 className="bg-white"
               />
             </div>
+            <div>
+              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">
+                NÚMERO DO PEDIDO
+              </Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  value={tempOrderNumber}
+                  readOnly
+                  className="bg-white font-mono font-bold flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigator.clipboard.writeText(tempOrderNumber)
+                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
+                  }}
+                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+                >
+                  Copiar Numero do Pedido
+                </button>
+              </div>
+              <p className="text-sm text-slate-600 mt-2 font-medium">
+                {isPix
+                  ? 'Inclua este numero na descricao do seu PIX para que possamos identificar seu pedido.'
+                  : 'Inclua este numero na descricao da sua transferencia bancaria para que possamos identificar seu pedido.'}
+              </p>
+            </div>
           </div>
         </div>
       )
@@ -1560,13 +1588,26 @@ Valor: ${formatCurrency(total)}
             </div>
             <div>
               <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Número do Pedido
+                NÚMERO DO PEDIDO
               </Label>
-              <Input
-                value={tempOrderNumber}
-                readOnly
-                className="bg-white font-mono font-bold mt-1"
-              />
+              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                <Input
+                  value={tempOrderNumber}
+                  readOnly
+                  className="bg-white font-mono font-bold flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigator.clipboard.writeText(tempOrderNumber)
+                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
+                  }}
+                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+                >
+                  Copiar Numero do Pedido
+                </button>
+              </div>
             </div>
             <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
               Favor transferir o valor acima. Seu pedido sera processado apos confirmacao do
@@ -1618,13 +1659,26 @@ Valor: ${formatCurrency(total)}
             </div>
             <div>
               <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Número do Pedido
+                NÚMERO DO PEDIDO
               </Label>
-              <Input
-                value={tempOrderNumber}
-                readOnly
-                className="bg-white font-mono font-bold mt-1"
-              />
+              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                <Input
+                  value={tempOrderNumber}
+                  readOnly
+                  className="bg-white font-mono font-bold flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigator.clipboard.writeText(tempOrderNumber)
+                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
+                  }}
+                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+                >
+                  Copiar Numero do Pedido
+                </button>
+              </div>
             </div>
             <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
               Use o email acima para enviar o pagamento via Zelle. Inclua o numero do pedido na
