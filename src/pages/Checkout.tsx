@@ -195,22 +195,21 @@ export default function Checkout() {
             .single()
 
           if (data) {
-            setCustomerData((prev) => ({
-              ...prev,
-              nome: prev.nome || data.full_name || user.user_metadata?.name || '',
-              email: prev.email || user.email || '',
-              telefone: prev.telefone || data.phone || '',
-            }))
+            setCustomerData({
+              nome: data.full_name || user.user_metadata?.name || '',
+              email: user.email || '',
+              telefone: data.phone || '',
+            })
             if (data.full_name && !stripeName) setStripeName(data.full_name)
             if (user.email && !stripeEmail) setStripeEmail(user.email)
           }
         } catch (err) {
           console.error('Erro ao sincronizar dados do cliente:', err)
-          setCustomerData((prev) => ({
-            ...prev,
-            nome: prev.nome || user.user_metadata?.name || '',
-            email: prev.email || user.email || '',
-          }))
+          setCustomerData({
+            nome: user.user_metadata?.name || '',
+            email: user.email || '',
+            telefone: '',
+          })
         }
       }
       syncCustomerData()
@@ -263,7 +262,10 @@ export default function Checkout() {
   useEffect(() => {
     if (loading) return
     if (!user) {
-      toast({ description: 'Por favor, faça login para continuar', variant: 'destructive' })
+      toast({
+        description: 'Usuario nao autenticado. Faca login para continuar.',
+        variant: 'destructive',
+      })
       navigate('/login?redirect=/checkout')
       return
     }
@@ -922,6 +924,14 @@ export default function Checkout() {
     const dbShippingMethod = getDBShippingMethod(deliveryMethod)
     if (!validateShippingMethod(dbShippingMethod)) return
 
+    if (!tempOrderNumber) {
+      toast({
+        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       const { data: customer } = await supabase
@@ -1054,6 +1064,14 @@ export default function Checkout() {
     const dbShippingMethod = getDBShippingMethod(deliveryMethod)
     if (!validateShippingMethod(dbShippingMethod)) return
 
+    if (!tempOrderNumber) {
+      toast({
+        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       const { data: customer } = await supabase
@@ -1088,6 +1106,15 @@ export default function Checkout() {
 
   const handleStripeSubmit = async () => {
     if (!validateCustomerData()) return
+
+    if (!tempOrderNumber) {
+      toast({
+        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       const dbShippingMethod = getDBShippingMethod(deliveryMethod)
@@ -1548,6 +1575,13 @@ export default function Checkout() {
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
+                    if (!tempOrderNumber) {
+                      toast({
+                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+                        variant: 'destructive',
+                      })
+                      return
+                    }
                     navigator.clipboard.writeText(tempOrderNumber)
                     toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
                   }}
@@ -1628,6 +1662,13 @@ Valor: ${formatCurrency(total)}
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
+                    if (!tempOrderNumber) {
+                      toast({
+                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+                        variant: 'destructive',
+                      })
+                      return
+                    }
                     navigator.clipboard.writeText(tempOrderNumber)
                     toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
                   }}
@@ -1702,6 +1743,13 @@ Valor: ${formatCurrency(total)}
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
+                    if (!tempOrderNumber) {
+                      toast({
+                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+                        variant: 'destructive',
+                      })
+                      return
+                    }
                     navigator.clipboard.writeText(tempOrderNumber)
                     toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
                   }}
