@@ -1485,400 +1485,6 @@ export default function Checkout() {
     )
   }
 
-  const renderManualPaymentDetails = () => {
-    const inputClassStyled = 'w-full p-3 border border-gray-300 rounded-lg text-[14px] focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition-all text-gray-800 placeholder:text-gray-400'
-    const readOnlyInputClass = 'bg-gray-200 cursor-not-allowed text-gray-600'
-    const copyBtnClass = 'w-8 h-8 sm:w-[36px] sm:h-[36px] flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md transition-colors shrink-0 text-gray-700'
-    const containerClass = 'max-w-full sm:max-w-[600px] mx-auto p-4 sm:p-6 bg-gray-100 rounded-[12px] mb-4 sm:mb-6 mt-6 animate-in fade-in duration-300'
-    const titleClass = 'text-[18px] sm:text-[20px] font-semibold text-gray-800 mb-4'
-    const labelClass = 'text-[14px] font-medium text-gray-800 mb-1 block'
-    const messageClass = 'text-[14px] text-gray-500 mb-4 sm:mb-5 leading-relaxed'
-
-    if (paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') {
-      const isPix = paymentMethod === 'pix'
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>
-            {isPix ? 'Pagamento via PIX' : 'Transferência (Brasil)'}
-          </h4>
-          <p className={messageClass}>
-            {isPix
-              ? 'Dados PIX serão enviados por email após confirmação do pedido.'
-              : 'Dados bancários serão enviados por email após confirmação do pedido.'}
-          </p>
-
-          <div className="space-y-3 sm:space-y-4 mb-6">
-            <div>
-              <Label className={labelClass}>Nome Completo *</Label>
-              <Input
-                value={customerData.nome}
-                onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
-                className={inputClassStyled}
-                placeholder="Seu nome"
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>Email *</Label>
-              <Input
-                value={customerData.email}
-                onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                className={inputClassStyled}
-                type="email"
-                placeholder="seu@email.com"
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>Telefone *</Label>
-              <Input
-                value={customerData.telefone}
-                onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
-                className={inputClassStyled}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={tempOrderNumber}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (!tempOrderNumber) {
-                    toast({ description: 'Numero do pedido nao foi gerado.', variant: 'destructive' })
-                    return
-                  }
-                  navigator.clipboard.writeText(tempOrderNumber)
-                  toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                }}
-                className={copyBtnClass}
-              >
-                <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              {isPix
-                ? 'Inclua este numero na descricao do seu PIX.'
-                : 'Inclua este numero na descricao da sua transferencia bancaria.'}
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'transferencia_miami') {
-      const details = bankDetails || {}
-
-      const formattedBlock = `DADOS BANCARIOS PARA TRANSFERENCIA
-=====================================
-Banco: ${details.bank_name || ''}
-Conta: ${details.account_number || ''}
-Routing: ${details.routing_number || ''}
-Titular: ${details.account_holder || ''}
-SWIFT: ${details.swift_code || ''}
-Numero do Pedido: ${tempOrderNumber}
-Valor: ${formatCurrency(total)}
-=====================================`
-
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>Dados para Depósito (EUA)</h4>
-          <p className={messageClass}>Transferência para conta bancária em Miami.</p>
-
-          <div className="bg-white border border-gray-300 p-4 rounded-lg text-[14px] font-mono text-gray-700 whitespace-pre-wrap mb-4">
-            {formattedBlock}
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              navigator.clipboard.writeText(formattedBlock)
-              toast({ description: 'Dados bancários copiados para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-            }}
-            className="w-full bg-emerald-600 text-white p-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors mb-5"
-          >
-            Copiar Dados Bancários
-          </button>
-
-          <div className="space-y-3 sm:space-y-4 mb-4">
-            <div>
-              <Label className={labelClass}>Valor a Transferir</Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) return
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              Favor transferir o valor exato acima. Seu pedido sera processado apos confirmacao do deposito.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'zelle') {
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>Pagamento via Zelle</h4>
-          <p className={messageClass}>Use o email abaixo para enviar o pagamento via Zelle.</p>
-
-          <div className="space-y-3 sm:space-y-4 mb-4">
-            <div>
-              <Label className={labelClass}>Email Zelle</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={zelleEmail || ''}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigator.clipboard.writeText(zelleEmail || '')
-                    toast({ description: 'Email Zelle copiado.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <div>
-              <Label className={labelClass}>Valor a Transferir</Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) return
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              Inclua o numero do pedido na descricao da transferencia Zelle.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    return null
-  }
-=====================================
-Banco: ${details.bank_name || ''}
-Conta: ${details.account_number || ''}
-Routing: ${details.routing_number || ''}
-Titular: ${details.account_holder || ''}
-SWIFT: ${details.swift_code || ''}
-Numero do Pedido: ${tempOrderNumber}
-Valor: ${formatCurrency(total)}
-=====================================`
-
-      return (
-        <div
-          ref={paymentDetailsRef}
-          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300"
-        >
-          <h4 className="font-bold text-lg text-slate-900">Dados para Depósito (EUA)</h4>
-
-          <pre className="bg-white border border-slate-200 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap text-slate-700">
-            {formattedBlock}
-          </pre>
-
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              navigator.clipboard.writeText(formattedBlock)
-              toast({ description: 'Dados copiados para a area de transferencia' })
-            }}
-            className={cn(btnSecondary, 'w-full text-sm font-bold')}
-          >
-            Copiar Dados Bancarios
-          </button>
-
-          <div className="space-y-3 mt-6">
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Valor a Transferir
-              </Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className="bg-emerald-50 border-emerald-200 font-mono font-bold text-emerald-700 mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                NÚMERO DO PEDIDO
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className="bg-white font-mono font-bold flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) {
-                      toast({
-                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
-                        variant: 'destructive',
-                      })
-                      return
-                    }
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
-                  }}
-                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
-                >
-                  Copiar Numero do Pedido
-                </button>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
-              Favor transferir o valor acima. Seu pedido sera processado apos confirmacao do
-              deposito.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'zelle') {
-      return (
-        <div
-          ref={paymentDetailsRef}
-          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center"
-        >
-          <h4 className="font-bold text-lg text-slate-900">Pagamento via Zelle</h4>
-
-          <div className="max-w-md mx-auto space-y-4 text-left mt-4">
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Email Zelle
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                <Input
-                  value={zelleEmail || ''}
-                  readOnly
-                  className="bg-white font-mono text-sm flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigator.clipboard.writeText(zelleEmail || '')
-                    toast({ description: 'Email copiado para a area de transferencia' })
-                  }}
-                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
-                >
-                  Copiar Email Zelle
-                </button>
-              </div>
-            </div>
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Valor a Transferir
-              </Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className="bg-emerald-50 border-emerald-200 font-mono font-bold text-emerald-700 mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                NÚMERO DO PEDIDO
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className="bg-white font-mono font-bold flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) {
-                      toast({
-                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
-                        variant: 'destructive',
-                      })
-                      return
-                    }
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
-                  }}
-                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
-                >
-                  Copiar Numero do Pedido
-                </button>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
-              Use o email acima para enviar o pagamento via Zelle. Inclua o numero do pedido na
-              descricao da transferencia.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    return null
-  }
-=======
   const renderOrderSummary = () => (
     <div className="space-y-4">
       <div className="flex justify-between py-3 border-b border-slate-200 items-center">
@@ -1939,10 +1545,13 @@ Valor: ${formatCurrency(total)}
   )
 
   const renderManualPaymentDetails = () => {
-    const inputClassStyled = 'w-full p-3 border border-gray-300 rounded-lg text-[14px] focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition-all text-gray-800 placeholder:text-gray-400'
+    const inputClassStyled =
+      'w-full p-3 border border-gray-300 rounded-lg text-[14px] focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition-all text-gray-800 placeholder:text-gray-400'
     const readOnlyInputClass = 'bg-gray-200 cursor-not-allowed text-gray-600'
-    const copyBtnClass = 'w-8 h-8 sm:w-[36px] sm:h-[36px] flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md transition-colors shrink-0 text-gray-700'
-    const containerClass = 'max-w-full sm:max-w-[600px] mx-auto p-4 sm:p-6 bg-gray-100 rounded-[12px] mb-4 sm:mb-6 mt-6 animate-in fade-in duration-300'
+    const copyBtnClass =
+      'w-8 h-8 sm:w-[36px] sm:h-[36px] flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md transition-colors shrink-0 text-gray-700'
+    const containerClass =
+      'max-w-full sm:max-w-[600px] mx-auto p-4 sm:p-6 bg-gray-100 rounded-[12px] mb-4 sm:mb-6 mt-6 animate-in fade-in duration-300'
     const titleClass = 'text-[18px] sm:text-[20px] font-semibold text-gray-800 mb-4'
     const labelClass = 'text-[14px] font-medium text-gray-800 mb-1 block'
     const messageClass = 'text-[14px] text-gray-500 mb-4 sm:mb-5 leading-relaxed'
@@ -1951,9 +1560,7 @@ Valor: ${formatCurrency(total)}
       const isPix = paymentMethod === 'pix'
       return (
         <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>
-            {isPix ? 'Pagamento via PIX' : 'Transferência (Brasil)'}
-          </h4>
+          <h4 className={titleClass}>{isPix ? 'Pagamento via PIX' : 'Transferência (Brasil)'}</h4>
           <p className={messageClass}>
             {isPix
               ? 'Dados PIX serão enviados por email após confirmação do pedido.'
@@ -2004,11 +1611,18 @@ Valor: ${formatCurrency(total)}
                 onClick={(e) => {
                   e.preventDefault()
                   if (!tempOrderNumber) {
-                    toast({ description: 'Numero do pedido nao foi gerado.', variant: 'destructive' })
+                    toast({
+                      description: 'Numero do pedido nao foi gerado.',
+                      variant: 'destructive',
+                    })
                     return
                   }
                   navigator.clipboard.writeText(tempOrderNumber)
-                  toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
+                  toast({
+                    description: 'Numero do pedido copiado para a area de transferencia.',
+                    duration: 3000,
+                    className: 'text-[14px]',
+                  })
                 }}
                 className={copyBtnClass}
               >
@@ -2029,7 +1643,7 @@ Valor: ${formatCurrency(total)}
       const details = bankDetails || {}
 
       const formattedBlock = `DADOS BANCARIOS PARA TRANSFERENCIA
-=====================================
+-------------------------------------
 Banco: ${details.bank_name || ''}
 Conta: ${details.account_number || ''}
 Routing: ${details.routing_number || ''}
@@ -2037,7 +1651,7 @@ Titular: ${details.account_holder || ''}
 SWIFT: ${details.swift_code || ''}
 Numero do Pedido: ${tempOrderNumber}
 Valor: ${formatCurrency(total)}
-=====================================`
+-------------------------------------`
 
       return (
         <div ref={paymentDetailsRef} className={containerClass}>
@@ -2052,7 +1666,11 @@ Valor: ${formatCurrency(total)}
             onClick={(e) => {
               e.preventDefault()
               navigator.clipboard.writeText(formattedBlock)
-              toast({ description: 'Dados bancários copiados para a area de transferencia.', duration: 3000, className: "text-[14px]" })
+              toast({
+                description: 'Dados bancários copiados para a area de transferencia.',
+                duration: 3000,
+                className: 'text-[14px]',
+              })
             }}
             className="w-full bg-emerald-600 text-white p-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors mb-5"
           >
@@ -2082,7 +1700,11 @@ Valor: ${formatCurrency(total)}
                     e.preventDefault()
                     if (!tempOrderNumber) return
                     navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
+                    toast({
+                      description: 'Numero do pedido copiado para a area de transferencia.',
+                      duration: 3000,
+                      className: 'text-[14px]',
+                    })
                   }}
                   className={copyBtnClass}
                 >
@@ -2091,385 +1713,7 @@ Valor: ${formatCurrency(total)}
               </div>
             </div>
             <p className={cn(messageClass, 'mt-2 mb-0')}>
-              Favor transferir o valor exato acima. Seu pedido sera processado apos confirmacao do deposito.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'zelle') {
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>Pagamento via Zelle</h4>
-          <p className={messageClass}>Use o email abaixo para enviar o pagamento via Zelle.</p>
-
-          <div className="space-y-3 sm:space-y-4 mb-4">
-            <div>
-              <Label className={labelClass}>Email Zelle</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={zelleEmail || ''}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigator.clipboard.writeText(zelleEmail || '')
-                    toast({ description: 'Email Zelle copiado.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <div>
-              <Label className={labelClass}>Valor a Transferir</Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) return
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              Inclua o numero do pedido na descricao da transferencia Zelle.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    return null
-  }
-=======
-  const renderManualPaymentDetails = () => {
-    const inputClassStyled = 'w-full p-3 border border-gray-300 rounded-lg text-[14px] focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition-all text-gray-800 placeholder:text-gray-400'
-    const readOnlyInputClass = 'bg-gray-200 cursor-not-allowed text-gray-600'
-    const copyBtnClass = 'w-8 h-8 sm:w-[36px] sm:h-[36px] flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md transition-colors shrink-0 text-gray-700'
-    const containerClass = 'max-w-full sm:max-w-[600px] mx-auto p-4 sm:p-6 bg-gray-100 rounded-[12px] mb-4 sm:mb-6 mt-6 animate-in fade-in duration-300'
-    const titleClass = 'text-[18px] sm:text-[20px] font-semibold text-gray-800 mb-4'
-    const labelClass = 'text-[14px] font-medium text-gray-800 mb-1 block'
-    const messageClass = 'text-[14px] text-gray-500 mb-4 sm:mb-5 leading-relaxed'
-
-    if (paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') {
-      const isPix = paymentMethod === 'pix'
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>
-            {isPix ? 'Pagamento via PIX' : 'Transferência (Brasil)'}
-          </h4>
-          <p className={messageClass}>
-            {isPix
-              ? 'Dados PIX serão enviados por email após confirmação do pedido.'
-              : 'Dados bancários serão enviados por email após confirmação do pedido.'}
-          </p>
-
-          <div className="space-y-3 sm:space-y-4 mb-6">
-            <div>
-              <Label className={labelClass}>Nome Completo *</Label>
-              <Input
-                value={customerData.nome}
-                onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
-                className={inputClassStyled}
-                placeholder="Seu nome"
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>Email *</Label>
-              <Input
-                value={customerData.email}
-                onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                className={inputClassStyled}
-                type="email"
-                placeholder="seu@email.com"
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>Telefone *</Label>
-              <Input
-                value={customerData.telefone}
-                onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
-                className={inputClassStyled}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={tempOrderNumber}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (!tempOrderNumber) {
-                    toast({ description: 'Numero do pedido nao foi gerado.', variant: 'destructive' })
-                    return
-                  }
-                  navigator.clipboard.writeText(tempOrderNumber)
-                  toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                }}
-                className={copyBtnClass}
-              >
-                <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              {isPix
-                ? 'Inclua este numero na descricao do seu PIX.'
-                : 'Inclua este numero na descricao da sua transferencia bancaria.'}
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'transferencia_miami') {
-      const details = bankDetails || {}
-
-      const formattedBlock = `DADOS BANCARIOS PARA TRANSFERENCIA
-=====================================
-Banco: ${details.bank_name || ''}
-Conta: ${details.account_number || ''}
-Routing: ${details.routing_number || ''}
-Titular: ${details.account_holder || ''}
-SWIFT: ${details.swift_code || ''}
-Numero do Pedido: ${tempOrderNumber}
-Valor: ${formatCurrency(total)}
-=====================================`
-
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>Dados para Depósito (EUA)</h4>
-          <p className={messageClass}>Transferência para conta bancária em Miami.</p>
-
-          <div className="bg-white border border-gray-300 p-4 rounded-lg text-[14px] font-mono text-gray-700 whitespace-pre-wrap mb-4">
-            {formattedBlock}
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              navigator.clipboard.writeText(formattedBlock)
-              toast({ description: 'Dados bancários copiados para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-            }}
-            className="w-full bg-emerald-600 text-white p-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors mb-5"
-          >
-            Copiar Dados Bancários
-          </button>
-
-          <div className="space-y-3 sm:space-y-4 mb-4">
-            <div>
-              <Label className={labelClass}>Valor a Transferir</Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) return
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              Favor transferir o valor exato acima. Seu pedido sera processado apos confirmacao do deposito.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'zelle') {
-      return (
-        <div ref={paymentDetailsRef} className={containerClass}>
-          <h4 className={titleClass}>Pagamento via Zelle</h4>
-          <p className={messageClass}>Use o email abaixo para enviar o pagamento via Zelle.</p>
-
-          <div className="space-y-3 sm:space-y-4 mb-4">
-            <div>
-              <Label className={labelClass}>Email Zelle</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={zelleEmail || ''}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigator.clipboard.writeText(zelleEmail || '')
-                    toast({ description: 'Email Zelle copiado.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <div>
-              <Label className={labelClass}>Valor a Transferir</Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-              />
-            </div>
-            <div>
-              <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) return
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.', duration: 3000, className: "text-[14px]" })
-                  }}
-                  className={copyBtnClass}
-                >
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-            </div>
-            <p className={cn(messageClass, 'mt-2 mb-0')}>
-              Inclua o numero do pedido na descricao da transferencia Zelle.
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    return null
-  }
-=====================================
-Banco: ${details.bank_name || ''}
-Conta: ${details.account_number || ''}
-Routing: ${details.routing_number || ''}
-Titular: ${details.account_holder || ''}
-SWIFT: ${details.swift_code || ''}
-Numero do Pedido: ${tempOrderNumber}
-Valor: ${formatCurrency(total)}
-=====================================`
-
-      return (
-        <div
-          ref={paymentDetailsRef}
-          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300"
-        >
-          <h4 className="font-bold text-lg text-slate-900">Dados para Depósito (EUA)</h4>
-
-          <pre className="bg-white border border-slate-200 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap text-slate-700">
-            {formattedBlock}
-          </pre>
-
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              navigator.clipboard.writeText(formattedBlock)
-              toast({ description: 'Dados copiados para a area de transferencia' })
-            }}
-            className={cn(btnSecondary, 'w-full text-sm font-bold')}
-          >
-            Copiar Dados Bancarios
-          </button>
-
-          <div className="space-y-3 mt-6">
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Valor a Transferir
-              </Label>
-              <Input
-                value={formatCurrency(total)}
-                readOnly
-                className="bg-emerald-50 border-emerald-200 font-mono font-bold text-emerald-700 mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                NÚMERO DO PEDIDO
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                <Input
-                  value={tempOrderNumber}
-                  readOnly
-                  className="bg-white font-mono font-bold flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (!tempOrderNumber) {
-                      toast({
-                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
-                        variant: 'destructive',
-                      })
-                      return
-                    }
-                    navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
-                  }}
-                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
-                >
-                  Copiar Numero do Pedido
-                </button>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
-              Favor transferir o valor acima. Seu pedido sera processado apos confirmacao do
+              Favor transferir o valor exato acima. Seu pedido sera processado apos confirmacao do
               deposito.
             </p>
           </div>
@@ -2479,79 +1723,72 @@ Valor: ${formatCurrency(total)}
 
     if (paymentMethod === 'zelle') {
       return (
-        <div
-          ref={paymentDetailsRef}
-          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center"
-        >
-          <h4 className="font-bold text-lg text-slate-900">Pagamento via Zelle</h4>
+        <div ref={paymentDetailsRef} className={containerClass}>
+          <h4 className={titleClass}>Pagamento via Zelle</h4>
+          <p className={messageClass}>Use o email abaixo para enviar o pagamento via Zelle.</p>
 
-          <div className="max-w-md mx-auto space-y-4 text-left mt-4">
+          <div className="space-y-3 sm:space-y-4 mb-4">
             <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Email Zelle
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+              <Label className={labelClass}>Email Zelle</Label>
+              <div className="flex items-center gap-2">
                 <Input
                   value={zelleEmail || ''}
                   readOnly
-                  className="bg-white font-mono text-sm flex-1"
+                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
                 />
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
                     navigator.clipboard.writeText(zelleEmail || '')
-                    toast({ description: 'Email copiado para a area de transferencia' })
+                    toast({
+                      description: 'Email Zelle copiado.',
+                      duration: 3000,
+                      className: 'text-[14px]',
+                    })
                   }}
-                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+                  className={copyBtnClass}
                 >
-                  Copiar Email Zelle
+                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             </div>
             <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                Valor a Transferir
-              </Label>
+              <Label className={labelClass}>Valor a Transferir</Label>
               <Input
                 value={formatCurrency(total)}
                 readOnly
-                className="bg-emerald-50 border-emerald-200 font-mono font-bold text-emerald-700 mt-1"
+                className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
               />
             </div>
             <div>
-              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                NÚMERO DO PEDIDO
-              </Label>
-              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+              <Label className={labelClass}>NÚMERO DO PEDIDO</Label>
+              <div className="flex items-center gap-2">
                 <Input
                   value={tempOrderNumber}
                   readOnly
-                  className="bg-white font-mono font-bold flex-1"
+                  className={cn(inputClassStyled, readOnlyInputClass, 'font-mono font-bold')}
                 />
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
-                    if (!tempOrderNumber) {
-                      toast({
-                        description: 'Numero do pedido nao foi gerado. Tente novamente.',
-                        variant: 'destructive',
-                      })
-                      return
-                    }
+                    if (!tempOrderNumber) return
                     navigator.clipboard.writeText(tempOrderNumber)
-                    toast({ description: 'Numero do pedido copiado para a area de transferencia.' })
+                    toast({
+                      description: 'Numero do pedido copiado para a area de transferencia.',
+                      duration: 3000,
+                      className: 'text-[14px]',
+                    })
                   }}
-                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+                  className={copyBtnClass}
                 >
-                  Copiar Numero do Pedido
+                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             </div>
-            <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
-              Use o email acima para enviar o pagamento via Zelle. Inclua o numero do pedido na
-              descricao da transferencia.
+            <p className={cn(messageClass, 'mt-2 mb-0')}>
+              Inclua o numero do pedido na descricao da transferencia Zelle.
             </p>
           </div>
         </div>
@@ -3062,8 +2299,8 @@ Valor: ${formatCurrency(total)}
                         ? 'Confirmar Depósito'
                         : 'Confirmar Pedido'}
               </button>
-              <button 
-                className="w-full bg-gray-200 text-gray-800 p-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors" 
+              <button
+                className="w-full bg-gray-200 text-gray-800 p-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                 onClick={() => setCurrentStep(4)}
               >
                 Voltar
