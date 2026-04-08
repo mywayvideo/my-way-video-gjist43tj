@@ -173,11 +173,12 @@ export default function Checkout() {
   const [discountAmount, setDiscountAmount] = useState(0)
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
-  const [tempOrderNumber] = useState(() => `ORD-${Math.floor(100000 + Math.random() * 900000)}`)
+  const orderNumberRef = useRef(`ORD-${Math.floor(100000 + Math.random() * 900000)}`)
+  const tempOrderNumber = orderNumberRef.current
 
   const [customerData, setCustomerData] = useState<CustomerData>({
-    nome: user?.user_metadata?.name || '',
-    email: user?.email || '',
+    nome: '',
+    email: '',
     telefone: '',
   })
 
@@ -185,17 +186,6 @@ export default function Checkout() {
 
   useEffect(() => {
     if (user) {
-      setCustomerData((prev) => ({
-        ...prev,
-        nome: prev.nome || user.user_metadata?.name || '',
-        email: prev.email || user.email || '',
-      }))
-    }
-  }, [user])
-
-  useEffect(() => {
-    if ((paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') && user) {
-      // Forçar sincronização dos dados ao selecionar o método de pagamento
       const syncCustomerData = async () => {
         try {
           const { data } = await supabase
@@ -208,22 +198,32 @@ export default function Checkout() {
             setCustomerData((prev) => ({
               ...prev,
               nome: prev.nome || data.full_name || user.user_metadata?.name || '',
+              email: prev.email || user.email || '',
               telefone: prev.telefone || data.phone || '',
             }))
+            if (data.full_name && !stripeName) setStripeName(data.full_name)
+            if (user.email && !stripeEmail) setStripeEmail(user.email)
           }
         } catch (err) {
           console.error('Erro ao sincronizar dados do cliente:', err)
+          setCustomerData((prev) => ({
+            ...prev,
+            nome: prev.nome || user.user_metadata?.name || '',
+            email: prev.email || user.email || '',
+          }))
         }
       }
       syncCustomerData()
     }
+  }, [user])
 
+  useEffect(() => {
     if (paymentMethod && paymentDetailsRef.current) {
       setTimeout(() => {
         paymentDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 150)
     }
-  }, [paymentMethod, user])
+  }, [paymentMethod])
 
   const [bankDetails, setBankDetails] = useState<any>(null)
   const [zelleEmail, setZelleEmail] = useState<string | null>(null)
@@ -876,6 +876,21 @@ export default function Checkout() {
     }
   }
 
+  const validateCustomerData = () => {
+    if (
+      !customerData.nome?.trim() ||
+      !customerData.email?.trim() ||
+      !customerData.telefone?.trim()
+    ) {
+      toast({
+        description: 'Preencha nome, email e telefone nos Dados do Comprador.',
+        variant: 'destructive',
+      })
+      return false
+    }
+    return true
+  }
+
   const ensureShippingAddress = async (customerId: string) => {
     if (deliveryMethod === 'coleta') return null
     if (selectedAddressId && !isAddingNewAddress) return selectedAddressId
@@ -903,6 +918,7 @@ export default function Checkout() {
   }
 
   const handleConfirmManualPayment = async () => {
+    if (!validateCustomerData()) return
     const dbShippingMethod = getDBShippingMethod(deliveryMethod)
     if (!validateShippingMethod(dbShippingMethod)) return
 
@@ -959,13 +975,6 @@ export default function Checkout() {
         )
         order_id = res.order_id
       } else if (paymentMethod === 'transferencia_brasil') {
-        if (
-          !customerData.nome?.trim() ||
-          !customerData.email?.trim() ||
-          !customerData.telefone?.trim()
-        ) {
-          throw new Error('Preencha nome, email e telefone para continuar.')
-        }
         const res = await createTransferenciaBrasilOrder(
           customer.id,
           cartItems,
@@ -992,13 +1001,6 @@ export default function Checkout() {
           },
         })
       } else if (paymentMethod === 'pix') {
-        if (
-          !customerData.nome?.trim() ||
-          !customerData.email?.trim() ||
-          !customerData.telefone?.trim()
-        ) {
-          throw new Error('Preencha nome, email e telefone para continuar.')
-        }
         const res = await createPIXOrder(
           customer.id,
           cartItems,
@@ -1048,6 +1050,7 @@ export default function Checkout() {
   }
 
   const handlePayPalSubmit = async () => {
+    if (!validateCustomerData()) return
     const dbShippingMethod = getDBShippingMethod(deliveryMethod)
     if (!validateShippingMethod(dbShippingMethod)) return
 
@@ -1084,6 +1087,7 @@ export default function Checkout() {
   }
 
   const handleStripeSubmit = async () => {
+    if (!validateCustomerData()) return
     setIsLoading(true)
     try {
       const dbShippingMethod = getDBShippingMethod(deliveryMethod)
@@ -1530,35 +1534,6 @@ export default function Checkout() {
           </p>
 
           <div className="space-y-4">
-            <div>
-              <Label className="text-slate-900 font-semibold mb-1 block">Nome Completo *</Label>
-              <Input
-                value={customerData.nome}
-                onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
-                placeholder="Seu nome completo"
-                className="bg-white"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-900 font-semibold mb-1 block">Email *</Label>
-              <Input
-                value={customerData.email}
-                onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                type="email"
-                placeholder="seu@email.com"
-                className="bg-white"
-              />
-            </div>
-            <div>
-              <Label className="text-slate-900 font-semibold mb-1 block">Telefone *</Label>
-              <Input
-                value={customerData.telefone || ''}
-                onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
-                placeholder="(11) 99999-9999"
-                className="bg-white"
-                required
-              />
-            </div>
             <div>
               <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">
                 NÚMERO DO PEDIDO
@@ -2138,6 +2113,40 @@ Valor: ${formatCurrency(total)}
             title="Seleção de Pagamento"
             onStepClick={setCurrentStep}
           >
+            <div className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mb-8 animate-in fade-in duration-300">
+              <h3 className="text-lg font-bold text-[hsl(215,25%,15%)] mb-4">Dados do Comprador</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Nome Completo *</Label>
+                  <Input
+                    value={customerData.nome}
+                    onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
+                    className="bg-white"
+                    placeholder="Seu nome"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Email *</Label>
+                  <Input
+                    value={customerData.email}
+                    onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                    className="bg-white"
+                    type="email"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Telefone *</Label>
+                  <Input
+                    value={customerData.telefone}
+                    onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
+                    className="bg-white"
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+              </div>
+            </div>
+
             <RadioGroup
               value={paymentMethod}
               onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}
