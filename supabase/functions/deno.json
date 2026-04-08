@@ -32,6 +32,7 @@
     "validate-ncm-suggestion": 14,
     "cancel-stripe-charge": 2,
     "notify-admin-refund": 2,
-    "initiate-paypal-payment": 2
+    "initiate-paypal-payment": 2,
+    "notify-admin-transferencia-brasil": 1
   }
 }
