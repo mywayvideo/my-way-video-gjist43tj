@@ -173,8 +173,7 @@ export default function Checkout() {
   const [discountAmount, setDiscountAmount] = useState(0)
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
-  const orderNumberRef = useRef(`ORD-${Math.floor(100000 + Math.random() * 900000)}`)
-  const tempOrderNumber = orderNumberRef.current
+  const [tempOrderNumber] = useState(`ORD-${Math.floor(100000 + Math.random() * 900000)}`)
 
   const [customerData, setCustomerData] = useState<CustomerData>({
     nome: '',
@@ -879,16 +878,18 @@ export default function Checkout() {
   }
 
   const validateCustomerData = () => {
-    if (
-      !customerData.nome?.trim() ||
-      !customerData.email?.trim() ||
-      !customerData.telefone?.trim()
-    ) {
-      toast({
-        description: 'Preencha nome, email e telefone nos Dados do Comprador.',
-        variant: 'destructive',
-      })
-      return false
+    if (paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') {
+      if (
+        !customerData.nome?.trim() ||
+        !customerData.email?.trim() ||
+        !customerData.telefone?.trim()
+      ) {
+        toast({
+          description: 'Preencha nome, email e telefone nos Dados do Comprador.',
+          variant: 'destructive',
+        })
+        return false
+      }
     }
     return true
   }
@@ -2161,44 +2162,10 @@ Valor: ${formatCurrency(total)}
             title="Seleção de Pagamento"
             onStepClick={setCurrentStep}
           >
-            <div className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mb-8 animate-in fade-in duration-300">
-              <h3 className="text-lg font-bold text-[hsl(215,25%,15%)] mb-4">Dados do Comprador</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Nome Completo *</Label>
-                  <Input
-                    value={customerData.nome}
-                    onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
-                    className="bg-white"
-                    placeholder="Seu nome"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Email *</Label>
-                  <Input
-                    value={customerData.email}
-                    onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                    className="bg-white"
-                    type="email"
-                    placeholder="seu@email.com"
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label className="font-semibold text-[hsl(215,25%,15%)]">Telefone *</Label>
-                  <Input
-                    value={customerData.telefone}
-                    onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
-                    className="bg-white"
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
-            </div>
-
             <RadioGroup
               value={paymentMethod}
               onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6"
             >
               {getPaymentOptions().map((opt) => (
                 <div
@@ -2239,6 +2206,46 @@ Valor: ${formatCurrency(total)}
                 </div>
               ))}
             </RadioGroup>
+
+            {(paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') && (
+              <div className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in duration-300">
+                <h3 className="text-lg font-bold text-[hsl(215,25%,15%)] mb-4">
+                  Dados do Comprador
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-[hsl(215,25%,15%)]">Nome Completo *</Label>
+                    <Input
+                      value={customerData.nome}
+                      onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
+                      className="bg-white"
+                      placeholder="Seu nome"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-[hsl(215,25%,15%)]">Email *</Label>
+                    <Input
+                      value={customerData.email}
+                      onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                      className="bg-white"
+                      type="email"
+                      placeholder="seu@email.com"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label className="font-semibold text-[hsl(215,25%,15%)]">Telefone *</Label>
+                    <Input
+                      value={customerData.telefone}
+                      onChange={(e) =>
+                        setCustomerData({ ...customerData, telefone: e.target.value })
+                      }
+                      className="bg-white"
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {renderManualPaymentDetails()}
 
