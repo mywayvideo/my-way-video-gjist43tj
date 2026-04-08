@@ -8,7 +8,7 @@ import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
 import { useStripePayment } from '@/hooks/useStripePayment'
 import { useAlternativePayments } from '@/hooks/useAlternativePayments'
-import { PaymentMethod } from '@/types/payment'
+import { PaymentMethod, CustomerData } from '@/types/payment'
 import {
   createPaymentIntent,
   confirmCardPayment,
@@ -135,10 +135,11 @@ export default function Checkout() {
     setIsLoading: setAltIsLoading,
     validateShippingMethod,
     handlePayPalFlow,
-    generateBankDepositDetails,
-    generatePIXQRCode,
+    generateBankDepositDetailsUSA,
     generateZelleDetails,
     createPendingOrder,
+    createTransferenciaBrasilOrder,
+    createPIXOrder,
     getAvailablePaymentMethods,
   } = useAlternativePayments()
 
@@ -173,7 +174,12 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
   const [tempOrderNumber, setTempOrderNumber] = useState('')
-  const [pixData, setPixData] = useState<{ pixKey: string; qrCodeUrl: string } | null>(null)
+
+  const [customerData, setCustomerData] = useState<CustomerData>({
+    nome: '',
+    email: '',
+    telefone: '',
+  })
 
   const [isLoading, setIsLoading] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
@@ -228,12 +234,6 @@ export default function Checkout() {
 
   const total = subtotal - discountAmount + (freight || 0)
 
-  useEffect(() => {
-    if (paymentMethod === 'pix' && tempOrderNumber && total > 0) {
-      generatePIXQRCode(tempOrderNumber, total).then(setPixData)
-    }
-  }, [paymentMethod, tempOrderNumber, total, generatePIXQRCode])
-
   const fetchAddressesAndDiscounts = async () => {
     if (!user) return
     try {
@@ -246,6 +246,11 @@ export default function Checkout() {
 
       if (custRes.data) {
         setStripeName(custRes.data.full_name || '')
+        setCustomerData({
+          nome: custRes.data.full_name || user.user_metadata?.name || '',
+          email: user.email || '',
+          telefone: custRes.data.phone || '',
+        })
         const { data: addresses } = await supabase
           .from('customer_addresses')
           .select('*')
@@ -850,50 +855,112 @@ export default function Checkout() {
 
       const shippingAddressId = await ensureShippingAddress(customer.id)
 
+      let order_id = ''
       let paymentData = null
+
       if (paymentMethod === 'transferencia_miami') {
-        paymentData = generateBankDepositDetails(tempOrderNumber, total, 'EUA')
-      } else if (paymentMethod === 'transferencia_brasil') {
-        paymentData = generateBankDepositDetails(tempOrderNumber, total, 'Brasil')
-      } else if (paymentMethod === 'pix') {
-        paymentData = pixData
+        paymentData = generateBankDepositDetailsUSA(tempOrderNumber, total)
+        const res = await createPendingOrder(
+          customer.id,
+          cartItems,
+          paymentMethod as PaymentMethod,
+          paymentData,
+          dbShippingMethod,
+          total,
+          subtotal,
+          discountAmount,
+          freight,
+          shippingAddressId,
+          tempOrderNumber,
+        )
+        order_id = res.order_id
       } else if (paymentMethod === 'zelle') {
         paymentData = generateZelleDetails(tempOrderNumber, total)
-      }
-
-      const { order_id } = await createPendingOrder(
-        customer.id,
-        cartItems,
-        paymentMethod as PaymentMethod,
-        paymentData,
-        dbShippingMethod,
-        total,
-        subtotal,
-        discountAmount,
-        freight,
-        shippingAddressId,
-        tempOrderNumber,
-      )
-
-      supabase.functions.invoke('notify-admin-payment', {
-        body: {
-          orderId: order_id,
-          orderNumber: tempOrderNumber,
-          customerName: user!.user_metadata?.name || '',
-          customerEmail: user!.email || '',
-          paymentMethod,
-          shippingMethod: dbShippingMethod,
-          amount: total,
+        const res = await createPendingOrder(
+          customer.id,
+          cartItems,
+          paymentMethod as PaymentMethod,
           paymentData,
-        },
-      })
+          dbShippingMethod,
+          total,
+          subtotal,
+          discountAmount,
+          freight,
+          shippingAddressId,
+          tempOrderNumber,
+        )
+        order_id = res.order_id
+      } else if (paymentMethod === 'transferencia_brasil') {
+        if (!customerData.nome || !customerData.email) {
+          throw new Error('Preencha nome e email para continuar.')
+        }
+        const res = await createTransferenciaBrasilOrder(
+          customer.id,
+          cartItems,
+          customerData,
+          dbShippingMethod,
+          total,
+          subtotal,
+          discountAmount,
+          freight,
+          shippingAddressId,
+          tempOrderNumber,
+        )
+        order_id = res.order_id
+
+        supabase.functions.invoke('notify-admin-transferencia-brasil', {
+          body: {
+            orderId: order_id,
+            orderNumber: tempOrderNumber,
+            customerName: customerData.nome,
+            customerEmail: customerData.email,
+            customerPhone: customerData.telefone,
+            amount: total,
+            currency: 'USD',
+          },
+        })
+      } else if (paymentMethod === 'pix') {
+        if (!customerData.nome || !customerData.email) {
+          throw new Error('Preencha nome e email para continuar.')
+        }
+        const res = await createPIXOrder(
+          customer.id,
+          cartItems,
+          customerData,
+          dbShippingMethod,
+          total,
+          subtotal,
+          discountAmount,
+          freight,
+          shippingAddressId,
+          tempOrderNumber,
+        )
+        order_id = res.order_id
+
+        supabase.functions.invoke('notify-admin-pix', {
+          body: {
+            orderId: order_id,
+            orderNumber: tempOrderNumber,
+            customerName: customerData.nome,
+            customerEmail: customerData.email,
+            customerPhone: customerData.telefone,
+            amount: total,
+          },
+        })
+      }
 
       if (cartContext?.clearCart) cartContext.clearCart()
       localStorage.removeItem('cart')
       setCreatedOrderId(order_id)
       setOrderConfirmed(true)
 
-      toast({ description: 'Pedido criado! Aguardando confirmação do pagamento.' })
+      if (paymentMethod === 'transferencia_brasil') {
+        toast({ description: 'Pedido criado! Dados bancários serão enviados por email.' })
+      } else if (paymentMethod === 'pix') {
+        toast({ description: 'Pedido criado! Dados PIX serão enviados por email.' })
+      } else {
+        toast({ description: 'Pedido criado! Aguardando confirmação do pagamento.' })
+      }
     } catch (err: any) {
       toast({
         description: err.message || 'Erro ao processar pedido. Tente novamente.',
@@ -1370,14 +1437,58 @@ export default function Checkout() {
   )
 
   const renderManualPaymentDetails = () => {
-    if (paymentMethod === 'transferencia_miami' || paymentMethod === 'transferencia_brasil') {
-      const isEUA = paymentMethod === 'transferencia_miami'
-      const details = generateBankDepositDetails(tempOrderNumber, total, isEUA ? 'EUA' : 'Brasil')
+    if (paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') {
+      const isPix = paymentMethod === 'pix'
       return (
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
           <h4 className="font-bold text-lg text-slate-900">
-            Dados para Depósito ({isEUA ? 'EUA' : 'Brasil'})
+            {isPix ? 'Pagamento via PIX' : 'Transferência (Brasil)'}
           </h4>
+          <p className="text-sm text-slate-600 mb-4">
+            {isPix
+              ? 'Dados PIX serão enviados por email após confirmação do pedido.'
+              : 'Dados bancários serão enviados por email após confirmação do pedido.'}
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="text-slate-900 font-semibold mb-1 block">Nome Completo *</Label>
+              <Input
+                value={customerData.nome}
+                onChange={(e) => setCustomerData({ ...customerData, nome: e.target.value })}
+                placeholder="Seu nome completo"
+                className="bg-white"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-900 font-semibold mb-1 block">Email *</Label>
+              <Input
+                value={customerData.email}
+                onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                type="email"
+                placeholder="seu@email.com"
+                className="bg-white"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-900 font-semibold mb-1 block">Telefone (opcional)</Label>
+              <Input
+                value={customerData.telefone || ''}
+                onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
+                placeholder="(11) 99999-9999"
+                className="bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (paymentMethod === 'transferencia_miami') {
+      const details = generateBankDepositDetailsUSA(tempOrderNumber, total)
+      return (
+        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
+          <h4 className="font-bold text-lg text-slate-900">Dados para Depósito (EUA)</h4>
           <p className="text-sm text-slate-600 mb-4">
             Favor transferir o valor exato abaixo. Seu pedido será processado após a confirmação do
             depósito.
@@ -1407,15 +1518,6 @@ export default function Checkout() {
                 </div>
               </div>
             )}
-            {details.agencyNumber && (
-              <div className="space-y-1">
-                <Label className="text-slate-500 text-xs">Agência</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                  <span className="flex-1 font-mono text-sm">{details.agencyNumber}</span>{' '}
-                  <CopyBtn text={details.agencyNumber} />
-                </div>
-              </div>
-            )}
             <div className="space-y-1">
               <Label className="text-slate-500 text-xs">Titular</Label>
               <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
@@ -1429,15 +1531,6 @@ export default function Checkout() {
                 <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
                   <span className="flex-1 font-mono text-sm">{details.swiftCode}</span>{' '}
                   <CopyBtn text={details.swiftCode} />
-                </div>
-              </div>
-            )}
-            {details.cpfCnpj && (
-              <div className="space-y-1">
-                <Label className="text-slate-500 text-xs">CPF/CNPJ</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                  <span className="flex-1 font-mono text-sm">{details.cpfCnpj}</span>{' '}
-                  <CopyBtn text={details.cpfCnpj} />
                 </div>
               </div>
             )}
@@ -1458,41 +1551,6 @@ export default function Checkout() {
                 <span className="flex-1 font-mono font-bold">{tempOrderNumber}</span>{' '}
                 <CopyBtn text={tempOrderNumber} />
               </div>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (paymentMethod === 'pix' && pixData) {
-      return (
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
-          <h4 className="font-bold text-lg text-slate-900">Pagamento via PIX</h4>
-          <p className="text-sm text-slate-600 mb-4">
-            Escaneie o código ou copie a chave PIX para pagar.
-          </p>
-
-          <img
-            src={pixData.qrCodeUrl}
-            alt="PIX QR Code"
-            className="w-48 h-48 mx-auto border border-slate-200 rounded-xl shadow-sm"
-          />
-
-          <div className="max-w-xs mx-auto space-y-1 text-left mt-4">
-            <Label className="text-slate-500 text-xs">Chave PIX</Label>
-            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-              <span className="flex-1 font-mono text-sm overflow-hidden text-ellipsis">
-                {pixData.pixKey}
-              </span>{' '}
-              <CopyBtn text={pixData.pixKey} />
-            </div>
-          </div>
-          <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
-            <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
-            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
-              <span className="flex-1 font-mono font-bold text-emerald-700">
-                {formatCurrency(total)}
-              </span>
             </div>
           </div>
         </div>

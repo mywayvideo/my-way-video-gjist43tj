@@ -24,3 +24,9 @@ export interface PIXData {
 export interface ZelleData {
   email: string
 }
+
+export interface CustomerData {
+  nome: string
+  email: string
+  telefone?: string
+}

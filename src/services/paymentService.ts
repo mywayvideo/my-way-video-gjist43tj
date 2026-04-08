@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
-import { PaymentMethod, BankDetails, PIXData, ZelleData } from '@/types/payment'
+import { PaymentMethod, BankDetails, PIXData, ZelleData, CustomerData } from '@/types/payment'
 
 export const getAvailablePaymentMethods = (shippingMethod: string): PaymentMethod[] => {
   const baseOptions: PaymentMethod[] = ['stripe', 'transferencia_miami', 'zelle', 'paypal']
@@ -19,34 +19,13 @@ export const initiatePayPalPayment = async (amount: number, email: string, order
   return data.paypal_approval_url
 }
 
-export const generateBankDepositDetails = (
-  orderId: string,
-  amount: number,
-  country: 'EUA' | 'Brasil',
-): BankDetails => {
-  if (country === 'EUA') {
-    return {
-      bankName: 'Miami International Bank',
-      accountNumber: '987654321',
-      routingNumber: '123456789',
-      accountHolder: 'My Way Business LLC',
-      swiftCode: 'MIBKUS3M',
-    }
-  } else {
-    return {
-      bankName: 'Banco do Brasil',
-      accountNumber: '12345-6',
-      agencyNumber: '0001',
-      accountHolder: 'My Way Video BR LTDA',
-      cpfCnpj: '12.345.678/0001-99',
-    }
-  }
-}
-
-export const generatePIXQRCode = async (orderId: string, amount: number): Promise<PIXData> => {
+export const generateBankDepositDetailsUSA = (orderId: string, amount: number): BankDetails => {
   return {
-    pixKey: '12.345.678/0001-99',
-    qrCodeUrl: `https://img.usecurling.com/p/300/300?q=qrcode&seed=${orderId}`,
+    bankName: 'Miami International Bank',
+    accountNumber: '987654321',
+    routingNumber: '123456789',
+    accountHolder: 'My Way Business LLC',
+    swiftCode: 'MIBKUS3M',
   }
 }
 
@@ -107,4 +86,58 @@ export const createPendingOrder = async (
   if (itemsErr) throw itemsErr
 
   return { order_id: order.id, order_number: order.order_number }
+}
+
+export const createTransferenciaBrasilOrder = async (
+  customerId: string,
+  items: any[],
+  customerData: CustomerData,
+  shippingMethod: string,
+  total: number,
+  subtotal: number,
+  discountAmount: number,
+  freight: number | null,
+  shippingAddressId: string | null,
+  orderNumber: string,
+) => {
+  return createPendingOrder(
+    customerId,
+    items,
+    'transferencia_brasil',
+    customerData,
+    shippingMethod,
+    total,
+    subtotal,
+    discountAmount,
+    freight,
+    shippingAddressId,
+    orderNumber,
+  )
+}
+
+export const createPIXOrder = async (
+  customerId: string,
+  items: any[],
+  customerData: CustomerData,
+  shippingMethod: string,
+  total: number,
+  subtotal: number,
+  discountAmount: number,
+  freight: number | null,
+  shippingAddressId: string | null,
+  orderNumber: string,
+) => {
+  return createPendingOrder(
+    customerId,
+    items,
+    'pix',
+    customerData,
+    shippingMethod,
+    total,
+    subtotal,
+    discountAmount,
+    freight,
+    shippingAddressId,
+    orderNumber,
+  )
 }

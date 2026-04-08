@@ -3,8 +3,9 @@ import { useToast } from '@/hooks/use-toast'
 import {
   initiatePayPalPayment,
   createPendingOrder,
-  generateBankDepositDetails,
-  generatePIXQRCode,
+  createTransferenciaBrasilOrder,
+  createPIXOrder,
+  generateBankDepositDetailsUSA,
   generateZelleDetails,
   getAvailablePaymentMethods,
 } from '@/services/paymentService'
@@ -39,10 +40,11 @@ export const useAlternativePayments = () => {
     setIsLoading,
     validateShippingMethod,
     handlePayPalFlow,
-    generateBankDepositDetails,
-    generatePIXQRCode,
+    generateBankDepositDetailsUSA,
     generateZelleDetails,
     createPendingOrder,
+    createTransferenciaBrasilOrder,
+    createPIXOrder,
     getAvailablePaymentMethods,
   }
 }
