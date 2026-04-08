@@ -125,7 +125,7 @@ const CopyBtn = ({ text }: { text: string }) => {
 }
 
 export default function Checkout() {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const cartContext = useCart() as any
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -185,35 +185,16 @@ export default function Checkout() {
 
   useEffect(() => {
     if (user) {
-      const syncCustomerData = async () => {
-        try {
-          const { data } = await supabase
-            .from('customers')
-            .select('full_name, phone')
-            .eq('user_id', user.id)
-            .single()
-
-          if (data) {
-            setCustomerData({
-              nome: data.full_name || user.user_metadata?.name || '',
-              email: user.email || '',
-              telefone: data.phone || '',
-            })
-            if (data.full_name && !stripeName) setStripeName(data.full_name)
-            if (user.email && !stripeEmail) setStripeEmail(user.email)
-          }
-        } catch (err) {
-          console.error('Erro ao sincronizar dados do cliente:', err)
-          setCustomerData({
-            nome: user.user_metadata?.name || '',
-            email: user.email || '',
-            telefone: '',
-          })
-        }
-      }
-      syncCustomerData()
+      setCustomerData((prev) => ({
+        ...prev,
+        nome: profile?.full_name || user.user_metadata?.name || prev.nome,
+        email: profile?.email || user.email || prev.email,
+        telefone: profile?.phone || prev.telefone,
+      }))
+      if (profile?.full_name && !stripeName) setStripeName(profile.full_name)
+      if (user.email && !stripeEmail) setStripeEmail(user.email)
     }
-  }, [user])
+  }, [user, profile])
 
   useEffect(() => {
     if (paymentMethod && paymentDetailsRef.current) {
@@ -308,12 +289,6 @@ export default function Checkout() {
       if (discRes.data) setActiveDiscounts(discRes.data)
 
       if (custRes.data) {
-        setStripeName(custRes.data.full_name || '')
-        setCustomerData({
-          nome: custRes.data.full_name || user.user_metadata?.name || '',
-          email: user.email || '',
-          telefone: custRes.data.phone || '',
-        })
         const { data: addresses } = await supabase
           .from('customer_addresses')
           .select('*')
