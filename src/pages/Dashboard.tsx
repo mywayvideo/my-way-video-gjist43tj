@@ -287,6 +287,10 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   return (
     <DashboardErrorBoundary>
       <DashboardContent />

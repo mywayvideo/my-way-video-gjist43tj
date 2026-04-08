@@ -88,11 +88,21 @@ export function PersonalInfoTab({
 
   useEffect(() => {
     if (customer) {
+      let formattedDate = customer.date_of_birth || ''
+      if (formattedDate && formattedDate.includes('T')) {
+        formattedDate = formattedDate.split('T')[0]
+      } else if (formattedDate && formattedDate.includes('/')) {
+        const parts = formattedDate.split('/')
+        if (parts.length === 3) {
+          formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`
+        }
+      }
+
       form.reset({
         full_name: customer.full_name || '',
         email: customer.email || '',
         phone: customer.phone || '',
-        date_of_birth: customer.date_of_birth || '',
+        date_of_birth: formattedDate,
         gender: customer.gender || '',
         company_name: customer.company_name || '',
         cpf: customer.cpf || '',
@@ -122,7 +132,7 @@ export function PersonalInfoTab({
     }
   }
 
-  if (state === 'LOADING') {
+  if (state === 'LOADING' && !propCustomer) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
@@ -148,7 +158,7 @@ export function PersonalInfoTab({
     )
   }
 
-  if (state === 'EMPTY') {
+  if (state === 'EMPTY' && !propCustomer) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card">
         <p className="text-lg font-medium text-muted-foreground">Nenhum dado encontrado.</p>
@@ -160,7 +170,7 @@ export function PersonalInfoTab({
     )
   }
 
-  if (state === 'ERROR') {
+  if (state === 'ERROR' && !propCustomer) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card border-destructive/50">
         <p className="text-lg font-medium text-destructive">
@@ -186,12 +196,12 @@ export function PersonalInfoTab({
         <div className="flex justify-between items-start">
           <h2 className="text-xl font-bold">Informações Pessoais</h2>
           <Button
-            variant="ghost"
-            size="icon"
+            variant="outline"
             onClick={() => setEditing(true)}
-            className="text-primary hover:bg-secondary hover:text-primary transition-all duration-200"
+            className="text-primary hover:bg-secondary hover:text-primary transition-all duration-200 flex items-center gap-2"
           >
-            <Pencil className="w-5 h-5" />
+            <Pencil className="w-4 h-4" />
+            <span>Editar</span>
           </Button>
         </div>
 
@@ -242,7 +252,10 @@ export function PersonalInfoTab({
               readOnly
               value={
                 customer.date_of_birth
-                  ? new Date(customer.date_of_birth).toLocaleDateString('pt-BR')
+                  ? new Date(
+                      customer.date_of_birth +
+                        (customer.date_of_birth.includes('T') ? '' : 'T12:00:00'),
+                    ).toLocaleDateString('pt-BR')
                   : '-'
               }
               className="bg-secondary border-none cursor-default"
@@ -255,7 +268,7 @@ export function PersonalInfoTab({
             <Input
               readOnly
               value={customer.gender || '-'}
-              className="bg-secondary border-none cursor-default capitalize"
+              className="bg-secondary border-none cursor-default"
             />
           </div>
           <div className="md:col-span-2">
@@ -432,10 +445,9 @@ export function PersonalInfoTab({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="masculino">Masculino</SelectItem>
-                      <SelectItem value="feminino">Feminino</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                      <SelectItem value="prefiro_nao_dizer">Prefiro não dizer</SelectItem>
+                      <SelectItem value="Feminino">Feminino</SelectItem>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage className="text-destructive text-sm mt-1" />
