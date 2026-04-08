@@ -1546,8 +1546,8 @@ export default function Checkout() {
 
   const renderManualPaymentDetails = () => {
     const inputClassStyled =
-      'w-full p-3 border border-gray-300 rounded-lg text-[14px] focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition-all text-gray-800 placeholder:text-gray-400'
-    const readOnlyInputClass = 'bg-gray-200 cursor-not-allowed text-gray-600'
+      'w-full p-3 border border-slate-600 rounded-lg text-[14px] focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 transition-all bg-slate-800 text-white placeholder:text-slate-400'
+    const readOnlyInputClass = 'bg-slate-600 cursor-not-allowed text-white'
     const copyBtnClass =
       'w-8 h-8 sm:w-[36px] sm:h-[36px] flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md transition-colors shrink-0 text-gray-700'
     const containerClass =
