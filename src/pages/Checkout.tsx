@@ -256,7 +256,9 @@ export default function Checkout() {
         if (bankSetting) {
           try {
             setBankDetails(JSON.parse(bankSetting))
-          } catch (e) {}
+          } catch (e) {
+            console.error('Error parsing bank details', e)
+          }
         }
         const zelleSetting = settingsRes.data.find(
           (s) => s.setting_key === 'zelle_email',
