@@ -176,9 +176,9 @@ export default function Checkout() {
   const [tempOrderNumber] = useState(`ORD-${Math.floor(100000 + Math.random() * 900000)}`)
 
   const [customerData, setCustomerData] = useState<CustomerData>({
-    nome: '',
-    email: '',
-    telefone: '',
+    nome: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '',
+    email: profile?.email || user?.email || '',
+    telefone: profile?.phone || '',
   })
 
   const paymentDetailsRef = useRef<HTMLDivElement>(null)
@@ -186,13 +186,25 @@ export default function Checkout() {
   useEffect(() => {
     if (user) {
       setCustomerData((prev) => ({
-        ...prev,
-        nome: profile?.full_name || user.user_metadata?.name || prev.nome,
-        email: profile?.email || user.email || prev.email,
-        telefone: profile?.phone || prev.telefone,
+        nome:
+          prev.nome ||
+          profile?.full_name ||
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          '',
+        email: prev.email || profile?.email || user?.email || '',
+        telefone: prev.telefone || profile?.phone || '',
       }))
-      if (profile?.full_name && !stripeName) setStripeName(profile.full_name)
-      if (user.email && !stripeEmail) setStripeEmail(user.email)
+
+      setStripeName(
+        (prev) =>
+          prev ||
+          profile?.full_name ||
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          '',
+      )
+      setStripeEmail((prev) => prev || profile?.email || user?.email || '')
     }
   }, [user, profile])
 
