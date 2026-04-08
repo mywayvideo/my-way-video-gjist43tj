@@ -178,6 +178,10 @@ export default function Checkout() {
 
   const { userName, userEmail, userPhone } = useUser()
 
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   const [customerData, setCustomerData] = useState<CustomerData>({
     nome: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '',
     email: profile?.email || user?.email || '',

@@ -47,7 +47,7 @@ export const orderService = {
 
     const { data: items, error } = await supabase
       .from('order_items')
-      .select('*')
+      .select('*, products(*)')
       .eq('order_id', orderId)
     if (error) throw error
 
@@ -74,13 +74,49 @@ export const orderService = {
         quantity: item.quantity,
         user_id: userId,
       }))
-      await supabase.from('cart_items').insert(cartItemsData)
 
-      const localCart = JSON.parse(localStorage.getItem('cart-items') || '[]')
-      items.forEach((item) => {
-        localCart.push({ product_id: item.product_id, quantity: item.quantity })
+      for (const ci of cartItemsData) {
+        const { data: existing } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('cart_id', cart.id)
+          .eq('product_id', ci.product_id)
+          .maybeSingle()
+        if (existing) {
+          await supabase
+            .from('cart_items')
+            .update({ quantity: existing.quantity + ci.quantity })
+            .eq('id', existing.id)
+        } else {
+          await supabase.from('cart_items').insert(ci)
+        }
+      }
+
+      let localCart: any[] = []
+      try {
+        localCart = JSON.parse(localStorage.getItem('cart') || '[]')
+      } catch (e) {}
+
+      items.forEach((item: any) => {
+        const existing = localCart.find((i: any) => (i.id || i.product_id) === item.product_id)
+        if (existing) {
+          existing.quantity += item.quantity
+        } else {
+          localCart.push({
+            id: item.product_id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            name: item.products?.name,
+            price: item.products?.price_usd || item.unit_price,
+            image_url: item.products?.image_url,
+            product: item.products,
+          })
+        }
       })
-      localStorage.setItem('cart-items', JSON.stringify(localCart))
+
+      localStorage.setItem('cart', JSON.stringify(localCart))
+      localStorage.setItem('cartItems', JSON.stringify(localCart))
+      window.dispatchEvent(new Event('storage'))
     }
   },
 

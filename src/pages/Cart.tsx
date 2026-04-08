@@ -18,7 +18,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -38,6 +38,10 @@ export default function Cart() {
   const [showHoursModal, setShowHoursModal] = useState(false)
   const [waMessage, setWaMessage] = useState('')
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   const checkBusinessHours = () => {
     const miamiTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))

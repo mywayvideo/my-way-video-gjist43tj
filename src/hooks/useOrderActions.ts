@@ -31,7 +31,9 @@ export function useOrderActions() {
       setActionLoading(`reorder-${orderId}`)
       await orderService.copyOrderToCart(orderId)
       toast.success('Itens adicionados ao carrinho! Revise e confirme.')
-      setTimeout(() => navigate('/checkout'), 2000)
+      setTimeout(() => {
+        window.location.href = '/cart'
+      }, 1500)
     } catch (e) {
       toast.error('Nao foi possivel copiar itens. Tente novamente.')
     } finally {
