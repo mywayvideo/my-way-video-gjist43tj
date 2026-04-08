@@ -173,13 +173,33 @@ export default function Checkout() {
   const [discountAmount, setDiscountAmount] = useState(0)
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
-  const [tempOrderNumber, setTempOrderNumber] = useState('')
+  const [tempOrderNumber, setTempOrderNumber] = useState(`ORD-${Date.now().toString().slice(-6)}`)
 
   const [customerData, setCustomerData] = useState<CustomerData>({
-    nome: '',
-    email: '',
+    nome: user?.user_metadata?.name || '',
+    email: user?.email || '',
     telefone: '',
   })
+
+  const paymentDetailsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (user) {
+      setCustomerData((prev) => ({
+        ...prev,
+        nome: prev.nome || user.user_metadata?.name || '',
+        email: prev.email || user.email || '',
+      }))
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (paymentMethod && paymentDetailsRef.current) {
+      setTimeout(() => {
+        paymentDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 150)
+    }
+  }, [paymentMethod])
 
   const [bankDetails, setBankDetails] = useState<any>(null)
   const [zelleEmail, setZelleEmail] = useState<string | null>(null)
@@ -204,12 +224,6 @@ export default function Checkout() {
       unmountCardElement()
     }
   }, [paymentMethod, unmountCardElement])
-
-  useEffect(() => {
-    if (currentStep === 5 && !tempOrderNumber) {
-      setTempOrderNumber(`ORD-${Date.now().toString().slice(-6)}`)
-    }
-  }, [currentStep, tempOrderNumber])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -921,8 +935,8 @@ export default function Checkout() {
         )
         order_id = res.order_id
       } else if (paymentMethod === 'transferencia_brasil') {
-        if (!customerData.nome || !customerData.email) {
-          throw new Error('Preencha nome e email para continuar.')
+        if (!customerData.nome || !customerData.email || !customerData.telefone) {
+          throw new Error('Preencha nome, email e telefone para continuar.')
         }
         const res = await createTransferenciaBrasilOrder(
           customer.id,
@@ -950,8 +964,8 @@ export default function Checkout() {
           },
         })
       } else if (paymentMethod === 'pix') {
-        if (!customerData.nome || !customerData.email) {
-          throw new Error('Preencha nome e email para continuar.')
+        if (!customerData.nome || !customerData.email || !customerData.telefone) {
+          throw new Error('Preencha nome, email e telefone para continuar.')
         }
         const res = await createPIXOrder(
           customer.id,
@@ -1470,7 +1484,10 @@ export default function Checkout() {
     if (paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') {
       const isPix = paymentMethod === 'pix'
       return (
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
+        <div
+          ref={paymentDetailsRef}
+          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300"
+        >
           <h4 className="font-bold text-lg text-slate-900">
             {isPix ? 'Pagamento via PIX' : 'Transferência (Brasil)'}
           </h4>
@@ -1501,7 +1518,7 @@ export default function Checkout() {
               />
             </div>
             <div>
-              <Label className="text-slate-900 font-semibold mb-1 block">Telefone (opcional)</Label>
+              <Label className="text-slate-900 font-semibold mb-1 block">Telefone *</Label>
               <Input
                 value={customerData.telefone || ''}
                 onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
@@ -1557,7 +1574,10 @@ Valor: ${formatCurrency(total)}
 =====================================`
 
       return (
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
+        <div
+          ref={paymentDetailsRef}
+          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300"
+        >
           <h4 className="font-bold text-lg text-slate-900">Dados para Depósito (EUA)</h4>
 
           <pre className="bg-white border border-slate-200 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap text-slate-700">
@@ -1620,7 +1640,10 @@ Valor: ${formatCurrency(total)}
 
     if (paymentMethod === 'zelle') {
       return (
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
+        <div
+          ref={paymentDetailsRef}
+          className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center"
+        >
           <h4 className="font-bold text-lg text-slate-900">Pagamento via Zelle</h4>
 
           <div className="max-w-md mx-auto space-y-4 text-left mt-4">
@@ -2130,7 +2153,10 @@ Valor: ${formatCurrency(total)}
             {renderManualPaymentDetails()}
 
             {paymentMethod === 'stripe' && (
-              <div className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in duration-300 space-y-5">
+              <div
+                ref={paymentDetailsRef}
+                className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in duration-300 space-y-5"
+              >
                 <div>
                   <Label className="text-[hsl(215,25%,15%)] font-semibold">Nome no Cartão</Label>
                   <Input
