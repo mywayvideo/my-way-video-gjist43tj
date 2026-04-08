@@ -181,6 +181,9 @@ export default function Checkout() {
     telefone: '',
   })
 
+  const [bankDetails, setBankDetails] = useState<any>(null)
+  const [zelleEmail, setZelleEmail] = useState<string | null>(null)
+
   const [isLoading, setIsLoading] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [orderConfirmed, setOrderConfirmed] = useState(false)
@@ -237,10 +240,29 @@ export default function Checkout() {
   const fetchAddressesAndDiscounts = async () => {
     if (!user) return
     try {
-      const [custRes, discRes] = await Promise.all([
+      const [custRes, discRes, settingsRes] = await Promise.all([
         supabase.from('customers').select('id, role').eq('user_id', user.id).single(),
         supabase.from('discounts').select('*').eq('is_active', true),
+        supabase
+          .from('app_settings')
+          .select('setting_key, setting_value')
+          .in('setting_key', ['transfer_usa_bank_details', 'zelle_email']),
       ])
+
+      if (settingsRes.data) {
+        const bankSetting = settingsRes.data.find(
+          (s) => s.setting_key === 'transfer_usa_bank_details',
+        )?.setting_value
+        if (bankSetting) {
+          try {
+            setBankDetails(JSON.parse(bankSetting))
+          } catch (e) {}
+        }
+        const zelleSetting = settingsRes.data.find(
+          (s) => s.setting_key === 'zelle_email',
+        )?.setting_value
+        if (zelleSetting) setZelleEmail(zelleSetting)
+      }
 
       if (discRes.data) setActiveDiscounts(discRes.data)
 
@@ -859,7 +881,10 @@ export default function Checkout() {
       let paymentData = null
 
       if (paymentMethod === 'transferencia_miami') {
-        paymentData = generateBankDepositDetailsUSA(tempOrderNumber, total)
+        if (!bankDetails) {
+          throw new Error('Dados bancarios nao configurados. Contate o administrador.')
+        }
+        paymentData = bankDetails
         const res = await createPendingOrder(
           customer.id,
           cartItems,
@@ -875,7 +900,10 @@ export default function Checkout() {
         )
         order_id = res.order_id
       } else if (paymentMethod === 'zelle') {
-        paymentData = generateZelleDetails(tempOrderNumber, total)
+        if (!zelleEmail) {
+          throw new Error('Email Zelle nao configurado. Contate o administrador.')
+        }
+        paymentData = { email: zelleEmail }
         const res = await createPendingOrder(
           customer.id,
           cartItems,
@@ -1485,108 +1513,121 @@ export default function Checkout() {
     }
 
     if (paymentMethod === 'transferencia_miami') {
-      const details = generateBankDepositDetailsUSA(tempOrderNumber, total)
+      const details = bankDetails || {}
+
+      const formattedBlock = `DADOS BANCARIOS PARA TRANSFERENCIA
+=====================================
+Banco: ${details.bank_name || ''}
+Conta: ${details.account_number || ''}
+Routing: ${details.routing_number || ''}
+Titular: ${details.account_holder || ''}
+SWIFT: ${details.swift_code || ''}
+Numero do Pedido: ${tempOrderNumber}
+Valor: ${formatCurrency(total)}
+=====================================`
+
       return (
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300">
           <h4 className="font-bold text-lg text-slate-900">Dados para Depósito (EUA)</h4>
-          <p className="text-sm text-slate-600 mb-4">
-            Favor transferir o valor exato abaixo. Seu pedido será processado após a confirmação do
-            depósito.
-          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label className="text-slate-500 text-xs">Banco</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                <span className="flex-1 font-mono text-sm">{details.bankName}</span>{' '}
-                <CopyBtn text={details.bankName} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-slate-500 text-xs">Conta</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                <span className="flex-1 font-mono text-sm">{details.accountNumber}</span>{' '}
-                <CopyBtn text={details.accountNumber} />
-              </div>
-            </div>
-            {details.routingNumber && (
-              <div className="space-y-1">
-                <Label className="text-slate-500 text-xs">Routing Number</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                  <span className="flex-1 font-mono text-sm">{details.routingNumber}</span>{' '}
-                  <CopyBtn text={details.routingNumber} />
-                </div>
-              </div>
-            )}
-            <div className="space-y-1">
-              <Label className="text-slate-500 text-xs">Titular</Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                <span className="flex-1 font-mono text-sm">{details.accountHolder}</span>{' '}
-                <CopyBtn text={details.accountHolder} />
-              </div>
-            </div>
-            {details.swiftCode && (
-              <div className="space-y-1">
-                <Label className="text-slate-500 text-xs">SWIFT Code</Label>
-                <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                  <span className="flex-1 font-mono text-sm">{details.swiftCode}</span>{' '}
-                  <CopyBtn text={details.swiftCode} />
-                </div>
-              </div>
-            )}
-            <div className="space-y-1 sm:col-span-2">
-              <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
-              <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
-                <span className="flex-1 font-mono font-bold text-emerald-700">
-                  {formatCurrency(total)}
-                </span>{' '}
-                <CopyBtn text={total.toString()} />
-              </div>
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <Label className="text-slate-500 text-xs">
-                Número do Pedido (Inclua na descrição)
+          <pre className="bg-white border border-slate-200 p-4 rounded-lg text-sm font-mono whitespace-pre-wrap text-slate-700">
+            {formattedBlock}
+          </pre>
+
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              navigator.clipboard.writeText(formattedBlock)
+              toast({ description: 'Dados copiados para a area de transferencia' })
+            }}
+            className={cn(btnSecondary, 'w-full text-sm font-bold')}
+          >
+            Copiar Dados Bancarios
+          </button>
+
+          <div className="space-y-3 mt-6">
+            <div>
+              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                Valor a Transferir
               </Label>
-              <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-                <span className="flex-1 font-mono font-bold">{tempOrderNumber}</span>{' '}
-                <CopyBtn text={tempOrderNumber} />
-              </div>
+              <Input
+                value={formatCurrency(total)}
+                readOnly
+                className="bg-emerald-50 border-emerald-200 font-mono font-bold text-emerald-700 mt-1"
+              />
             </div>
+            <div>
+              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                Número do Pedido
+              </Label>
+              <Input
+                value={tempOrderNumber}
+                readOnly
+                className="bg-white font-mono font-bold mt-1"
+              />
+            </div>
+            <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
+              Favor transferir o valor acima. Seu pedido sera processado apos confirmacao do
+              deposito.
+            </p>
           </div>
         </div>
       )
     }
 
     if (paymentMethod === 'zelle') {
-      const details = generateZelleDetails(tempOrderNumber, total)
       return (
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-6 space-y-4 animate-in fade-in duration-300 text-center">
           <h4 className="font-bold text-lg text-slate-900">Pagamento via Zelle</h4>
-          <p className="text-sm text-slate-600 mb-4">
-            Use o email abaixo para enviar o pagamento via Zelle.
-          </p>
 
-          <div className="max-w-xs mx-auto space-y-1 text-left mt-4">
-            <Label className="text-slate-500 text-xs">Email Zelle</Label>
-            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-              <span className="flex-1 font-mono text-sm">{details.email}</span>{' '}
-              <CopyBtn text={details.email} />
+          <div className="max-w-md mx-auto space-y-4 text-left mt-4">
+            <div>
+              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                Email Zelle
+              </Label>
+              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                <Input
+                  value={zelleEmail || ''}
+                  readOnly
+                  className="bg-white font-mono text-sm flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigator.clipboard.writeText(zelleEmail || '')
+                    toast({ description: 'Email copiado para a area de transferencia' })
+                  }}
+                  className="px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors font-bold text-sm whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+                >
+                  Copiar Email Zelle
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
-            <Label className="text-slate-500 text-xs">Valor a Transferir</Label>
-            <div className="flex gap-2 items-center bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
-              <span className="flex-1 font-mono font-bold text-emerald-700">
-                {formatCurrency(total)}
-              </span>
+            <div>
+              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                Valor a Transferir
+              </Label>
+              <Input
+                value={formatCurrency(total)}
+                readOnly
+                className="bg-emerald-50 border-emerald-200 font-mono font-bold text-emerald-700 mt-1"
+              />
             </div>
-          </div>
-          <div className="max-w-xs mx-auto space-y-1 text-left mt-2">
-            <Label className="text-slate-500 text-xs">Número do Pedido (Inclua no memo)</Label>
-            <div className="flex gap-2 items-center bg-white border border-slate-200 p-2 rounded-lg">
-              <span className="flex-1 font-mono font-bold">{tempOrderNumber}</span>{' '}
-              <CopyBtn text={tempOrderNumber} />
+            <div>
+              <Label className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                Número do Pedido
+              </Label>
+              <Input
+                value={tempOrderNumber}
+                readOnly
+                className="bg-white font-mono font-bold mt-1"
+              />
             </div>
+            <p className="text-sm text-slate-600 mt-4 leading-relaxed font-medium">
+              Use o email acima para enviar o pagamento via Zelle. Inclua o numero do pedido na
+              descricao da transferencia.
+            </p>
           </div>
         </div>
       )
