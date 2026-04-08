@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
 import { Order } from '@/types/order'
 import { orderService } from '@/services/orderService'
+import { Link } from 'react-router-dom'
 
 interface Props {
   orderId: string | null
@@ -81,17 +82,32 @@ export function OrderDetailsModal({
               <div>
                 <h4 className="font-semibold mb-3 border-b pb-2">Itens do Pedido</h4>
                 <div className="space-y-3">
-                  {order.order_items?.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-sm">{item.products?.name || 'Produto'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.quantity}x ${item.unit_price}
-                        </p>
+                  {order.order_items?.map((item) => {
+                    const isDiscontinued = item.products?.is_discontinued === true
+                    return (
+                      <div key={item.id} className="flex justify-between items-center">
+                        <div>
+                          {isDiscontinued ? (
+                            <p className="font-medium text-sm text-muted-foreground mb-0.5">
+                              {item.products?.name || 'Produto'}{' '}
+                              <span className="text-xs italic">(Produto descontinuado)</span>
+                            </p>
+                          ) : (
+                            <Link
+                              to={`/product/${item.product_id}`}
+                              className="font-medium text-sm hover:underline hover:text-emerald-600 transition-colors block mb-0.5"
+                            >
+                              {item.products?.name || 'Produto'}
+                            </Link>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {item.quantity}x ${item.unit_price}
+                          </p>
+                        </div>
+                        <p className="font-bold">${item.total_price}</p>
                       </div>
-                      <p className="font-bold">${item.total_price}</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
@@ -113,7 +129,7 @@ export function OrderDetailsModal({
 
               <div className="flex flex-col gap-2 pt-4">
                 <Button variant="outline" className="min-h-11" onClick={() => onDownload(order)}>
-                  Baixar Nota Fiscal
+                  Imprimir Pedido
                 </Button>
                 <Button className="min-h-11" onClick={() => onReorder(order.id)}>
                   Recomprar Itens

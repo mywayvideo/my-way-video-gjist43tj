@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { orderService } from '@/services/orderService'
 import { useNavigate } from 'react-router-dom'
 import { Order } from '@/types/order'
+import { generateOrderPDF } from '@/services/generateOrderPDF'
 
 export function useOrderActions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -11,18 +12,15 @@ export function useOrderActions() {
   const handleDownloadInvoice = async (order: Order) => {
     try {
       setActionLoading(`invoice-${order.id}`)
-      const blob = await orderService.generateInvoicePDF(order, '/logo.png')
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Invoice-${order.order_number}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      toast.success('Nota fiscal baixada com sucesso.')
+      const doc = await generateOrderPDF(order)
+      if (doc) {
+        doc.save(`pedido-${order.order_number || order.id}.pdf`)
+        toast.success('Pedido impresso com sucesso!')
+      } else {
+        toast.error('Nao foi possivel gerar o PDF. Tente novamente.')
+      }
     } catch (e) {
-      toast.error('Erro ao gerar nota fiscal. Tente novamente.')
+      toast.error('Nao foi possivel gerar o PDF. Tente novamente.')
     } finally {
       setActionLoading(null)
     }
