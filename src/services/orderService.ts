@@ -95,7 +95,9 @@ export const orderService = {
       let localCart: any[] = []
       try {
         localCart = JSON.parse(localStorage.getItem('cart') || '[]')
-      } catch (e) {}
+      } catch (e) {
+        // ignore parse error
+      }
 
       items.forEach((item: any) => {
         const existing = localCart.find((i: any) => (i.id || i.product_id) === item.product_id)
