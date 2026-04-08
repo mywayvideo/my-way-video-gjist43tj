@@ -1,13 +1,90 @@
+import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Loader2, Settings, Building2, Shield, Wrench } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from '@/hooks/use-toast'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Loader2, Settings, Building2, Shield, Wrench, Save } from 'lucide-react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth()
 
-  if (authLoading)
+  const [companyName, setCompanyName] = useState('')
+  const [companyAddress, setCompanyAddress] = useState('')
+  const [companyEmail, setCompanyEmail] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadSettings() {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['company_name', 'company_address', 'company_email'])
+
+      if (data && !error) {
+        const name = data.find((d) => d.setting_key === 'company_name')?.setting_value
+        const address = data.find((d) => d.setting_key === 'company_address')?.setting_value
+        const email = data.find((d) => d.setting_key === 'company_email')?.setting_value
+
+        if (name) setCompanyName(name)
+        if (address) setCompanyAddress(address)
+        if (email) setCompanyEmail(email)
+      }
+      setIsLoading(false)
+    }
+    loadSettings()
+  }, [])
+
+  const handleSaveCompany = async () => {
+    setIsSaving(true)
+    try {
+      const settingsToSave = [
+        { setting_key: 'company_name', setting_value: companyName, updated_by_user_id: user?.id },
+        {
+          setting_key: 'company_address',
+          setting_value: companyAddress,
+          updated_by_user_id: user?.id,
+        },
+        { setting_key: 'company_email', setting_value: companyEmail, updated_by_user_id: user?.id },
+      ]
+
+      for (const setting of settingsToSave) {
+        const { error } = await supabase
+          .from('app_settings')
+          .upsert(setting, { onConflict: 'setting_key' })
+
+        if (error) throw error
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Configurações da empresa atualizadas.',
+      })
+    } catch (error: any) {
+      console.error(error)
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível salvar as configurações.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (authLoading || isLoading)
     return (
       <div className="p-8 flex justify-center">
         <Loader2 className="animate-spin w-6 h-6 text-muted-foreground" />
@@ -38,14 +115,49 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="text-lg">Empresa</CardTitle>
-                <CardDescription>Informações cadastrais e identidade visual</CardDescription>
+                <CardDescription>Informações cadastrais exibidas em PDFs e e-mails</CardDescription>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Configurações da empresa estarão disponíveis em breve.
-              </p>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="companyName">Nome da Empresa</Label>
+                <Input
+                  id="companyName"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Ex: My Way Video"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="companyEmail">E-mail de Contato</Label>
+                <Input
+                  id="companyEmail"
+                  type="email"
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                  placeholder="Ex: contato@mywayvideo.com"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="companyAddress">Endereço</Label>
+                <Input
+                  id="companyAddress"
+                  value={companyAddress}
+                  onChange={(e) => setCompanyAddress(e.target.value)}
+                  placeholder="Ex: Miami, FL 33122"
+                />
+              </div>
             </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveCompany} disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Salvar Configurações
+              </Button>
+            </CardFooter>
           </Card>
 
           <Card className="border-border/50 shadow-sm bg-card">

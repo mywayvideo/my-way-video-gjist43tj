@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { supabase } from '@/lib/supabase/client'
 
 export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> => {
   try {
@@ -7,6 +8,20 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
       unit: 'mm',
       format: 'a4',
     })
+
+    const { data: settings } = await supabase
+      .from('app_settings')
+      .select('setting_key, setting_value')
+      .in('setting_key', ['company_name', 'company_address', 'company_email'])
+
+    const companyName =
+      settings?.find((s: any) => s.setting_key === 'company_name')?.setting_value || 'My Way Video'
+    const companyAddress =
+      settings?.find((s: any) => s.setting_key === 'company_address')?.setting_value ||
+      'Miami, FL 33122'
+    const companyEmail =
+      settings?.find((s: any) => s.setting_key === 'company_email')?.setting_value ||
+      'contato@mywayvideo.com'
 
     try {
       const logoUrl = '/logo.png'
@@ -24,9 +39,9 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     doc.setTextColor(80, 80, 80)
-    doc.text('My Way Video', 195, 15, { align: 'right' })
-    doc.text('Miami, FL 33122', 195, 20, { align: 'right' })
-    doc.text('contato@mywayvideo.com', 195, 25, { align: 'right' })
+    doc.text(companyName, 195, 15, { align: 'right' })
+    doc.text(companyAddress, 195, 20, { align: 'right' })
+    doc.text(companyEmail, 195, 25, { align: 'right' })
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(18)
@@ -39,7 +54,11 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
-    doc.text(`Número do Pedido: ${orderData.orderNumber || orderData.order_number}`, 15, 67)
+    doc.text(
+      `Número do Pedido: ${orderData.orderNumber || orderData.order_number || 'N/A'}`,
+      15,
+      67,
+    )
 
     const orderDate =
       orderData.createdAt || orderData.created_at
@@ -47,8 +66,13 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
         : 'N/A'
     doc.text(`Data: ${orderDate}`, 15, 73)
 
-    const custName = orderData.customerName || orderData.customers?.full_name || 'N/A'
-    const custEmail = orderData.customerEmail || orderData.customers?.email || 'N/A'
+    const custName =
+      orderData.customerName ||
+      orderData.customers?.full_name ||
+      orderData.customer?.full_name ||
+      'N/A'
+    const custEmail =
+      orderData.customerEmail || orderData.customers?.email || orderData.customer?.email || 'N/A'
 
     doc.text(`Cliente: ${custName}`, 15, 79)
     doc.text(`Email: ${custEmail}`, 15, 85)
@@ -71,14 +95,18 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
       orderData.payment_method_type === 'pix'
     const currencySym = isBrl ? 'R$' : 'US$'
 
+    const formatMoney = (val: number) => {
+      return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+
     let yPos = 110
     doc.setFont('helvetica', 'bold')
     doc.setFillColor(240, 240, 240)
     doc.rect(15, yPos - 5, 180, 8, 'F')
     doc.text('Item', 17, yPos)
-    doc.text('Qtd', 120, yPos)
-    doc.text('Preço Unit.', 140, yPos)
-    doc.text('Total', 170, yPos)
+    doc.text('Qtd', 125, yPos, { align: 'center' })
+    doc.text('Preço Unit.', 160, yPos, { align: 'right' })
+    doc.text('Total', 190, yPos, { align: 'right' })
 
     yPos += 8
     doc.setFont('helvetica', 'normal')
@@ -93,9 +121,9 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
       const shortName = name.length > 50 ? name.substring(0, 47) + '...' : name
 
       doc.text(shortName, 17, yPos)
-      doc.text(qty.toString(), 120, yPos)
-      doc.text(`${currencySym} ${unitPrice.toFixed(2)}`, 140, yPos)
-      doc.text(`${currencySym} ${total.toFixed(2)}`, 170, yPos)
+      doc.text(qty.toString(), 125, yPos, { align: 'center' })
+      doc.text(`${currencySym} ${formatMoney(unitPrice)}`, 160, yPos, { align: 'right' })
+      doc.text(`${currencySym} ${formatMoney(total)}`, 190, yPos, { align: 'right' })
       yPos += 7
     })
 
@@ -109,31 +137,31 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
     const discount = orderData.discount_amount || 0
     const total = orderData.total || 0
 
-    doc.text(`Subtotal:`, 140, yPos)
-    doc.text(`${currencySym} ${subtotal.toFixed(2)}`, 170, yPos)
+    doc.text(`Subtotal:`, 160, yPos, { align: 'right' })
+    doc.text(`${currencySym} ${formatMoney(subtotal)}`, 190, yPos, { align: 'right' })
     yPos += 7
 
     if (discount > 0) {
-      doc.text(`Desconto:`, 140, yPos)
-      doc.text(`-${currencySym} ${discount.toFixed(2)}`, 170, yPos)
+      doc.text(`Desconto:`, 160, yPos, { align: 'right' })
+      doc.text(`-${currencySym} ${formatMoney(discount)}`, 190, yPos, { align: 'right' })
       yPos += 7
     }
 
-    doc.text(`Frete:`, 140, yPos)
-    doc.text(`${currencySym} ${shipping.toFixed(2)}`, 170, yPos)
+    doc.text(`Frete:`, 160, yPos, { align: 'right' })
+    doc.text(`${currencySym} ${formatMoney(shipping)}`, 190, yPos, { align: 'right' })
     yPos += 7
 
     if (tax > 0) {
-      doc.text(`Impostos:`, 140, yPos)
-      doc.text(`${currencySym} ${tax.toFixed(2)}`, 170, yPos)
+      doc.text(`Impostos:`, 160, yPos, { align: 'right' })
+      doc.text(`${currencySym} ${formatMoney(tax)}`, 190, yPos, { align: 'right' })
       yPos += 7
     }
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12)
     doc.setTextColor(16, 185, 129)
-    doc.text(`Total:`, 140, yPos)
-    doc.text(`${currencySym} ${total.toFixed(2)}`, 170, yPos)
+    doc.text(`Total:`, 160, yPos, { align: 'right' })
+    doc.text(`${currencySym} ${formatMoney(total)}`, 190, yPos, { align: 'right' })
 
     const pageHeight = doc.internal.pageSize.height
     doc.setFontSize(8)
