@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { useEffect } from 'react'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -32,40 +31,8 @@ import CheckoutSuccess from './pages/CheckoutSuccess'
 import { AuthProvider } from '@/hooks/use-auth'
 import { UserProvider } from '@/contexts/UserContext'
 import { CartProvider } from '@/hooks/useCart'
-import { supabase } from '@/lib/supabase/client'
-import { toast } from '@/hooks/use-toast'
 
 const App = () => {
-  useEffect(() => {
-    const restoreSession = async () => {
-      const accessToken = localStorage.getItem('supabase-auth-token')
-      const refreshToken = localStorage.getItem('supabase-refresh-token')
-
-      if (accessToken && refreshToken) {
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        })
-
-        if (error) {
-          localStorage.removeItem('supabase-auth-token')
-          localStorage.removeItem('supabase-refresh-token')
-
-          toast({
-            description: 'Sessao expirada. Faca login novamente.',
-            variant: 'destructive',
-          })
-
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login'
-          }
-        }
-      }
-    }
-
-    restoreSession()
-  }, [])
-
   return (
     <AuthProvider>
       <UserProvider>
