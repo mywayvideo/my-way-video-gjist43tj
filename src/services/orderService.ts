@@ -5,7 +5,7 @@ export const orderService = {
   fetchOrderDetails: async (orderId: string) => {
     const { data, error } = await supabase
       .from('orders')
-      .select('*, order_items(*, products(*))')
+      .select('*, customers(*), order_items(*, products(*))')
       .eq('id', orderId)
       .single()
     if (error) throw error

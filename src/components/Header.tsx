@@ -30,7 +30,7 @@ import useSearchState from '@/hooks/useSearchState'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/client'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
@@ -58,22 +58,28 @@ export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [firstName, setFirstName] = useState('')
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null)
   const { role, loading: roleLoading, error: roleError } = useUserRole()
 
   useEffect(() => {
-    const fetchFirstName = async () => {
+    const fetchCustomerData = async () => {
       if (!user) return
       const { data, error } = await supabase
         .from('customers')
-        .select('full_name')
+        .select('full_name, profile_photo_url')
         .eq('user_id', user.id)
         .single()
 
-      if (!error && data?.full_name) {
-        setFirstName(data.full_name.split(' ')[0])
+      if (!error && data) {
+        if (data.full_name) {
+          setFirstName(data.full_name.split(' ')[0])
+        }
+        if (data.profile_photo_url) {
+          setProfilePhotoUrl(data.profile_photo_url)
+        }
       }
     }
-    fetchFirstName()
+    fetchCustomerData()
   }, [user])
 
   const UserMenuItems = () => {
@@ -484,6 +490,13 @@ export function Header() {
                 <Sheet open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
                   <SheetTrigger asChild>
                     <Avatar className="h-11 w-11 cursor-pointer hover:opacity-80 transition-opacity">
+                      {profilePhotoUrl && (
+                        <AvatarImage
+                          src={profilePhotoUrl}
+                          alt={firstName || 'User'}
+                          className="object-cover"
+                        />
+                      )}
                       <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                         {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
                       </AvatarFallback>
@@ -501,6 +514,13 @@ export function Header() {
                 <Popover open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
                   <PopoverTrigger asChild>
                     <Avatar className="h-11 w-11 cursor-pointer hover:opacity-80 transition-opacity">
+                      {profilePhotoUrl && (
+                        <AvatarImage
+                          src={profilePhotoUrl}
+                          alt={firstName || 'User'}
+                          className="object-cover"
+                        />
+                      )}
                       <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                         {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
                       </AvatarFallback>
