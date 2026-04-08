@@ -173,7 +173,7 @@ export default function Checkout() {
   const [discountAmount, setDiscountAmount] = useState(0)
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
-  const [tempOrderNumber, setTempOrderNumber] = useState(`ORD-${Date.now().toString().slice(-6)}`)
+  const [tempOrderNumber] = useState(() => `ORD-${Math.floor(100000 + Math.random() * 900000)}`)
 
   const [customerData, setCustomerData] = useState<CustomerData>({
     nome: user?.user_metadata?.name || '',
@@ -194,12 +194,36 @@ export default function Checkout() {
   }, [user])
 
   useEffect(() => {
+    if ((paymentMethod === 'transferencia_brasil' || paymentMethod === 'pix') && user) {
+      // Forçar sincronização dos dados ao selecionar o método de pagamento
+      const syncCustomerData = async () => {
+        try {
+          const { data } = await supabase
+            .from('customers')
+            .select('full_name, phone')
+            .eq('user_id', user.id)
+            .single()
+
+          if (data) {
+            setCustomerData((prev) => ({
+              ...prev,
+              nome: prev.nome || data.full_name || user.user_metadata?.name || '',
+              telefone: prev.telefone || data.phone || '',
+            }))
+          }
+        } catch (err) {
+          console.error('Erro ao sincronizar dados do cliente:', err)
+        }
+      }
+      syncCustomerData()
+    }
+
     if (paymentMethod && paymentDetailsRef.current) {
       setTimeout(() => {
         paymentDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 150)
     }
-  }, [paymentMethod])
+  }, [paymentMethod, user])
 
   const [bankDetails, setBankDetails] = useState<any>(null)
   const [zelleEmail, setZelleEmail] = useState<string | null>(null)
@@ -935,7 +959,11 @@ export default function Checkout() {
         )
         order_id = res.order_id
       } else if (paymentMethod === 'transferencia_brasil') {
-        if (!customerData.nome || !customerData.email || !customerData.telefone) {
+        if (
+          !customerData.nome?.trim() ||
+          !customerData.email?.trim() ||
+          !customerData.telefone?.trim()
+        ) {
           throw new Error('Preencha nome, email e telefone para continuar.')
         }
         const res = await createTransferenciaBrasilOrder(
@@ -964,7 +992,11 @@ export default function Checkout() {
           },
         })
       } else if (paymentMethod === 'pix') {
-        if (!customerData.nome || !customerData.email || !customerData.telefone) {
+        if (
+          !customerData.nome?.trim() ||
+          !customerData.email?.trim() ||
+          !customerData.telefone?.trim()
+        ) {
           throw new Error('Preencha nome, email e telefone para continuar.')
         }
         const res = await createPIXOrder(
@@ -1524,6 +1556,7 @@ export default function Checkout() {
                 onChange={(e) => setCustomerData({ ...customerData, telefone: e.target.value })}
                 placeholder="(11) 99999-9999"
                 className="bg-white"
+                required
               />
             </div>
             <div>
