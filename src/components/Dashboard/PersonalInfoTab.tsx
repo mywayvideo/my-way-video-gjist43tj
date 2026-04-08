@@ -29,10 +29,39 @@ import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCustomerProfile } from '@/hooks/useCustomerProfile'
 
+const formatPhone = (value: string) => {
+  if (!value) return ''
+  let raw = value.replace(/[^\d+]/g, '')
+  if (raw.length > 0 && !raw.startsWith('+')) {
+    if (raw.startsWith('55') || raw.startsWith('1')) {
+      raw = '+' + raw
+    } else {
+      raw = '+55' + raw
+    }
+  }
+  let digits = raw.replace(/\D/g, '')
+  if (!digits) return raw
+  if (digits.startsWith('55')) {
+    let res = '+55'
+    if (digits.length > 2) res += '-' + digits.substring(2, 4)
+    if (digits.length > 4) res += '-' + digits.substring(4, 9)
+    if (digits.length > 9) res += '-' + digits.substring(9, 13)
+    return res
+  } else {
+    let ccLen = digits.startsWith('1') ? 1 : digits.length >= 2 ? 2 : digits.length
+    let res = '+' + digits.substring(0, ccLen)
+    let rest = digits.substring(ccLen)
+    if (rest.length > 0) res += '-' + rest.substring(0, 3)
+    if (rest.length > 3) res += '-' + rest.substring(3, 6)
+    if (rest.length > 6) res += '-' + rest.substring(6, 10)
+    return res
+  }
+}
+
 const profileSchema = z.object({
   full_name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   email: z.string().email('Email inválido'),
-  phone: z.string().optional().nullable(),
+  phone: z.string().min(1, 'Telefone é obrigatório'),
   date_of_birth: z.string().optional().nullable(),
   gender: z.string().optional().nullable(),
   company_name: z.string().optional().nullable(),
@@ -381,8 +410,11 @@ export function PersonalInfoTab({
                   <FormControl>
                     <Input
                       {...field}
+                      onChange={(e) => {
+                        field.onChange(formatPhone(e.target.value))
+                      }}
                       value={field.value || ''}
-                      placeholder="(00) 00000-0000"
+                      placeholder="+55-00-00000-0000"
                       className="border-input rounded-lg p-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all duration-200"
                     />
                   </FormControl>

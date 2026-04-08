@@ -288,7 +288,11 @@ function DashboardContent() {
 
 export default function Dashboard() {
   useEffect(() => {
-    window.scrollTo(0, 0)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const timer = setTimeout(() => {
+      window.scrollTo(0, 0)
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   return (
