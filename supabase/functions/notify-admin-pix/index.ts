@@ -15,8 +15,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { orderId, orderNumber, customerName, customerEmail, customerPhone, amount, currency } =
-      body
+    const { orderId, orderNumber, customerName, customerEmail, customerPhone, amount } = body
 
     if (!orderId || !orderNumber || !customerName || !customerEmail || amount === undefined) {
       return new Response(JSON.stringify({ error: 'Dados invalidos para notificacao.' }), {
@@ -35,12 +34,10 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const curr = currency || 'USD'
     const origin = req.headers.get('origin') || 'https://my-way-beta-ia.goskip.app'
 
-    const subject = `Novo Pedido Pendente de Transferencia - ${orderNumber}`
+    const subject = `Novo Pedido Pendente de PIX - ${orderNumber}`
     let text = `Ola Admin,\n\n`
-    text += `Novo pedido pendente de pagamento via Transferencia (Brasil).\n\n`
     text += `Detalhes do Pedido:\n`
     text += `- Numero do Pedido: ${orderNumber}\n`
     text += `- Cliente: ${customerName}\n`
@@ -48,10 +45,10 @@ Deno.serve(async (req: Request) => {
     if (customerPhone) {
       text += `- Telefone: ${customerPhone}\n`
     }
-    text += `- Valor: ${curr} ${amount}\n\n`
-    text += `Acao necessaria: Fornecer dados bancarios para este cliente via dashboard\n`
+    text += `- Valor: BRL ${amount}\n\n`
+    text += `Acao necessaria: Fornecer dados PIX (chave PIX e codigo QR) para este cliente via dashboard\n`
     text += `Link do pedido: ${origin}/admin/orders/${orderId}\n\n`
-    text += `Acesse o painel admin para fornecer os dados bancarios.`
+    text += `Acesse o painel admin para fornecer os dados PIX.`
 
     let attempt = 0
     const maxAttempts = 3
@@ -113,7 +110,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
-    console.error('Unhandled error in notify-admin-transferencia-brasil:', error)
+    console.error('Unhandled error in notify-admin-pix:', error)
     return new Response(JSON.stringify({ error: 'Erro interno do servidor.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
