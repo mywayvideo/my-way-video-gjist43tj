@@ -25,7 +25,7 @@ export function formatPriceBRL(price?: number | null): FormattedPrice {
   return {
     text:
       'R$ ' +
-      price.toLocaleString('pt-BR', {
+      price.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),

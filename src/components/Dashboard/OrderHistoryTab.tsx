@@ -12,6 +12,7 @@ import { Eye, Download, RefreshCw, X, Package } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
 import { useOrderActions } from '@/hooks/useOrderActions'
+import { orderService } from '@/services/orderService'
 import { OrderDetailsModal } from './OrderDetailsModal'
 import { OrderCancelModal } from './OrderCancelModal'
 import { Card, CardContent } from '@/components/ui/card'
@@ -29,6 +30,19 @@ export function OrderHistoryTab({
     useOrderActions()
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [cancelOrder, setCancelOrder] = useState<Order | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  const onDownloadClick = async (order: Order) => {
+    setDownloadingId(order.id)
+    try {
+      const fullOrder = await orderService.fetchOrderDetails(order.id)
+      await handleDownloadInvoice(fullOrder)
+    } catch (e) {
+      await handleDownloadInvoice(order)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase()
@@ -66,11 +80,15 @@ export function OrderHistoryTab({
       <Button
         variant="ghost"
         size="icon"
-        disabled={actionLoading === `invoice-${order.id}`}
-        onClick={() => handleDownloadInvoice(order)}
+        disabled={actionLoading === `invoice-${order.id}` || downloadingId === order.id}
+        onClick={() => onDownloadClick(order)}
         className="text-muted-foreground"
       >
-        <Download className="w-4 h-4" />
+        {downloadingId === order.id ? (
+          <RefreshCw className="w-4 h-4 animate-spin" />
+        ) : (
+          <Download className="w-4 h-4" />
+        )}
       </Button>
       <Button
         variant="ghost"
@@ -114,7 +132,13 @@ export function OrderHistoryTab({
               <TableRow key={order.id}>
                 <TableCell>{new Date(order.created_at).toLocaleDateString('pt-BR')}</TableCell>
                 <TableCell className="font-semibold">{order.order_number}</TableCell>
-                <TableCell className="text-right font-bold">${order.total.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-bold">
+                  $
+                  {Number(order.total).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline" className={getStatusColor(order.status)}>
                     {order.status}
@@ -144,7 +168,13 @@ export function OrderHistoryTab({
               </div>
               <div className="flex justify-between font-bold py-2 border-y border-border">
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>
+                  $
+                  {Number(order.total).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
               </div>
               <div className="flex justify-end gap-2 pt-1">{renderActions(order)}</div>
             </CardContent>

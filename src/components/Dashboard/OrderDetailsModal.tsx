@@ -101,10 +101,20 @@ export function OrderDetailsModal({
                             </Link>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            {item.quantity}x ${item.unit_price}
+                            {item.quantity}x $
+                            {Number(item.unit_price).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </p>
                         </div>
-                        <p className="font-bold">${item.total_price}</p>
+                        <p className="font-bold">
+                          $
+                          {Number(item.total_price).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
                       </div>
                     )
                   })}
@@ -124,7 +134,13 @@ export function OrderDetailsModal({
 
               <div className="flex justify-between items-center border-t pt-4 text-lg font-bold">
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>
+                  $
+                  {Number(order.total).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
               </div>
 
               <div className="flex flex-col gap-2 pt-4">

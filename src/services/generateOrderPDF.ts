@@ -96,7 +96,10 @@ export const generateOrderPDF = async (orderData: any): Promise<jsPDF | null> =>
     const currencySym = isBrl ? 'R$' : 'US$'
 
     const formatMoney = (val: number) => {
-      return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      return Number(val).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
     }
 
     let yPos = 110
