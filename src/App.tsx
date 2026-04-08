@@ -30,6 +30,7 @@ import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import CheckoutSuccess from './pages/CheckoutSuccess'
 import { AuthProvider } from '@/hooks/use-auth'
+import { UserProvider } from '@/contexts/UserContext'
 import { CartProvider } from '@/hooks/useCart'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -67,47 +68,49 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <CartProvider>
-        <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/product/:id" element={<Product />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/ai" element={<AdminAIPage />} />
-                <Route path="/admin/catalog" element={<AdminCatalogPage />} />
-                <Route path="/products/new" element={<NewProductPage />} />
-                <Route path="/products/edit/:id" element={<NewProductPage />} />
-                <Route path="/admin/pricing" element={<AdminPricingPage />} />
-                <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
-                <Route path="/admin/product-cache" element={<AdminProductCache />} />
-                <Route path="/admin/ai-settings" element={<AdminAISettings />} />
-                <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
-                <Route path="/admin/settings" element={<SettingsPage />} />
-                <Route path="/admin/shipping-config" element={<ShippingConfigPage />} />
-                <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
-                <Route
-                  path="/admin/checkout-assistido/:customerId"
-                  element={<AssistedCheckoutPage />}
-                />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard-admin" element={<DashboardAdmin />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/checkout/success" element={<CheckoutSuccess />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
-        </BrowserRouter>
-      </CartProvider>
+      <UserProvider>
+        <CartProvider>
+          <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/product/:id" element={<Product />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/admin/ai" element={<AdminAIPage />} />
+                  <Route path="/admin/catalog" element={<AdminCatalogPage />} />
+                  <Route path="/products/new" element={<NewProductPage />} />
+                  <Route path="/products/edit/:id" element={<NewProductPage />} />
+                  <Route path="/admin/pricing" element={<AdminPricingPage />} />
+                  <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
+                  <Route path="/admin/product-cache" element={<AdminProductCache />} />
+                  <Route path="/admin/ai-settings" element={<AdminAISettings />} />
+                  <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
+                  <Route path="/admin/settings" element={<SettingsPage />} />
+                  <Route path="/admin/shipping-config" element={<ShippingConfigPage />} />
+                  <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
+                  <Route
+                    path="/admin/checkout-assistido/:customerId"
+                    element={<AssistedCheckoutPage />}
+                  />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard-admin" element={<DashboardAdmin />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </BrowserRouter>
+        </CartProvider>
+      </UserProvider>
     </AuthProvider>
   )
 }

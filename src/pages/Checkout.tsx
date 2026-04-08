@@ -8,6 +8,7 @@ import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
 import { useStripePayment } from '@/hooks/useStripePayment'
 import { useAlternativePayments } from '@/hooks/useAlternativePayments'
+import { useUser } from '@/hooks/useUser'
 import { PaymentMethod, CustomerData } from '@/types/payment'
 import {
   createPaymentIntent,
@@ -175,11 +176,23 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
   const [tempOrderNumber] = useState(`ORD-${Math.floor(100000 + Math.random() * 900000)}`)
 
+  const { userName, userEmail, userPhone } = useUser()
+
   const [customerData, setCustomerData] = useState<CustomerData>({
     nome: profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '',
     email: profile?.email || user?.email || '',
     telefone: profile?.phone || '',
   })
+
+  useEffect(() => {
+    if (userName || userEmail || userPhone) {
+      setCustomerData((prev) => ({
+        nome: prev.nome || userName || '',
+        email: prev.email || userEmail || '',
+        telefone: prev.telefone || userPhone || '',
+      }))
+    }
+  }, [userName, userEmail, userPhone])
 
   const paymentDetailsRef = useRef<HTMLDivElement>(null)
 
