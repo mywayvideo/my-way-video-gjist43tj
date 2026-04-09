@@ -27,21 +27,26 @@ export function useUserRole() {
         setError(null)
 
         const fetchPromise = (async () => {
-          // Check metadata first (app_metadata or user_metadata)
-          const metadataRole =
-            user.app_metadata?.role || user.user_metadata?.role || (user as any).role
-          if (metadataRole) {
-            return metadataRole
-          }
-
-          // Fallback to customers table
+          // Check customers table first for the most accurate role
           const { data, error: dbError } = await supabase
             .from('customers')
             .select('role')
             .eq('user_id', user.id)
             .single()
 
-          if (dbError) throw dbError
+          if (!dbError && data?.role && data.role !== 'customer') {
+            return data.role
+          }
+
+          // Fallback to metadata if DB doesn't have a specific role
+          const appRole = user.app_metadata?.role
+          const userRole = user.user_metadata?.role
+
+          if (appRole === 'admin' || userRole === 'admin') return 'admin'
+          if (appRole === 'collaborator' || userRole === 'collaborator') return 'collaborator'
+          if (appRole === 'reseller' || userRole === 'reseller') return 'reseller'
+          if (appRole === 'vip' || userRole === 'vip') return 'vip'
+
           return data?.role || 'customer'
         })()
 

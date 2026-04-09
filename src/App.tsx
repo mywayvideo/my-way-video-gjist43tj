@@ -18,8 +18,10 @@ import NewProductPage from './pages/admin/NewProductPage'
 import SettingsPage from './pages/admin/SettingsPage'
 import ShippingConfigPage from './pages/admin/ShippingConfigPage'
 import Dashboard from './pages/Dashboard'
-import DashboardAdmin from './pages/DashboardAdmin'
 import AdminDiscountsPage from './pages/admin/AdminDiscountsPage'
+import AdminCustomersPage from './pages/admin/AdminCustomersPage'
+import AdminMetricsPage from './pages/admin/AdminMetricsPage'
+import AdminProfilePage from './pages/admin/AdminProfilePage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AssistedCheckoutPage from './pages/admin/AssistedCheckoutPage'
 import Login from './pages/Login'
@@ -65,8 +67,10 @@ const App = () => {
                     path="/admin/checkout-assistido/:customerId"
                     element={<AssistedCheckoutPage />}
                   />
+                  <Route path="/admin/customers" element={<AdminCustomersPage />} />
+                  <Route path="/admin/metrics" element={<AdminMetricsPage />} />
+                  <Route path="/admin/profile" element={<AdminProfilePage />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/dashboard-admin" element={<DashboardAdmin />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/favorites" element={<Favorites />} />

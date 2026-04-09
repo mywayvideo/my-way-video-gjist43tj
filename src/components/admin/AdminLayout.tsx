@@ -12,6 +12,8 @@ import {
   ChevronRight,
   User,
   ShoppingCart,
+  Users,
+  BarChart3,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
@@ -21,6 +23,8 @@ import { useSidebarVisibility } from '@/hooks/use-sidebar-state'
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Gerenciamento de Pedidos', href: '/admin/orders', icon: ShoppingCart },
+  { name: 'Gerenciar Clientes', href: '/admin/customers', icon: Users },
+  { name: 'Métricas e Relatórios', href: '/admin/metrics', icon: BarChart3 },
   { name: 'IA & Inteligência Artificial', href: '/admin/ai', icon: Brain },
   { name: 'Catálogo & Produtos', href: '/admin/catalog', icon: Package },
   { name: 'Preços & Câmbio', href: '/admin/pricing', icon: DollarSign },
@@ -72,17 +76,28 @@ export function AdminLayout({
 
   const UserProfile = () => (
     <div className="p-4 border-t border-border/50 shrink-0">
-      <div className="flex items-center gap-3 px-3 py-2">
+      <Link
+        to="/admin/profile"
+        onClick={() => {
+          if (window.innerWidth < 768 && isSidebarVisible) {
+            toggleSidebar()
+          }
+        }}
+        className={cn(
+          'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-primary/10',
+          location.pathname === '/admin/profile' && 'bg-primary/20',
+        )}
+      >
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
           <User className="w-4 h-4" />
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-medium leading-none truncate">
+        <div className="flex flex-col min-w-0 text-left">
+          <span className="text-sm font-medium leading-none truncate text-foreground hover:text-primary transition-colors">
             {user?.user_metadata?.name || 'Admin'}
           </span>
           <span className="text-xs text-muted-foreground mt-1 truncate">{user?.email}</span>
         </div>
-      </div>
+      </Link>
     </div>
   )
 

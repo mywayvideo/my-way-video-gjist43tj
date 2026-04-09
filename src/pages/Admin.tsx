@@ -2,7 +2,8 @@ import { AdminLayout } from '@/components/admin/AdminLayout'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Link } from 'react-router-dom'
 import {
-  LayoutDashboard,
+  Users,
+  BarChart3,
   ShoppingCart,
   Brain,
   Package,
@@ -15,10 +16,16 @@ import {
 export default function Admin() {
   const cards = [
     {
-      title: 'Dashboard',
-      description: 'Visualizar métricas e gerenciar clientes',
-      icon: LayoutDashboard,
-      href: '/dashboard-admin',
+      title: 'Métricas e Relatórios',
+      description: 'Acompanhe o desempenho de vendas e acessos em tempo real',
+      icon: BarChart3,
+      href: '/admin/metrics',
+    },
+    {
+      title: 'Gerenciar Clientes',
+      description: 'Administre a base de clientes, permissões e informações',
+      icon: Users,
+      href: '/admin/customers',
     },
     {
       title: 'Gerenciamento de Pedidos',
