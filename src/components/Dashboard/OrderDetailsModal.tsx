@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { Order } from '@/types/order'
 import { orderService } from '@/services/orderService'
 import { Link } from 'react-router-dom'
+import { formatCurrency } from '@/utils/formatters'
 
 interface Props {
   orderId: string | null
@@ -31,7 +32,7 @@ export function OrderDetailsModal({
   onDownload,
   onCancel,
 }: Props) {
-  const [order, setOrder] = useState<Order | null>(null)
+  const [order, setOrder] = useState<any | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function OrderDetailsModal({
       orderService
         .fetchOrderDetails(orderId)
         .then((data) => {
-          setOrder(data as Order)
+          setOrder(data)
         })
         .finally(() => setLoading(false))
     } else {
@@ -48,15 +49,96 @@ export function OrderDetailsModal({
     }
   }, [orderId, open])
 
+  const safeFormatCurrency = (value: any, currency = 'USD') => {
+    try {
+      return formatCurrency(value, currency)
+    } catch {
+      return `US$ ${value}`
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr)
+      const pad = (n: number) => n.toString().padStart(2, '0')
+      return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    } catch {
+      return dateStr
+    }
+  }
+
+  const customerName = order?.customers?.full_name || order?.customer?.full_name || 'N/A'
+  const customerEmail = order?.customers?.email || order?.customer?.email || 'N/A'
+  const customerPhone = order?.customers?.phone || order?.customer?.phone || 'N/A'
+
+  const getDeliveryAddress = (ord: any) => {
+    try {
+      const hasDelivery =
+        ord.delivery_address_street || ord.delivery_address_city || ord.delivery_address_state
+      const hasShipping = ord.shipping_address && typeof ord.shipping_address === 'object'
+
+      if (!hasDelivery && !hasShipping) return null
+
+      return {
+        street: ord.delivery_address_street ?? ord.shipping_address?.street ?? 'N/A',
+        number: ord.delivery_address_number ?? ord.shipping_address?.number ?? 'N/A',
+        complement: ord.delivery_address_complement ?? ord.shipping_address?.complement ?? 'N/A',
+        city: ord.delivery_address_city ?? ord.shipping_address?.city ?? 'N/A',
+        state: ord.delivery_address_state ?? ord.shipping_address?.state ?? 'N/A',
+        zip_code: ord.delivery_address_zip_code ?? ord.shipping_address?.zip_code ?? 'N/A',
+        country: ord.delivery_address_country ?? ord.shipping_address?.country ?? 'N/A',
+      }
+    } catch {
+      return null
+    }
+  }
+
+  const getBillingAddress = (ord: any) => {
+    try {
+      const hasBillingFields =
+        ord.billing_address_street || ord.billing_address_city || ord.billing_address_state
+      const hasBillingJson = ord.billing_address && typeof ord.billing_address === 'object'
+
+      if (!hasBillingFields && !hasBillingJson) return null
+
+      return {
+        street: ord.billing_address_street ?? ord.billing_address?.street ?? 'N/A',
+        number: ord.billing_address_number ?? ord.billing_address?.number ?? 'N/A',
+        complement: ord.billing_address_complement ?? ord.billing_address?.complement ?? 'N/A',
+        city: ord.billing_address_city ?? ord.billing_address?.city ?? 'N/A',
+        state: ord.billing_address_state ?? ord.billing_address?.state ?? 'N/A',
+        zip_code: ord.billing_address_zip_code ?? ord.billing_address?.zip_code ?? 'N/A',
+        country: ord.billing_address_country ?? ord.billing_address?.country ?? 'N/A',
+      }
+    } catch {
+      return null
+    }
+  }
+
+  const renderAddress = (addr: any) => {
+    if (!addr) {
+      return <p className="text-sm text-muted-foreground">N/A (Endereco nao fornecido)</p>
+    }
+    return (
+      <p className="text-sm">
+        {addr.street}, {addr.number} | {addr.complement} | {addr.city}, {addr.state} {addr.zip_code}{' '}
+        | {addr.country}
+      </p>
+    )
+  }
+
+  const deliveryAddress = order ? getDeliveryAddress(order) : null
+  const billingAddress = order ? getBillingAddress(order) : null
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] w-[90vw] p-0 overflow-hidden bg-background">
+      <DialogContent className="sm:max-w-[800px] w-[90vw] p-0 overflow-hidden bg-background">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Detalhes do Pedido</DialogTitle>
           <DialogDescription>Pedido {order?.order_number}</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] px-6 pb-6">
+        <ScrollArea className="max-h-[70vh] px-6 pb-6">
           {loading || !order ? (
             <div className="space-y-4">
               <Skeleton className="h-8 w-full" />
@@ -64,97 +146,138 @@ export function OrderDetailsModal({
               <Skeleton className="h-24 w-full" />
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center bg-secondary/20 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Section 1: Order Header */}
                 <div>
-                  <p className="text-sm text-muted-foreground">Data da compra</p>
-                  <p className="font-medium">
-                    {new Date(order.created_at).toLocaleDateString('pt-BR')}
-                  </p>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Cabecalho do Pedido</h4>
+                  <div className="text-sm space-y-1">
+                    <p>
+                      <span className="font-medium">Numero:</span> {order.order_number}
+                    </p>
+                    <p>
+                      <span className="font-medium">Cliente:</span> {customerName}
+                    </p>
+                    <p>
+                      <span className="font-medium">Email:</span> {customerEmail}
+                    </p>
+                    <p>
+                      <span className="font-medium">Telefone:</span> {customerPhone}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Section 2: Order Details */}
                 <div>
-                  <Badge variant="outline" className="capitalize">
-                    {order.status}
-                  </Badge>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Detalhes do Pedido</h4>
+                  <div className="text-sm space-y-2">
+                    <p>
+                      <span className="font-medium">Data:</span> {formatDate(order.created_at)}
+                    </p>
+                    <p>
+                      <span className="font-medium">Total:</span>{' '}
+                      {safeFormatCurrency(order.total_amount ?? order.total, 'USD')}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Status:</span>
+                      <Badge variant="outline" className="uppercase">
+                        {order.status}
+                      </Badge>
+                    </div>
+                    <p>
+                      <span className="font-medium">Metodo de Pagamento:</span>{' '}
+                      {order.payment_method_type || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Section 3: Delivery Address */}
+                <div>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Endereco de Entrega</h4>
+                  {renderAddress(deliveryAddress)}
+                </div>
+
+                {/* Section 4: Billing Address */}
+                <div>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Endereco de Faturamento</h4>
+                  {renderAddress(billingAddress)}
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-semibold mb-3 border-b pb-2">Itens do Pedido</h4>
-                <div className="space-y-3">
-                  {order.order_items?.map((item) => {
-                    const isDiscontinued = item.products?.is_discontinued === true
-                    return (
-                      <div key={item.id} className="flex justify-between items-center">
-                        <div>
-                          {isDiscontinued ? (
-                            <p className="font-medium text-sm text-muted-foreground mb-0.5">
-                              {item.products?.name || 'Produto'}{' '}
-                              <span className="text-xs italic">(Produto descontinuado)</span>
-                            </p>
-                          ) : (
-                            <Link
-                              to={`/product/${item.product_id}`}
-                              className="font-medium text-sm hover:underline hover:text-emerald-600 transition-colors block mb-0.5"
-                            >
-                              {item.products?.name || 'Produto'}
-                            </Link>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            {item.quantity}x $
-                            {Number(item.unit_price).toLocaleString('en-US', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </p>
-                        </div>
-                        <p className="font-bold">
-                          $
-                          {Number(item.total_price).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Section 5: Order Items */}
                 <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground mb-1">Pagamento</h4>
-                  <p className="text-sm capitalize">{order.payment_method_type || 'N/A'}</p>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Itens do Pedido</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 font-medium">Produto</th>
+                          <th className="text-center py-2 font-medium">Qtd</th>
+                          <th className="text-right py-2 font-medium">Preco</th>
+                          <th className="text-right py-2 font-medium">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.order_items?.map((item: any) => {
+                          const productName = item.products?.name || item.product_id || 'Produto'
+                          const productId = item.product_id
+
+                          return (
+                            <tr key={item.id} className="border-b last:border-0">
+                              <td className="py-2 pr-2">
+                                {productId && item.products?.name ? (
+                                  <Link
+                                    to={`/products/${productId}`}
+                                    className="hover:underline text-emerald-600"
+                                  >
+                                    {productName}
+                                  </Link>
+                                ) : (
+                                  <span>{productName}</span>
+                                )}
+                              </td>
+                              <td className="text-center py-2 px-1">{item.quantity}</td>
+                              <td className="text-right py-2 px-1 whitespace-nowrap">
+                                {safeFormatCurrency(item.unit_price, 'USD')}
+                              </td>
+                              <td className="text-right py-2 pl-2 whitespace-nowrap font-medium">
+                                {safeFormatCurrency(
+                                  item.subtotal ??
+                                    item.total_price ??
+                                    item.unit_price * item.quantity,
+                                  'USD',
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+
+                {/* Section 6: Notes */}
                 <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground mb-1">Envio</h4>
-                  <p className="text-sm capitalize">{order.shipping_method || 'N/A'}</p>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Observacoes</h4>
+                  <p className="text-sm">{order.notes || 'Sem observacoes'}</p>
                 </div>
-              </div>
 
-              <div className="flex justify-between items-center border-t pt-4 text-lg font-bold">
-                <span>Total</span>
-                <span>
-                  $
-                  {Number(order.total).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2 pt-4">
-                <Button variant="outline" className="min-h-11" onClick={() => onDownload(order)}>
-                  Imprimir Pedido
-                </Button>
-                <Button className="min-h-11" onClick={() => onReorder(order.id)}>
-                  Recomprar Itens
-                </Button>
-                {(order.status === 'pending' || order.status === 'pending_payment') && (
-                  <Button variant="destructive" className="min-h-11" onClick={onCancel}>
-                    Cancelar Pedido
+                <div className="flex flex-col gap-2 pt-4">
+                  <Button variant="outline" className="min-h-11" onClick={() => onDownload(order)}>
+                    Imprimir Pedido
                   </Button>
-                )}
+                  <Button className="min-h-11" onClick={() => onReorder(order.id)}>
+                    Recomprar Itens
+                  </Button>
+                  {(order.status === 'pending' || order.status === 'pending_payment') && (
+                    <Button variant="destructive" className="min-h-11" onClick={onCancel}>
+                      Cancelar Pedido
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
