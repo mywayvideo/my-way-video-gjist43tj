@@ -11,9 +11,89 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { adminOrdersService } from '@/services/adminOrdersService'
 import { formatCurrency } from '@/utils/formatters'
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const d = new Date(dateStr)
+    const day = String(d.getDate()).padStart(2, '0')
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = d.getFullYear()
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    const seconds = String(d.getSeconds()).padStart(2, '0')
+    return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`
+  } catch (e) {
+    return 'N/A'
+  }
+}
+
+const safeFormatCurrency = (value: any) => {
+  if (value === null || value === undefined) return '—'
+  if (Number(value) === 0) return 'US$ 0.00'
+  try {
+    return formatCurrency(value, 'USD')
+  } catch (e) {
+    return `US$ ${Number(value).toFixed(2)}`
+  }
+}
+
+const formatAddress = (address: any) => {
+  if (!address) return 'N/A (Endereço não fornecido)'
+
+  try {
+    const street = address.street || 'N/A'
+    const number = address.number || 'N/A'
+    const complement = address.complement ? ` | ${address.complement}` : ''
+    const city = address.city || 'N/A'
+    const state = address.state || 'N/A'
+    const zip = address.zip_code || 'N/A'
+    const country = address.country || 'N/A'
+
+    return `${street}, ${number}${complement} | ${city}, ${state} ${zip} | ${country}`
+  } catch (e) {
+    return 'N/A (Erro ao formatar endereço)'
+  }
+}
+
+const getStatusBadge = (status: string) => {
+  const s = status?.toUpperCase() || 'N/A'
+  switch (s) {
+    case 'PENDING':
+    case 'PENDING_PAYMENT':
+      return (
+        <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+          PENDING_PAYMENT
+        </Badge>
+      )
+    case 'PAID':
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800">
+          PAID
+        </Badge>
+      )
+    case 'CANCELLED':
+      return <Badge variant="destructive">CANCELLED</Badge>
+    case 'SHIPPED':
+      return (
+        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+          SHIPPED
+        </Badge>
+      )
+    case 'DELIVERED':
+      return (
+        <Badge variant="outline" className="bg-purple-100 text-purple-800">
+          DELIVERED
+        </Badge>
+      )
+    default:
+      return <Badge variant="secondary">{s}</Badge>
+  }
+}
 
 export default function OrderDetailsDialog({
   orderId,
@@ -51,6 +131,7 @@ export default function OrderDetailsDialog({
     if (!orderId) return
     try {
       await adminOrdersService.updateOrderNotes(orderId, notes)
+      setDetails((prev: any) => ({ ...prev, notes }))
       toast({ title: 'Notas salvas com sucesso' })
     } catch (e) {
       toast({ title: 'Erro ao salvar notas', variant: 'destructive' })
@@ -59,7 +140,7 @@ export default function OrderDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes do Pedido</DialogTitle>
         </DialogHeader>
@@ -69,99 +150,153 @@ export default function OrderDetailsDialog({
             <Skeleton className="h-64 w-full" />
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg">
-              <div>
-                <h4 className="font-bold text-sm text-muted-foreground mb-2">CLIENTE</h4>
-                <p className="font-medium">{details.customers?.full_name}</p>
-                <p className="text-sm">{details.customers?.email}</p>
-                <p className="text-sm">{details.customers?.phone || 'Sem telefone'}</p>
-              </div>
-              <div>
-                <h4 className="font-bold text-sm text-muted-foreground mb-2">PEDIDO</h4>
-                <p className="font-medium">{details.order_number}</p>
-                <p className="text-sm">{new Date(details.created_at).toLocaleString()}</p>
-                <p className="text-sm capitalize mt-1">
-                  Status: <strong>{details.status}</strong>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <section className="bg-muted/30 p-4 rounded-lg border">
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">
+                  1. CABEÇALHO DO PEDIDO
+                </h4>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <span className="font-semibold">Número:</span> {details.order_number || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Cliente:</span>{' '}
+                    {details.customers?.full_name || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Email:</span>{' '}
+                    {details.customers?.email || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Telefone:</span>{' '}
+                    {details.customers?.phone || 'N/A'}
+                  </p>
+                </div>
+              </section>
+
+              <section className="bg-muted/30 p-4 rounded-lg border">
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">
+                  2. DETALHES DO PEDIDO
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-semibold">Data:</span> {formatDate(details.created_at)}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Total:</span>{' '}
+                    {safeFormatCurrency(details.total)}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Status:</span> {getStatusBadge(details.status)}
+                  </div>
+                  <p>
+                    <span className="font-semibold">Método de Pagamento:</span>{' '}
+                    {details.payment_method_type?.toUpperCase() || 'N/A'}
+                  </p>
+                </div>
+              </section>
+
+              <section className="bg-muted/30 p-4 rounded-lg border">
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">
+                  3. ENDEREÇO DE ENTREGA
+                </h4>
+                <p className="text-sm text-foreground/80">
+                  {formatAddress(details.shipping_address)}
                 </p>
-                <p className="text-sm capitalize">Método: {details.payment_method_type || 'N/A'}</p>
-              </div>
+              </section>
+
+              <section className="bg-muted/30 p-4 rounded-lg border">
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">
+                  4. ENDEREÇO DE FATURAMENTO
+                </h4>
+                <p className="text-sm text-foreground/80">
+                  {formatAddress(details.billing_address)}
+                </p>
+              </section>
             </div>
 
-            <div>
-              <h4 className="font-bold text-sm text-muted-foreground mb-2">ENDEREÇOS</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="border p-3 rounded-md">
-                  <strong>Entrega:</strong>
-                  {details.shipping_address ? (
-                    <p>
-                      {details.shipping_address.street}, {details.shipping_address.number} -{' '}
-                      {details.shipping_address.city}/{details.shipping_address.state}
-                    </p>
-                  ) : (
-                    <p>N/A</p>
-                  )}
-                </div>
-                <div className="border p-3 rounded-md">
-                  <strong>Faturamento:</strong>
-                  {details.billing_address ? (
-                    <p>
-                      {details.billing_address.street}, {details.billing_address.number} -{' '}
-                      {details.billing_address.city}/{details.billing_address.state}
-                    </p>
-                  ) : (
-                    <p>N/A</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-sm text-muted-foreground mb-2">ITENS DO PEDIDO</h4>
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="text-right">Qtd</TableHead>
-                      <TableHead className="text-right">Preço</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {details.order_items?.map((item: any) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.products?.name}</TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(item.unit_price, 'USD')}
-                        </TableCell>
-                        <TableCell className="text-right font-bold">
-                          {formatCurrency(item.total_price, 'USD')}
-                        </TableCell>
+            <div className="space-y-6">
+              <section className="bg-muted/30 p-4 rounded-lg border">
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">5. ITENS DO PEDIDO</h4>
+                <div className="border rounded-md overflow-hidden bg-background">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Produto</TableHead>
+                        <TableHead className="text-right">Qtd</TableHead>
+                        <TableHead className="text-right">Preço</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="bg-muted p-3 text-right">
-                  <span className="font-bold text-lg">
-                    Total: {formatCurrency(details.total, 'USD')}
-                  </span>
+                    </TableHeader>
+                    <TableBody>
+                      {details.order_items?.map((item: any) => (
+                        <TableRow key={item.id}>
+                          <TableCell
+                            className="font-medium max-w-[200px] truncate"
+                            title={item.products?.name}
+                          >
+                            {item.product_id ? (
+                              <a
+                                href={`/product/${item.product_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                {item.products?.name || item.product_id}
+                              </a>
+                            ) : (
+                              item.products?.name || item.product_id || 'N/A'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">{item.quantity || 0}</TableCell>
+                          <TableCell className="text-right">
+                            {safeFormatCurrency(item.unit_price)}
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {safeFormatCurrency(item.total_price)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {!details.order_items?.length && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                            Nenhum item encontrado
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
-            </div>
+              </section>
 
-            <div>
-              <h4 className="font-bold text-sm text-muted-foreground mb-2">NOTAS INTERNAS</h4>
-              <Textarea
-                placeholder="Adicione observações internas sobre este pedido..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-              />
-              <div className="flex justify-end mt-2">
-                <Button onClick={handleSaveNotes}>Salvar Notas</Button>
-              </div>
+              <section className="bg-muted/30 p-4 rounded-lg border">
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">6. OBSERVAÇÕES</h4>
+                <div className="space-y-4">
+                  <div className="text-sm bg-background p-3 rounded-md border min-h-[60px]">
+                    {details.notes ? (
+                      <p className="whitespace-pre-wrap">{details.notes}</p>
+                    ) : (
+                      <p className="text-muted-foreground italic">Sem observações</p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-border/50">
+                    <Textarea
+                      placeholder="Atualizar observações internas..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={2}
+                      className="bg-background"
+                    />
+                    <div className="flex justify-end mt-2">
+                      <Button onClick={handleSaveNotes} size="sm" variant="secondary">
+                        Salvar Notas
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         )}
