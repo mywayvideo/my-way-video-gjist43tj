@@ -35,6 +35,7 @@
     "initiate-paypal-payment": 6,
     "notify-admin-transferencia-brasil": 5,
     "notify-admin-pix": 5,
-    "send-order-email": 1
+    "send-order-email": 1,
+    "send-email": 1
   }
 }
