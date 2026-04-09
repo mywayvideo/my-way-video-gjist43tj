@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal } from 'lucide-react'
+import { formatCurrency } from '@/utils/formatters'
 
 interface Props {
   orders: AdminOrder[]
@@ -117,7 +118,7 @@ export default function OrdersTable({
                 <TableCell className="hidden lg:table-cell capitalize">
                   {order.payment_method}
                 </TableCell>
-                <TableCell>USD {order.total_amount.toFixed(2)}</TableCell>
+                <TableCell>{formatCurrency(order.total_amount, 'USD')}</TableCell>
                 <TableCell>
                   <StatusBadge status={order.status} />
                 </TableCell>
@@ -143,7 +144,7 @@ export default function OrdersTable({
               </div>
               <div className="text-sm">{order.customer_name}</div>
               <div className="flex justify-between items-center mt-2">
-                <div className="font-medium">USD {order.total_amount.toFixed(2)}</div>
+                <div className="font-medium">{formatCurrency(order.total_amount, 'USD')}</div>
                 {renderActions(order)}
               </div>
             </CardContent>

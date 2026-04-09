@@ -13,6 +13,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { adminOrdersService } from '@/services/adminOrdersService'
+import { formatCurrency } from '@/utils/formatters'
 
 export default function OrderDetailsDialog({
   orderId,
@@ -132,16 +133,20 @@ export default function OrderDetailsDialog({
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.products?.name}</TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">USD {item.unit_price}</TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(item.unit_price, 'USD')}
+                        </TableCell>
                         <TableCell className="text-right font-bold">
-                          USD {item.total_price}
+                          {formatCurrency(item.total_price, 'USD')}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
                 <div className="bg-muted p-3 text-right">
-                  <span className="font-bold text-lg">Total: USD {details.total}</span>
+                  <span className="font-bold text-lg">
+                    Total: {formatCurrency(details.total, 'USD')}
+                  </span>
                 </div>
               </div>
             </div>
