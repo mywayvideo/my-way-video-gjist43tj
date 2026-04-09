@@ -16,7 +16,7 @@ interface Props {
   order: AdminOrder | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onProcess: (orderId: string, data: any, email: string, orderNum: string) => Promise<void>
+  onProcess: (order: AdminOrder, data: any) => Promise<void>
 }
 
 export default function RefundDialog({ order, open, onOpenChange, onProcess }: Props) {
@@ -47,7 +47,7 @@ export default function RefundDialog({ order, open, onOpenChange, onProcess }: P
     if (!order) return
     try {
       setLoading(true)
-      await onProcess(order.id, formData, order.customer_email, order.order_number)
+      await onProcess(order, formData)
       onOpenChange(false)
     } finally {
       setLoading(false)

@@ -90,11 +90,7 @@ export default function AdminOrdersPage() {
   const handleApprove = async () => {
     if (!approveConfirm) return
     setActionLoading(true)
-    await approveOrder(
-      approveConfirm.id,
-      approveConfirm.customer_email,
-      approveConfirm.order_number,
-    )
+    await approveOrder(approveConfirm)
     setActionLoading(false)
     setApproveConfirm(null)
   }
@@ -102,7 +98,7 @@ export default function AdminOrdersPage() {
   const handleReject = async () => {
     if (!rejectConfirm) return
     setActionLoading(true)
-    await rejectOrder(rejectConfirm.id, rejectConfirm.customer_email, rejectConfirm.order_number)
+    await rejectOrder(rejectConfirm)
     setActionLoading(false)
     setRejectConfirm(null)
   }
