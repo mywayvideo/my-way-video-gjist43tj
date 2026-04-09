@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 
-export function useSidebarState() {
-  const [isVisible, setIsVisible] = useState<boolean>(() => {
-    const stored = localStorage.getItem('admin-sidebar-visible')
-    return stored !== null ? stored === 'true' : true
+export function useSidebarVisibility() {
+  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('admin-sidebar-visible')
+      if (stored !== null) return stored === 'true'
+      return window.innerWidth >= 768
+    }
+    return true
   })
 
   useEffect(() => {
-    localStorage.setItem('admin-sidebar-visible', String(isVisible))
-  }, [isVisible])
+    localStorage.setItem('admin-sidebar-visible', String(isSidebarVisible))
+  }, [isSidebarVisible])
 
-  const toggleSidebar = useCallback(() => setIsVisible((prev) => !prev), [])
-  const isSidebarVisible = useCallback(() => isVisible, [isVisible])
+  const toggleSidebar = useCallback(() => setIsSidebarVisible((prev) => !prev), [])
 
-  return { isVisible, toggleSidebar, isSidebarVisible }
+  return { isSidebarVisible, toggleSidebar }
 }

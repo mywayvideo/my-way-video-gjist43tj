@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
-  Bot,
+  Brain,
   Package,
   DollarSign,
   Truck,
@@ -11,19 +11,17 @@ import {
   Menu,
   ChevronRight,
   User,
-  LogOut,
   ShoppingCart,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
-import { useSidebarState } from '@/hooks/use-sidebar-state'
+import { useSidebarVisibility } from '@/hooks/use-sidebar-state'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Pedidos', href: '/admin/orders', icon: ShoppingCart },
-  { name: 'IA & Inteligência Artificial', href: '/admin/ai', icon: Bot },
+  { name: 'Gerenciamento de Pedidos', href: '/admin/orders', icon: ShoppingCart },
+  { name: 'IA & Inteligência Artificial', href: '/admin/ai', icon: Brain },
   { name: 'Catálogo & Produtos', href: '/admin/catalog', icon: Package },
   { name: 'Preços & Câmbio', href: '/admin/pricing', icon: DollarSign },
   { name: 'Fretes & Shipping', href: '/admin/shipping-config', icon: Truck },
@@ -38,16 +36,9 @@ export function AdminLayout({
   children: React.ReactNode
   breadcrumb?: string
 }) {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
-  const [isOpen, setIsOpen] = useState(false)
-  const { isVisible, toggleSidebar } = useSidebarState()
-
-  const handleLogout = async () => {
-    await signOut()
-    navigate('/login')
-  }
+  const { isSidebarVisible, toggleSidebar } = useSidebarVisibility()
 
   const NavLinks = () => (
     <div className="flex flex-col gap-2">
@@ -59,7 +50,11 @@ export function AdminLayout({
           <Link
             key={item.name}
             to={item.href}
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              if (window.innerWidth < 768 && isSidebarVisible) {
+                toggleSidebar()
+              }
+            }}
             className={cn(
               'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
               isActive
@@ -67,31 +62,52 @@ export function AdminLayout({
                 : 'hover:bg-primary/10 text-muted-foreground hover:text-foreground',
             )}
           >
-            <item.icon className="w-5 h-5" />
-            {item.name}
+            <item.icon className="w-5 h-5 shrink-0" />
+            <span className="truncate">{item.name}</span>
           </Link>
         )
       })}
-      <button
-        onClick={handleLogout}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-destructive/10 text-destructive hover:text-destructive w-full text-left mt-4"
-      >
-        <LogOut className="w-5 h-5" />
-        Sair
-      </button>
+    </div>
+  )
+
+  const UserProfile = () => (
+    <div className="p-4 border-t border-border/50 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-2">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+          <User className="w-4 h-4" />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium leading-none truncate">
+            {user?.user_metadata?.name || 'Admin'}
+          </span>
+          <span className="text-xs text-muted-foreground mt-1 truncate">{user?.email}</span>
+        </div>
+      </div>
     </div>
   )
 
   return (
-    <div className="flex flex-col md:flex-row w-full flex-1 min-h-[calc(100vh-4rem)] bg-background">
+    <div className="flex w-full min-h-screen bg-background overflow-hidden relative">
+      {/* Fixed Toggle Button */}
+      <button
+        onClick={toggleSidebar}
+        className="fixed top-3 left-3 z-50 w-[44px] h-[44px] flex items-center justify-center rounded hover:bg-secondary transition-colors"
+        aria-label="Toggle Sidebar"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Desktop Sidebar */}
       <aside
         className={cn(
           'hidden md:flex flex-col border-r border-border/50 bg-card shrink-0 transition-[width,opacity] duration-300 ease-in-out overflow-hidden',
-          isVisible ? 'w-[280px] opacity-100' : 'w-0 opacity-0 border-r-0',
+          isSidebarVisible
+            ? 'w-[280px] opacity-100 pointer-events-auto'
+            : 'w-0 opacity-0 pointer-events-none border-r-0',
         )}
       >
-        <div className="w-[280px] flex flex-col h-full">
-          <div className="p-6 flex items-center gap-3 border-b border-border/50">
+        <div className="w-[280px] flex flex-col h-screen">
+          <div className="h-16 flex items-center gap-3 border-b border-border/50 pl-16 pr-4 shrink-0">
             <div className="w-8 h-8 rounded bg-primary flex items-center justify-center shrink-0">
               <LayoutDashboard className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -100,70 +116,43 @@ export function AdminLayout({
           <div className="flex-1 px-4 py-6 overflow-y-auto">
             <NavLinks />
           </div>
-          <div className="p-4 border-t border-border/50">
-            <div className="flex items-center gap-3 px-3 py-2">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                <User className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium leading-none truncate">
-                  {user?.user_metadata?.name || 'Admin'}
-                </span>
-                <span className="text-xs text-muted-foreground mt-1 truncate">{user?.email}</span>
-              </div>
-            </div>
-          </div>
+          <UserProfile />
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
-        <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="hidden md:flex w-11 h-11"
-              title="Toggle Sidebar"
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
+      {/* Mobile Sidebar (Sheet) */}
+      <div className="md:hidden">
+        <Sheet
+          open={isSidebarVisible}
+          onOpenChange={(open) => {
+            if (open !== isSidebarVisible) toggleSidebar()
+          }}
+        >
+          <SheetContent side="left" className="w-[280px] p-0 flex flex-col border-r-border/50">
+            <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+            <div className="h-16 flex items-center gap-3 border-b border-border/50 pl-16 pr-4 shrink-0">
+              <div className="w-8 h-8 rounded bg-primary flex items-center justify-center shrink-0">
+                <LayoutDashboard className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-xl tracking-tight truncate">Admin Panel</span>
+            </div>
+            <div className="flex-1 px-4 py-6 overflow-y-auto">
+              <NavLinks />
+            </div>
+            <UserProfile />
+          </SheetContent>
+        </Sheet>
+      </div>
 
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden w-11 h-11">
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] p-0 flex flex-col border-r-border/50">
-                <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-                <div className="p-6 flex items-center gap-3 border-b border-border/50">
-                  <div className="w-8 h-8 rounded bg-primary flex items-center justify-center shrink-0">
-                    <LayoutDashboard className="w-5 h-5 text-primary-foreground" />
-                  </div>
-                  <span className="font-bold text-xl tracking-tight truncate">Admin Panel</span>
-                </div>
-                <div className="flex-1 px-4 py-6 overflow-y-auto">
-                  <NavLinks />
-                </div>
-                <div className="p-4 border-t border-border/50">
-                  <div className="flex items-center gap-3 px-3 py-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-medium leading-none truncate">
-                        {user?.user_metadata?.name || 'Admin'}
-                      </span>
-                      <span className="text-xs text-muted-foreground mt-1 truncate">
-                        {user?.email}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out h-screen overflow-y-auto">
+        <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-10 shrink-0">
+          <div
+            className={cn(
+              'flex items-center gap-4 transition-all duration-300',
+              isSidebarVisible ? 'md:pl-0 pl-14' : 'pl-14',
+            )}
+          >
             <div className="flex items-center text-sm font-medium text-muted-foreground">
               <Link to="/admin" className="hover:text-foreground transition-colors hidden sm:block">
                 Admin
@@ -171,7 +160,7 @@ export function AdminLayout({
               <span className="sm:hidden">Admin</span>
               {breadcrumb && (
                 <>
-                  <ChevronRight className="w-4 h-4 mx-1 opacity-50" />
+                  <ChevronRight className="w-4 h-4 mx-1 opacity-50 shrink-0" />
                   <span className="text-foreground truncate max-w-[200px] sm:max-w-none">
                     {breadcrumb}
                   </span>
