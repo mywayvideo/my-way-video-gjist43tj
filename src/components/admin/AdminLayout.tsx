@@ -100,7 +100,7 @@ export function AdminLayout({
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          'hidden md:flex flex-col border-r border-border/50 bg-card shrink-0 transition-[width,opacity] duration-300 ease-in-out overflow-hidden',
+          'hidden md:flex flex-col border-r border-border/50 bg-card shrink-0 overflow-hidden',
           isSidebarVisible
             ? 'w-[280px] opacity-100 pointer-events-auto'
             : 'w-0 opacity-0 pointer-events-none border-r-0',
@@ -145,13 +145,10 @@ export function AdminLayout({
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out h-screen overflow-y-auto">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-10 shrink-0">
           <div
-            className={cn(
-              'flex items-center gap-4 transition-all duration-300',
-              isSidebarVisible ? 'md:pl-0 pl-14' : 'pl-14',
-            )}
+            className={cn('flex items-center gap-4', isSidebarVisible ? 'md:pl-0 pl-14' : 'pl-14')}
           >
             <div className="flex items-center text-sm font-medium text-muted-foreground">
               <Link to="/admin" className="hover:text-foreground transition-colors hidden sm:block">

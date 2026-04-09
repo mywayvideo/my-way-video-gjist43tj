@@ -2,19 +2,29 @@ import { useState, useEffect, useCallback } from 'react'
 
 export function useSidebarVisibility() {
   const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('admin-sidebar-visible')
-      if (stored !== null) return stored === 'true'
-      return window.innerWidth >= 768
-    }
-    return true
+    if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem('admin-sidebar-visible')
+    return saved !== null ? JSON.parse(saved) : true
   })
 
-  useEffect(() => {
-    localStorage.setItem('admin-sidebar-visible', String(isSidebarVisible))
-  }, [isSidebarVisible])
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarVisible((prev) => {
+      const newState = !prev
+      localStorage.setItem('admin-sidebar-visible', JSON.stringify(newState))
+      return newState
+    })
+  }, [])
 
-  const toggleSidebar = useCallback(() => setIsSidebarVisible((prev) => !prev), [])
+  // Sync state if another tab changes it
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'admin-sidebar-visible' && e.newValue !== null) {
+        setIsSidebarVisible(JSON.parse(e.newValue))
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   return { isSidebarVisible, toggleSidebar }
 }
