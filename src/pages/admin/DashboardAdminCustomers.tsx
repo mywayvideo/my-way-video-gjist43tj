@@ -18,7 +18,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Search, Plus, MoreHorizontal, ShieldAlert, Edit, Trash2 } from 'lucide-react'
+import { Search, Plus, MoreHorizontal, ShieldAlert, Edit, Trash2, ShoppingCart } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -166,6 +167,14 @@ export function DashboardAdminCustomers(props: any) {
                           onClick={() => handleEditCustomer && handleEditCustomer(customer)}
                         >
                           <Edit className="w-4 h-4 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to={`/admin/checkout-assistido/${customer.id}`}
+                            className="flex items-center cursor-pointer w-full"
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2" /> Checkout Assistido
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleReset2FA && handleReset2FA(customer)}

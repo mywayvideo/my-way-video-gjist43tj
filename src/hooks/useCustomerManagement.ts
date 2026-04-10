@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { fetchAllCustomers } from '@/services/customerManagementService'
 import { supabase } from '@/lib/supabase/client'
@@ -13,7 +13,7 @@ export function useCustomerManagement() {
   const [statusFilter, setStatusFilter] = useState('all')
   const { toast } = useToast()
 
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     setIsLoading(true)
     try {
       const result = await fetchAllCustomers(page, limit, searchTerm, statusFilter)
@@ -31,11 +31,11 @@ export function useCustomerManagement() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [page, limit, searchTerm, statusFilter, toast])
 
   useEffect(() => {
     loadCustomers()
-  }, [page, limit, searchTerm, statusFilter])
+  }, [loadCustomers])
 
   const updateCustomerStatus = async (id: string, status: string) => {
     try {
@@ -59,10 +59,39 @@ export function useCustomerManagement() {
     }
   }
 
+  const handleDeleteCustomer = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.'))
+      return
+    try {
+      const { error } = await supabase.from('customers').delete().eq('id', id)
+      if (error) throw error
+      toast({ title: 'Sucesso', description: 'Cliente excluído com sucesso.' })
+      loadCustomers()
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+    }
+  }
+
+  const handleReset2FA = async (customer: any) => {
+    if (!confirm('Tem certeza que deseja resetar o 2FA deste cliente?')) return
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ two_factor_enabled: false })
+        .eq('id', customer.id)
+      if (error) throw error
+      toast({ title: 'Sucesso', description: '2FA resetado com sucesso.' })
+      loadCustomers()
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+    }
+  }
+
   return {
     customers,
-    totalCustomers,
+    total: totalCustomers,
     isLoading,
+    loading: isLoading,
     page,
     setPage,
     limit,
@@ -74,5 +103,7 @@ export function useCustomerManagement() {
     refreshCustomers: loadCustomers,
     updateCustomerStatus,
     updateCustomerRole,
+    handleDeleteCustomer,
+    handleReset2FA,
   }
 }
