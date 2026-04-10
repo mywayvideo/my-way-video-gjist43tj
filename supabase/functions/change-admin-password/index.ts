@@ -15,45 +15,31 @@ Deno.serve(async (req: Request) => {
     const { user_id, current_password, new_password } = await req.json()
 
     if (!user_id || !current_password || !new_password) {
-      return new Response(JSON.stringify({ error: 'Dados inválidos' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Dados inválidos' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAdmin.auth.admin.getUserById(user_id)
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(user_id)
     if (userError || !user || !user.email) {
       throw new Error('Usuário não encontrado')
     }
 
     const { error: signInError } = await supabaseAdmin.auth.signInWithPassword({
       email: user.email,
-      password: current_password,
+      password: current_password
     })
 
     if (signInError) {
-      return new Response(JSON.stringify({ error: 'Senha atual incorreta' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Senha atual incorreta' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
-      password: new_password,
+      password: new_password
     })
 
     if (updateError) throw updateError
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
