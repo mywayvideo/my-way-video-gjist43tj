@@ -51,9 +51,7 @@ export async function fetchAllCustomers(
     'Query: SELECT id, user_id, full_name, email, role, phone, status, created_at, last_login FROM customers',
   )
 
-  const { data, error, count } = await query
-    .order('created_at', { ascending: false })
-    .range(from, to)
+  let { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to)
 
   if (error) {
     console.log('Query error: ' + error.message)
@@ -87,7 +85,14 @@ export async function fetchAllCustomers(
     toast.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
   }
 
-  return { customers: customersWithLogin, total: count || 0 }
+  if (!customersWithLogin) {
+    customersWithLogin = []
+  }
+  if (!count) {
+    count = 0
+  }
+
+  return { customers: customersWithLogin, total: count }
 }
 
 export async function updateCustomer(customerId: string, data: any) {
