@@ -27,18 +27,19 @@ export function useUserRole() {
         setError(null)
 
         const fetchPromise = (async () => {
-          // Check customers table first for the most accurate role
-          const { data, error: dbError } = await supabase
-            .from('customers')
-            .select('role')
-            .eq('user_id', user.id)
-            .single()
+          const { data, error } = await supabase.functions.invoke('verify-user-role', {
+            method: 'POST',
+          })
 
-          if (!dbError && data?.role && data.role !== 'customer') {
+          if (error) {
+            throw error
+          }
+
+          if (data?.role) {
             return data.role
           }
 
-          // Fallback to metadata if DB doesn't have a specific role
+          // Fallback to metadata se a função não retornar
           const appRole = user.app_metadata?.role
           const userRole = user.user_metadata?.role
 
@@ -47,11 +48,11 @@ export function useUserRole() {
           if (appRole === 'reseller' || userRole === 'reseller') return 'reseller'
           if (appRole === 'vip' || userRole === 'vip') return 'vip'
 
-          return data?.role || 'customer'
+          return 'customer'
         })()
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 1000),
+          setTimeout(() => reject(new Error('Timeout')), 8000),
         )
 
         const fetchedRole = await Promise.race([fetchPromise, timeoutPromise])
@@ -63,7 +64,7 @@ export function useUserRole() {
         console.error('Error fetching user role:', err)
         if (isMounted) {
           setError('Nao foi possivel verificar seu acesso.')
-          setRole(null)
+          setRole('customer')
         }
       } finally {
         if (isMounted) {
