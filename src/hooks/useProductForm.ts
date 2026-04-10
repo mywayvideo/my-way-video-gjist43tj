@@ -8,6 +8,7 @@ import { z } from 'zod'
 const productSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   sku: z.string().min(1, 'SKU é obrigatório'),
+  manufacturer_id: z.string().min(1, 'Fabricante é obrigatório').catch('').default(''),
   price_cost: z.coerce.number().catch(0).default(0),
   price_usa: z.coerce.number().catch(0).default(0),
   price_brl: z.coerce.number().catch(0).default(0),
@@ -40,11 +41,12 @@ export function useProductForm() {
 
   const isEditMode = !!id
 
-  const form = useForm<ProductFormData>({
+  const form = useForm<any>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',
       sku: '',
+      manufacturer_id: '',
       price_cost: 0,
       price_usa: 0,
       price_brl: 0,
@@ -87,6 +89,7 @@ export function useProductForm() {
             form.reset({
               name: data.name || '',
               sku: data.sku || '',
+              manufacturer_id: data.manufacturer_id || '',
               price_cost: data.price_cost || 0,
               price_usa: data.price_usd || 0,
               price_brl: data.price_brl || 0,
@@ -149,6 +152,7 @@ export function useProductForm() {
       if (data.category_id && categories.some((c) => c.id === data.category_id)) {
         form.setValue('category_id', data.category_id)
       }
+      if (data.manufacturer_id) form.setValue('manufacturer_id', data.manufacturer_id)
       if (data.price_usa) form.setValue('price_usa', parseFloat(data.price_usa) || 0)
       if (data.price_cost) form.setValue('price_cost', parseFloat(data.price_cost) || 0)
       if (data.weight) form.setValue('weight', parseFloat(data.weight) || 0)
@@ -195,37 +199,44 @@ export function useProductForm() {
     }
   }
 
-  const onSubmit = async (data: ProductFormData) => {
+  const onSubmit = async (data: any) => {
     setIsSaving(true)
     try {
+      const payload = {
+        ...data,
+        category_id: data.category_id || null,
+        manufacturer_id: data.manufacturer_id || null,
+      }
+
       if (!isEditMode) {
-        const exists = await productService.checkSkuExists(data.sku)
+        const exists = await productService.checkSkuExists(payload.sku)
         if (exists) {
           form.setError('sku', { type: 'manual', message: 'Este SKU já existe' })
           setIsSaving(false)
           return
         }
-        await productService.createProduct(data)
+        await productService.createProduct(payload)
         toast({ description: 'Produto salvo com sucesso!' })
       } else {
         const { error } = await supabase
           .from('products')
           .update({
-            name: data.name,
-            sku: data.sku,
-            price_usd: data.price_usa,
-            price_cost: data.price_cost,
-            price_brl: data.price_brl,
-            weight: data.weight,
-            dimensions: data.dimensions,
-            stock: data.stock,
-            ncm: data.ncm,
-            image_url: data.image_url,
-            description: data.description,
-            technical_info: data.technical_info,
-            is_special: data.is_special,
-            is_discontinued: data.is_discontinued,
-            category_id: data.category_id,
+            name: payload.name,
+            sku: payload.sku,
+            manufacturer_id: payload.manufacturer_id,
+            price_usd: payload.price_usa,
+            price_cost: payload.price_cost,
+            price_brl: payload.price_brl,
+            weight: payload.weight,
+            dimensions: payload.dimensions,
+            stock: payload.stock,
+            ncm: payload.ncm,
+            image_url: payload.image_url,
+            description: payload.description,
+            technical_info: payload.technical_info,
+            is_special: payload.is_special,
+            is_discontinued: payload.is_discontinued,
+            category_id: payload.category_id,
           })
           .eq('id', id!)
         if (error) throw error
