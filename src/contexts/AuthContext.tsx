@@ -18,6 +18,7 @@ interface AuthContextType {
   userMetadata: CustomerMetadata | null
   isLoading: boolean
   isAuthenticated: boolean
+  signIn: (email: string, password: string) => Promise<any>
   signOut: () => Promise<void>
 }
 
@@ -123,6 +124,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+    return data
+  }
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut()
@@ -143,6 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userMetadata,
     isLoading,
     isAuthenticated: !!currentUser,
+    signIn,
     signOut,
   }
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -53,7 +53,6 @@ export default function Login() {
   const authContext = useAuthContext() as any
   const { signIn, userRole, userMetadata } = authContext
   const { toast } = useToast()
-  const from = useLocation().state?.from?.pathname || '/'
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
@@ -65,8 +64,6 @@ export default function Login() {
           nav('/admin/dashboard', { replace: true })
         } else if (['customer', 'vip', 'reseller'].includes(userRole)) {
           nav('/dashboard', { replace: true })
-        } else {
-          nav(from, { replace: true })
         }
       } else {
         timeout = setTimeout(() => {
@@ -81,22 +78,22 @@ export default function Login() {
       }
     }
     return () => clearTimeout(timeout)
-  }, [isLoadingUserData, userRole, userMetadata, nav, from, toast])
+  }, [isLoadingUserData, userRole, userMetadata, nav, toast])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
     setLoading(true)
     setError(null)
-    const { error: err } = await signIn(email, password)
-    if (err) {
+    try {
+      await signIn(email, password)
+      setIsLoadingUserData(true)
+    } catch (err: any) {
       setError('Email ou senha inválidos.')
       toast({ title: 'Erro', description: 'Email ou senha inválidos.', variant: 'destructive' })
       captchaRefL.current?.resetCaptcha()
       setCaptchaL(null)
       setLoading(false)
-    } else {
-      setIsLoadingUserData(true)
     }
   }
 
