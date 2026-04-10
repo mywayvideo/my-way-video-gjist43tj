@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/useCart'
@@ -38,7 +38,7 @@ import { useUserRole } from '@/hooks/use-user-role'
 import { useFavorites } from '@/hooks/useFavorites'
 
 export function Header() {
-  const { user, signOut } = useAuth()
+  const { currentUser: user, signOut } = useAuthContext()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
