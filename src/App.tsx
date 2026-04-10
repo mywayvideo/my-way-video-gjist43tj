@@ -31,6 +31,7 @@ import Favorites from './pages/Favorites'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import CheckoutSuccess from './pages/CheckoutSuccess'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import { AuthProvider } from '@/hooks/use-auth'
 import { UserProvider } from '@/contexts/UserContext'
 import { CartProvider } from '@/hooks/useCart'
@@ -49,27 +50,150 @@ const App = () => {
                   <Route path="/" element={<Index />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/product/:id" element={<Product />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="/admin/ai" element={<AdminAIPage />} />
-                  <Route path="/admin/catalog" element={<AdminCatalogPage />} />
-                  <Route path="/products/new" element={<NewProductPage />} />
-                  <Route path="/products/edit/:id" element={<NewProductPage />} />
-                  <Route path="/admin/pricing" element={<AdminPricingPage />} />
-                  <Route path="/admin/ai-providers" element={<AdminAIProviders />} />
-                  <Route path="/admin/product-cache" element={<AdminProductCache />} />
-                  <Route path="/admin/ai-settings" element={<AdminAISettings />} />
-                  <Route path="/admin/ai-system-prompt" element={<AdminAISystemPrompt />} />
-                  <Route path="/admin/settings" element={<SettingsPage />} />
-                  <Route path="/admin/shipping-config" element={<ShippingConfigPage />} />
-                  <Route path="/admin/discounts" element={<AdminDiscountsPage />} />
-                  <Route path="/admin/orders" element={<AdminOrdersPage />} />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <Admin />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ai"
+                    element={
+                      <ProtectedRoute>
+                        <AdminAIPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/catalog"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCatalogPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/products/new"
+                    element={
+                      <ProtectedRoute>
+                        <NewProductPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/products/edit/:id"
+                    element={
+                      <ProtectedRoute>
+                        <NewProductPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/pricing"
+                    element={
+                      <ProtectedRoute>
+                        <AdminPricingPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ai-providers"
+                    element={
+                      <ProtectedRoute>
+                        <AdminAIProviders />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/product-cache"
+                    element={
+                      <ProtectedRoute>
+                        <AdminProductCache />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ai-settings"
+                    element={
+                      <ProtectedRoute>
+                        <AdminAISettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ai-system-prompt"
+                    element={
+                      <ProtectedRoute>
+                        <AdminAISystemPrompt />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/settings"
+                    element={
+                      <ProtectedRoute>
+                        <SettingsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/shipping-config"
+                    element={
+                      <ProtectedRoute>
+                        <ShippingConfigPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/discounts"
+                    element={
+                      <ProtectedRoute>
+                        <AdminDiscountsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/orders"
+                    element={
+                      <ProtectedRoute>
+                        <AdminOrdersPage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/admin/checkout-assistido/:customerId"
-                    element={<AssistedCheckoutPage />}
+                    element={
+                      <ProtectedRoute>
+                        <AssistedCheckoutPage />
+                      </ProtectedRoute>
+                    }
                   />
-                  <Route path="/admin/customers" element={<AdminCustomersPage />} />
-                  <Route path="/admin/metrics" element={<AdminMetricsPage />} />
-                  <Route path="/admin/profile" element={<AdminProfilePage />} />
+                  <Route
+                    path="/admin/customers"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCustomersPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/metrics"
+                    element={
+                      <ProtectedRoute>
+                        <AdminMetricsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/profile"
+                    element={
+                      <ProtectedRoute>
+                        <AdminProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
