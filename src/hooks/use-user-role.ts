@@ -52,7 +52,7 @@ export function useUserRole() {
         })()
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 8000),
+          setTimeout(() => reject(new Error('Timeout')), 10000),
         )
 
         const fetchedRole = await Promise.race([fetchPromise, timeoutPromise])
@@ -61,9 +61,18 @@ export function useUserRole() {
           setRole(fetchedRole as string)
         }
       } catch (err: any) {
-        console.error('Error fetching user role:', err)
+        if (err.message === 'Timeout') {
+          if (import.meta.env.DEV) {
+            console.log('Timeout fetching user role. Falling back to customer.')
+          }
+        } else {
+          console.error('Error fetching user role:', err)
+        }
+
         if (isMounted) {
-          setError('Nao foi possivel verificar seu acesso.')
+          if (err.message !== 'Timeout') {
+            setError('Nao foi possivel verificar seu acesso.')
+          }
           setRole('customer')
         }
       } finally {
