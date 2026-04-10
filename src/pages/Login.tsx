@@ -14,12 +14,13 @@ import logoImg from '../assets/mw_logo_horiz_1200x318_fundo_escuro-037e3.png'
 
 const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
 
-const Field = ({ id, icon: Icon, right, ...p }: any) => (
+const Field = ({ id, icon: Icon, right, disabled, ...p }: any) => (
   <div className="relative">
     {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />}
     <Input
       id={id}
-      className={`bg-zinc-900 border-zinc-800 text-white h-11 rounded-xl text-sm ${Icon ? 'pl-9' : 'pl-3'} ${right ? 'pr-9' : ''}`}
+      disabled={disabled}
+      className={`bg-zinc-900 border-zinc-800 text-white h-11 rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed ${Icon ? 'pl-9' : 'pl-3'} ${right ? 'pr-9' : ''}`}
       {...p}
     />
     {right && <div className="absolute right-3 top-1/2 -translate-y-1/2">{right}</div>}
@@ -47,10 +48,40 @@ export default function Login() {
   const [captchaR, setCaptchaR] = useState<string | null>(null)
   const captchaRefR = useRef<HCaptcha>(null)
 
+  const [isLoadingUserData, setIsLoadingUserData] = useState(false)
   const nav = useNavigate()
-  const { signIn } = useAuthContext()
+  const authContext = useAuthContext() as any
+  const { signIn, userRole, userMetadata } = authContext
   const { toast } = useToast()
   const from = useLocation().state?.from?.pathname || '/'
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout
+    if (isLoadingUserData) {
+      if (userRole && userMetadata) {
+        setIsLoadingUserData(false)
+        setLoading(false)
+        if (userRole === 'admin') {
+          nav('/admin/dashboard', { replace: true })
+        } else if (['customer', 'vip', 'reseller'].includes(userRole)) {
+          nav('/dashboard', { replace: true })
+        } else {
+          nav(from, { replace: true })
+        }
+      } else {
+        timeout = setTimeout(() => {
+          setIsLoadingUserData(false)
+          setLoading(false)
+          toast({
+            title: 'Erro',
+            description: 'Não foi possível carregar dados do usuário',
+            variant: 'destructive',
+          })
+        }, 5000)
+      }
+    }
+    return () => clearTimeout(timeout)
+  }, [isLoadingUserData, userRole, userMetadata, nav, from, toast])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,10 +91,13 @@ export default function Login() {
     const { error: err } = await signIn(email, password)
     if (err) {
       setError('Email ou senha inválidos.')
+      toast({ title: 'Erro', description: 'Email ou senha inválidos.', variant: 'destructive' })
       captchaRefL.current?.resetCaptcha()
       setCaptchaL(null)
-    } else nav(from, { replace: true })
-    setLoading(false)
+      setLoading(false)
+    } else {
+      setIsLoadingUserData(true)
+    }
   }
 
   const handleReg = async (e: React.FormEvent) => {
@@ -151,6 +185,7 @@ export default function Login() {
                     required
                     value={email}
                     onChange={(e: any) => setEmail(e.target.value)}
+                    disabled={loading || isLoadingUserData}
                   />
                 </div>
                 <div className="space-y-1">
@@ -162,11 +197,13 @@ export default function Login() {
                     required
                     value={password}
                     onChange={(e: any) => setPassword(e.target.value)}
+                    disabled={loading || isLoadingUserData}
                     right={
                       <button
                         type="button"
                         onClick={() => setShowPwd(!showPwd)}
                         className="text-zinc-500 hover:text-white"
+                        disabled={loading || isLoadingUserData}
                       >
                         {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
@@ -174,15 +211,25 @@ export default function Login() {
                   />
                 </div>
                 <div className="flex justify-between items-center text-sm pt-1 pb-2">
-                  <label className="flex items-center space-x-2 text-zinc-400 cursor-pointer hover:text-zinc-300">
-                    <Checkbox className="border-zinc-700 data-[state=checked]:bg-orange-500" />
+                  <label
+                    className={`flex items-center space-x-2 text-zinc-400 cursor-pointer hover:text-zinc-300 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                  >
+                    <Checkbox
+                      disabled={loading || isLoadingUserData}
+                      className="border-zinc-700 data-[state=checked]:bg-orange-500"
+                    />
                     <span>Lembrar-me</span>
                   </label>
-                  <Link to="/forgot-password" className="text-orange-500 hover:text-orange-400">
+                  <Link
+                    to="/forgot-password"
+                    className={`text-orange-500 hover:text-orange-400 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                  >
                     Esqueceu a senha?
                   </Link>
                 </div>
-                <div className="flex justify-center overflow-hidden rounded-lg">
+                <div
+                  className={`flex justify-center overflow-hidden rounded-lg ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                >
                   {!siteKey ? (
                     <div className="text-red-500 text-sm text-center py-2">
                       Configuracao de CAPTCHA ausente. Contate o administrador.
@@ -199,10 +246,14 @@ export default function Login() {
                 </div>
                 <Button
                   type="submit"
-                  disabled={loading || !captchaL}
+                  disabled={loading || isLoadingUserData || !captchaL}
                   className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
                 >
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar'}
+                  {loading || isLoadingUserData ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    'Entrar'
+                  )}
                 </Button>
               </form>
             </TabsContent>
