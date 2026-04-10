@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export interface Customer {
   id: string
@@ -9,13 +9,13 @@ export interface Customer {
 }
 
 export function useCurrentCustomer() {
-  const { user } = useAuth()
+  const { currentUser } = useAuthContext()
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchCustomer() {
-      if (!user?.id) {
+      if (!currentUser?.id) {
         setCustomer(null)
         setLoading(false)
         return
@@ -25,7 +25,7 @@ export function useCurrentCustomer() {
         const { data, error } = await supabase
           .from('customers')
           .select('id, user_id, full_name')
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .maybeSingle()
 
         if (error) throw error
@@ -36,8 +36,8 @@ export function useCurrentCustomer() {
           // Fallback if no customer record yet exists
           setCustomer({
             id: '',
-            user_id: user.id,
-            full_name: user.user_metadata?.name || null,
+            user_id: currentUser.id,
+            full_name: currentUser.user_metadata?.name || null,
           })
         }
       } catch (error) {
@@ -45,8 +45,8 @@ export function useCurrentCustomer() {
         // Fallback to user metadata so it doesn't break
         setCustomer({
           id: '',
-          user_id: user.id,
-          full_name: user.user_metadata?.name || null,
+          user_id: currentUser.id,
+          full_name: currentUser.user_metadata?.name || null,
         })
       } finally {
         setLoading(false)
@@ -54,7 +54,7 @@ export function useCurrentCustomer() {
     }
 
     fetchCustomer()
-  }, [user])
+  }, [currentUser])
 
   return { customer, loading }
 }
