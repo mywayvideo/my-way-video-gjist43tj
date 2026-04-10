@@ -1,8 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { productSchema, ProductFormData } from '@/types/product'
+import { ProductFormData } from '@/types/product'
 import { productService } from '@/services/productService'
+import { z } from 'zod'
+
+const productSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  sku: z.string().min(1, 'SKU é obrigatório'),
+  price_cost: z.coerce.number().catch(0).default(0),
+  price_usa: z.coerce.number().catch(0).default(0),
+  price_brl: z.coerce.number().catch(0).default(0),
+  stock: z.coerce.number().catch(0).default(0),
+  category_id: z.string().catch('').default(''),
+  description: z.string().catch('').default(''),
+  weight: z.coerce.number().catch(0).default(0),
+  dimensions: z.string().catch('').default(''),
+  image_url: z.string().catch('').default(''),
+  ncm: z.string().catch('').default(''),
+  is_special: z.boolean().catch(false).default(false),
+  technical_info: z.string().catch('').default(''),
+  is_discontinued: z.boolean().catch(false).default(false),
+})
 import { useToast } from '@/hooks/use-toast'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
