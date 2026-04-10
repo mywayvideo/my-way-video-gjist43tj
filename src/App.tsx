@@ -206,4 +206,15 @@ const App = () => {
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
-                <Route path="/checkout/success" element={<Checkou
+                <Route path="/checkout/success" element={<CheckoutSuccess />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </BrowserRouter>
+      </CartProvider>
+    </AuthProvider>
+  )
+}
+
+export default App
