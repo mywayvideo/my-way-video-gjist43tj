@@ -134,13 +134,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await supabase.auth.signOut()
     } finally {
+      const keysToRemove = [
+        'user-session',
+        'user-role',
+        'user-metadata',
+        'theme',
+        'favorites',
+        'cart',
+      ]
+      keysToRemove.forEach((key) => localStorage.removeItem(key))
+
+      const keysToDrop: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('my-way')) {
+          keysToDrop.push(key)
+        }
+      }
+      keysToDrop.forEach((key) => localStorage.removeItem(key))
+
       setCurrentUser(null)
       setUserRole(null)
       setUserMetadata(null)
-      localStorage.removeItem('user-session')
-      localStorage.removeItem('user-role')
-      localStorage.removeItem('user-metadata')
       setIsLoading(false)
+
+      window.dispatchEvent(new CustomEvent('auth-logout'))
+
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 100)
     }
   }
 

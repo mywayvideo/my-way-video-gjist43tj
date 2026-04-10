@@ -59,7 +59,22 @@ export function Header() {
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null)
+  const [hasLoggedOut, setHasLoggedOut] = useState(false)
   const { role, loading: roleLoading, error: roleError } = useUserRole()
+
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      setProfilePhotoUrl(null)
+      setFirstName('')
+      setIsUserMenuOpen(false)
+      setHasLoggedOut(true)
+    }
+
+    window.addEventListener('auth-logout', handleLogoutEvent)
+    return () => {
+      window.removeEventListener('auth-logout', handleLogoutEvent)
+    }
+  }, [])
 
   useEffect(() => {
     const fetchCustomerData = async () => {
@@ -83,7 +98,7 @@ export function Header() {
   }, [user])
 
   const UserMenuItems = () => {
-    if (roleLoading) {
+    if (roleLoading && !hasLoggedOut) {
       return (
         <div className="flex flex-col w-full gap-1 p-4 items-center justify-center">
           <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -92,7 +107,7 @@ export function Header() {
       )
     }
 
-    if (roleError) {
+    if (roleError && !hasLoggedOut) {
       return (
         <div className="flex flex-col w-full gap-1">
           <div className="p-3 text-sm text-destructive font-medium text-center">{roleError}</div>
@@ -110,7 +125,7 @@ export function Header() {
       )
     }
 
-    const isAdminOrCollaborator = role === 'admin' || role === 'collaborator'
+    const isAdminOrCollaborator = !hasLoggedOut && (role === 'admin' || role === 'collaborator')
 
     return (
       <div className="flex flex-col w-full gap-1">
@@ -380,7 +395,7 @@ export function Header() {
                       />
                     </form>
                   </div>
-                  {(role === 'admin' || role === 'collaborator') && (
+                  {!hasLoggedOut && (role === 'admin' || role === 'collaborator') && (
                     <div className="pt-4 border-t border-border/50 mt-auto">
                       <Link
                         to="/admin"
@@ -438,7 +453,7 @@ export function Header() {
               <Search className="w-5 h-5" />
             </Button>
 
-            {(role === 'admin' || role === 'collaborator') && (
+            {!hasLoggedOut && (role === 'admin' || role === 'collaborator') && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -480,7 +495,7 @@ export function Header() {
                 </span>
               )}
             </Button>
-            {user ? (
+            {user && !hasLoggedOut ? (
               isMobile ? (
                 <Sheet open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
                   <SheetTrigger asChild>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
@@ -36,8 +37,29 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/hooks/useCart'
 
 const App = () => {
+  const [isCleaningUp, setIsCleaningUp] = useState(false)
+
+  useEffect(() => {
+    const handleLogout = () => {
+      setIsCleaningUp(true)
+      window.history.pushState({}, '', '/login')
+
+      setTimeout(() => {
+        setIsCleaningUp(false)
+      }, 1000)
+    }
+
+    window.addEventListener('auth-logout', handleLogout)
+    return () => window.removeEventListener('auth-logout', handleLogout)
+  }, [])
+
   return (
     <AuthProvider>
+      {isCleaningUp && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
       <CartProvider>
         <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
           <TooltipProvider>
