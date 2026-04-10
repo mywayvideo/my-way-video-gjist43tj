@@ -131,7 +131,7 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
 
         if (headers.length === 1) {
           throw new Error(
-            'Arquivo invalido. SKU sozinho nao e permitido. Use criacao (SKU+nome+descricao) ou atualizacao (SKU+coluna)',
+            'Arquivo invalido. SKU sozinho nao e permitido. Use criacao (SKU+nome) ou atualizacao (SKU+coluna)',
           )
         }
 
@@ -219,11 +219,11 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
             const existing = dbSkuMap.get(normalizedSku)
 
             if (!existing) {
-              if (!rowData.name || !rowData.description) {
+              if (!rowData.name) {
                 invalidRows.push({
                   row: i + 1,
                   sku: rowSku,
-                  reason: 'SKU nao encontrado',
+                  reason: 'Nome obrigatorio para novos produtos',
                 })
                 continue
               }
