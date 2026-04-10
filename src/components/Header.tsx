@@ -115,11 +115,12 @@ export function Header() {
     return (
       <div className="flex flex-col w-full gap-1">
         <Link
-          to="/dashboard"
+          to={isAdminOrCollaborator ? '/admin' : '/dashboard'}
           onClick={() => setIsUserMenuOpen(false)}
           className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
         >
-          <LayoutDashboard className="w-4 h-4" /> Meu Dashboard
+          <LayoutDashboard className="w-4 h-4" />{' '}
+          {isAdminOrCollaborator ? 'Painel Admin' : 'Meu Dashboard'}
         </Link>
 
         {!isAdminOrCollaborator && (
@@ -139,7 +140,7 @@ export function Header() {
               <ShoppingCart className="w-4 h-4" /> Meu Carrinho
             </Link>
             <Link
-              to="/purchase-history"
+              to="/dashboard"
               onClick={() => setIsUserMenuOpen(false)}
               className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
             >
@@ -170,12 +171,6 @@ export function Header() {
       </div>
     )
   }
-
-  const isAdmin =
-    user &&
-    (user.app_metadata?.role === 'admin' ||
-      user.user_metadata?.role === 'admin' ||
-      (user as any).role === 'admin')
 
   const handleLogout = async () => {
     await signOut()
@@ -385,7 +380,7 @@ export function Header() {
                       />
                     </form>
                   </div>
-                  {isAdmin && (
+                  {(role === 'admin' || role === 'collaborator') && (
                     <div className="pt-4 border-t border-border/50 mt-auto">
                       <Link
                         to="/admin"
@@ -443,7 +438,7 @@ export function Header() {
               <Search className="w-5 h-5" />
             </Button>
 
-            {isAdmin && (
+            {(role === 'admin' || role === 'collaborator') && (
               <Button
                 variant="ghost"
                 size="icon"

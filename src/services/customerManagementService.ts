@@ -16,7 +16,9 @@ export async function fetchAllCustomers(
 
   let query = supabase
     .from('customers')
-    .select('id, full_name, email, role, phone, status, created_at', { count: 'exact' })
+    .select('id, user_id, full_name, email, role, phone, status, created_at, last_login', {
+      count: 'exact',
+    })
 
   if (role !== 'admin' && user) {
     query = query.eq('user_id', user.id)
@@ -33,7 +35,9 @@ export async function fetchAllCustomers(
   const from = (page - 1) * limit
   const to = from + limit - 1
 
-  console.log('Query: SELECT id, full_name, email, role, phone, status, created_at FROM customers')
+  console.log(
+    'Query: SELECT id, user_id, full_name, email, role, phone, status, created_at, last_login FROM customers',
+  )
 
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
@@ -45,15 +49,33 @@ export async function fetchAllCustomers(
     throw new Error('Erro ao buscar clientes.')
   }
 
-  if (!data || data.length === 0) {
+  let customersWithLogin = data || []
+
+  if (customersWithLogin.length > 0) {
+    const userIds = customersWithLogin.map((c: any) => c.user_id).filter(Boolean)
+    if (userIds.length > 0) {
+      const { data: sessions } = await supabase
+        .from('user_sessions')
+        .select('user_id, login_timestamp')
+        .in('user_id', userIds)
+        .order('login_timestamp', { ascending: false })
+
+      if (sessions && sessions.length > 0) {
+        customersWithLogin = customersWithLogin.map((c: any) => {
+          const userSessions = sessions.filter((s) => s.user_id === c.user_id)
+          const latestSession =
+            userSessions.length > 0 ? userSessions[0].login_timestamp : c.last_login
+          return { ...c, last_login: latestSession }
+        })
+      }
+    }
+  } else {
     console.log('Query returned empty array')
     console.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
     toast.error('Nenhum cliente encontrado. Verifique as permissoes RLS.')
-  } else {
-    console.log('Query returned: ' + data.length)
   }
 
-  return { customers: data || [], total: count || 0 }
+  return { customers: customersWithLogin, total: count || 0 }
 }
 
 export async function updateCustomer(customerId: string, data: any) {
