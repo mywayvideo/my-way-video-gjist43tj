@@ -34,11 +34,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
-import { useUserRole } from '@/hooks/use-user-role'
 import { useFavorites } from '@/hooks/useFavorites'
 
 export function Header() {
-  const { currentUser: user, signOut } = useAuthContext()
+  const { currentUser: user, userRole, signOut } = useAuthContext()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -60,7 +59,11 @@ export function Header() {
   const [firstName, setFirstName] = useState('')
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null)
   const [hasLoggedOut, setHasLoggedOut] = useState(false)
-  const { role, loading: roleLoading, error: roleError } = useUserRole()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    setIsAdmin(userRole === 'admin')
+  }, [userRole])
 
   useEffect(() => {
     const handleLogoutEvent = () => {
@@ -98,47 +101,19 @@ export function Header() {
   }, [user])
 
   const UserMenuItems = () => {
-    if (roleLoading && !hasLoggedOut) {
-      return (
-        <div className="flex flex-col w-full gap-1 p-4 items-center justify-center">
-          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-muted-foreground mt-2">Carregando...</span>
-        </div>
-      )
-    }
-
-    if (roleError && !hasLoggedOut) {
-      return (
-        <div className="flex flex-col w-full gap-1">
-          <div className="p-3 text-sm text-destructive font-medium text-center">{roleError}</div>
-          <div className="h-px bg-border my-1" />
-          <button
-            onClick={() => {
-              setIsUserMenuOpen(false)
-              handleLogout()
-            }}
-            className="w-full text-left p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted hover:text-destructive focus:text-destructive cursor-pointer transition-colors rounded-md flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" /> Sair
-          </button>
-        </div>
-      )
-    }
-
-    const isAdminOrCollaborator = !hasLoggedOut && (role === 'admin' || role === 'collaborator')
+    const isAdminUser = !hasLoggedOut && isAdmin
 
     return (
       <div className="flex flex-col w-full gap-1">
         <Link
-          to={isAdminOrCollaborator ? '/admin' : '/dashboard'}
+          to={isAdminUser ? '/admin' : '/dashboard'}
           onClick={() => setIsUserMenuOpen(false)}
           className="p-[10px] px-[16px] text-sm text-foreground hover:bg-muted focus:bg-muted cursor-pointer transition-colors rounded-md flex items-center gap-2"
         >
-          <LayoutDashboard className="w-4 h-4" />{' '}
-          {isAdminOrCollaborator ? 'Painel Admin' : 'Meu Dashboard'}
+          <LayoutDashboard className="w-4 h-4" /> {isAdminUser ? 'Painel Admin' : 'Meu Dashboard'}
         </Link>
 
-        {!isAdminOrCollaborator && (
+        {!isAdminUser && (
           <>
             <Link
               to="/favorites"
@@ -395,7 +370,7 @@ export function Header() {
                       />
                     </form>
                   </div>
-                  {!hasLoggedOut && (role === 'admin' || role === 'collaborator') && (
+                  {!hasLoggedOut && isAdmin && (
                     <div className="pt-4 border-t border-border/50 mt-auto">
                       <Link
                         to="/admin"
@@ -453,7 +428,7 @@ export function Header() {
               <Search className="w-5 h-5" />
             </Button>
 
-            {!hasLoggedOut && (role === 'admin' || role === 'collaborator') && (
+            {!hasLoggedOut && isAdmin && (
               <Button
                 variant="ghost"
                 size="icon"
