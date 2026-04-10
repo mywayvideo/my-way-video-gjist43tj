@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { z } from 'zod'
@@ -170,7 +170,7 @@ const InlineSetting = ({ label, value, type, dbField, onSave }: any) => {
 }
 
 export default function AdminAIProviders() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const [providers, setProviders] = useState<any[]>([])
   const [settings, setSettings] = useState<any>(null)
   const [loading, setLoading] = useState(true)

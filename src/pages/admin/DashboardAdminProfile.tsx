@@ -11,12 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export function DashboardAdminProfile() {
   const { profile, loading, error, updateProfile, changePassword, toggle2FA, loadProfile } =
     useAdminProfile()
-  const { signOut } = useAuth()
+  const { signOut } = useAuthContext()
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
 

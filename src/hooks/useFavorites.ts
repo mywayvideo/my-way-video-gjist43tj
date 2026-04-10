@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { create } from 'zustand'
 
@@ -23,7 +23,7 @@ let lastUserId: string | null | undefined = undefined
 let activeChannel: any = null
 
 export function useFavorites() {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const { favorites, setFavorites, addFav, removeFav } = useFavoritesStore()
   const [loading, setLoading] = useState(!hasFetched)
   const [error, setError] = useState<string | null>(null)

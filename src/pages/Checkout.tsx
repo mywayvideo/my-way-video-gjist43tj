@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/hooks/useCart'
@@ -126,7 +126,8 @@ const CopyBtn = ({ text }: { text: string }) => {
 }
 
 export default function Checkout() {
-  const { user, profile, loading } = useAuth()
+  const { currentUser: user, loading } = useAuthContext()
+  const profile: any = null
   const cartContext = useCart() as any
   const { toast } = useToast()
   const navigate = useNavigate()

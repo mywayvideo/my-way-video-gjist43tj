@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -25,7 +25,7 @@ export function ChangePasswordDialog({
   onSuccess: () => void
   onSubmit?: (curr: string, newP: string) => Promise<{ error?: string }>
 }) {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

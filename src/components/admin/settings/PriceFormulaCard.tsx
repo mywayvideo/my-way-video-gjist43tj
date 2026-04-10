@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/hooks/use-toast'
 import { Loader2, Edit2, Save, X } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export function PriceFormulaCard() {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [settingsId, setSettingsId] = useState<string | null>(null)

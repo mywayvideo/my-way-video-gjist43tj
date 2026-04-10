@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Navigate, Link } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { z } from 'zod'
@@ -59,7 +59,7 @@ const defaultValues: FormValues = {
 }
 
 export default function AdminAISettings() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,7 +48,7 @@ export default function Login() {
   const captchaRefR = useRef<HCaptcha>(null)
 
   const nav = useNavigate()
-  const { signIn } = useAuth()
+  const { signIn } = useAuthContext()
   const { toast } = useToast()
   const from = useLocation().state?.from?.pathname || '/'
 

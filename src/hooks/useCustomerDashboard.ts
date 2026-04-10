@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { customerService } from '@/services/customerService'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { Customer, Order, Favorite, CartItem, DiscountRuleCustomer } from '@/types/customer'
 
 export function useCustomerDashboard() {
-  const { user: authUser, loading: authLoading } = useAuth()
+  const { currentUser: authUser, loading: authLoading } = useAuthContext()
   const navigate = useNavigate()
 
   const [user, setUser] = useState<Customer | null>(null)

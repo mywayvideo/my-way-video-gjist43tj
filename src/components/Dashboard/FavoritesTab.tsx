@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { customerService } from '@/services/customerService'
 
 type Product = { id: string; name: string; price_usd: number; image_url: string }
@@ -79,7 +79,7 @@ function FavoriteCard({
   customerId: string
   onOptimisticRemove: (id: string) => void
 }) {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const { toast } = useToast()
   const [isFavorited, setIsFavorited] = useState(true)
   const [isRemoving, setIsRemoving] = useState(false)
@@ -268,7 +268,7 @@ export function FavoritesTab({
   customerId: string
   onRefresh?: () => void
 }) {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const [items, setItems] = useState<FavoriteItem[]>([])
   const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)

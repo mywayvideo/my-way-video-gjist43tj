@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { useCart } from '@/hooks/useCart'
 import { cn } from '@/lib/utils'
@@ -21,7 +21,7 @@ export function CartTab({
   onRefresh: () => void
 }) {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
 
   const cartContext = useCart() as any
   const globalRefresh =

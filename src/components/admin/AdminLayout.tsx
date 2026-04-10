@@ -16,7 +16,7 @@ import {
   BarChart3,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { useSidebarVisibility } from '@/hooks/use-sidebar-state'
 
@@ -40,7 +40,7 @@ export function AdminLayout({
   children: React.ReactNode
   breadcrumb?: string
 }) {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const location = useLocation()
   const { isSidebarVisible, toggleSidebar } = useSidebarVisibility()
 

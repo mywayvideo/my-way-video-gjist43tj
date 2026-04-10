@@ -83,7 +83,7 @@ export function PersonalInfoTab({
   isEditing?: boolean
   setEditing?: (editing: boolean) => void
 }) {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 

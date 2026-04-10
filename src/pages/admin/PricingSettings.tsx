@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/hooks/use-toast'
 import { Loader2, RefreshCw, Edit2, Save, X } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export default function PricingSettings() {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
 
   // Existing Exchange Rate State
   const [rateData, setRateData] = useState<any>(null)

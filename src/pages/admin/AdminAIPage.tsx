@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Navigate, Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -12,7 +12,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
 
 export default function AdminAIPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const location = useLocation()
 
   const [companyInfo, setCompanyInfo] = useState<any>(null)

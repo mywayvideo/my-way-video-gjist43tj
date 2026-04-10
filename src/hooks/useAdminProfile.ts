@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminProfileService } from '@/services/adminProfileService'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export function useAdminProfile() {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

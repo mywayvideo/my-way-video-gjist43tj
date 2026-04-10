@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { Product, Manufacturer } from '@/types'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -87,7 +87,7 @@ const formatNCM = (ncm?: string | null) => {
 }
 
 export default function AdminCatalogPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const [products, setProducts] = useState<Product[]>([])
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [search, setSearch] = useState('')

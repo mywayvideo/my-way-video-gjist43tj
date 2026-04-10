@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { useAdminOrders } from '@/hooks/useAdminOrders'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ import {
 import { Download } from 'lucide-react'
 
 export default function AdminOrdersPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const navigate = useNavigate()
   const [isAdmin, setIsAdmin] = useState(false)
 

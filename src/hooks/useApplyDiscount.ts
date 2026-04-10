@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Discount } from '@/types/discount'
 import { getBestDiscount, DiscountCalculation } from '@/services/discountApplicationService'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { toast } from '@/hooks/use-toast'
 
 // Global state cache to prevent redundant fetches
@@ -42,7 +42,7 @@ export function useApplyDiscount(
   originalPrice?: number | null,
   costPrice?: number | null,
 ) {
-  const { user } = useAuth()
+  const { currentUser: user } = useAuthContext()
   const [discounts, setDiscounts] = useState<Discount[]>(globalDiscounts)
 
   const [isRealtimeActive, setIsRealtimeActive] = useState(true)

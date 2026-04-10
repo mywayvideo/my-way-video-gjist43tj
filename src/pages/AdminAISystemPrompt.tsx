@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Navigate, Link } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { Bot, Save, X, Loader2 } from 'lucide-react'
@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 
 export default function AdminAISystemPrompt() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [initialPrompt, setInitialPrompt] = useState('')
   const [prompt, setPrompt] = useState('')

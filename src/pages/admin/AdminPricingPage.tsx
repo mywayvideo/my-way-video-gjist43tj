@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,7 +12,7 @@ import { PriceFormulaCard } from '@/components/admin/settings/PriceFormulaCard'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 
 export default function AdminPricingPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { currentUser: user, loading: authLoading } = useAuthContext()
   const [showPriceCost, setShowPriceCost] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [saving, setSaving] = useState(false)
