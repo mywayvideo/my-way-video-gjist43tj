@@ -12,7 +12,19 @@ export async function fetchAllCustomers(
   } = await supabase.auth.getSession()
 
   const user = session?.user
-  const role = user?.app_metadata?.role || user?.user_metadata?.role
+  let role = user?.app_metadata?.role || user?.user_metadata?.role
+
+  if (user && role !== 'admin') {
+    const { data: customerData } = await supabase
+      .from('customers')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (customerData?.role) {
+      role = customerData.role
+    }
+  }
 
   let query = supabase
     .from('customers')
