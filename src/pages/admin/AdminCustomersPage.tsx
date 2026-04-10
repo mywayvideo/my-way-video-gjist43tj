@@ -1,9 +1,9 @@
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { DashboardAdminCustomers } from './DashboardAdminCustomers'
-import { useAdminDashboard } from '@/hooks/useAdminDashboard'
+import { useCustomerManagement } from '@/hooks/useCustomerManagement'
 
 export default function AdminCustomersPage() {
-  const dashboardParams = useAdminDashboard()
+  const customerParams = useCustomerManagement()
 
   return (
     <AdminLayout breadcrumb="Gerenciar Clientes">
@@ -14,7 +14,7 @@ export default function AdminCustomersPage() {
             Administre a base de clientes, níveis de acesso e informações.
           </p>
         </div>
-        <DashboardAdminCustomers {...dashboardParams} />
+        <DashboardAdminCustomers {...customerParams} />
       </div>
     </AdminLayout>
   )
