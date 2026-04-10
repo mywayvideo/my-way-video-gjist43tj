@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,7 @@ export default function Login() {
 
   const [isLoadingUserData, setIsLoadingUserData] = useState(false)
   const nav = useNavigate()
+  const location = useLocation()
   const authContext = useAuthContext() as any
   const { signIn, userRole, userMetadata } = authContext
   const { toast } = useToast()
@@ -63,7 +64,11 @@ export default function Login() {
         if (userRole === 'admin') {
           nav('/admin/dashboard', { replace: true })
         } else if (['customer', 'vip', 'reseller'].includes(userRole)) {
-          nav('/dashboard', { replace: true })
+          if (window.history.length > 1) {
+            window.history.back()
+          } else {
+            nav('/', { replace: true })
+          }
         }
       } else {
         timeout = setTimeout(() => {
