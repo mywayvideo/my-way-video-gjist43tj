@@ -13,6 +13,10 @@ export interface Discount {
   customer_application_type?: string | null
   customer_role?: string | null
   customers?: string[] | null
+  target_type?: string | null
+  excluded_products?: string[] | null
+  category_id?: string | null
+  manufacturer_id?: string | null
 }
 
 export interface DiscountRule {

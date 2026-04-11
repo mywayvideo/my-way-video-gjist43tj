@@ -96,7 +96,12 @@ function subscribeToDiscounts() {
   })
 }
 
-function calculateBestDiscountSync(product: any, discounts: any[], customerRole: string | null) {
+function calculateBestDiscountSync(
+  product: any,
+  discounts: any[],
+  customerId: string | null,
+  customerRole: string | null,
+) {
   if (!product || product.price_usd == null) return null
 
   let bestDiscountAmount = 0
@@ -105,34 +110,45 @@ function calculateBestDiscountSync(product: any, discounts: any[], customerRole:
   let appliedRule = null
 
   for (const discount of discounts) {
-    if (discount.customer_application_type === 'specific_roles' && discount.customer_role) {
+    if (discount.customer_application_type === 'rule' && discount.customer_role) {
       if (!customerRole || discount.customer_role !== customerRole) continue
+    }
+    if (discount.customer_application_type === 'specific_customers' && discount.customers) {
+      if (!customerId || !discount.customers.includes(customerId)) continue
     }
 
     let matches = false
-    let hasCriteria = false
+    const targetType = discount.target_type || 'specific'
+    const excluded = discount.excluded_products || []
 
-    if (discount.category_id) {
-      hasCriteria = true
-      if (product.category_id === discount.category_id) matches = true
-    }
+    if (excluded.includes(product.id)) continue
 
-    if (discount.manufacturer_id) {
-      hasCriteria = true
-      if (product.manufacturer_id === discount.manufacturer_id) matches = true
-    }
-
-    if (
-      discount.product_selection &&
-      Array.isArray(discount.product_selection) &&
-      discount.product_selection.length > 0
-    ) {
-      hasCriteria = true
-      if (discount.product_selection.includes(product.id)) matches = true
-    }
-
-    if (!hasCriteria) {
+    if (targetType === 'all') {
       matches = true
+    } else if (targetType === 'manufacturer') {
+      if (product.manufacturer_id === discount.manufacturer_id) matches = true
+    } else if (targetType === 'category') {
+      if (product.category_id === discount.category_id) matches = true
+    } else if (targetType === 'specific') {
+      if (discount.product_selection && Array.isArray(discount.product_selection)) {
+        if (discount.product_selection.includes(product.id)) matches = true
+      }
+    } else {
+      if (discount.category_id && product.category_id === discount.category_id) matches = true
+      else if (discount.manufacturer_id && product.manufacturer_id === discount.manufacturer_id)
+        matches = true
+      else if (
+        discount.product_selection &&
+        Array.isArray(discount.product_selection) &&
+        discount.product_selection.includes(product.id)
+      )
+        matches = true
+      else if (
+        !discount.category_id &&
+        !discount.manufacturer_id &&
+        (!discount.product_selection || discount.product_selection.length === 0)
+      )
+        matches = true
     }
 
     if (!matches) continue
@@ -141,7 +157,17 @@ function calculateBestDiscountSync(product: any, discounts: any[], customerRole:
     let discountedPrice = product.price_usd
     const value = Number(discount.discount_value) || 0
 
-    if (discount.discount_type === 'percentage') {
+    if (discount.discount_type === 'margin_percentage') {
+      if (product.price_cost != null && product.price_cost < product.price_usd) {
+        discountAmount = (product.price_usd - product.price_cost) * (value / 100)
+        discountedPrice = product.price_usd - discountAmount
+      } else {
+        continue
+      }
+    } else if (
+      discount.discount_type === 'price_usa_percentage' ||
+      discount.discount_type === 'percentage'
+    ) {
       discountAmount = product.price_usd * (value / 100)
       discountedPrice = product.price_usd - discountAmount
     } else if (discount.discount_type === 'fixed' || discount.discount_type === 'fixed_amount') {
@@ -219,7 +245,12 @@ export function useProductDiscount(product: any) {
       try {
         const customer = await getCustomerContext()
         const activeDiscounts = await fetchActiveDiscounts()
-        const info = calculateBestDiscountSync(product, activeDiscounts, customer?.role || null)
+        const info = calculateBestDiscountSync(
+          product,
+          activeDiscounts,
+          customer?.id || null,
+          customer?.role || null,
+        )
 
         if (isMounted) {
           setDiscountInfo({ ...(info as any), loading: false })
@@ -254,7 +285,13 @@ export function useProductDiscount(product: any) {
       listeners.delete(listener)
       clearTimeout(timeoutId)
     }
-  }, [product?.id, product?.price_usd, product?.category_id, product?.manufacturer_id])
+  }, [
+    product?.id,
+    product?.price_usd,
+    product?.category_id,
+    product?.manufacturer_id,
+    product?.price_cost,
+  ])
 
   return discountInfo
 }
@@ -285,7 +322,12 @@ export function useMultipleProductDiscounts(products: any[]) {
 
         const newDiscounts: Record<string, any> = {}
         for (const p of products) {
-          newDiscounts[p.id] = calculateBestDiscountSync(p, activeDiscounts, customer?.role || null)
+          newDiscounts[p.id] = calculateBestDiscountSync(
+            p,
+            activeDiscounts,
+            customer?.id || null,
+            customer?.role || null,
+          )
         }
 
         if (isMounted) {
@@ -326,7 +368,11 @@ export function useMultipleProductDiscounts(products: any[]) {
       listeners.delete(listener)
       clearTimeout(timeoutId)
     }
-  }, [JSON.stringify(products.map((p) => p.id)), JSON.stringify(products.map((p) => p.price_usd))])
+  }, [
+    JSON.stringify(products.map((p) => p.id)),
+    JSON.stringify(products.map((p) => p.price_usd)),
+    JSON.stringify(products.map((p) => p.price_cost)),
+  ])
 
   return { discounts, loading }
 }

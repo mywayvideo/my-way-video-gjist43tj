@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Discount } from '@/types/discount'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,11 +22,17 @@ import { toast } from '@/hooks/use-toast'
 const schema = z
   .object({
     name: z.string().min(3, 'Mínimo de 3 caracteres'),
-    discount_type: z.enum(['margin_percentage', 'price_usa_percentage'], {
-      required_error: 'Tipo de desconto é obrigatório',
-    }),
+    discount_type: z.enum([
+      'margin_percentage',
+      'price_usa_percentage',
+      'percentage',
+      'fixed',
+      'fixed_amount',
+    ]),
     discount_value: z.coerce.number().min(0.01, 'Valor deve ser maior que 0'),
-    product_selection: z.array(z.string()).min(1, 'Selecione pelo menos um produto.'),
+    target_type: z.enum(['all', 'manufacturer', 'category', 'specific']),
+    manufacturer_id: z.string().optional().nullable(),
+    category_id: z.string().optional().nullable(),
     status: z.enum(['active', 'inactive']),
     start_date: z.string().optional().nullable(),
     end_date: z.string().optional().nullable(),
@@ -34,8 +40,21 @@ const schema = z
       required_error: 'Tipo de beneficiário é obrigatório',
     }),
     customer_role: z.string().optional().nullable(),
-    customer_selection: z.array(z.string()).optional(),
   })
+  .refine(
+    (data) => {
+      if (data.target_type === 'manufacturer' && !data.manufacturer_id) return false
+      return true
+    },
+    { message: 'Selecione um fabricante', path: ['manufacturer_id'] },
+  )
+  .refine(
+    (data) => {
+      if (data.target_type === 'category' && !data.category_id) return false
+      return true
+    },
+    { message: 'Selecione uma categoria', path: ['category_id'] },
+  )
   .refine(
     (data) => {
       if (data.application_type === 'rule' && !data.customer_role) return false
@@ -43,39 +62,8 @@ const schema = z
     },
     { message: 'Selecione uma regra', path: ['customer_role'] },
   )
-  .refine(
-    (data) => {
-      if (
-        data.application_type === 'specific_customers' &&
-        (!data.customer_selection || data.customer_selection.length === 0)
-      )
-        return false
-      return true
-    },
-    { message: 'Selecione pelo menos um cliente', path: ['customer_selection'] },
-  )
 
 type FormData = z.infer<typeof schema>
-
-interface Manufacturer {
-  id: string
-  name: string
-}
-
-interface ProductDetails {
-  id: string
-  name: string
-  sku: string | null
-  manufacturer_id: string | null
-  category: string | null
-}
-
-interface CustomerDetails {
-  id: string
-  full_name: string | null
-  email: string | null
-  role: string
-}
 
 interface Props {
   rule?: Discount
@@ -95,35 +83,36 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
-  const [selectionType, setSelectionType] = useState<
-    'product' | 'manufacturer' | 'manufacturer_category'
-  >('product')
-
-  // Data states
-  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
-  const [dbProducts, setDbProducts] = useState<ProductDetails[]>([])
-  const [customers, setCustomers] = useState<CustomerDetails[]>([])
+  const [manufacturers, setManufacturers] = useState<{ id: string; name: string }[]>([])
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
+  const [dbProducts, setDbProducts] = useState<any[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
   const [customerRoles, setCustomerRoles] = useState<string[]>([])
 
-  // Search states
-  const [manufSearch, setManufSearch] = useState('')
-  const [catSearch, setCatSearch] = useState('')
   const [prodSearch, setProdSearch] = useState('')
   const [custSearch, setCustSearch] = useState('')
-
-  const debouncedManufSearch = useDebounce(manufSearch, 300)
-  const debouncedCatSearch = useDebounce(catSearch, 300)
   const debouncedProdSearch = useDebounce(prodSearch, 300)
   const debouncedCustSearch = useDebounce(custSearch, 300)
 
-  // Selection states
-  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([])
-  const [selectedCategories, setSelectedCategories] = useState<Record<string, string[]>>({})
-  const [excludedProducts, setExcludedProducts] = useState<string[]>([])
-  const [selectedSpecificProducts, setSelectedSpecificProducts] = useState<string[]>([])
+  const [excludedProducts, setExcludedProducts] = useState<string[]>(rule?.excluded_products || [])
+  const [selectedSpecificProducts, setSelectedSpecificProducts] = useState<string[]>(
+    rule?.product_selection || [],
+  )
+  const [selectedCustomerSelection, setSelectedCustomerSelection] = useState<string[]>(
+    rule?.customers || [],
+  )
 
-  const initializedRuleId = useRef<string | null>(null)
+  const defaultTargetType =
+    rule?.target_type ||
+    (rule?.category_id
+      ? 'category'
+      : rule?.manufacturer_id
+        ? 'manufacturer'
+        : rule?.product_selection?.length
+          ? 'specific'
+          : 'all')
 
   const {
     register,
@@ -138,134 +127,74 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
       name: rule?.name || '',
       discount_type: (rule?.discount_type as any) || 'margin_percentage',
       discount_value: rule?.discount_value || 0,
-      product_selection: rule?.product_selection || [],
+      target_type: defaultTargetType,
+      manufacturer_id: rule?.manufacturer_id || '',
+      category_id: rule?.category_id || '',
       status: rule ? (rule.is_active ? 'active' : 'inactive') : 'active',
       start_date: rule?.start_date ? new Date(rule.start_date).toISOString().split('T')[0] : '',
       end_date: rule?.end_date ? new Date(rule.end_date).toISOString().split('T')[0] : '',
-      application_type:
-        (rule as any)?.application_type || (rule?.customer_application_type as any) || 'all',
-      customer_role: (rule as any)?.role || rule?.customer_role || '',
-      customer_selection: rule?.customers || [],
+      application_type: (rule as any)?.customer_application_type || 'all',
+      customer_role: rule?.customer_role || '',
     },
   })
 
-  const selectedProducts = watch('product_selection') || []
+  const targetType = watch('target_type')
   const applicationType = watch('application_type')
-  const selectedCustomerSelection = watch('customer_selection') || []
 
-  // Fetch required data from Supabase
   useEffect(() => {
     const loadData = async () => {
-      const [mRes, pRes, cRes] = await Promise.all([
+      const [mRes, cRes, pRes, custRes] = await Promise.all([
         supabase.from('manufacturers').select('id, name').order('name'),
-        supabase.from('products').select('id, name, sku, manufacturer_id, category').order('name'),
+        supabase.from('categories').select('id, name').order('name'),
+        supabase
+          .from('products')
+          .select('id, name, sku, manufacturer_id, category_id, category')
+          .order('name'),
         supabase.from('customers').select('id, full_name, email, role').order('full_name'),
       ])
       if (mRes.data) setManufacturers(mRes.data)
+      if (cRes.data) setCategories(cRes.data)
       if (pRes.data) setDbProducts(pRes.data)
-      if (cRes.data) {
-        setCustomers(cRes.data)
-        const roles = Array.from(new Set(cRes.data.map((c) => c.role).filter(Boolean)))
+      if (custRes.data) {
+        setCustomers(custRes.data)
+        const roles = Array.from(new Set(custRes.data.map((c) => c.role).filter(Boolean)))
         setCustomerRoles(roles.sort())
       }
     }
     loadData()
   }, [])
 
-  // Initialize states if editing an existing rule
-  useEffect(() => {
-    if (dbProducts.length === 0) return
-
-    const currentRuleId = rule?.id || 'new'
-    if (initializedRuleId.current === currentRuleId) return
-
-    initializedRuleId.current = currentRuleId
-
-    if (rule?.product_selection?.length) {
-      setSelectionType('manufacturer_category')
-      const initialManufacturers = new Set<string>()
-      const initialCategories: Record<string, Set<string>> = {}
-
-      rule.product_selection.forEach((id: string) => {
-        const p = dbProducts.find((prod) => prod.id === id)
-        if (p && p.manufacturer_id) {
-          initialManufacturers.add(p.manufacturer_id)
-          if (p.category) {
-            if (!initialCategories[p.manufacturer_id]) {
-              initialCategories[p.manufacturer_id] = new Set()
-            }
-            initialCategories[p.manufacturer_id].add(p.category)
-          }
-        }
-      })
-
-      const mArr = Array.from(initialManufacturers)
-      setSelectedManufacturers(mArr)
-
-      const cObj: Record<string, string[]> = {}
-      for (const mId of mArr) {
-        cObj[mId] = initialCategories[mId] ? Array.from(initialCategories[mId]) : []
-      }
-      setSelectedCategories(cObj)
-
-      const matching = dbProducts.filter((p) => {
-        if (!p.manufacturer_id) return false
-        if (!mArr.includes(p.manufacturer_id)) return false
-        const cats = cObj[p.manufacturer_id] || []
-        if (cats.length === 0) return true
-        return cats.includes(p.category || '')
-      })
-
-      const excluded = matching
-        .filter((p) => !rule.product_selection.includes(p.id))
-        .map((p) => p.id)
-      setExcludedProducts(excluded)
-
-      setSelectedSpecificProducts(rule.product_selection)
-
-      setValue('product_selection', rule.product_selection, { shouldValidate: true })
-    } else {
-      setSelectionType('product')
-      setSelectedManufacturers([])
-      setSelectedCategories({})
-      setExcludedProducts([])
-      setSelectedSpecificProducts([])
-      setValue('product_selection', [], { shouldValidate: true })
+  const availableProducts = useMemo(() => {
+    if (targetType === 'all') return dbProducts
+    if (targetType === 'manufacturer') {
+      const mId = watch('manufacturer_id')
+      return dbProducts.filter((p) => p.manufacturer_id === mId)
     }
-  }, [dbProducts, rule, setValue])
+    if (targetType === 'category') {
+      const cId = watch('category_id')
+      return dbProducts.filter(
+        (p) => p.category_id === cId || p.category === categories.find((c) => c.id === cId)?.name,
+      )
+    }
+    return dbProducts
+  }, [dbProducts, targetType, watch('manufacturer_id'), watch('category_id'), categories])
 
-  // Filter Manufacturers
-  const filteredManufacturers = useMemo(() => {
-    return manufacturers.filter((m) =>
-      m.name.toLowerCase().includes(debouncedManufSearch.toLowerCase()),
-    )
-  }, [manufacturers, debouncedManufSearch])
-
-  // Match Products (AND logic: Manufacturer AND Category)
-  const matchingProducts = useMemo(() => {
-    if (selectionType === 'product') return dbProducts
-
-    return dbProducts.filter((p) => {
-      if (!p.manufacturer_id) return false
-      if (!selectedManufacturers.includes(p.manufacturer_id)) return false
-
-      if (selectionType === 'manufacturer') return true
-
-      const catsForManuf = selectedCategories[p.manufacturer_id] || []
-      if (catsForManuf.length === 0) return true
-      return catsForManuf.includes(p.category || '')
-    })
-  }, [dbProducts, selectedManufacturers, selectedCategories, selectionType])
-
-  // Filter Matching Products (for manufacturer/category mode)
   const filteredProducts = useMemo(() => {
-    if (!debouncedProdSearch) return matchingProducts
-    return matchingProducts.filter((p) =>
-      p.name.toLowerCase().includes(debouncedProdSearch.toLowerCase()),
-    )
-  }, [matchingProducts, debouncedProdSearch])
+    if (!debouncedProdSearch) return availableProducts
+    const s = debouncedProdSearch.toLowerCase()
+    return availableProducts.filter((p) => {
+      const m = manufacturers.find((m) => m.id === p.manufacturer_id)
+      const c = categories.find((c) => c.id === p.category_id)
+      return (
+        p.name.toLowerCase().includes(s) ||
+        (p.sku && p.sku.toLowerCase().includes(s)) ||
+        (m && m.name.toLowerCase().includes(s)) ||
+        (c && c.name.toLowerCase().includes(s)) ||
+        (p.category && p.category.toLowerCase().includes(s))
+      )
+    })
+  }, [availableProducts, manufacturers, categories, debouncedProdSearch])
 
-  // Filter Customers
   const filteredCustomers = useMemo(() => {
     if (!debouncedCustSearch) return customers
     const s = debouncedCustSearch.toLowerCase()
@@ -277,114 +206,29 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     )
   }, [customers, debouncedCustSearch])
 
-  // Filter Specific Products (for product mode)
-  const filteredSpecificProducts = useMemo(() => {
-    if (!debouncedProdSearch) return dbProducts
-    const s = debouncedProdSearch.toLowerCase()
-    return dbProducts.filter((p) => {
-      const m = manufacturers.find((m) => m.id === p.manufacturer_id)
-      const mName = m ? m.name.toLowerCase() : ''
-      return (
-        p.name.toLowerCase().includes(s) ||
-        (p.sku && p.sku.toLowerCase().includes(s)) ||
-        mName.includes(s) ||
-        (p.category && p.category.toLowerCase().includes(s))
-      )
-    })
-  }, [dbProducts, manufacturers, debouncedProdSearch])
-
-  // Sync to form 'product_selection'
-  useEffect(() => {
-    if (initializedRuleId.current !== (rule?.id || 'new')) return
-
-    if (selectionType === 'product') {
-      setValue('product_selection', selectedSpecificProducts, { shouldValidate: true })
-    } else {
-      const newSelection = matchingProducts
-        .map((p) => p.id)
-        .filter((id) => !excludedProducts.includes(id))
-
-      setValue('product_selection', newSelection, { shouldValidate: true })
-    }
-  }, [matchingProducts, excludedProducts, selectedSpecificProducts, selectionType, setValue, rule])
-
-  // Toggle handlers
-  const handleSelectionTypeChange = (val: string) => {
-    const newType = val as 'product' | 'manufacturer' | 'manufacturer_category'
-    setSelectionType(newType)
-
-    setSelectedManufacturers([])
-    setSelectedCategories({})
-    setExcludedProducts([])
-    setSelectedSpecificProducts([])
-    setValue('product_selection', [], { shouldValidate: true })
-  }
-
-  const toggleManufacturer = (mId: string, checked: boolean) => {
-    setSelectedManufacturers((prev) => {
-      if (checked) return [...prev, mId]
-      return prev.filter((id) => id !== mId)
-    })
-    if (!checked) {
-      setSelectedCategories((prev) => {
-        const next = { ...prev }
-        delete next[mId]
-        return next
-      })
-    }
-  }
-
-  const toggleCategory = (mId: string, cat: string, checked: boolean) => {
-    setSelectedCategories((prev) => {
-      const next = { ...prev }
-      const mCats = next[mId] || []
-      if (checked) {
-        next[mId] = [...mCats, cat]
-      } else {
-        next[mId] = mCats.filter((c) => c !== cat)
-      }
-      return next
-    })
-  }
-
-  const toggleProduct = (pId: string, checked: boolean) => {
-    setExcludedProducts((prev) => {
-      if (checked) {
-        return prev.filter((id) => id !== pId)
-      } else {
-        return [...prev, pId]
-      }
-    })
-  }
-
   const toggleSpecificProduct = (pId: string, checked: boolean) => {
-    setSelectedSpecificProducts((prev) => {
-      if (checked) return [...prev, pId]
-      return prev.filter((id) => id !== pId)
-    })
+    setSelectedSpecificProducts((prev) =>
+      checked ? [...prev, pId] : prev.filter((id) => id !== pId),
+    )
+  }
+
+  const toggleExcludedProduct = (pId: string, checked: boolean) => {
+    setExcludedProducts((prev) => (checked ? [...prev, pId] : prev.filter((id) => id !== pId)))
   }
 
   const toggleCustomer = (cId: string, checked: boolean) => {
-    const current = watch('customer_selection') || []
-    if (checked) {
-      setValue('customer_selection', [...current, cId], { shouldValidate: true })
-    } else {
-      setValue(
-        'customer_selection',
-        current.filter((id) => id !== cId),
-        { shouldValidate: true },
-      )
-    }
+    setSelectedCustomerSelection((prev) =>
+      checked ? [...prev, cId] : prev.filter((id) => id !== cId),
+    )
   }
-
-  const [saveError, setSaveError] = useState<string | null>(null)
 
   const isFormValid = !!(
     watch('name') &&
     watch('name').length >= 3 &&
-    watch('discount_type') &&
     watch('discount_value') > 0 &&
-    selectedProducts.length > 0 &&
+    (targetType !== 'specific' || selectedSpecificProducts.length > 0) &&
+    (targetType !== 'manufacturer' || watch('manufacturer_id')) &&
+    (targetType !== 'category' || watch('category_id')) &&
     watch('application_type') &&
     (watch('application_type') !== 'rule' || watch('customer_role')) &&
     (watch('application_type') !== 'specific_customers' || selectedCustomerSelection.length > 0)
@@ -398,38 +242,37 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
         name: data.name,
         discount_type: data.discount_type,
         discount_value: data.discount_value,
-        status: data.status,
-        product_selection: data.product_selection,
         is_active: data.status === 'active',
         start_date: data.start_date || null,
         end_date: data.end_date || null,
-        application_type: data.application_type,
-        role: data.application_type === 'rule' ? data.customer_role : null,
-        customers: data.application_type === 'specific_customers' ? data.customer_selection : [],
-        product_selection_type: selectionType,
-        selected_products: data.product_selection,
-        excluded_products: excludedProducts,
-        beneficiary_type: data.application_type,
-        selected_rule: data.application_type === 'rule' ? data.customer_role : null,
-        selected_customers:
-          data.application_type === 'specific_customers' ? data.customer_selection : null,
+
+        target_type: data.target_type,
+        manufacturer_id: data.target_type === 'manufacturer' ? data.manufacturer_id : null,
+        category_id: data.target_type === 'category' ? data.category_id : null,
+        product_selection: data.target_type === 'specific' ? selectedSpecificProducts : [],
+        excluded_products: data.target_type !== 'specific' ? excludedProducts : [],
+
+        customer_application_type: data.application_type,
+        customer_role: data.application_type === 'rule' ? data.customer_role : null,
+        customers: data.application_type === 'specific_customers' ? selectedCustomerSelection : [],
       }
+
       const success = await onSave(payload)
       if (success === false) {
-        setSaveError('Nao foi possivel salvar o desconto.')
+        setSaveError('Não foi possivel salvar o desconto.')
         toast({
           title: 'Erro',
-          description: 'Nao foi possivel salvar o desconto.',
+          description: 'Não foi possivel salvar o desconto.',
           variant: 'destructive',
         })
       } else {
         toast({ title: 'Sucesso', description: 'Desconto salvo com sucesso!' })
       }
     } catch (err) {
-      setSaveError('Nao foi possivel salvar o desconto.')
+      setSaveError('Não foi possivel salvar o desconto.')
       toast({
         title: 'Erro',
-        description: 'Nao foi possivel salvar o desconto.',
+        description: 'Não foi possivel salvar o desconto.',
         variant: 'destructive',
       })
     } finally {
@@ -437,12 +280,51 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     }
   }
 
+  const renderProductList = (isExclusion: boolean) => {
+    const selected = isExclusion ? excludedProducts : selectedSpecificProducts
+    const toggle = isExclusion ? toggleExcludedProduct : toggleSpecificProduct
+
+    return (
+      <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+        {filteredProducts.length === 0 ? (
+          <div className="text-sm text-muted-foreground p-4 text-center">
+            Nenhum produto correspondente
+          </div>
+        ) : (
+          filteredProducts.map((p) => {
+            const m = manufacturers.find((x) => x.id === p.manufacturer_id)
+            const c = categories.find((x) => x.id === p.category_id)
+            return (
+              <label
+                key={p.id}
+                className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+              >
+                <Checkbox
+                  checked={selected.includes(p.id)}
+                  onCheckedChange={(checked) => toggle(p.id, !!checked)}
+                  className="mt-1 shrink-0"
+                />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-sm font-medium">{p.name}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5">
+                    SKU: {p.sku || 'N/A'} • Fab: {m ? m.name : 'N/A'} • Cat:{' '}
+                    {c ? c.name : p.category || 'N/A'}
+                  </span>
+                </div>
+              </label>
+            )
+          })
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="bg-card border rounded-lg shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
       <div className="p-6 border-b bg-muted/20">
         <h2 className="text-lg font-semibold">{!rule ? 'Criar Nova Regra' : 'Editar Regra'}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure os detalhes e os produtos que farão parte deste desconto.
+          Configure os detalhes e a qual alvo o desconto deve se aplicar dinamicamente.
         </p>
       </div>
 
@@ -474,6 +356,8 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                         <SelectContent>
                           <SelectItem value="margin_percentage">Margem %</SelectItem>
                           <SelectItem value="price_usa_percentage">Price USA %</SelectItem>
+                          <SelectItem value="percentage">Percentual Padrão</SelectItem>
+                          <SelectItem value="fixed_amount">Valor Fixo (USD)</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -482,7 +366,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
 
                 <div className="space-y-2">
                   <Label htmlFor="discount_value">
-                    Valor (%) <span className="text-destructive">*</span>
+                    Valor <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="discount_value"
@@ -519,11 +403,11 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Data de Início (Opcional)</Label>
+                  <Label htmlFor="start_date">Data Início (Opcional)</Label>
                   <Input id="start_date" type="date" {...register('start_date')} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end_date">Data de Fim (Opcional)</Label>
+                  <Label htmlFor="end_date">Data Fim (Opcional)</Label>
                   <Input id="end_date" type="date" {...register('end_date')} />
                 </div>
               </div>
@@ -532,43 +416,116 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
 
           <div className="space-y-4 pt-6 border-t">
             <Label className="text-base font-semibold">
-              Tipo de Seleção <span className="text-destructive">*</span>
+              Alvo do Desconto <span className="text-destructive">*</span>
             </Label>
-            <RadioGroup
-              value={selectionType}
-              onValueChange={handleSelectionTypeChange}
-              className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-6"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="product" id="type-product" />
-                <Label htmlFor="type-product" className="cursor-pointer font-medium">
-                  Por Produto
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="manufacturer" id="type-manufacturer" />
-                <Label htmlFor="type-manufacturer" className="cursor-pointer font-medium">
-                  Por Fabricante
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="manufacturer_category" id="type-manufacturer-category" />
-                <Label htmlFor="type-manufacturer-category" className="cursor-pointer font-medium">
-                  Por Fabricante + Categoria
-                </Label>
-              </div>
-            </RadioGroup>
+            <Controller
+              name="target_type"
+              control={control}
+              render={({ field }) => (
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={(val) => {
+                    field.onChange(val)
+                    if (val !== 'manufacturer')
+                      setValue('manufacturer_id', null, { shouldValidate: true })
+                    if (val !== 'category') setValue('category_id', null, { shouldValidate: true })
+                  }}
+                  className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="all" id="t-all" />
+                    <Label htmlFor="t-all" className="cursor-pointer font-medium">
+                      Todo o Site
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manufacturer" id="t-man" />
+                    <Label htmlFor="t-man" className="cursor-pointer font-medium">
+                      Por Fabricante
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="category" id="t-cat" />
+                    <Label htmlFor="t-cat" className="cursor-pointer font-medium">
+                      Por Categoria
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="specific" id="t-spec" />
+                    <Label htmlFor="t-spec" className="cursor-pointer font-medium">
+                      Produtos Específicos
+                    </Label>
+                  </div>
+                </RadioGroup>
+              )}
+            />
           </div>
 
           <div className="space-y-4 pt-6 border-t">
-            <Label className="text-base font-semibold">
-              Seleção de Produtos <span className="text-destructive">*</span>
-            </Label>
+            {targetType === 'manufacturer' && (
+              <div className="space-y-2 max-w-md">
+                <Label>
+                  Fabricante <span className="text-destructive">*</span>
+                </Label>
+                <Controller
+                  name="manufacturer_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um fabricante..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {manufacturers.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.manufacturer_id && (
+                  <p className="text-sm text-destructive">{errors.manufacturer_id.message}</p>
+                )}
+              </div>
+            )}
 
-            {selectionType === 'product' ? (
+            {targetType === 'category' && (
+              <div className="space-y-2 max-w-md">
+                <Label>
+                  Categoria <span className="text-destructive">*</span>
+                </Label>
+                <Controller
+                  name="category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.category_id && (
+                  <p className="text-sm text-destructive">{errors.category_id.message}</p>
+                )}
+              </div>
+            )}
+
+            {targetType === 'specific' ? (
               <div className="border rounded-md p-4 bg-muted/10 space-y-3">
                 <div>
-                  <Label className="text-sm font-semibold">Produtos Específicos</Label>
+                  <Label className="text-sm font-semibold">
+                    Produtos Inclusos <span className="text-destructive">*</span>
+                  </Label>
                   <p className="text-xs text-muted-foreground">
                     {selectedSpecificProducts.length} produto(s) selecionado(s)
                   </p>
@@ -576,205 +533,42 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por nome, SKU, fabricante ou categoria..."
+                    placeholder="Buscar produto..."
                     value={prodSearch}
                     onChange={(e) => setProdSearch(e.target.value)}
                     className="pl-9 h-9"
                   />
                 </div>
-                <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
-                  {filteredSpecificProducts.length === 0 ? (
-                    <div className="text-sm text-muted-foreground p-4 text-center">
-                      Nenhum produto correspondente
-                    </div>
-                  ) : (
-                    filteredSpecificProducts.map((p) => {
-                      const m = manufacturers.find((x) => x.id === p.manufacturer_id)
-                      const mName = m ? m.name : 'N/A'
-                      const isIncluded = selectedSpecificProducts.includes(p.id)
-                      return (
-                        <label
-                          key={p.id}
-                          className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
-                        >
-                          <Checkbox
-                            checked={isIncluded}
-                            onCheckedChange={(checked) => toggleSpecificProduct(p.id, !!checked)}
-                            className="mt-1 shrink-0"
-                          />
-                          <div className="flex flex-col leading-tight">
-                            <span className="text-sm font-medium">{p.name}</span>
-                            <span className="text-xs text-muted-foreground mt-0.5">
-                              SKU: {p.sku || 'N/A'} • Fab: {mName} • Cat: {p.category || 'N/A'}
-                            </span>
-                          </div>
-                        </label>
-                      )
-                    })
-                  )}
-                </div>
+                {renderProductList(false)}
+                {selectedSpecificProducts.length === 0 && (
+                  <p className="text-sm text-destructive">Selecione pelo menos 1 produto.</p>
+                )}
               </div>
             ) : (
-              <div
-                className={`grid grid-cols-1 gap-6 border rounded-md p-4 bg-muted/10 ${selectionType === 'manufacturer' ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}
-              >
-                {/* Step 1: Manufacturers */}
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-semibold">1. Fabricantes</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedManufacturers.length} fabricante(s) selecionado(s)
-                    </p>
-                  </div>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar fabricante..."
-                      value={manufSearch}
-                      onChange={(e) => setManufSearch(e.target.value)}
-                      className="pl-9 h-9"
-                    />
-                  </div>
-                  <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
-                    {filteredManufacturers.map((m) => (
-                      <label
-                        key={m.id}
-                        className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
-                      >
-                        <Checkbox
-                          checked={selectedManufacturers.includes(m.id)}
-                          onCheckedChange={(c) => toggleManufacturer(m.id, !!c)}
-                          className="mt-0.5"
-                        />
-                        <span className="text-sm font-medium">{m.name}</span>
-                      </label>
-                    ))}
-                  </div>
+              <div className="border rounded-md p-4 bg-muted/10 space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">Exceções (Produtos Excluídos)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {excludedProducts.length} produto(s) excluído(s)
+                  </p>
                 </div>
-
-                {/* Step 2: Categories (Hidden if 'manufacturer') */}
-                {selectionType === 'manufacturer_category' && (
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-sm font-semibold">2. Categorias</Label>
-                      <p className="text-xs text-muted-foreground">
-                        {Object.values(selectedCategories).flat().length} categoria(s)
-                        selecionada(s)
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar categoria..."
-                        value={catSearch}
-                        onChange={(e) => setCatSearch(e.target.value)}
-                        className="pl-9 h-9"
-                      />
-                    </div>
-                    <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-3">
-                      {selectedManufacturers.length === 0 ? (
-                        <div className="text-sm text-muted-foreground p-4 text-center">
-                          Selecione um fabricante primeiro
-                        </div>
-                      ) : (
-                        selectedManufacturers.map((mId) => {
-                          const m = manufacturers.find((x) => x.id === mId)
-                          if (!m) return null
-                          const mCats = Array.from(
-                            new Set(
-                              dbProducts
-                                .filter((p) => p.manufacturer_id === mId && p.category)
-                                .map((p) => p.category as string),
-                            ),
-                          ).sort()
-                          const filteredMCats = mCats.filter((c) =>
-                            c.toLowerCase().includes(debouncedCatSearch.toLowerCase()),
-                          )
-                          if (filteredMCats.length === 0) return null
-
-                          return (
-                            <div key={mId} className="space-y-1">
-                              <div className="text-xs font-bold text-muted-foreground uppercase px-2 py-1 bg-muted/30 rounded">
-                                {m.name}
-                              </div>
-                              {filteredMCats.map((c) => (
-                                <label
-                                  key={`${mId}-${c}`}
-                                  className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors ml-1"
-                                >
-                                  <Checkbox
-                                    checked={(selectedCategories[mId] || []).includes(c)}
-                                    onCheckedChange={(checked) => toggleCategory(mId, c, !!checked)}
-                                    className="mt-0.5"
-                                  />
-                                  <span className="text-sm font-medium">{c}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Products */}
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-semibold">
-                      {selectionType === 'manufacturer' ? '2. Produtos' : '3. Produtos'}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {matchingProducts.length - excludedProducts.length} produto(s) selecionado(s)
-                    </p>
-                  </div>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar produto..."
-                      value={prodSearch}
-                      onChange={(e) => setProdSearch(e.target.value)}
-                      className="pl-9 h-9"
-                    />
-                  </div>
-                  <div className="h-[280px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
-                    {matchingProducts.length === 0 ? (
-                      <div className="text-sm text-muted-foreground p-4 text-center">
-                        Nenhum produto correspondente
-                      </div>
-                    ) : (
-                      filteredProducts.map((p) => {
-                        const isIncluded = !excludedProducts.includes(p.id)
-                        return (
-                          <label
-                            key={p.id}
-                            className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
-                          >
-                            <Checkbox
-                              checked={isIncluded}
-                              onCheckedChange={(checked) => toggleProduct(p.id, !!checked)}
-                              className="mt-0.5 shrink-0"
-                            />
-                            <span className="text-sm font-medium leading-tight">{p.name}</span>
-                          </label>
-                        )
-                      })
-                    )}
-                  </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar produto para excluir..."
+                    value={prodSearch}
+                    onChange={(e) => setProdSearch(e.target.value)}
+                    className="pl-9 h-9"
+                  />
                 </div>
+                {renderProductList(true)}
               </div>
-            )}
-
-            {errors.product_selection && (
-              <p className="text-sm text-destructive font-medium mt-2">
-                {errors.product_selection.message}
-              </p>
             )}
           </div>
 
           <div className="space-y-4 pt-6 border-t">
             <Label className="text-base font-semibold">
-              Seleção de Beneficiários <span className="text-destructive">*</span>
+              Beneficiários <span className="text-destructive">*</span>
             </Label>
             <Controller
               name="application_type"
@@ -785,8 +579,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                   onValueChange={(val) => {
                     field.onChange(val)
                     if (val !== 'rule') setValue('customer_role', null, { shouldValidate: true })
-                    if (val !== 'specific_customers')
-                      setValue('customer_selection', [], { shouldValidate: true })
+                    if (val !== 'specific_customers') setSelectedCustomerSelection([])
                   }}
                   className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-6"
                 >
@@ -799,27 +592,22 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="rule" id="app-rule" />
                     <Label htmlFor="app-rule" className="cursor-pointer font-medium">
-                      Por Regra de Cliente
+                      Por Regra
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="specific_customers" id="app-specific" />
                     <Label htmlFor="app-specific" className="cursor-pointer font-medium">
-                      Por Clientes Específicos
+                      Clientes Específicos
                     </Label>
                   </div>
                 </RadioGroup>
               )}
             />
-            {errors.application_type && (
-              <p className="text-sm text-destructive font-medium">
-                {errors.application_type.message}
-              </p>
-            )}
 
             {applicationType === 'all' && (
               <div className="border rounded-md p-4 bg-muted/10 text-sm text-muted-foreground">
-                Este desconto será aplicado a todos os clientes.
+                Este desconto será aplicado a todos os clientes, incluindo visitantes.
               </div>
             )}
 
@@ -835,7 +623,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value || undefined}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma regra..." />
+                          <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
                           {customerRoles.map((role) => (
@@ -848,17 +636,9 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                     )}
                   />
                   {errors.customer_role && (
-                    <p className="text-sm text-destructive font-medium">
-                      {errors.customer_role.message}
-                    </p>
+                    <p className="text-sm text-destructive">{errors.customer_role.message}</p>
                   )}
                 </div>
-                {watch('customer_role') && (
-                  <p className="text-sm text-muted-foreground">
-                    Este desconto será aplicado a todos os clientes com a regra{' '}
-                    <span className="font-semibold">{watch('customer_role')}</span>.
-                  </p>
-                )}
               </div>
             )}
 
@@ -875,7 +655,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por nome, email ou regra..."
+                    placeholder="Buscar cliente..."
                     value={custSearch}
                     onChange={(e) => setCustSearch(e.target.value)}
                     className="pl-9 h-9"
@@ -887,39 +667,28 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                       Nenhum cliente correspondente
                     </div>
                   ) : (
-                    filteredCustomers.map((c) => {
-                      const isIncluded = selectedCustomerSelection.includes(c.id)
-                      return (
-                        <label
-                          key={c.id}
-                          className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
-                        >
-                          <Checkbox
-                            checked={isIncluded}
-                            onCheckedChange={(checked) => toggleCustomer(c.id, !!checked)}
-                            className="mt-1 shrink-0"
-                          />
-                          <div className="flex flex-col leading-tight">
-                            <span className="text-sm font-medium">{c.full_name || 'Sem Nome'}</span>
-                            <span className="text-xs text-muted-foreground mt-0.5">
-                              {c.email || 'Sem Email'} • Regra: {c.role}
-                            </span>
-                          </div>
-                        </label>
-                      )
-                    })
+                    filteredCustomers.map((c) => (
+                      <label
+                        key={c.id}
+                        className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedCustomerSelection.includes(c.id)}
+                          onCheckedChange={(checked) => toggleCustomer(c.id, !!checked)}
+                          className="mt-1 shrink-0"
+                        />
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-sm font-medium">{c.full_name || 'Sem Nome'}</span>
+                          <span className="text-xs text-muted-foreground mt-0.5">
+                            {c.email || 'Sem Email'} • Regra: {c.role}
+                          </span>
+                        </div>
+                      </label>
+                    ))
                   )}
                 </div>
-                {errors.customer_selection && (
-                  <p className="text-sm text-destructive font-medium">
-                    {errors.customer_selection.message}
-                  </p>
-                )}
-                {selectedCustomerSelection.length > 0 && (
-                  <p className="text-sm text-muted-foreground pt-2 border-t">
-                    Este desconto será aplicado a {selectedCustomerSelection.length} clientes
-                    selecionados.
-                  </p>
+                {selectedCustomerSelection.length === 0 && (
+                  <p className="text-sm text-destructive">Selecione pelo menos 1 cliente.</p>
                 )}
               </div>
             )}
@@ -935,68 +704,61 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
                 <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">Nome da Regra</span>
+                  <span className="font-medium text-muted-foreground block">Nome</span>
                   <span className="text-foreground">{watch('name') || '-'}</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">Tipo de Desconto</span>
+                  <span className="font-medium text-muted-foreground block">Desconto</span>
                   <span className="text-foreground">
-                    {watch('discount_type') === 'margin_percentage'
-                      ? 'Margem %'
-                      : watch('discount_type') === 'price_usa_percentage'
-                        ? 'Price USA %'
-                        : '-'}
+                    {watch('discount_value') || 0}{' '}
+                    {watch('discount_type')?.includes('amount') ||
+                    watch('discount_type')?.includes('fixed')
+                      ? 'USD'
+                      : '%'}
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">Valor do Desconto</span>
-                  <span className="text-foreground">{watch('discount_value') || 0}%</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">Status</span>
+                  <span className="font-medium text-muted-foreground block">Status / Período</span>
                   <span className="text-foreground">
-                    {watch('status') === 'active' ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">Período</span>
-                  <span className="text-foreground">
+                    {watch('status') === 'active' ? 'Ativo' : 'Inativo'} •{' '}
                     {watch('start_date')
                       ? new Date(watch('start_date')! + 'T00:00:00').toLocaleDateString()
-                      : 'Imediato'}
-                    {' até '}
+                      : 'Imediato'}{' '}
+                    até{' '}
                     {watch('end_date')
                       ? new Date(watch('end_date')! + 'T00:00:00').toLocaleDateString()
                       : 'Indeterminado'}
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">
-                    Produtos Selecionados
-                  </span>
-                  <span className="text-foreground">{selectedProducts.length} produto(s)</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="font-medium text-muted-foreground block">Tipo de Seleção</span>
-                  <span className="text-foreground">
-                    {selectionType === 'product'
-                      ? 'Por Produto'
-                      : selectionType === 'manufacturer'
-                        ? 'Por Fabricante'
-                        : 'Por Fabricante + Categoria'}
-                  </span>
-                </div>
-                <div className="space-y-1">
                   <span className="font-medium text-muted-foreground block">Beneficiários</span>
                   <span className="text-foreground">
-                    {watch('application_type') === 'all' && 'Todo o Site'}
-                    {watch('application_type') === 'rule' &&
-                      `Por Regra: ${watch('customer_role') || '-'}`}
-                    {watch('application_type') === 'specific_customers' &&
-                      `${selectedCustomerSelection.length} cliente(s) selecionado(s)`}
-                    {!watch('application_type') && '-'}
+                    {applicationType === 'all' && 'Todo o Site'}
+                    {applicationType === 'rule' && `Regra: ${watch('customer_role') || '-'}`}
+                    {applicationType === 'specific_customers' &&
+                      `${selectedCustomerSelection.length} cliente(s)`}
                   </span>
                 </div>
+                <div className="space-y-1">
+                  <span className="font-medium text-muted-foreground block">Alvo do Desconto</span>
+                  <span className="text-foreground">
+                    {targetType === 'all' && 'Todo o Site'}
+                    {targetType === 'manufacturer' &&
+                      `Fabricante: ${manufacturers.find((m) => m.id === watch('manufacturer_id'))?.name || '-'}`}
+                    {targetType === 'category' &&
+                      `Categoria: ${categories.find((c) => c.id === watch('category_id'))?.name || '-'}`}
+                    {targetType === 'specific' &&
+                      `${selectedSpecificProducts.length} produto(s) específicos`}
+                  </span>
+                </div>
+                {targetType !== 'specific' && (
+                  <div className="space-y-1">
+                    <span className="font-medium text-muted-foreground block">Exceções</span>
+                    <span className="text-foreground">
+                      {excludedProducts.length} produto(s) excluído(s)
+                    </span>
+                  </div>
+                )}
               </div>
 
               {saveError && (
