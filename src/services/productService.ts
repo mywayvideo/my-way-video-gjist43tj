@@ -52,22 +52,54 @@ export const productService = {
   },
 
   async createProduct(productData: any) {
-    const { price_usa, ...rest } = productData
-    const { data, error } = await supabase
-      .from('products')
-      .insert({
-        ...rest,
-        price_usd: price_usa || 0,
-        price_cost: productData.price_cost || 0,
-        price_brl: productData.price_brl || 0,
-        stock: productData.stock || 0,
-        image_url: productData.image_url || null,
-        technical_info: productData.technical_info || null,
-      })
-      .select()
-      .single()
+    const payload = {
+      name: productData.name,
+      sku: productData.sku,
+      manufacturer_id: productData.manufacturer_id || null,
+      price_usd: productData.price_usa || 0,
+      price_cost: productData.price_cost || 0,
+      price_brl: productData.price_brl || 0,
+      weight: productData.weight || 0,
+      dimensions: productData.dimensions || null,
+      stock: productData.stock || 0,
+      ncm: productData.ncm || null,
+      image_url: productData.image_url || null,
+      description: productData.description || null,
+      technical_info: productData.technical_info || null,
+      is_special: productData.is_special || false,
+      is_discontinued: productData.is_discontinued || false,
+      category_id: productData.category_id || null,
+    }
+
+    const { data, error } = await supabase.from('products').insert(payload).select().single()
 
     if (error) throw error
     return data
+  },
+
+  async updateProduct(id: string, productData: any) {
+    const payload = {
+      name: productData.name,
+      sku: productData.sku,
+      manufacturer_id: productData.manufacturer_id || null,
+      price_usd: productData.price_usa || 0,
+      price_cost: productData.price_cost || 0,
+      price_brl: productData.price_brl || 0,
+      weight: productData.weight || 0,
+      dimensions: productData.dimensions || null,
+      stock: productData.stock || 0,
+      ncm: productData.ncm || null,
+      image_url: productData.image_url || null,
+      description: productData.description || null,
+      technical_info: productData.technical_info || null,
+      is_special: productData.is_special || false,
+      is_discontinued: productData.is_discontinued || false,
+      category_id: productData.category_id || null,
+    }
+
+    const { error } = await supabase.from('products').update(payload).eq('id', id)
+
+    if (error) throw error
+    return true
   },
 }

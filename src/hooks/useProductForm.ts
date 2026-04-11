@@ -253,28 +253,7 @@ export function useProductForm() {
         await productService.createProduct(payload)
         toast({ description: 'Produto salvo com sucesso!' })
       } else {
-        const { error } = await supabase
-          .from('products')
-          .update({
-            name: payload.name,
-            sku: payload.sku,
-            manufacturer_id: payload.manufacturer_id,
-            price_usd: payload.price_usa,
-            price_cost: payload.price_cost,
-            price_brl: payload.price_brl,
-            weight: payload.weight,
-            dimensions: payload.dimensions,
-            stock: payload.stock,
-            ncm: payload.ncm,
-            image_url: payload.image_url,
-            description: payload.description,
-            technical_info: payload.technical_info,
-            is_special: payload.is_special,
-            is_discontinued: payload.is_discontinued,
-            category_id: payload.category_id,
-          })
-          .eq('id', id!)
-        if (error) throw error
+        await productService.updateProduct(id!, payload)
         toast({ description: 'Produto atualizado com sucesso!' })
       }
       setTimeout(() => navigate('/admin/catalog'), 2000)
