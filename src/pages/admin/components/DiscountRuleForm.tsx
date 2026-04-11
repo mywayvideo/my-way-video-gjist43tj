@@ -239,6 +239,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     setSaveError(null)
     try {
       const payload = {
+        id: rule?.id,
         name: data.name,
         discount_type: data.discount_type,
         discount_value: data.discount_value,

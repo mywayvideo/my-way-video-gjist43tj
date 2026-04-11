@@ -2,12 +2,8 @@ import { supabase } from '@/lib/supabase/client'
 
 export const discountRuleService = {
   async fetchDiscountRule(ruleId: string) {
-    const { data, error } = await supabase
-      .from('discount_rules')
-      .select('*')
-      .eq('id', ruleId)
-      .single()
-    if (error) throw error
+    const { data, error } = await supabase.from('discounts').select('*').eq('id', ruleId).single()
+    if (error) throw new Error('Falha ao buscar desconto: ' + error.message)
     return data
   },
   async fetchManufacturers() {
@@ -49,33 +45,40 @@ export const discountRuleService = {
   },
   async saveDiscountRule(data: any) {
     const payload = {
-      rule_name: data.name,
-      discount_calculation_type: data.discount_type,
-      discount_value: data.value,
-      scope_type: data.scope,
-      scope_data: data.scope_data,
-      application_type: data.application_type,
-      role: data.role,
-      rule_type: data.role || 'custom',
-      customers: data.customers,
+      name: data.name,
+      discount_type: data.discount_type,
+      discount_value: data.discount_value,
+      target_type: data.target_type,
+      manufacturer_id: data.target_type === 'manufacturer' ? data.manufacturer_id : null,
+      category_id: data.target_type === 'category' ? data.category_id : null,
+      product_selection: data.target_type === 'specific' ? data.product_selection : [],
+      excluded_products: data.target_type !== 'specific' ? data.excluded_products : [],
+      customer_application_type: data.customer_application_type || 'all',
+      customer_role: data.customer_application_type === 'rule' ? data.customer_role : null,
       start_date: data.start_date ? new Date(data.start_date).toISOString() : null,
       end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
-      is_active: data.status === 'active',
+      is_active: data.is_active !== undefined ? data.is_active : true,
     }
 
     if (data.id) {
-      const { error } = await supabase
-        .from('discount_rules')
+      const { data: updatedData, error } = await supabase
+        .from('discounts')
         .update({ ...payload, updated_at: new Date().toISOString() })
         .eq('id', data.id)
-      if (error) throw error
+        .select()
+      if (error) throw new Error('Falha ao atualizar desconto: ' + error.message)
+      return updatedData
     } else {
-      const { error } = await supabase.from('discount_rules').insert(payload)
-      if (error) throw error
+      const { data: insertedData, error } = await supabase
+        .from('discounts')
+        .insert(payload)
+        .select()
+      if (error) throw new Error('Falha ao criar desconto: ' + error.message)
+      return insertedData
     }
   },
   async deleteDiscountRule(ruleId: string) {
-    const { error } = await supabase.from('discount_rules').delete().eq('id', ruleId)
-    if (error) throw error
+    const { error } = await supabase.from('discounts').delete().eq('id', ruleId)
+    if (error) throw new Error('Falha ao deletar desconto: ' + error.message)
   },
 }
