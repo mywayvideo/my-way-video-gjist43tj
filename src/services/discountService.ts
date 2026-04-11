@@ -196,15 +196,4 @@ export const discountService = {
         }
       }
     } catch (err) {
-      console.error('Error calculating discount:', err)
-    }
-
-    return {
-      originalPrice: product.price_usd || 0,
-      discountedPrice: null,
-      discountPercentage: null,
-      discountAmount: null,
-      appliedRule: null,
-    }
-  },
-}
+      
