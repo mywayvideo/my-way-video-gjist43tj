@@ -18,7 +18,20 @@ export const discountService = {
   },
 
   async createDiscount(payload: any): Promise<any> {
-    const { data, error } = await supabase.from('discounts').insert([payload]).select().single()
+    const payloadWithId = {
+      id: crypto.randomUUID(),
+      ...payload,
+    }
+
+    const cleanPayload = Object.fromEntries(
+      Object.entries(payloadWithId).filter(([_, v]) => v !== undefined),
+    )
+
+    const { data, error } = await supabase
+      .from('discounts')
+      .insert([cleanPayload])
+      .select()
+      .single()
     if (error) throw error
     return data
   },
