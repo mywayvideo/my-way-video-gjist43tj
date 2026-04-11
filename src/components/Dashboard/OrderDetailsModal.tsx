@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState } from 'react'
 import { Order } from '@/types/order'
 import { orderService } from '@/services/orderService'
+import { supabase } from '@/lib/supabase/client'
 import { Link } from 'react-router-dom'
 import { formatCurrency } from '@/utils/formatters'
 
@@ -34,18 +35,46 @@ export function OrderDetailsModal({
 }: Props) {
   const [order, setOrder] = useState<any | null>(null)
   const [loading, setLoading] = useState(false)
+  const [extraAddresses, setExtraAddresses] = useState<any>({ shipping: null, billing: null })
 
   useEffect(() => {
     if (open && orderId) {
       setLoading(true)
       orderService
         .fetchOrderDetails(orderId)
-        .then((data) => {
+        .then(async (data) => {
+          let shipping = Array.isArray(data.shipping_address)
+            ? data.shipping_address[0]
+            : data.shipping_address
+          let billing = Array.isArray(data.billing_address)
+            ? data.billing_address[0]
+            : data.billing_address
+
+          // Manual fallback fetch if relation was not loaded but ID exists
+          if (!shipping && data.shipping_address_id) {
+            const { data: sData } = await supabase
+              .from('customer_addresses')
+              .select('*')
+              .eq('id', data.shipping_address_id)
+              .maybeSingle()
+            if (sData) shipping = sData
+          }
+          if (!billing && data.billing_address_id) {
+            const { data: bData } = await supabase
+              .from('customer_addresses')
+              .select('*')
+              .eq('id', data.billing_address_id)
+              .maybeSingle()
+            if (bData) billing = bData
+          }
+
+          setExtraAddresses({ shipping, billing })
           setOrder(data)
         })
         .finally(() => setLoading(false))
     } else {
       setOrder(null)
+      setExtraAddresses({ shipping: null, billing: null })
     }
   }, [orderId, open])
 
@@ -71,44 +100,38 @@ export function OrderDetailsModal({
   const customerEmail = order?.customers?.email || order?.customer?.email || 'N/A'
   const customerPhone = order?.customers?.phone || order?.customer?.phone || 'N/A'
 
-  const getDeliveryAddress = (ord: any) => {
+  const getDeliveryAddress = (ord: any, fetchedShipping: any) => {
     try {
-      const hasDelivery =
-        ord.delivery_address_street || ord.delivery_address_city || ord.delivery_address_state
-      const hasShipping = ord.shipping_address && typeof ord.shipping_address === 'object'
-
-      if (!hasDelivery && !hasShipping) return null
+      const addr = fetchedShipping || ord.payment_data?.shipping_address
+      if (!addr && !ord.delivery_address_street) return null
 
       return {
-        street: ord.delivery_address_street ?? ord.shipping_address?.street ?? 'N/A',
-        number: ord.delivery_address_number ?? ord.shipping_address?.number ?? 'N/A',
-        complement: ord.delivery_address_complement ?? ord.shipping_address?.complement ?? '',
-        city: ord.delivery_address_city ?? ord.shipping_address?.city ?? 'N/A',
-        state: ord.delivery_address_state ?? ord.shipping_address?.state ?? 'N/A',
-        zip_code: ord.delivery_address_zip_code ?? ord.shipping_address?.zip_code ?? 'N/A',
-        country: ord.delivery_address_country ?? ord.shipping_address?.country ?? 'N/A',
+        street: ord.delivery_address_street ?? addr?.street ?? 'N/A',
+        number: ord.delivery_address_number ?? addr?.number ?? 'N/A',
+        complement: ord.delivery_address_complement ?? addr?.complement ?? '',
+        city: ord.delivery_address_city ?? addr?.city ?? 'N/A',
+        state: ord.delivery_address_state ?? addr?.state ?? 'N/A',
+        zip_code: ord.delivery_address_zip_code ?? addr?.zip_code ?? 'N/A',
+        country: ord.delivery_address_country ?? addr?.country ?? 'N/A',
       }
     } catch {
       return null
     }
   }
 
-  const getBillingAddress = (ord: any) => {
+  const getBillingAddress = (ord: any, fetchedBilling: any) => {
     try {
-      const hasBillingFields =
-        ord.billing_address_street || ord.billing_address_city || ord.billing_address_state
-      const hasBillingJson = ord.billing_address && typeof ord.billing_address === 'object'
-
-      if (!hasBillingFields && !hasBillingJson) return null
+      const addr = fetchedBilling || ord.payment_data?.billing_address
+      if (!addr && !ord.billing_address_street) return null
 
       return {
-        street: ord.billing_address_street ?? ord.billing_address?.street ?? 'N/A',
-        number: ord.billing_address_number ?? ord.billing_address?.number ?? 'N/A',
-        complement: ord.billing_address_complement ?? ord.billing_address?.complement ?? '',
-        city: ord.billing_address_city ?? ord.billing_address?.city ?? 'N/A',
-        state: ord.billing_address_state ?? ord.billing_address?.state ?? 'N/A',
-        zip_code: ord.billing_address_zip_code ?? ord.billing_address?.zip_code ?? 'N/A',
-        country: ord.billing_address_country ?? ord.billing_address?.country ?? 'N/A',
+        street: ord.billing_address_street ?? addr?.street ?? 'N/A',
+        number: ord.billing_address_number ?? addr?.number ?? 'N/A',
+        complement: ord.billing_address_complement ?? addr?.complement ?? '',
+        city: ord.billing_address_city ?? addr?.city ?? 'N/A',
+        state: ord.billing_address_state ?? addr?.state ?? 'N/A',
+        zip_code: ord.billing_address_zip_code ?? addr?.zip_code ?? 'N/A',
+        country: ord.billing_address_country ?? addr?.country ?? 'N/A',
       }
     } catch {
       return null
@@ -129,8 +152,8 @@ export function OrderDetailsModal({
     )
   }
 
-  const deliveryAddress = order ? getDeliveryAddress(order) : null
-  const billingAddress = order ? getBillingAddress(order) : null
+  const deliveryAddress = order ? getDeliveryAddress(order, extraAddresses.shipping) : null
+  const billingAddress = order ? getBillingAddress(order, extraAddresses.billing) : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

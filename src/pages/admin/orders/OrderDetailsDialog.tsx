@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { adminOrdersService } from '@/services/adminOrdersService'
 import { formatCurrency } from '@/utils/formatters'
+import { supabase } from '@/lib/supabase/client'
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return 'N/A'
@@ -107,6 +108,7 @@ export default function OrderDetailsDialog({
   const [details, setDetails] = useState<any>(null)
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(true)
+  const [addresses, setAddresses] = useState<any>({ shipping: null, billing: null })
   const { toast } = useToast()
 
   useEffect(() => {
@@ -114,7 +116,32 @@ export default function OrderDetailsDialog({
       setLoading(true)
       adminOrdersService
         .getOrderDetails(orderId)
-        .then((data) => {
+        .then(async (data) => {
+          let shipping = Array.isArray(data.shipping_address)
+            ? data.shipping_address[0]
+            : data.shipping_address
+          let billing = Array.isArray(data.billing_address)
+            ? data.billing_address[0]
+            : data.billing_address
+
+          if (!shipping && data.shipping_address_id) {
+            const { data: sData } = await supabase
+              .from('customer_addresses')
+              .select('*')
+              .eq('id', data.shipping_address_id)
+              .maybeSingle()
+            if (sData) shipping = sData
+          }
+          if (!billing && data.billing_address_id) {
+            const { data: bData } = await supabase
+              .from('customer_addresses')
+              .select('*')
+              .eq('id', data.billing_address_id)
+              .maybeSingle()
+            if (bData) billing = bData
+          }
+
+          setAddresses({ shipping, billing })
           setDetails(data)
           setNotes(data.notes || '')
         })
@@ -124,6 +151,7 @@ export default function OrderDetailsDialog({
         .finally(() => setLoading(false))
     } else {
       setDetails(null)
+      setAddresses({ shipping: null, billing: null })
     }
   }, [open, orderId, toast])
 
@@ -202,7 +230,7 @@ export default function OrderDetailsDialog({
                   3. ENDEREÇO DE ENTREGA
                 </h4>
                 <p className="text-sm text-foreground/80">
-                  {formatAddress(details.shipping_address)}
+                  {formatAddress(addresses.shipping || details.payment_data?.shipping_address)}
                 </p>
               </section>
 
@@ -211,7 +239,7 @@ export default function OrderDetailsDialog({
                   4. ENDEREÇO DE FATURAMENTO
                 </h4>
                 <p className="text-sm text-foreground/80">
-                  {formatAddress(details.billing_address)}
+                  {formatAddress(addresses.billing || details.payment_data?.billing_address)}
                 </p>
               </section>
             </div>
