@@ -27,9 +27,12 @@ export async function fetchAllCustomers(
 
   let query = supabase
     .from('customers')
-    .select('id, user_id, full_name, email, role, phone, status, created_at, last_login', {
-      count: 'exact',
-    })
+    .select(
+      'id, user_id, full_name, email, role, phone, status, created_at, last_login, cpf, billing_address, shipping_address',
+      {
+        count: 'exact',
+      },
+    )
 
   if (role !== 'admin' && user) {
     query = query.eq('user_id', user.id)
@@ -47,7 +50,7 @@ export async function fetchAllCustomers(
   const to = from + limit - 1
 
   console.log(
-    'Query: SELECT id, user_id, full_name, email, role, phone, status, created_at, last_login FROM customers',
+    'Query: SELECT id, user_id, full_name, email, role, phone, status, created_at, last_login, cpf, billing_address, shipping_address FROM customers',
   )
 
   const { data, error, count } = await query

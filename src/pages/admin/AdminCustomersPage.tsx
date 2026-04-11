@@ -2,17 +2,8 @@ import { useState } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { DashboardAdminCustomers } from './DashboardAdminCustomers'
 import { useCustomerManagement } from '@/hooks/useCustomerManagement'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { EditCustomerModal } from '@/components/admin/EditCustomerModal'
+import { CreateCustomerModal } from '@/components/admin/CreateCustomerModal'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 
@@ -40,11 +31,14 @@ export default function AdminCustomersPage() {
           role: editingCustomer.role,
           status: editingCustomer.status,
           phone: editingCustomer.phone,
+          cpf: editingCustomer.cpf,
+          billing_address: editingCustomer.billing_address,
+          shipping_address: editingCustomer.shipping_address,
         })
         .eq('id', editingCustomer.id)
 
       if (error) throw error
-      toast({ title: 'Sucesso', description: 'Cliente atualizado.' })
+      toast({ title: 'Sucesso', description: 'Cliente atualizado com sucesso.' })
       setIsEditModalOpen(false)
       customerParams.refreshCustomers()
     } catch (err: any) {
@@ -77,7 +71,7 @@ export default function AdminCustomersPage() {
         },
       })
       if (error) throw new Error(error.message || 'Erro ao criar cliente')
-      toast({ title: 'Sucesso', description: 'Cliente criado.' })
+      toast({ title: 'Sucesso', description: 'Cliente criado com sucesso.' })
       setIsCreateModalOpen(false)
       customerParams.refreshCustomers()
     } catch (err: any) {
@@ -87,151 +81,35 @@ export default function AdminCustomersPage() {
 
   return (
     <AdminLayout breadcrumb="Gerenciar Clientes">
-      <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
+      <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-up">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gerenciar Clientes</h1>
           <p className="text-muted-foreground mt-2">
-            Administre a base de clientes, níveis de acesso e informações.
+            Administre a base de clientes, níveis de acesso, endereços e informações.
           </p>
         </div>
+
         <DashboardAdminCustomers
           {...customerParams}
           handleEditCustomer={handleEditCustomer}
           handleCreateCustomer={handleCreateCustomer}
         />
 
-        <Sheet open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Editar Cliente</SheetTitle>
-            </SheetHeader>
-            <div className="mt-6">
-              {editingCustomer && (
-                <form onSubmit={handleSaveEdit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      value={editingCustomer.full_name || ''}
-                      onChange={(e) =>
-                        setEditingCustomer({ ...editingCustomer, full_name: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      value={editingCustomer.email || ''}
-                      onChange={(e) =>
-                        setEditingCustomer({ ...editingCustomer, email: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <Input
-                      value={editingCustomer.phone || ''}
-                      onChange={(e) =>
-                        setEditingCustomer({ ...editingCustomer, phone: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Perfil</Label>
-                    <Select
-                      value={editingCustomer.role}
-                      onValueChange={(v) => setEditingCustomer({ ...editingCustomer, role: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="collaborator">Colaborador</SelectItem>
-                        <SelectItem value="customer">Cliente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={editingCustomer.status}
-                      onValueChange={(v) => setEditingCustomer({ ...editingCustomer, status: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ativo">Ativo</SelectItem>
-                        <SelectItem value="inativo">Inativo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Salvar
-                  </Button>
-                </form>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <EditCustomerModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          customer={editingCustomer}
+          setCustomer={setEditingCustomer}
+          onSave={handleSaveEdit}
+        />
 
-        <Sheet open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Novo Cliente</SheetTitle>
-            </SheetHeader>
-            <div className="mt-6">
-              <form onSubmit={handleSaveCreate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Nome</Label>
-                  <Input
-                    required
-                    value={newCustomer.full_name}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, full_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input
-                    required
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Senha</Label>
-                  <Input
-                    required
-                    type="password"
-                    minLength={8}
-                    value={newCustomer.password}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, password: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Perfil</Label>
-                  <Select
-                    value={newCustomer.role}
-                    onValueChange={(v) => setNewCustomer({ ...newCustomer, role: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="collaborator">Colaborador</SelectItem>
-                      <SelectItem value="customer">Cliente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button type="submit" className="w-full">
-                  Criar Cliente
-                </Button>
-              </form>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <CreateCustomerModal
+          open={isCreateModalOpen}
+          onOpenChange={setIsCreateModalOpen}
+          customer={newCustomer}
+          setCustomer={setNewCustomer}
+          onSave={handleSaveCreate}
+        />
       </div>
     </AdminLayout>
   )

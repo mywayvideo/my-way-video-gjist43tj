@@ -35,6 +35,14 @@ export const authService = {
       if (data.session) {
         localStorage.setItem('supabase-auth-token', data.session.access_token)
         localStorage.setItem('supabase-refresh-token', data.session.refresh_token)
+
+        if (data.user) {
+          const now = new Date().toISOString()
+          await supabase.from('customers').update({ last_login: now }).eq('user_id', data.user.id)
+          await supabase
+            .from('user_sessions')
+            .insert({ user_id: data.user.id, login_timestamp: now })
+        }
       }
 
       return { success: true, token: data.session?.access_token }
