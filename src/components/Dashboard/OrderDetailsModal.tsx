@@ -82,7 +82,7 @@ export function OrderDetailsModal({
       return {
         street: ord.delivery_address_street ?? ord.shipping_address?.street ?? 'N/A',
         number: ord.delivery_address_number ?? ord.shipping_address?.number ?? 'N/A',
-        complement: ord.delivery_address_complement ?? ord.shipping_address?.complement ?? 'N/A',
+        complement: ord.delivery_address_complement ?? ord.shipping_address?.complement ?? '',
         city: ord.delivery_address_city ?? ord.shipping_address?.city ?? 'N/A',
         state: ord.delivery_address_state ?? ord.shipping_address?.state ?? 'N/A',
         zip_code: ord.delivery_address_zip_code ?? ord.shipping_address?.zip_code ?? 'N/A',
@@ -104,7 +104,7 @@ export function OrderDetailsModal({
       return {
         street: ord.billing_address_street ?? ord.billing_address?.street ?? 'N/A',
         number: ord.billing_address_number ?? ord.billing_address?.number ?? 'N/A',
-        complement: ord.billing_address_complement ?? ord.billing_address?.complement ?? 'N/A',
+        complement: ord.billing_address_complement ?? ord.billing_address?.complement ?? '',
         city: ord.billing_address_city ?? ord.billing_address?.city ?? 'N/A',
         state: ord.billing_address_state ?? ord.billing_address?.state ?? 'N/A',
         zip_code: ord.billing_address_zip_code ?? ord.billing_address?.zip_code ?? 'N/A',
@@ -117,12 +117,14 @@ export function OrderDetailsModal({
 
   const renderAddress = (addr: any) => {
     if (!addr) {
-      return <p className="text-sm text-muted-foreground">N/A (Endereco nao fornecido)</p>
+      return <p className="text-sm text-muted-foreground">N/A (Endereco não fornecido)</p>
     }
+    const complementStr =
+      addr.complement && addr.complement !== 'N/A' ? ` | ${addr.complement}` : ''
     return (
       <p className="text-sm">
-        {addr.street}, {addr.number} | {addr.complement} | {addr.city}, {addr.state} {addr.zip_code}{' '}
-        | {addr.country}
+        {addr.street}, {addr.number}
+        {complementStr} | {addr.city}, {addr.state} {addr.zip_code} | {addr.country}
       </p>
     )
   }
