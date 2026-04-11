@@ -14,56 +14,33 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/hooks/use-toast'
-import { UploadCloud, Plus } from 'lucide-react'
+import { UploadCloud, Plus, Wand2 } from 'lucide-react'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
 import ReactMarkdown from 'react-markdown'
+import { useProductForm } from '@/hooks/useProductForm'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 
 interface Props {
   initialData: Product | null
-  manufacturers: Manufacturer[]
-  onSuccess: () => void
-  onAddManufacturer: () => void
+  manufacturers?: Manufacturer[]
+  onSuccess?: () => void
+  onAddManufacturer?: () => void
 }
 
-export function AdminProductForm({
-  initialData,
-  manufacturers,
-  onSuccess,
-  onAddManufacturer,
-}: Props) {
-  const [loading, setLoading] = useState(false)
+export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: Props) {
+  const { form, manufacturers, categories, isExtracting, isSaving, handleExtractUrl, onSubmit } =
+    useProductForm({ initialData, onSuccess })
+
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showMfgDialog, setShowMfgDialog] = useState(false)
-
-  const [formData, setFormData] = useState<Partial<Product>>(
-    initialData || {
-      name: '',
-      sku: '',
-      category: '',
-      price_brl: 0,
-      price_usd: 0,
-      price_cost: 0,
-      stock: 0,
-      image_url: '',
-      description: '',
-      technical_info: '',
-      ncm: '',
-      weight: 0,
-      dimensions: '',
-      is_special: false,
-      is_discontinued: false,
-      manufacturer_id: '',
-    },
-  )
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    const numericFields = ['price_brl', 'price_usd', 'price_cost', 'stock', 'weight']
-    setFormData((prev) => ({
-      ...prev,
-      [name]: numericFields.includes(name) ? Number(value) || 0 : value,
-    }))
-  }
+  const [extractUrl, setExtractUrl] = useState('')
 
   const handleImageDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -82,308 +59,375 @@ export function AdminProductForm({
       const {
         data: { publicUrl },
       } = supabase.storage.from('product-images').getPublicUrl(fileName)
-      setFormData((prev) => ({ ...prev, image_url: publicUrl }))
+      form.setValue('image_url', publicUrl, { shouldDirty: true })
     }
     setUploadingImage(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.manufacturer_id)
-      return toast({
-        title: 'Erro',
-        description: 'Selecione um fabricante',
-        variant: 'destructive',
-      })
-    setLoading(true)
-
-    const payload = { ...formData }
-    delete payload.id
-    delete payload.created_at
-    delete payload.manufacturer
-
-    const isUpdate = !!initialData?.id
-
-    const req = isUpdate
-      ? supabase.from('products').update(payload).eq('id', initialData.id)
-      : supabase.from('products').insert([payload])
-
-    const { error } = await req
-    setLoading(false)
-
-    if (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao salvar produto. Tente novamente.',
-        variant: 'destructive',
-      })
-    } else {
-      toast({
-        title: 'Sucesso',
-        description: isUpdate ? 'Produto atualizado com sucesso.' : 'Produto salvo no inventário.',
-      })
-      onSuccess()
-    }
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="space-y-2 md:col-span-2">
-          <Label>Imagem do Produto</Label>
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleImageDrop}
-            className="border-2 border-dashed border-white/20 rounded-xl p-6 flex flex-col items-center justify-center text-muted-foreground hover:bg-white/5 transition-colors cursor-pointer group relative overflow-hidden"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-2">
+        <div className="flex flex-col md:flex-row gap-3 bg-muted/30 p-4 rounded-lg border border-border items-end">
+          <div className="flex-1 w-full space-y-1">
+            <Label>Importar de URL</Label>
+            <Input
+              placeholder="Colar URL do produto (B&H, Amazon, etc) para extrair dados..."
+              value={extractUrl}
+              onChange={(e) => setExtractUrl(e.target.value)}
+              className="bg-background"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => handleExtractUrl(extractUrl)}
+            disabled={isExtracting || !extractUrl}
+            className="w-full md:w-auto"
           >
-            {uploadingImage ? (
-              <p className="animate-pulse">Fazendo upload...</p>
-            ) : formData.image_url ? (
-              <div className="flex flex-col items-center">
-                <img
-                  src={formData.image_url}
-                  alt="Preview"
-                  className="h-32 object-contain mb-3 rounded"
-                />
-                <p className="text-xs">Arraste nova imagem para substituir</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <UploadCloud className="w-8 h-8 mb-2 group-hover:text-primary" />
-                <p>Arraste uma imagem aqui ou preencha a URL abaixo</p>
-              </div>
-            )}
-          </div>
-          <Input
-            id="image_url"
+            <Wand2 className="w-4 h-4 mr-2" />
+            {isExtracting ? 'Extraindo...' : 'Extrair'}
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FormField
+            control={form.control}
             name="image_url"
-            value={formData.image_url || ''}
-            onChange={handleChange}
-            placeholder="https://..."
-            className="bg-background/50 mt-2"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Imagem do Produto</FormLabel>
+                <FormControl>
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleImageDrop}
+                    className="border-2 border-dashed border-white/20 rounded-xl p-6 flex flex-col items-center justify-center text-muted-foreground hover:bg-white/5 transition-colors cursor-pointer group relative overflow-hidden"
+                  >
+                    {uploadingImage ? (
+                      <p className="animate-pulse">Fazendo upload...</p>
+                    ) : field.value ? (
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={field.value}
+                          alt="Preview"
+                          className="h-32 object-contain mb-3 rounded"
+                        />
+                        <p className="text-xs">Arraste nova imagem para substituir</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <UploadCloud className="w-8 h-8 mb-2 group-hover:text-primary" />
+                        <p>Arraste uma imagem aqui ou preencha a URL abaixo</p>
+                      </div>
+                    )}
+                  </div>
+                </FormControl>
+                <Input {...field} placeholder="https://..." className="bg-background/50 mt-2" />
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="manufacturer_id">Fabricante</Label>
-          <div className="flex gap-2">
-            <Select
-              value={formData.manufacturer_id || ''}
-              onValueChange={(v) => setFormData({ ...formData, manufacturer_id: v })}
-            >
-              <SelectTrigger className="bg-background/50 border-white/10 flex-1">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {manufacturers.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setShowMfgDialog(true)}
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+          <FormField
+            control={form.control}
+            name="manufacturer_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fabricante</FormLabel>
+                <div className="flex gap-2">
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="bg-background/50 border-white/10 flex-1">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {manufacturers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowMfgDialog(true)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <div className="space-y-2">
-          <Label htmlFor="sku">SKU</Label>
-          <Input
-            id="sku"
+          <FormField
+            control={form.control}
             name="sku"
-            value={formData.sku || ''}
-            onChange={handleChange}
-            required
-            className="bg-background/50"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>SKU</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="name">Nome do Produto</Label>
-          <Input
-            id="name"
+
+          <FormField
+            control={form.control}
             name="name"
-            value={formData.name || ''}
-            onChange={handleChange}
-            required
-            className="bg-background/50"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Nome do Produto</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="category">Categoria</Label>
-          <Input
-            id="category"
+
+          <FormField
+            control={form.control}
             name="category"
-            value={formData.category || ''}
-            onChange={handleChange}
-            className="bg-background/50"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria (Texto)</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="ncm">NCM</Label>
-          <Input
-            id="ncm"
+
+          <FormField
+            control={form.control}
+            name="category_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria do Sistema</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="bg-background/50 border-white/10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="ncm"
-            value={formData.ncm || ''}
-            onChange={handleChange}
-            className="bg-background/50"
-            placeholder="0000.00.00"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>NCM</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-background/50" placeholder="0000.00.00" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="price_usd">Preço de Venda Miami (USD)</Label>
-          <Input
-            id="price_usd"
-            name="price_usd"
-            type="number"
-            step="0.01"
-            value={formData.price_usd || 0}
-            onChange={handleChange}
-            className="bg-background/50"
+          <FormField
+            control={form.control}
+            name="price_usa"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço de Venda Miami (USD)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="price_brl">Preço de Venda Brasil (USD)</Label>
-          <Input
-            id="price_brl"
+
+          <FormField
+            control={form.control}
             name="price_brl"
-            type="number"
-            step="0.01"
-            value={formData.price_brl || 0}
-            onChange={handleChange}
-            className="bg-background/50"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço de Venda Brasil (USD)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="price_cost" className="text-amber-500">
-            Preço de Custo Miami (USD)
-          </Label>
-          <Input
-            id="price_cost"
+
+          <FormField
+            control={form.control}
             name="price_cost"
-            type="number"
-            step="0.01"
-            value={formData.price_cost || 0}
-            onChange={handleChange}
-            className="bg-background/50 border-amber-500/30"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-amber-500">Preço de Custo Miami (USD)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    className="bg-background/50 border-amber-500/30"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="stock">Estoque Local</Label>
-          <Input
-            id="stock"
+
+          <FormField
+            control={form.control}
             name="stock"
-            type="number"
-            value={formData.stock || 0}
-            onChange={handleChange}
-            className="bg-background/50"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estoque Local</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="weight">Peso (lb)</Label>
-          <Input
-            id="weight"
+
+          <FormField
+            control={form.control}
             name="weight"
-            type="number"
-            step="0.01"
-            value={formData.weight || 0}
-            onChange={handleChange}
-            className="bg-background/50"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Peso (lb)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" {...field} className="bg-background/50" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="dimensions">Dimensões (in)</Label>
-          <Input
-            id="dimensions"
+
+          <FormField
+            control={form.control}
             name="dimensions"
-            value={formData.dimensions || ''}
-            onChange={handleChange}
-            className="bg-background/50"
-            placeholder="10x10x10"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dimensões (in)</FormLabel>
+                <FormControl>
+                  <Input {...field} className="bg-background/50" placeholder="10x10x10" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-background/50 p-3 md:col-span-2">
-          <div>
-            <Label className="text-amber-500">Produto "DESTAQUE"</Label>
-            <p className="text-xs text-muted-foreground">Destacar na página inicial</p>
-          </div>
-          <Switch
-            checked={formData.is_special || false}
-            onCheckedChange={(c) => setFormData((p) => ({ ...p, is_special: c }))}
+          <FormField
+            control={form.control}
+            name="is_special"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border border-white/10 bg-background/50 p-3 md:col-span-2">
+                <div>
+                  <FormLabel className="text-amber-500">Produto "DESTAQUE"</FormLabel>
+                  <p className="text-xs text-muted-foreground">Destacar na página inicial</p>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 p-3 md:col-span-2">
-          <div>
-            <Label className="text-destructive">Produto "DESCONTINUADO"</Label>
-            <p className="text-xs text-muted-foreground">Marcar como fora de linha/indisponível</p>
-          </div>
-          <Switch
-            checked={formData.is_discontinued || false}
-            onCheckedChange={(c) => setFormData((p) => ({ ...p, is_discontinued: c }))}
+          <FormField
+            control={form.control}
+            name="is_discontinued"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 p-3 md:col-span-2">
+                <div>
+                  <FormLabel className="text-destructive">Produto "DESCONTINUADO"</FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    Marcar como fora de linha/indisponível
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="description">Descrição Técnica</Label>
-          <Textarea
-            id="description"
+          <FormField
+            control={form.control}
             name="description"
-            value={formData.description || ''}
-            onChange={handleChange}
-            className="bg-background/50 min-h-[100px]"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Descrição Curta</FormLabel>
+                <FormControl>
+                  <Textarea {...field} className="bg-background/50 min-h-[100px]" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="technical_info">Informacoes Tecnicas (Markdown/HTML)</Label>
-          <Textarea
-            id="technical_info"
+          <FormField
+            control={form.control}
             name="technical_info"
-            value={formData.technical_info || ''}
-            onChange={handleChange}
-            placeholder={`## Especificacoes Avancadas\n\n**Recurso 1:** Descricao...`}
-            className="bg-background/50 min-h-[200px]"
-            rows={10}
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Informações Técnicas (Markdown/HTML)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder={`## Especificações Avançadas\n\n**Recurso 1:** Descrição...`}
+                    className="bg-background/50 min-h-[200px]"
+                    rows={10}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
+
+          {form.watch('technical_info') && (
+            <div className="space-y-2 md:col-span-2">
+              <Label>Preview das Informações Técnicas</Label>
+              <div className="p-4 border border-border/50 rounded-md bg-background/50 text-sm [&_h2]:text-[1.5rem] [&_h2]:font-[700] [&_h2]:mt-[1.5rem] [&_h2]:mb-[1rem] [&_h3]:text-[1.25rem] [&_h3]:font-[600] [&_h3]:mt-[1rem] [&_h3]:mb-[0.75rem] [&_strong]:font-[700] [&_strong]:text-primary [&_ul]:ml-[1.5rem] [&_ul]:mt-[0.5rem] [&_ul]:mb-[0.5rem] [&_ul]:list-disc [&_ol]:ml-[1.5rem] [&_ol]:mt-[0.5rem] [&_ol]:mb-[0.5rem] [&_ol]:list-decimal [&_li]:mb-[0.5rem] [&_blockquote]:border-l-[4px] [&_blockquote]:border-primary [&_blockquote]:pl-[1rem] [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_code]:bg-muted [&_code]:py-[0.25rem] [&_code]:px-[0.5rem] [&_code]:rounded-[0.25rem] [&_code]:font-mono [&_pre]:bg-muted [&_pre]:p-[1rem] [&_pre]:rounded-[0.5rem] [&_pre]:overflow-x-auto [&_pre]:font-mono">
+                <ReactMarkdown>{form.watch('technical_info')}</ReactMarkdown>
+              </div>
+            </div>
+          )}
         </div>
 
-        {formData.technical_info && (
-          <div className="space-y-2 md:col-span-2">
-            <Label>Preview</Label>
-            <div className="p-4 border border-border/50 rounded-md bg-background/50 text-sm [&_h2]:text-[1.5rem] [&_h2]:font-[700] [&_h2]:mt-[1.5rem] [&_h2]:mb-[1rem] [&_h3]:text-[1.25rem] [&_h3]:font-[600] [&_h3]:mt-[1rem] [&_h3]:mb-[0.75rem] [&_strong]:font-[700] [&_strong]:text-primary [&_ul]:ml-[1.5rem] [&_ul]:mt-[0.5rem] [&_ul]:mb-[0.5rem] [&_ul]:list-disc [&_ol]:ml-[1.5rem] [&_ol]:mt-[0.5rem] [&_ol]:mb-[0.5rem] [&_ol]:list-decimal [&_li]:mb-[0.5rem] [&_blockquote]:border-l-[4px] [&_blockquote]:border-primary [&_blockquote]:pl-[1rem] [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_code]:bg-muted [&_code]:py-[0.25rem] [&_code]:px-[0.5rem] [&_code]:rounded-[0.25rem] [&_code]:font-mono [&_pre]:bg-muted [&_pre]:p-[1rem] [&_pre]:rounded-[0.5rem] [&_pre]:overflow-x-auto [&_pre]:font-mono">
-              <ReactMarkdown>{formData.technical_info}</ReactMarkdown>
-            </div>
-          </div>
-        )}
-      </div>
+        <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
+          <Button type="button" variant="ghost" onClick={onSuccess}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSaving} className="px-8">
+            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+        </div>
 
-      <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
-        <Button type="button" variant="ghost" onClick={onSuccess}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={loading} className="px-8">
-          {loading ? 'Salvando...' : 'Salvar Alterações'}
-        </Button>
-      </div>
-
-      <AdminManufacturerDialog
-        open={showMfgDialog}
-        onOpenChange={setShowMfgDialog}
-        onSuccess={(id) => {
-          onAddManufacturer()
-          setFormData((p) => ({ ...p, manufacturer_id: id }))
-          setShowMfgDialog(false)
-        }}
-      />
-    </form>
+        <AdminManufacturerDialog
+          open={showMfgDialog}
+          onOpenChange={setShowMfgDialog}
+          onSuccess={(id) => {
+            if (onAddManufacturer) onAddManufacturer()
+            form.setValue('manufacturer_id', id, { shouldDirty: true })
+            setShowMfgDialog(false)
+          }}
+        />
+      </form>
+    </Form>
   )
 }

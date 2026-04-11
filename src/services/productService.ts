@@ -69,6 +69,7 @@ export const productService = {
       is_special: productData.is_special || false,
       is_discontinued: productData.is_discontinued || false,
       category_id: productData.category_id || null,
+      category: productData.category || null,
     }
 
     const { data, error } = await supabase.from('products').insert(payload).select().single()
@@ -95,6 +96,7 @@ export const productService = {
       is_special: productData.is_special || false,
       is_discontinued: productData.is_discontinued || false,
       category_id: productData.category_id || null,
+      category: productData.category || null,
     }
 
     const { error } = await supabase.from('products').update(payload).eq('id', id)

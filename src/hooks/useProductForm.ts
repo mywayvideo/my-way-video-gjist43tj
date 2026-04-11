@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ProductFormData } from '@/types/product'
 import { productService } from '@/services/productService'
 import { z } from 'zod'
+import { useToast } from '@/hooks/use-toast'
+import { useNavigate, useParams } from 'react-router-dom'
+import { supabase } from '@/lib/supabase/client'
 
 const productSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   sku: z.string().min(1, 'SKU é obrigatório'),
-  manufacturer_id: z.string().min(1, 'Fabricante é obrigatório').catch('').default(''),
+  manufacturer_id: z.string().catch('').default(''),
   price_cost: z.coerce.number().catch(0).default(0),
   price_usa: z.coerce.number().catch(0).default(0),
   price_brl: z.coerce.number().catch(0).default(0),
   stock: z.coerce.number().catch(0).default(0),
   category_id: z.string().catch('').default(''),
+  category: z.string().catch('').default(''),
   description: z.string().catch('').default(''),
   weight: z.coerce.number().catch(0).default(0),
   dimensions: z.string().catch('').default(''),
@@ -23,14 +26,21 @@ const productSchema = z.object({
   technical_info: z.string().catch('').default(''),
   is_discontinued: z.boolean().catch(false).default(false),
 })
-import { useToast } from '@/hooks/use-toast'
-import { useNavigate, useParams } from 'react-router-dom'
-import { supabase } from '@/lib/supabase/client'
 
-export function useProductForm() {
+export interface UseProductFormProps {
+  initialData?: any
+  onSuccess?: () => void
+}
+
+export function useProductForm(props?: UseProductFormProps) {
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
+  const { id: routeId } = useParams<{ id: string }>()
+
+  const initialId = props?.initialData?.id
+  const id = initialId || routeId
+  const isEditMode = !!id
+
   const [categories, setCategories] = useState<any[]>([])
   const [manufacturers, setManufacturers] = useState<any[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
@@ -40,8 +50,6 @@ export function useProductForm() {
   const [isLoadingProduct, setIsLoadingProduct] = useState(!!id)
   const [ncmSuggestions, setNcmSuggestions] = useState<any[]>([])
   const [isSuggestingNcm, setIsSuggestingNcm] = useState(false)
-
-  const isEditMode = !!id
 
   const form = useForm<any>({
     resolver: zodResolver(productSchema),
@@ -54,6 +62,7 @@ export function useProductForm() {
       price_brl: 0,
       stock: 0,
       category_id: '',
+      category: '',
       description: '',
       weight: 0,
       dimensions: '',
@@ -92,12 +101,39 @@ export function useProductForm() {
     loadManufacturers()
   }, [toast])
 
+  const initialDataStr = JSON.stringify(props?.initialData || {})
+
   useEffect(() => {
-    if (id) {
+    if (props?.initialData && Object.keys(props.initialData).length > 0) {
+      form.reset({
+        name: props.initialData.name || '',
+        sku: props.initialData.sku || '',
+        manufacturer_id: props.initialData.manufacturer_id || '',
+        price_cost: props.initialData.price_cost || 0,
+        price_usa: props.initialData.price_usd || props.initialData.price_usa || 0,
+        price_brl: props.initialData.price_brl || 0,
+        stock: props.initialData.stock || 0,
+        category_id: props.initialData.category_id || '',
+        category: props.initialData.category || '',
+        description: props.initialData.description || '',
+        weight: props.initialData.weight || 0,
+        dimensions: props.initialData.dimensions || '',
+        image_url: props.initialData.image_url || '',
+        ncm: props.initialData.ncm || '',
+        is_special: props.initialData.is_special || false,
+        technical_info: props.initialData.technical_info || '',
+        is_discontinued: props.initialData.is_discontinued || false,
+      })
+      setIsLoadingProduct(false)
+    } else if (routeId) {
       const loadProduct = async () => {
         setIsLoadingProduct(true)
         try {
-          const { data, error } = await supabase.from('products').select('*').eq('id', id).single()
+          const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', routeId)
+            .single()
           if (error) throw error
           if (data) {
             form.reset({
@@ -109,6 +145,7 @@ export function useProductForm() {
               price_brl: data.price_brl || 0,
               stock: data.stock || 0,
               category_id: data.category_id || '',
+              category: data.category || '',
               description: data.description || '',
               weight: data.weight || 0,
               dimensions: data.dimensions || '',
@@ -127,8 +164,10 @@ export function useProductForm() {
         }
       }
       loadProduct()
+    } else {
+      setIsLoadingProduct(false)
     }
-  }, [id, form, navigate, toast])
+  }, [routeId, initialDataStr, form, navigate, toast])
 
   const price_usa = form.watch('price_usa')
   const weight = form.watch('weight')
@@ -138,7 +177,7 @@ export function useProductForm() {
       if (price_usa > 0 && weight > 0) {
         try {
           const brl = await productService.calculateBrl(price_usa, weight)
-          form.setValue('price_brl', brl)
+          form.setValue('price_brl', brl, { shouldDirty: true })
         } catch (e) {
           console.error('Failed to calculate BRL price', e)
         }
@@ -157,24 +196,28 @@ export function useProductForm() {
       if (data.error) {
         throw new Error(data.error)
       }
-      if (data.name) form.setValue('name', data.name)
-      if (data.sku) form.setValue('sku', data.sku)
-      if (data.description) form.setValue('description', data.description)
-      if (data.technical_info) form.setValue('technical_info', data.technical_info)
-      if (data.image_url) form.setValue('image_url', data.image_url)
-      if (data.dimensions) form.setValue('dimensions', data.dimensions)
+      if (data.name) form.setValue('name', data.name, { shouldDirty: true })
+      if (data.sku) form.setValue('sku', data.sku, { shouldDirty: true })
+      if (data.description) form.setValue('description', data.description, { shouldDirty: true })
+      if (data.technical_info)
+        form.setValue('technical_info', data.technical_info, { shouldDirty: true })
+      if (data.image_url) form.setValue('image_url', data.image_url, { shouldDirty: true })
+      if (data.dimensions) form.setValue('dimensions', data.dimensions, { shouldDirty: true })
+      if (data.category) form.setValue('category', data.category, { shouldDirty: true })
       if (data.category_id && categories.some((c) => c.id === data.category_id)) {
-        form.setValue('category_id', data.category_id)
+        form.setValue('category_id', data.category_id, { shouldDirty: true })
       }
       if (data.manufacturer_id) {
-        form.setValue('manufacturer_id', data.manufacturer_id)
+        form.setValue('manufacturer_id', data.manufacturer_id, { shouldDirty: true })
       }
-      if (data.price_usa) form.setValue('price_usa', parseFloat(data.price_usa) || 0)
-      if (data.price_cost) form.setValue('price_cost', parseFloat(data.price_cost) || 0)
-      if (data.weight) form.setValue('weight', parseFloat(data.weight) || 0)
-      if (data.stock) form.setValue('stock', parseInt(data.stock, 10) || 0)
-      form.setValue('is_discontinued', data.is_discontinued === 'true')
-      form.setValue('is_special', data.is_special === 'true')
+      if (data.price_usa)
+        form.setValue('price_usa', parseFloat(data.price_usa) || 0, { shouldDirty: true })
+      if (data.price_cost)
+        form.setValue('price_cost', parseFloat(data.price_cost) || 0, { shouldDirty: true })
+      if (data.weight) form.setValue('weight', parseFloat(data.weight) || 0, { shouldDirty: true })
+      if (data.stock) form.setValue('stock', parseInt(data.stock, 10) || 0, { shouldDirty: true })
+      form.setValue('is_discontinued', data.is_discontinued === 'true', { shouldDirty: true })
+      form.setValue('is_special', data.is_special === 'true', { shouldDirty: true })
       toast({ description: 'Dados extraídos com sucesso!' })
     } catch (err: any) {
       toast({
@@ -256,7 +299,12 @@ export function useProductForm() {
         await productService.updateProduct(id!, payload)
         toast({ description: 'Produto atualizado com sucesso!' })
       }
-      setTimeout(() => navigate('/admin/catalog'), 2000)
+
+      if (props?.onSuccess) {
+        props.onSuccess()
+      } else {
+        setTimeout(() => navigate('/admin/catalog'), 2000)
+      }
     } catch (err) {
       toast({ description: 'Não foi possível salvar o produto', variant: 'destructive' })
     } finally {
