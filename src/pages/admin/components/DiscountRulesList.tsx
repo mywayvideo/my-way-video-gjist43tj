@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase/client'
 import { Discount } from '@/types/discount'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -29,6 +31,79 @@ export default function DiscountRulesList({
   onDelete,
   onCreateNew,
 }: Props) {
+  const [productCounts, setProductCounts] = useState<Record<string, number | 'Calculando...'>>({})
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchCounts = async () => {
+      const counts: Record<string, number | 'Calculando...'> = {}
+
+      for (const rule of discounts) {
+        counts[rule.id] = 'Calculando...'
+      }
+      if (isMounted) setProductCounts({ ...counts })
+
+      for (const rule of discounts) {
+        try {
+          if (rule.target_type === 'specific') {
+            counts[rule.id] = Array.isArray(rule.product_selection)
+              ? rule.product_selection.length
+              : 0
+            continue
+          }
+
+          let query = supabase.from('products').select('id', { count: 'exact', head: true })
+
+          if (rule.target_type === 'manufacturer') {
+            const mIds =
+              rule.manufacturer_ids || (rule.manufacturer_id ? [rule.manufacturer_id] : [])
+            if (mIds.length > 0) query = query.in('manufacturer_id', mIds)
+            else query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+          } else if (rule.target_type === 'category') {
+            const cIds = rule.category_ids || (rule.category_id ? [rule.category_id] : [])
+            if (cIds.length > 0) query = query.in('category_id', cIds)
+            else query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+          } else if (rule.target_type === 'manufacturer_category') {
+            const mIds =
+              rule.manufacturer_ids || (rule.manufacturer_id ? [rule.manufacturer_id] : [])
+            const cIds = rule.category_ids || (rule.category_id ? [rule.category_id] : [])
+            if (mIds.length > 0 && cIds.length > 0) {
+              query = query.in('manufacturer_id', mIds).in('category_id', cIds)
+            } else {
+              query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+            }
+          }
+
+          const excluded = rule.excluded_products || []
+          if (excluded.length > 0) {
+            query = query.not('id', 'in', `(${excluded.join(',')})`)
+          }
+
+          const { count, error } = await query
+          if (error) throw error
+
+          counts[rule.id] = count || 0
+        } catch (err) {
+          console.error('Error fetching count for rule', rule.id, err)
+          counts[rule.id] = 0
+        }
+      }
+
+      if (isMounted) setProductCounts(counts)
+    }
+
+    if (discounts.length > 0) {
+      fetchCounts()
+    } else {
+      setProductCounts({})
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [discounts])
+
   if (loading)
     return (
       <div className="space-y-4">
@@ -79,9 +154,9 @@ export default function DiscountRulesList({
                 </td>
                 <td className="p-4">{discount.discount_value}%</td>
                 <td className="p-4 text-muted-foreground">
-                  {Array.isArray(discount.product_selection)
-                    ? discount.product_selection.length
-                    : 0}{' '}
+                  {productCounts[discount.id] !== undefined
+                    ? productCounts[discount.id]
+                    : 'Calculando...'}{' '}
                   selecionados
                 </td>
                 <td className="p-4">
