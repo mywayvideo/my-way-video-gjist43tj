@@ -8,7 +8,6 @@ import { useShippingConfig } from '@/hooks/useShippingConfig'
 import { getApplicableDiscounts, getBestDiscount } from '@/services/discountApplicationService'
 import { useStripePayment } from '@/hooks/useStripePayment'
 import { useAlternativePayments } from '@/hooks/useAlternativePayments'
-import { useUser } from '@/hooks/useUser'
 import { PaymentMethod, CustomerData } from '@/types/payment'
 import {
   createPaymentIntent,
@@ -177,8 +176,6 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('')
   const [tempOrderNumber] = useState(`ORD-${Math.floor(100000 + Math.random() * 900000)}`)
 
-  const { userName, userEmail, userPhone } = useUser()
-
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
@@ -188,16 +185,6 @@ export default function Checkout() {
     email: profile?.email || user?.email || '',
     telefone: profile?.phone || '',
   })
-
-  useEffect(() => {
-    if (userName || userEmail || userPhone) {
-      setCustomerData((prev) => ({
-        nome: prev.nome || userName || '',
-        email: prev.email || userEmail || '',
-        telefone: prev.telefone || userPhone || '',
-      }))
-    }
-  }, [userName, userEmail, userPhone])
 
   const paymentDetailsRef = useRef<HTMLDivElement>(null)
 
@@ -291,7 +278,11 @@ export default function Checkout() {
     if (!user) return
     try {
       const [custRes, discRes, settingsRes] = await Promise.all([
-        supabase.from('customers').select('id, role').eq('user_id', user.id).single(),
+        supabase
+          .from('customers')
+          .select('id, role, full_name, phone')
+          .eq('user_id', user.id)
+          .single(),
         supabase.from('discounts').select('*').eq('is_active', true),
         supabase
           .from('app_settings')
@@ -319,6 +310,11 @@ export default function Checkout() {
       if (discRes.data) setActiveDiscounts(discRes.data)
 
       if (custRes.data) {
+        setCustomerData((prev) => ({
+          ...prev,
+          nome: prev.nome || custRes.data.full_name || '',
+          telefone: prev.telefone || custRes.data.phone || '',
+        }))
         const { data: addresses } = await supabase
           .from('customer_addresses')
           .select('*')
