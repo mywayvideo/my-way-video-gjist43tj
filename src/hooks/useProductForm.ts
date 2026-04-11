@@ -204,8 +204,9 @@ export function useProductForm() {
     try {
       const payload = {
         ...data,
-        category_id: data.category_id || null,
-        manufacturer_id: data.manufacturer_id || null,
+        category_id: data.category_id && data.category_id.trim() !== '' ? data.category_id : null,
+        manufacturer_id:
+          data.manufacturer_id && data.manufacturer_id.trim() !== '' ? data.manufacturer_id : null,
       }
 
       if (!isEditMode) {

@@ -183,7 +183,7 @@ export default function NewProductPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex justify-between items-center">
-                          <span>Categoria *</span>
+                          <span>Categoria</span>
                           <Button
                             type="button"
                             variant="ghost"
@@ -221,7 +221,7 @@ export default function NewProductPage() {
                     name="description"
                     render={({ field }) => (
                       <FormItem className="md:col-span-2">
-                        <FormLabel>Descrição *</FormLabel>
+                        <FormLabel>Descrição</FormLabel>
                         <FormControl>
                           <Textarea className="min-h-[80px]" {...field} disabled={isBusy} />
                         </FormControl>
@@ -241,7 +241,7 @@ export default function NewProductPage() {
                     name="price_usa"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço USD *</FormLabel>
+                        <FormLabel>Preço USD</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} disabled={isBusy} />
                         </FormControl>
@@ -294,7 +294,7 @@ export default function NewProductPage() {
                     name="dimensions"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Dimensões (ex: 10x10x10) *</FormLabel>
+                        <FormLabel>Dimensões (ex: 10x10x10)</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={isBusy} />
                         </FormControl>
@@ -307,7 +307,7 @@ export default function NewProductPage() {
                     name="weight"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Peso (lbs) *</FormLabel>
+                        <FormLabel>Peso (lbs)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} disabled={isBusy} />
                         </FormControl>
@@ -402,7 +402,7 @@ export default function NewProductPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex justify-between items-center">
-                          NCM (8 dígitos) *
+                          NCM (8 dígitos)
                           <Button
                             type="button"
                             variant="link"
