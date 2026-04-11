@@ -65,7 +65,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>

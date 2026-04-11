@@ -481,6 +481,7 @@ export default function Checkout() {
 
     if (method === 'miami') {
       return savedAddresses.filter((a) => {
+        if (a.street === 'COLETA NA MY WAY') return false
         const isBr = normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil'
         if (isBr) return false
 
@@ -506,6 +507,7 @@ export default function Checkout() {
     }
     if (method === 'usa') {
       return savedAddresses.filter((a) => {
+        if (a.street === 'COLETA NA MY WAY') return false
         const isUs =
           normalizeStr(a.country) === 'usa' ||
           normalizeStr(a.country) === 'eua' ||
@@ -536,6 +538,7 @@ export default function Checkout() {
     if (method === 'brasil') {
       return savedAddresses.filter(
         (a) =>
+          a.street !== 'COLETA NA MY WAY' &&
           (normalizeStr(a.country) === 'brasil' || normalizeStr(a.country) === 'brazil') &&
           normalizeStr(a.state) === 'sp',
       )
@@ -896,7 +899,39 @@ export default function Checkout() {
   }
 
   const ensureShippingAddress = async (customerId: string) => {
-    if (deliveryMethod === 'coleta') return null
+    if (deliveryMethod === 'coleta') {
+      const { data: existingAddr } = await supabase
+        .from('customer_addresses')
+        .select('id')
+        .eq('customer_id', customerId)
+        .eq('street', 'COLETA NA MY WAY')
+        .eq('address_type', 'shipping')
+        .maybeSingle()
+
+      if (existingAddr) return existingAddr.id
+
+      const { data: addrData, error } = await supabase
+        .from('customer_addresses')
+        .insert({
+          customer_id: customerId,
+          address_type: 'shipping',
+          street: 'COLETA NA MY WAY',
+          number: 'S/N',
+          complement: null,
+          neighborhood: 'Miami',
+          city: 'Miami',
+          state: 'FL',
+          zip_code: '00000',
+          country: 'USA',
+          is_default: false,
+        })
+        .select('id')
+        .single()
+
+      if (error) throw error
+      return addrData?.id || null
+    }
+
     if (selectedAddressId && !isAddingNewAddress) return selectedAddressId
 
     const { data: addrData, error } = await supabase

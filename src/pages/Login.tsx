@@ -64,8 +64,10 @@ export default function Login() {
         if (userRole === 'admin') {
           nav('/admin/dashboard', { replace: true })
         } else if (['customer', 'vip', 'reseller'].includes(userRole)) {
-          if (window.history.length > 1) {
-            window.history.back()
+          const params = new URLSearchParams(location.search)
+          const redirect = params.get('redirect')
+          if (redirect) {
+            nav(redirect, { replace: true })
           } else {
             nav('/', { replace: true })
           }
