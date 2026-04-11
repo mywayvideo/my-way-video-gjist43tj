@@ -30,9 +30,7 @@ const schema = z
       'fixed_amount',
     ]),
     discount_value: z.coerce.number().min(0.01, 'Valor deve ser maior que 0'),
-    target_type: z.enum(['all', 'manufacturer', 'category', 'specific']),
-    manufacturer_id: z.string().optional().nullable(),
-    category_id: z.string().optional().nullable(),
+    target_type: z.enum(['all', 'manufacturer', 'category', 'manufacturer_category', 'specific']),
     status: z.enum(['active', 'inactive']),
     start_date: z.string().optional().nullable(),
     end_date: z.string().optional().nullable(),
@@ -41,20 +39,6 @@ const schema = z
     }),
     customer_role: z.string().optional().nullable(),
   })
-  .refine(
-    (data) => {
-      if (data.target_type === 'manufacturer' && !data.manufacturer_id) return false
-      return true
-    },
-    { message: 'Selecione um fabricante', path: ['manufacturer_id'] },
-  )
-  .refine(
-    (data) => {
-      if (data.target_type === 'category' && !data.category_id) return false
-      return true
-    },
-    { message: 'Selecione uma categoria', path: ['category_id'] },
-  )
   .refine(
     (data) => {
       if (data.application_type === 'rule' && !data.customer_role) return false
@@ -104,11 +88,18 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     rule?.customers || [],
   )
 
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>(
+    rule?.manufacturer_ids || (rule?.manufacturer_id ? [rule.manufacturer_id] : []),
+  )
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    rule?.category_ids || (rule?.category_id ? [rule.category_id] : []),
+  )
+
   const defaultTargetType =
     rule?.target_type ||
-    (rule?.category_id
+    (rule?.category_ids?.length || rule?.category_id
       ? 'category'
-      : rule?.manufacturer_id
+      : rule?.manufacturer_ids?.length || rule?.manufacturer_id
         ? 'manufacturer'
         : rule?.product_selection?.length
           ? 'specific'
@@ -127,9 +118,7 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
       name: rule?.name || '',
       discount_type: (rule?.discount_type as any) || 'margin_percentage',
       discount_value: rule?.discount_value || 0,
-      target_type: defaultTargetType,
-      manufacturer_id: rule?.manufacturer_id || '',
-      category_id: rule?.category_id || '',
+      target_type: defaultTargetType as any,
       status: rule ? (rule.is_active ? 'active' : 'inactive') : 'active',
       start_date: rule?.start_date ? new Date(rule.start_date).toISOString().split('T')[0] : '',
       end_date: rule?.end_date ? new Date(rule.end_date).toISOString().split('T')[0] : '',
@@ -167,17 +156,29 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
   const availableProducts = useMemo(() => {
     if (targetType === 'all') return dbProducts
     if (targetType === 'manufacturer') {
-      const mId = watch('manufacturer_id')
-      return dbProducts.filter((p) => p.manufacturer_id === mId)
+      return dbProducts.filter((p) => selectedManufacturers.includes(p.manufacturer_id))
     }
     if (targetType === 'category') {
-      const cId = watch('category_id')
       return dbProducts.filter(
-        (p) => p.category_id === cId || p.category === categories.find((c) => c.id === cId)?.name,
+        (p) =>
+          selectedCategories.includes(p.category_id) ||
+          selectedCategories.some(
+            (cId) => categories.find((c) => c.id === cId)?.name === p.category,
+          ),
+      )
+    }
+    if (targetType === 'manufacturer_category') {
+      return dbProducts.filter(
+        (p) =>
+          selectedManufacturers.includes(p.manufacturer_id) &&
+          (selectedCategories.includes(p.category_id) ||
+            selectedCategories.some(
+              (cId) => categories.find((c) => c.id === cId)?.name === p.category,
+            )),
       )
     }
     return dbProducts
-  }, [dbProducts, targetType, watch('manufacturer_id'), watch('category_id'), categories])
+  }, [dbProducts, targetType, selectedManufacturers, selectedCategories, categories])
 
   const filteredProducts = useMemo(() => {
     if (!debouncedProdSearch) return availableProducts
@@ -227,8 +228,10 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
     watch('name').length >= 3 &&
     watch('discount_value') > 0 &&
     (targetType !== 'specific' || selectedSpecificProducts.length > 0) &&
-    (targetType !== 'manufacturer' || watch('manufacturer_id')) &&
-    (targetType !== 'category' || watch('category_id')) &&
+    (targetType !== 'manufacturer' || selectedManufacturers.length > 0) &&
+    (targetType !== 'category' || selectedCategories.length > 0) &&
+    (targetType !== 'manufacturer_category' ||
+      (selectedManufacturers.length > 0 && selectedCategories.length > 0)) &&
     watch('application_type') &&
     (watch('application_type') !== 'rule' || watch('customer_role')) &&
     (watch('application_type') !== 'specific_customers' || selectedCustomerSelection.length > 0)
@@ -248,8 +251,12 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
         end_date: data.end_date || null,
 
         target_type: data.target_type,
-        manufacturer_id: data.target_type === 'manufacturer' ? data.manufacturer_id : null,
-        category_id: data.target_type === 'category' ? data.category_id : null,
+        manufacturer_ids: ['manufacturer', 'manufacturer_category'].includes(data.target_type)
+          ? selectedManufacturers
+          : [],
+        category_ids: ['category', 'manufacturer_category'].includes(data.target_type)
+          ? selectedCategories
+          : [],
         product_selection: data.target_type === 'specific' ? selectedSpecificProducts : [],
         excluded_products: data.target_type !== 'specific' ? excludedProducts : [],
 
@@ -425,13 +432,8 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
               render={({ field }) => (
                 <RadioGroup
                   value={field.value}
-                  onValueChange={(val) => {
-                    field.onChange(val)
-                    if (val !== 'manufacturer')
-                      setValue('manufacturer_id', null, { shouldValidate: true })
-                    if (val !== 'category') setValue('category_id', null, { shouldValidate: true })
-                  }}
-                  className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-6"
+                  onValueChange={(val) => field.onChange(val)}
+                  className="flex flex-col space-y-2 sm:flex-row sm:flex-wrap sm:space-y-0 gap-y-2 sm:gap-x-6"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="all" id="t-all" />
@@ -452,6 +454,12 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manufacturer_category" id="t-man-cat" />
+                    <Label htmlFor="t-man-cat" className="cursor-pointer font-medium">
+                      Fabricante + Categoria
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <RadioGroupItem value="specific" id="t-spec" />
                     <Label htmlFor="t-spec" className="cursor-pointer font-medium">
                       Produtos Específicos
@@ -463,63 +471,77 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
           </div>
 
           <div className="space-y-4 pt-6 border-t">
-            {targetType === 'manufacturer' && (
-              <div className="space-y-2 max-w-md">
-                <Label>
-                  Fabricante <span className="text-destructive">*</span>
-                </Label>
-                <Controller
-                  name="manufacturer_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um fabricante..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {manufacturers.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(targetType === 'manufacturer' || targetType === 'manufacturer_category') && (
+                <div className="border rounded-md p-4 bg-muted/10 space-y-3">
+                  <div>
+                    <Label className="text-sm font-semibold">
+                      Fabricantes <span className="text-destructive">*</span>
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedManufacturers.length} selecionado(s)
+                    </p>
+                  </div>
+                  <div className="h-[200px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                    {manufacturers.map((m) => (
+                      <label
+                        key={m.id}
+                        className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedManufacturers.includes(m.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedManufacturers((prev) =>
+                              checked ? [...prev, m.id] : prev.filter((id) => id !== m.id),
+                            )
+                          }}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span className="text-sm font-medium leading-none">{m.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedManufacturers.length === 0 && (
+                    <p className="text-sm text-destructive">Selecione pelo menos 1 fabricante.</p>
                   )}
-                />
-                {errors.manufacturer_id && (
-                  <p className="text-sm text-destructive">{errors.manufacturer_id.message}</p>
-                )}
-              </div>
-            )}
+                </div>
+              )}
 
-            {targetType === 'category' && (
-              <div className="space-y-2 max-w-md">
-                <Label>
-                  Categoria <span className="text-destructive">*</span>
-                </Label>
-                <Controller
-                  name="category_id"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || undefined}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {(targetType === 'category' || targetType === 'manufacturer_category') && (
+                <div className="border rounded-md p-4 bg-muted/10 space-y-3">
+                  <div>
+                    <Label className="text-sm font-semibold">
+                      Categorias <span className="text-destructive">*</span>
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedCategories.length} selecionada(s)
+                    </p>
+                  </div>
+                  <div className="h-[200px] overflow-y-auto border rounded-md bg-background p-2 space-y-1">
+                    {categories.map((c) => (
+                      <label
+                        key={c.id}
+                        className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedCategories.includes(c.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedCategories((prev) =>
+                              checked ? [...prev, c.id] : prev.filter((id) => id !== c.id),
+                            )
+                          }}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span className="text-sm font-medium leading-none">{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedCategories.length === 0 && (
+                    <p className="text-sm text-destructive">Selecione pelo menos 1 categoria.</p>
                   )}
-                />
-                {errors.category_id && (
-                  <p className="text-sm text-destructive">{errors.category_id.message}</p>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {targetType === 'specific' ? (
               <div className="border rounded-md p-4 bg-muted/10 space-y-3">
@@ -745,9 +767,10 @@ export default function DiscountRuleForm({ rule, onClose, onSave }: Props) {
                   <span className="text-foreground">
                     {targetType === 'all' && 'Todo o Site'}
                     {targetType === 'manufacturer' &&
-                      `Fabricante: ${manufacturers.find((m) => m.id === watch('manufacturer_id'))?.name || '-'}`}
-                    {targetType === 'category' &&
-                      `Categoria: ${categories.find((c) => c.id === watch('category_id'))?.name || '-'}`}
+                      `${selectedManufacturers.length} Fabricante(s)`}
+                    {targetType === 'category' && `${selectedCategories.length} Categoria(s)`}
+                    {targetType === 'manufacturer_category' &&
+                      `${selectedManufacturers.length} Fabricante(s) e ${selectedCategories.length} Categoria(s)`}
                     {targetType === 'specific' &&
                       `${selectedSpecificProducts.length} produto(s) específicos`}
                   </span>

@@ -49,8 +49,14 @@ export const discountRuleService = {
       discount_type: data.discount_type,
       discount_value: data.discount_value,
       target_type: data.target_type,
-      manufacturer_id: data.target_type === 'manufacturer' ? data.manufacturer_id : null,
-      category_id: data.target_type === 'category' ? data.category_id : null,
+      manufacturer_ids: ['manufacturer', 'manufacturer_category'].includes(data.target_type)
+        ? data.manufacturer_ids
+        : [],
+      category_ids: ['category', 'manufacturer_category'].includes(data.target_type)
+        ? data.category_ids
+        : [],
+      manufacturer_id: null,
+      category_id: null,
       product_selection: data.target_type === 'specific' ? data.product_selection : [],
       excluded_products: data.target_type !== 'specific' ? data.excluded_products : [],
       customer_application_type: data.customer_application_type || 'all',

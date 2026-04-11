@@ -123,32 +123,36 @@ function calculateBestDiscountSync(
 
     if (excluded.includes(product.id)) continue
 
+    const mIds =
+      discount.manufacturer_ids || (discount.manufacturer_id ? [discount.manufacturer_id] : [])
+    const cIds = discount.category_ids || (discount.category_id ? [discount.category_id] : [])
+
     if (targetType === 'all') {
       matches = true
-    } else if (targetType === 'manufacturer') {
-      if (product.manufacturer_id === discount.manufacturer_id) matches = true
-    } else if (targetType === 'category') {
-      if (product.category_id === discount.category_id) matches = true
     } else if (targetType === 'specific') {
       if (discount.product_selection && Array.isArray(discount.product_selection)) {
         if (discount.product_selection.includes(product.id)) matches = true
       }
-    } else {
-      if (discount.category_id && product.category_id === discount.category_id) matches = true
-      else if (discount.manufacturer_id && product.manufacturer_id === discount.manufacturer_id)
+    } else if (targetType === 'manufacturer') {
+      if (mIds.includes(product.manufacturer_id)) matches = true
+    } else if (targetType === 'category') {
+      if (cIds.includes(product.category_id)) matches = true
+    } else if (targetType === 'manufacturer_category') {
+      if (mIds.includes(product.manufacturer_id) && cIds.includes(product.category_id))
         matches = true
-      else if (
+    } else {
+      if (
         discount.product_selection &&
         Array.isArray(discount.product_selection) &&
         discount.product_selection.includes(product.id)
-      )
+      ) {
         matches = true
-      else if (
-        !discount.category_id &&
-        !discount.manufacturer_id &&
-        (!discount.product_selection || discount.product_selection.length === 0)
-      )
-        matches = true
+      } else if (!discount.product_selection || discount.product_selection.length === 0) {
+        if (discount.category_id && product.category_id === discount.category_id) matches = true
+        else if (discount.manufacturer_id && product.manufacturer_id === discount.manufacturer_id)
+          matches = true
+        else if (!discount.category_id && !discount.manufacturer_id) matches = true
+      }
     }
 
     if (!matches) continue
