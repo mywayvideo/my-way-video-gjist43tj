@@ -45,11 +45,19 @@ export const productService = {
     return data
   },
 
-  async createProduct(productData: ProductFormData) {
+  async getManufacturers() {
+    const { data, error } = await supabase.from('manufacturers').select('id, name').order('name')
+    if (error) throw error
+    return data || []
+  },
+
+  async createProduct(productData: any) {
+    const { price_usa, ...rest } = productData
     const { data, error } = await supabase
       .from('products')
       .insert({
-        ...productData,
+        ...rest,
+        price_usd: price_usa || 0,
         price_cost: productData.price_cost || 0,
         price_brl: productData.price_brl || 0,
         stock: productData.stock || 0,

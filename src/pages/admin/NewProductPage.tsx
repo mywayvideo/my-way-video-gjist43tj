@@ -36,12 +36,16 @@ export default function NewProductPage() {
   const navigate = useNavigate()
   const [importUrl, setImportUrl] = useState('')
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
+  const [isManufacturerDialogOpen, setIsManufacturerDialogOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [newManufacturerName, setNewManufacturerName] = useState('')
 
   const {
     form,
     categories,
+    manufacturers,
     isLoadingCategories,
+    isLoadingManufacturers,
     isLoadingProduct,
     isExtracting,
     isSaving,
@@ -53,6 +57,7 @@ export default function NewProductPage() {
     onSubmit,
     isEditMode,
     handleAddCategory,
+    handleAddManufacturer,
   } = useProductForm()
 
   const imageUrl = form.watch('image_url')
@@ -76,7 +81,7 @@ export default function NewProductPage() {
     img.src = debouncedImageUrl
   }, [debouncedImageUrl])
 
-  if (isLoadingCategories || isLoadingProduct) {
+  if (isLoadingCategories || isLoadingManufacturers || isLoadingProduct) {
     return (
       <div className="container mx-auto py-8 max-w-4xl space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -94,6 +99,15 @@ export default function NewProductPage() {
     if (success) {
       setNewCategoryName('')
       setIsCategoryDialogOpen(false)
+    }
+  }
+
+  const handleCreateManufacturer = async () => {
+    if (!newManufacturerName.trim()) return
+    const success = await handleAddManufacturer(newManufacturerName.trim())
+    if (success) {
+      setNewManufacturerName('')
+      setIsManufacturerDialogOpen(false)
     }
   }
 
@@ -173,6 +187,45 @@ export default function NewProductPage() {
                         <FormControl>
                           <Input {...field} disabled={isEditMode || isBusy} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="manufacturer_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex justify-between items-center">
+                          <span>Fabricante *</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setIsManufacturerDialogOpen(true)}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isBusy}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {manufacturers.map((mfg) => (
+                              <SelectItem key={mfg.id} value={mfg.id}>
+                                {mfg.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -569,6 +622,29 @@ export default function NewProductPage() {
               Cancelar
             </Button>
             <Button onClick={handleCreateCategory} disabled={!newCategoryName.trim()}>
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isManufacturerDialogOpen} onOpenChange={setIsManufacturerDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Fabricante</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Nome do fabricante"
+              value={newManufacturerName}
+              onChange={(e) => setNewManufacturerName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsManufacturerDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateManufacturer} disabled={!newManufacturerName.trim()}>
               Adicionar
             </Button>
           </DialogFooter>

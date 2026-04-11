@@ -32,7 +32,9 @@ export function useProductForm() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const [categories, setCategories] = useState<any[]>([])
+  const [manufacturers, setManufacturers] = useState<any[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  const [isLoadingManufacturers, setIsLoadingManufacturers] = useState(true)
   const [isExtracting, setIsExtracting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingProduct, setIsLoadingProduct] = useState(!!id)
@@ -74,8 +76,20 @@ export function useProductForm() {
     }
   }
 
+  const loadManufacturers = async () => {
+    try {
+      const mfgs = await productService.getManufacturers()
+      setManufacturers(mfgs)
+    } catch {
+      toast({ description: 'Erro ao carregar fabricantes', variant: 'destructive' })
+    } finally {
+      setIsLoadingManufacturers(false)
+    }
+  }
+
   useEffect(() => {
     loadCategories()
+    loadManufacturers()
   }, [toast])
 
   useEffect(() => {
@@ -152,7 +166,9 @@ export function useProductForm() {
       if (data.category_id && categories.some((c) => c.id === data.category_id)) {
         form.setValue('category_id', data.category_id)
       }
-      if (data.manufacturer_id) form.setValue('manufacturer_id', data.manufacturer_id)
+      if (data.manufacturer_id) {
+        form.setValue('manufacturer_id', data.manufacturer_id)
+      }
       if (data.price_usa) form.setValue('price_usa', parseFloat(data.price_usa) || 0)
       if (data.price_cost) form.setValue('price_cost', parseFloat(data.price_cost) || 0)
       if (data.weight) form.setValue('weight', parseFloat(data.weight) || 0)
@@ -195,6 +211,24 @@ export function useProductForm() {
       return true
     } catch (e) {
       toast({ description: 'Erro ao adicionar categoria', variant: 'destructive' })
+      return false
+    }
+  }
+
+  const handleAddManufacturer = async (name: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('manufacturers')
+        .insert({ name })
+        .select()
+        .single()
+      if (error) throw error
+      await loadManufacturers()
+      form.setValue('manufacturer_id', data.id)
+      toast({ description: 'Fabricante adicionado com sucesso!' })
+      return true
+    } catch (e) {
+      toast({ description: 'Erro ao adicionar fabricante', variant: 'destructive' })
       return false
     }
   }
@@ -254,7 +288,9 @@ export function useProductForm() {
   return {
     form,
     categories,
+    manufacturers,
     isLoadingCategories,
+    isLoadingManufacturers,
     isLoadingProduct,
     isExtracting,
     isSaving,
@@ -266,5 +302,6 @@ export function useProductForm() {
     onSubmit,
     isEditMode,
     handleAddCategory,
+    handleAddManufacturer,
   }
 }
