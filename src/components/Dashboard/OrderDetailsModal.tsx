@@ -50,7 +50,6 @@ export function OrderDetailsModal({
             ? data.billing_address[0]
             : data.billing_address
 
-          // Manual fallback fetch if relation was not loaded but ID exists
           if (!shipping && data.shipping_address_id) {
             const { data: sData } = await supabase
               .from('customer_addresses')
@@ -119,25 +118,6 @@ export function OrderDetailsModal({
     }
   }
 
-  const getBillingAddress = (ord: any, fetchedBilling: any) => {
-    try {
-      const addr = fetchedBilling || ord.payment_data?.billing_address
-      if (!addr && !ord.billing_address_street) return null
-
-      return {
-        street: ord.billing_address_street ?? addr?.street ?? 'N/A',
-        number: ord.billing_address_number ?? addr?.number ?? 'N/A',
-        complement: ord.billing_address_complement ?? addr?.complement ?? '',
-        city: ord.billing_address_city ?? addr?.city ?? 'N/A',
-        state: ord.billing_address_state ?? addr?.state ?? 'N/A',
-        zip_code: ord.billing_address_zip_code ?? addr?.zip_code ?? 'N/A',
-        country: ord.billing_address_country ?? addr?.country ?? 'N/A',
-      }
-    } catch {
-      return null
-    }
-  }
-
   const renderAddress = (addr: any) => {
     if (!addr) {
       return <p className="text-sm text-muted-foreground">N/A (Endereco não fornecido)</p>
@@ -153,7 +133,36 @@ export function OrderDetailsModal({
   }
 
   const deliveryAddress = order ? getDeliveryAddress(order, extraAddresses.shipping) : null
-  const billingAddress = order ? getBillingAddress(order, extraAddresses.billing) : null
+
+  const getStatusBadge = (status: string) => {
+    const s = status?.toLowerCase() || ''
+    if (s === 'pending_payment') {
+      return (
+        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 animate-pulse uppercase">
+          {status}
+        </Badge>
+      )
+    }
+    if (s === 'cancelled') {
+      return (
+        <Badge variant="destructive" className="uppercase">
+          {status}
+        </Badge>
+      )
+    }
+    return (
+      <Badge variant="outline" className="uppercase">
+        {status}
+      </Badge>
+    )
+  }
+
+  const handleSupport = () => {
+    const msg = encodeURIComponent(
+      `Olá! Gostaria de solicitar suporte para o meu pedido.\n\n*Número do Pedido:* ${order?.order_number}\n*Cliente:* ${customerName}\n\n*Como podemos ajudar?* (Descreva sua necessidade abaixo):\n`,
+    )
+    window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank')
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,9 +181,7 @@ export function OrderDetailsModal({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column */}
               <div className="space-y-6">
-                {/* Section 1: Order Header */}
                 <div>
                   <h4 className="font-semibold mb-3 border-b pb-2">Cabecalho do Pedido</h4>
                   <div className="text-sm space-y-1">
@@ -193,9 +200,8 @@ export function OrderDetailsModal({
                   </div>
                 </div>
 
-                {/* Section 2: Order Details */}
                 <div>
-                  <h4 className="font-semibold mb-3 border-b pb-2">Detalhes do Pedido</h4>
+                  <h4 className="font-semibold mb-3 border-b pb-2">Resumo do Pedido</h4>
                   <div className="text-sm space-y-2">
                     <p>
                       <span className="font-medium">Data:</span> {formatDate(order.created_at)}
@@ -206,9 +212,7 @@ export function OrderDetailsModal({
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">Status:</span>
-                      <Badge variant="outline" className="uppercase">
-                        {order.status}
-                      </Badge>
+                      {getStatusBadge(order.status)}
                     </div>
                     <p>
                       <span className="font-medium">Metodo de Pagamento:</span>{' '}
@@ -217,22 +221,13 @@ export function OrderDetailsModal({
                   </div>
                 </div>
 
-                {/* Section 3: Delivery Address */}
                 <div>
                   <h4 className="font-semibold mb-3 border-b pb-2">Endereco de Entrega</h4>
                   {renderAddress(deliveryAddress)}
                 </div>
-
-                {/* Section 4: Billing Address */}
-                <div>
-                  <h4 className="font-semibold mb-3 border-b pb-2">Endereco de Faturamento</h4>
-                  {renderAddress(billingAddress)}
-                </div>
               </div>
 
-              {/* Right Column */}
               <div className="space-y-6">
-                {/* Section 5: Order Items */}
                 <div>
                   <h4 className="font-semibold mb-3 border-b pb-2">Itens do Pedido</h4>
                   <div className="overflow-x-auto">
@@ -255,7 +250,7 @@ export function OrderDetailsModal({
                               <td className="py-2 pr-2">
                                 {productId && item.products?.name ? (
                                   <Link
-                                    to={`/products/${productId}`}
+                                    to={`/product/${productId}`}
                                     className="hover:underline text-emerald-600"
                                   >
                                     {productName}
@@ -284,22 +279,38 @@ export function OrderDetailsModal({
                   </div>
                 </div>
 
-                {/* Section 6: Notes */}
                 <div>
                   <h4 className="font-semibold mb-3 border-b pb-2">Observacoes</h4>
-                  <p className="text-sm">{order.notes || 'Sem observacoes'}</p>
+                  <p className="text-sm whitespace-pre-wrap">{order.notes || 'Sem observacoes'}</p>
                 </div>
 
                 <div className="flex flex-col gap-2 pt-4">
-                  <Button variant="outline" className="min-h-11" onClick={() => onDownload(order)}>
+                  <Button
+                    className="min-h-11 bg-white text-black border border-input hover:bg-orange-500 hover:text-white hover:border-transparent transition-colors"
+                    onClick={() => onDownload(order)}
+                  >
                     Imprimir Pedido
                   </Button>
-                  <Button className="min-h-11" onClick={() => onReorder(order.id)}>
+                  <Button
+                    className="min-h-11 bg-blue-600 text-white border-none hover:bg-orange-500 hover:text-white transition-colors"
+                    onClick={() => onReorder(order.id)}
+                  >
                     Recomprar Itens
                   </Button>
-                  {(order.status === 'pending' || order.status === 'pending_payment') && (
-                    <Button variant="destructive" className="min-h-11" onClick={onCancel}>
+                  {order.status?.toLowerCase() === 'pending_payment' && (
+                    <Button
+                      className="min-h-11 bg-white text-black border border-input hover:bg-orange-500 hover:text-white hover:border-transparent transition-colors"
+                      onClick={onCancel}
+                    >
                       Cancelar Pedido
+                    </Button>
+                  )}
+                  {order.status?.toLowerCase() === 'paid' && (
+                    <Button
+                      className="min-h-11 bg-green-600 text-white border-none hover:bg-orange-500 hover:text-white transition-colors"
+                      onClick={handleSupport}
+                    >
+                      Solicitar Suporte
                     </Button>
                   )}
                 </div>

@@ -135,11 +135,22 @@ export const orderService = {
       await supabase.functions.invoke('notify-admin-refund', { body: { orderId, reason } })
     }
 
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select('notes')
+      .eq('id', orderId)
+      .single()
+    const now = new Date()
+    const dateStr = now.toLocaleDateString('pt-BR')
+    const timeStr = now.toLocaleTimeString('pt-BR')
+    const cancelNote = `\nCancelamento realizado pelo cliente, motivo: ${reason} em ${dateStr} às ${timeStr}`
+    const newNotes = (orderData?.notes || '') + cancelNote
+
     const { data: items } = await supabase.from('order_items').select('id').eq('order_id', orderId)
 
     const { error } = await supabase
       .from('orders')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled', notes: newNotes.trim() })
       .eq('id', orderId)
     if (error) throw error
 

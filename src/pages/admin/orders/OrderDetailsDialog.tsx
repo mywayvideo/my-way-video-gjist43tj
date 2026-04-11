@@ -205,7 +205,7 @@ export default function OrderDetailsDialog({
 
               <section className="bg-muted/30 p-4 rounded-lg border">
                 <h4 className="font-bold text-sm text-muted-foreground mb-3">
-                  2. DETALHES DO PEDIDO
+                  2. RESUMO DO PEDIDO
                 </h4>
                 <div className="space-y-2 text-sm">
                   <p>
@@ -233,20 +233,11 @@ export default function OrderDetailsDialog({
                   {formatAddress(addresses.shipping || details.payment_data?.shipping_address)}
                 </p>
               </section>
-
-              <section className="bg-muted/30 p-4 rounded-lg border">
-                <h4 className="font-bold text-sm text-muted-foreground mb-3">
-                  4. ENDEREÇO DE FATURAMENTO
-                </h4>
-                <p className="text-sm text-foreground/80">
-                  {formatAddress(addresses.billing || details.payment_data?.billing_address)}
-                </p>
-              </section>
             </div>
 
             <div className="space-y-6">
               <section className="bg-muted/30 p-4 rounded-lg border">
-                <h4 className="font-bold text-sm text-muted-foreground mb-3">5. ITENS DO PEDIDO</h4>
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">4. ITENS DO PEDIDO</h4>
                 <div className="border rounded-md overflow-hidden bg-background">
                   <Table>
                     <TableHeader>
@@ -299,7 +290,7 @@ export default function OrderDetailsDialog({
               </section>
 
               <section className="bg-muted/30 p-4 rounded-lg border">
-                <h4 className="font-bold text-sm text-muted-foreground mb-3">6. OBSERVAÇÕES</h4>
+                <h4 className="font-bold text-sm text-muted-foreground mb-3">5. OBSERVAÇÕES</h4>
                 <div className="space-y-4">
                   <div className="text-sm bg-background p-3 rounded-md border min-h-[60px]">
                     {details.notes ? (
