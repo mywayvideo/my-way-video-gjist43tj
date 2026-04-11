@@ -373,7 +373,11 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
               <FormItem className="md:col-span-2">
                 <FormLabel>Descrição Curta</FormLabel>
                 <FormControl>
-                  <Textarea {...field} className="bg-background/50 min-h-[100px]" />
+                  <Textarea
+                    {...field}
+                    value={field.value || ''}
+                    className="bg-background/50 min-h-[100px]"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -389,6 +393,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                 <FormControl>
                   <Textarea
                     {...field}
+                    value={field.value || ''}
                     placeholder={`## Especificações Avançadas\n\n**Recurso 1:** Descrição...`}
                     className="bg-background/50 min-h-[200px]"
                     rows={10}

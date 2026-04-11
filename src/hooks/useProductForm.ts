@@ -17,13 +17,17 @@ const productSchema = z.object({
   stock: z.coerce.number().catch(0).default(0),
   category_id: z.string().catch('').default(''),
   category: z.string().catch('').default(''),
-  description: z.string().catch('').default(''),
+  description: z
+    .any()
+    .transform((v) => (typeof v === 'string' ? v : v ? JSON.stringify(v, null, 2) : '')),
   weight: z.coerce.number().catch(0).default(0),
   dimensions: z.string().catch('').default(''),
   image_url: z.string().catch('').default(''),
   ncm: z.string().catch('').default(''),
   is_special: z.boolean().catch(false).default(false),
-  technical_info: z.string().catch('').default(''),
+  technical_info: z
+    .any()
+    .transform((v) => (typeof v === 'string' ? v : v ? JSON.stringify(v, null, 2) : '')),
   is_discontinued: z.boolean().catch(false).default(false),
 })
 
@@ -198,9 +202,20 @@ export function useProductForm(props?: UseProductFormProps) {
       }
       if (data.name) form.setValue('name', data.name, { shouldDirty: true })
       if (data.sku) form.setValue('sku', data.sku, { shouldDirty: true })
-      if (data.description) form.setValue('description', data.description, { shouldDirty: true })
-      if (data.technical_info)
-        form.setValue('technical_info', data.technical_info, { shouldDirty: true })
+      if (data.description) {
+        const descStr =
+          typeof data.description === 'string'
+            ? data.description
+            : JSON.stringify(data.description, null, 2)
+        form.setValue('description', descStr, { shouldDirty: true })
+      }
+      if (data.technical_info) {
+        const techInfoStr =
+          typeof data.technical_info === 'string'
+            ? data.technical_info
+            : JSON.stringify(data.technical_info, null, 2)
+        form.setValue('technical_info', techInfoStr, { shouldDirty: true })
+      }
       if (data.image_url) form.setValue('image_url', data.image_url, { shouldDirty: true })
       if (data.dimensions) form.setValue('dimensions', data.dimensions, { shouldDirty: true })
       if (data.category) form.setValue('category', data.category, { shouldDirty: true })
