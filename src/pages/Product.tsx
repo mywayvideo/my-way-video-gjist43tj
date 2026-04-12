@@ -45,6 +45,7 @@ import { useAppSettingsRealtime } from '@/hooks/useAppSettingsRealtime'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
 import { useAuthState } from '@/hooks/useAuthState'
+import { ProductCard } from '@/components/ProductCard'
 
 type Message = {
   id: string
@@ -815,36 +816,7 @@ export default function Product() {
           ) : relatedProducts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/product/${p.id}`}
-                  className="group flex flex-col p-4 rounded-xl border border-border/50 bg-card hover:border-primary/50 hover:shadow-md transition-all h-full shadow-sm"
-                >
-                  <div className="w-full aspect-square relative bg-muted/10 rounded-lg overflow-hidden mb-4 p-4 flex items-center justify-center">
-                    <ImageWithFallback
-                      src={p.image_url}
-                      alt={p.name}
-                      productId={p.id}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
-                  <div className="flex flex-col flex-1">
-                    <span className="text-[0.65rem] md:text-xs text-muted-foreground uppercase tracking-wider mb-1.5 font-semibold line-clamp-1">
-                      {p.manufacturer?.name || p.category || 'Equipamento'}
-                    </span>
-                    <h3 className="font-medium text-sm md:text-base leading-snug line-clamp-2 mb-3 group-hover:text-primary transition-colors">
-                      {p.name}
-                    </h3>
-                    <div className="mt-auto">
-                      <span className="text-base md:text-lg font-bold text-foreground tracking-tight">
-                        {new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                        }).format(p.price_usd || 0)}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           ) : (
