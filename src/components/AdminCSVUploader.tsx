@@ -317,6 +317,11 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
           const targetKey = h === 'price_usa' ? 'price_usd' : h
           if (['price_brl', 'price_usd', 'price_cost', 'stock', 'weight'].includes(targetKey)) {
             prod[targetKey] = val ? parseFloat(val) : 0
+          } else if (['price_nationalized_sales', 'price_nationalized_cost'].includes(targetKey)) {
+            prod[targetKey] = val ? parseFloat(val) : null
+          } else if (targetKey === 'price_nationalized_currency') {
+            const curr = val ? String(val).trim().toUpperCase() : 'BRL'
+            prod[targetKey] = curr === 'USD' ? 'USD' : 'BRL'
           } else if (targetKey === 'is_special' || targetKey === 'is_discontinued') {
             if (typeof val === 'boolean') {
               prod[targetKey] = val

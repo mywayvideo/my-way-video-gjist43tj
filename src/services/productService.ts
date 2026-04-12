@@ -70,6 +70,9 @@ export const productService = {
       is_discontinued: productData.is_discontinued || false,
       category_id: productData.category_id || null,
       category: productData.category || null,
+      price_nationalized_sales: productData.price_nationalized_sales || null,
+      price_nationalized_cost: productData.price_nationalized_cost || null,
+      price_nationalized_currency: productData.price_nationalized_currency || 'BRL',
     }
 
     const { data, error } = await supabase.from('products').insert(payload).select().single()
@@ -97,6 +100,9 @@ export const productService = {
       is_discontinued: productData.is_discontinued || false,
       category_id: productData.category_id || null,
       category: productData.category || null,
+      price_nationalized_sales: productData.price_nationalized_sales || null,
+      price_nationalized_cost: productData.price_nationalized_cost || null,
+      price_nationalized_currency: productData.price_nationalized_currency || 'BRL',
     }
 
     const { error } = await supabase.from('products').update(payload).eq('id', id)
