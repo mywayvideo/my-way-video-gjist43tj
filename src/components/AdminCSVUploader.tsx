@@ -593,22 +593,4 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
                   (report?.rowsToCreate.length === 0 && report?.rowsToUpdate.length === 0)
                 }
               >
-                {isUploading ? progressMsg || 'Processando...' : 'Confirmar Importação'}
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <AdminManufacturerDialog
-        open={showMfgDialog}
-        onOpenChange={setShowMfgDialog}
-        onSuccess={(id) => {
-          onAddManufacturer()
-          setMfgId(id)
-          setShowMfgDialog(false)
-        }}
-      />
-    </>
-  )
-}
+                {isUploading ? progressMsg || 'Processando...' : 'Confirmar Imp
