@@ -13,6 +13,7 @@ import {
   History,
   KeyRound,
   LogOut,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -43,6 +44,8 @@ export function Header() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [mobileAiQuery, setMobileAiQuery] = useState('')
+  const [isAiNavigating, setIsAiNavigating] = useState(false)
+  const [isMobileAiNavigating, setIsMobileAiNavigating] = useState(false)
   const [mobileDbQuery, setMobileDbQuery] = useState('')
   const { itemCount } = useCart()
   const { customer } = useCurrentCustomer()
@@ -185,19 +188,28 @@ export function Header() {
   const handleAISearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
+      setIsAiNavigating(true)
       saveSearchState(searchQuery.trim(), null, [], 'ai')
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
-      setIsSheetOpen(false)
+      setTimeout(() => {
+        navigate(`/search?type=ai&q=${encodeURIComponent(searchQuery.trim())}`)
+        setIsSheetOpen(false)
+        setIsAiNavigating(false)
+        setSearchQuery('')
+      }, 300)
     }
   }
 
   const handleMobileAISearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (mobileAiQuery.trim()) {
+      setIsMobileAiNavigating(true)
       saveSearchState(mobileAiQuery.trim(), null, [], 'ai')
-      navigate(`/search?type=ai&q=${encodeURIComponent(mobileAiQuery.trim())}`)
-      setShowMobileSearch(false)
-      setMobileAiQuery('')
+      setTimeout(() => {
+        navigate(`/search?type=ai&q=${encodeURIComponent(mobileAiQuery.trim())}`)
+        setShowMobileSearch(false)
+        setMobileAiQuery('')
+        setIsMobileAiNavigating(false)
+      }, 300)
     }
   }
 
@@ -237,15 +249,48 @@ export function Header() {
                 onChange={(e) => setMobileDbQuery(e.target.value)}
               />
             </form>
-            <form onSubmit={handleMobileAISearch} className="relative w-full sm:w-1/2">
-              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+            <form
+              onSubmit={handleMobileAISearch}
+              className="relative w-full sm:w-1/2 group flex items-center shadow-sm rounded-xl border border-primary/20 bg-primary/5 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300 h-12"
+            >
+              <div className="pl-3 pr-2 py-2">
+                <Sparkles className="h-4 w-4 text-primary group-focus-within:animate-pulse transition-all" />
+              </div>
               <Input
                 type="text"
                 placeholder="Pesquisar com IA..."
-                className="w-full pl-10 h-12 rounded-xl bg-primary/5 border-primary/20"
+                className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-11"
                 value={mobileAiQuery}
                 onChange={(e) => setMobileAiQuery(e.target.value)}
+                disabled={isMobileAiNavigating}
               />
+              {mobileAiQuery && !isMobileAiNavigating && (
+                <div className="pr-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setMobileAiQuery('')}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              <div className="pr-1.5">
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={isMobileAiNavigating || !mobileAiQuery.trim()}
+                  className="h-9 w-9 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
+                >
+                  {isMobileAiNavigating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </form>
           </div>
 
@@ -359,15 +404,48 @@ export function Header() {
                     <DirectSearch />
                   </div>
                   <div className="pt-4">
-                    <form onSubmit={handleAISearch} className="w-full relative group">
-                      <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                    <form
+                      onSubmit={handleAISearch}
+                      className="w-full relative group flex items-center shadow-sm rounded-xl border border-primary/20 bg-primary/5 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300 h-10"
+                    >
+                      <div className="pl-3 pr-2 py-2">
+                        <Sparkles className="h-4 w-4 text-primary group-focus-within:animate-pulse transition-all" />
+                      </div>
                       <Input
                         type="text"
                         placeholder="Pergunte à IA Especialista..."
-                        className="w-full pl-10 h-10 rounded-xl bg-primary/5 border-primary/20"
+                        className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-9"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        disabled={isAiNavigating}
                       />
+                      {searchQuery && !isAiNavigating && (
+                        <div className="pr-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => setSearchQuery('')}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <div className="pr-1.5">
+                        <Button
+                          type="submit"
+                          size="icon"
+                          disabled={isAiNavigating || !searchQuery.trim()}
+                          className="h-7 w-7 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
+                        >
+                          {isAiNavigating ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Search className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </div>
                     </form>
                   </div>
                   {!hasLoggedOut && isAdmin && (
@@ -399,26 +477,48 @@ export function Header() {
               <DirectSearch />
             </div>
             <div className="w-1/2 relative">
-              <form onSubmit={handleAISearch} className="w-full relative group shadow-sm">
-                <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/70 group-focus-within:text-primary group-focus-within:animate-pulse transition-all" />
+              <form
+                onSubmit={handleAISearch}
+                className="w-full relative group flex items-center shadow-sm rounded-full border border-primary/20 bg-primary/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-300 h-10"
+              >
+                <div className="pl-3 pr-2 py-2">
+                  <Sparkles className="h-4 w-4 text-primary/70 group-focus-within:text-primary group-focus-within:animate-pulse transition-all" />
+                </div>
                 <Input
                   type="text"
                   placeholder="Pergunte à IA (Ex: Câmera 4K Broadcast?)"
-                  className="w-full pl-10 pr-10 h-10 rounded-full bg-primary/5 border-primary/20 focus-visible:bg-background focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary transition-all placeholder:text-muted-foreground/70"
+                  className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-9 placeholder:text-muted-foreground/70"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={isAiNavigating}
                 />
-                {searchQuery && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground rounded-full transition-colors"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                {searchQuery && !isAiNavigating && (
+                  <div className="pr-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
                 )}
+                <div className="pr-1.5">
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={isAiNavigating || !searchQuery.trim()}
+                    className="h-7 w-7 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
+                  >
+                    {isAiNavigating ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Search className="w-3 h-3" />
+                    )}
+                  </Button>
+                </div>
               </form>
             </div>
           </div>

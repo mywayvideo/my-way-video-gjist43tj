@@ -3,6 +3,7 @@ import { Sparkles, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart } from
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
+import { ProductCard } from '@/components/ProductCard'
 
 interface Product {
   id: string
@@ -167,51 +168,9 @@ export function AISearchResults({ isLoading, result, error, className }: AISearc
           <h4 className="text-sm font-medium uppercase tracking-wider text-slate-500">
             Produtos Recomendados
           </h4>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {result.referenced_internal_products.map((product) => (
-              <div
-                key={product.id}
-                className="flex flex-col justify-between rounded-lg border border-slate-700/50 bg-slate-800/50 p-4 transition-colors hover:bg-slate-800"
-              >
-                <div className="flex items-start space-x-4">
-                  {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      className="h-16 w-16 rounded-md object-cover bg-white"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-slate-700">
-                      <Sparkles className="h-6 w-6 text-slate-500" />
-                    </div>
-                  )}
-                  <div>
-                    <h5 className="font-medium text-slate-200 line-clamp-2">{product.name}</h5>
-                    {product.price_usd ? (
-                      <p className="mt-1 text-lg font-bold text-primary">
-                        USD {product.price_usd.toFixed(2)}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="w-full sm:w-auto"
-                    onClick={() =>
-                      addItem({
-                        product_id: product.id,
-                        quantity: 1,
-                        price_usd: product.price_usd || 0,
-                      })
-                    }
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Adicionar
-                  </Button>
-                </div>
-              </div>
+              <ProductCard key={product.id} product={product as any} />
             ))}
           </div>
         </div>
