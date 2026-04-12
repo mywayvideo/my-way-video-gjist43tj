@@ -14,6 +14,15 @@ const productSchema = z.object({
   price_cost: z.coerce.number().catch(0).default(0),
   price_usa: z.coerce.number().catch(0).default(0),
   price_brl: z.coerce.number().catch(0).default(0),
+  price_nationalized_sales: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.coerce.number().nullable().optional(),
+  ),
+  price_nationalized_cost: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.coerce.number().nullable().optional(),
+  ),
+  price_nationalized_currency: z.string().catch('BRL').default('BRL'),
   stock: z.coerce.number().catch(0).default(0),
   category_id: z.string().catch('').default(''),
   category: z.string().catch('').default(''),
@@ -29,6 +38,7 @@ const productSchema = z.object({
     .any()
     .transform((v) => (typeof v === 'string' ? v : v ? JSON.stringify(v, null, 2) : '')),
   is_discontinued: z.boolean().catch(false).default(false),
+  manual_related_ids: z.array(z.string()).catch([]).default([]),
 })
 
 export interface UseProductFormProps {
@@ -64,6 +74,9 @@ export function useProductForm(props?: UseProductFormProps) {
       price_cost: 0,
       price_usa: 0,
       price_brl: 0,
+      price_nationalized_sales: null,
+      price_nationalized_cost: null,
+      price_nationalized_currency: 'BRL',
       stock: 0,
       category_id: '',
       category: '',
@@ -75,6 +88,7 @@ export function useProductForm(props?: UseProductFormProps) {
       is_special: false,
       technical_info: '',
       is_discontinued: false,
+      manual_related_ids: [],
     },
   })
 
@@ -116,6 +130,9 @@ export function useProductForm(props?: UseProductFormProps) {
         price_cost: props.initialData.price_cost || 0,
         price_usa: props.initialData.price_usd || props.initialData.price_usa || 0,
         price_brl: props.initialData.price_brl || 0,
+        price_nationalized_sales: props.initialData.price_nationalized_sales ?? null,
+        price_nationalized_cost: props.initialData.price_nationalized_cost ?? null,
+        price_nationalized_currency: props.initialData.price_nationalized_currency || 'BRL',
         stock: props.initialData.stock || 0,
         category_id: props.initialData.category_id || '',
         category: props.initialData.category || '',
@@ -127,6 +144,7 @@ export function useProductForm(props?: UseProductFormProps) {
         is_special: props.initialData.is_special || false,
         technical_info: props.initialData.technical_info || '',
         is_discontinued: props.initialData.is_discontinued || false,
+        manual_related_ids: props.initialData.manual_related_ids || [],
       })
       setIsLoadingProduct(false)
     } else if (routeId) {
@@ -147,6 +165,9 @@ export function useProductForm(props?: UseProductFormProps) {
               price_cost: data.price_cost || 0,
               price_usa: data.price_usd || 0,
               price_brl: data.price_brl || 0,
+              price_nationalized_sales: data.price_nationalized_sales ?? null,
+              price_nationalized_cost: data.price_nationalized_cost ?? null,
+              price_nationalized_currency: data.price_nationalized_currency || 'BRL',
               stock: data.stock || 0,
               category_id: data.category_id || '',
               category: data.category || '',
@@ -158,6 +179,7 @@ export function useProductForm(props?: UseProductFormProps) {
               is_special: data.is_special || false,
               technical_info: data.technical_info || '',
               is_discontinued: data.is_discontinued || false,
+              manual_related_ids: data.manual_related_ids || [],
             })
           }
         } catch (e) {
