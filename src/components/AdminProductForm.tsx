@@ -43,6 +43,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showMfgDialog, setShowMfgDialog] = useState(false)
   const [extractUrl, setExtractUrl] = useState('')
+  const [searchRelated, setSearchRelated] = useState('')
   const [allProducts, setAllProducts] = useState<
     { id: string; name: string; sku: string | null }[]
   >([])
@@ -262,7 +263,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             name="price_usa"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço de Venda Miami (USD)</FormLabel>
+                <FormLabel>Preço Venda USA (USD)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} className="bg-background/50" />
                 </FormControl>
@@ -276,7 +277,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             name="price_brl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço de Venda Brasil (USD)</FormLabel>
+                <FormLabel>Preço CIF SP Estimado</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} className="bg-background/50" />
                 </FormControl>
@@ -290,7 +291,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             name="price_cost"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-amber-500">Preço de Custo Miami (USD)</FormLabel>
+                <FormLabel className="text-amber-500">Preço Custo USA (USD)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -408,42 +409,71 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             )}
           />
 
+          <div className="md:col-span-2 mt-6 mb-2">
+            <h3 className="text-lg font-medium">Relacionamentos e Status</h3>
+            <div className="h-px bg-white/10 w-full mt-2" />
+          </div>
+
           <FormField
             control={form.control}
             name="manual_related_ids"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Produtos Relacionados (Manual)</FormLabel>
-                <div className="border border-white/10 rounded-md p-2 bg-background/50">
-                  <ScrollArea className="h-[150px]">
-                    <div className="space-y-2 p-2">
-                      {allProducts.map((prod) => (
-                        <div key={prod.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`related-${prod.id}`}
-                            checked={(field.value || []).includes(prod.id)}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || []
-                              const updated = checked
-                                ? [...current, prod.id]
-                                : current.filter((id: string) => id !== prod.id)
-                              field.onChange(updated)
-                            }}
-                          />
-                          <label
-                            htmlFor={`related-${prod.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {prod.name} {prod.sku ? `(${prod.sku})` : ''}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const filteredProducts = allProducts.filter(
+                (p) =>
+                  p.name.toLowerCase().includes(searchRelated.toLowerCase()) ||
+                  (p.sku && p.sku.toLowerCase().includes(searchRelated.toLowerCase())),
+              )
+
+              return (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Produtos Relacionados (Manual)</FormLabel>
+                  <div className="border border-white/10 rounded-md p-3 bg-background/50 space-y-3">
+                    <Input
+                      placeholder="Buscar por nome ou SKU..."
+                      value={searchRelated}
+                      onChange={(e) => setSearchRelated(e.target.value)}
+                      className="bg-background"
+                    />
+                    <ScrollArea className="h-[150px] border border-white/5 rounded p-2 bg-black/20">
+                      <div className="space-y-3">
+                        {filteredProducts.map((prod) => (
+                          <div key={prod.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`related-${prod.id}`}
+                              checked={(field.value || []).includes(prod.id)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || []
+                                const updated = checked
+                                  ? [...current, prod.id]
+                                  : current.filter((id: string) => id !== prod.id)
+                                field.onChange(updated)
+                              }}
+                            />
+                            <label
+                              htmlFor={`related-${prod.id}`}
+                              className="text-sm font-medium leading-none cursor-pointer"
+                            >
+                              {prod.name}{' '}
+                              {prod.sku ? (
+                                <span className="text-muted-foreground ml-1">({prod.sku})</span>
+                              ) : (
+                                ''
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                        {filteredProducts.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Nenhum produto encontrado.
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )
+            }}
           />
 
           <FormField
