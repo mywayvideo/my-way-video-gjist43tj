@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
-import { useApplyDiscount } from '@/hooks/useApplyDiscount'
+import { useProductDiscount } from '@/hooks/useProductDiscount'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useState } from 'react'
 import { QuantityModal } from '@/components/QuantityModal'
@@ -15,11 +15,8 @@ import { QuantityModal } from '@/components/QuantityModal'
 export function ProductCard({ product }: { product: any }) {
   const [showQtyModal, setShowQtyModal] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
-  const { originalPrice, discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
-    product.id,
-    product.price_usd,
-    product.price_cost,
-  )
+  const { originalPrice, discountedPrice, discountPercentage, ruleName } =
+    useProductDiscount(product)
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
 

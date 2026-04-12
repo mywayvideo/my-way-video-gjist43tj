@@ -43,19 +43,14 @@ export const getApplicableDiscounts = (
   productId: string,
   userId?: string | null,
   userRole?: string | null,
+  productManufacturerId?: string | null,
+  productCategoryId?: string | null,
 ): Discount[] => {
   const now = new Date()
 
-  return discounts.filter((rule) => {
+  return discounts.filter((rule: any) => {
     if (!rule.is_active) return false
     if (!rule.discount_value || rule.discount_value <= 0) return false
-
-    // Product match
-    let matchesProduct = false
-    if (Array.isArray(rule.product_selection)) {
-      matchesProduct = rule.product_selection.includes(productId)
-    }
-    if (!matchesProduct) return false
 
     // Date match
     if (rule.start_date) {
@@ -68,17 +63,47 @@ export const getApplicableDiscounts = (
       if (now > endDate) return false
     }
 
-    // User match
-    if (rule.customer_application_type === 'role') {
-      if (rule.customer_role && rule.customer_role !== 'all' && rule.customer_role !== userRole) {
-        return false
-      }
-    } else if (rule.customer_application_type === 'specific_customers') {
-      const customersList = rule.customers || []
-      if (!userId || !customersList.includes(userId)) {
-        return false
-      }
+    // Exclusion match
+    if (rule.excluded_products && Array.isArray(rule.excluded_products)) {
+      if (rule.excluded_products.includes(productId)) return false
     }
+
+    // Target match
+    const targetType = rule.target_type || 'specific'
+    let matchesProduct = false
+
+    if (targetType === 'all') {
+      matchesProduct = true
+    } else if (targetType === 'specific') {
+      matchesProduct =
+        Array.isArray(rule.product_selection) && rule.product_selection.includes(productId)
+    } else if (targetType === 'manufacturer') {
+      matchesProduct =
+        Array.isArray(rule.manufacturer_ids) && productManufacturerId
+          ? rule.manufacturer_ids.includes(productManufacturerId)
+          : false
+    } else if (targetType === 'category') {
+      matchesProduct =
+        Array.isArray(rule.category_ids) && productCategoryId
+          ? rule.category_ids.includes(productCategoryId)
+          : false
+    } else if (targetType === 'manufacturer_category') {
+      const hasManufacturer =
+        Array.isArray(rule.manufacturer_ids) && productManufacturerId
+          ? rule.manufacturer_ids.includes(productManufacturerId)
+          : false
+      const hasCategory =
+        Array.isArray(rule.category_ids) && productCategoryId
+          ? rule.category_ids.includes(productCategoryId)
+          : false
+      matchesProduct = hasManufacturer && hasCategory
+    } else {
+      // Fallback
+      matchesProduct =
+        Array.isArray(rule.product_selection) && rule.product_selection.includes(productId)
+    }
+
+    if (!matchesProduct) return false
 
     return true
   })
@@ -91,6 +116,8 @@ export const getBestDiscount = (
   userRole: string | null,
   originalPrice: number,
   costPrice: number,
+  productManufacturerId?: string | null,
+  productCategoryId?: string | null,
 ): DiscountCalculation => {
   const defaultCalc: DiscountCalculation = {
     originalPrice,
@@ -102,7 +129,14 @@ export const getBestDiscount = (
 
   if (!originalPrice || originalPrice <= 0) return defaultCalc
 
-  const applicable = getApplicableDiscounts(discounts, productId, userId, userRole)
+  const applicable = getApplicableDiscounts(
+    discounts,
+    productId,
+    userId,
+    userRole,
+    productManufacturerId,
+    productCategoryId,
+  )
   if (applicable.length === 0) return defaultCalc
 
   let bestRule: Discount | null = null

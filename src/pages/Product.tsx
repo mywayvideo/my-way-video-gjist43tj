@@ -39,7 +39,7 @@ import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
-import { useApplyDiscount } from '@/hooks/useApplyDiscount'
+import { useProductDiscount } from '@/hooks/useProductDiscount'
 import { useAppSettingsRealtime } from '@/hooks/useAppSettingsRealtime'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
@@ -151,11 +151,7 @@ export default function Product() {
   const { isAnimating, triggerAnimation } = useHeartAnimation()
   const { user: authUser, isLoading: isAuthLoading } = useAuthState()
 
-  const { discountedPrice, discountPercentage, ruleName } = useApplyDiscount(
-    product?.id,
-    product?.price_usd,
-    product?.price_cost,
-  )
+  const { discountedPrice, discountPercentage, ruleName } = useProductDiscount(product)
 
   const effectiveDiscountPercentage = discountPercentage || 0
 
