@@ -36,6 +36,7 @@ import {
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
+import { AISearchResults } from '@/components/AISearchResults'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
@@ -727,75 +728,37 @@ export default function Product() {
               )}
 
               {messages.map((msg, idx) => {
-                const showWhatsApp = checkWhatsAppTrigger(msg, product)
+                if (msg.role === 'ai') {
+                  const hasError =
+                    msg.content === 'Ocorreu um erro ao consultar o especialista. Tente novamente.'
+                  const showWhatsApp = checkWhatsAppTrigger(msg, product)
+                  return (
+                    <div key={msg.id} className="w-full flex flex-col items-start my-2">
+                      <AISearchResults
+                        isLoading={msg.isLoading || false}
+                        result={
+                          msg.aiData
+                            ? {
+                                message: msg.content,
+                                confidence_level: msg.aiData.confidence_level,
+                                referenced_internal_products: msg.aiData
+                                  .referenced_internal_products as any,
+                                should_show_whatsapp_button: showWhatsApp,
+                                whatsapp_reason: msg.aiData.whatsapp_reason,
+                              }
+                            : { message: msg.content, should_show_whatsapp_button: showWhatsApp }
+                        }
+                        error={hasError ? msg.content : null}
+                        className="w-full shadow-md"
+                      />
+                    </div>
+                  )
+                }
 
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                  >
-                    {msg.role === 'ai' && (
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">
-                        Assistente
-                      </span>
-                    )}
-                    <div
-                      className={`p-3 rounded-2xl text-sm leading-[1.5] max-w-[90%] sm:max-w-[85%] shadow-sm ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                          : 'bg-background border border-border/60 rounded-tl-sm'
-                      }`}
-                    >
-                      {msg.isLoading ? (
-                        <div className="flex items-center gap-2 opacity-70 font-mono text-[11px]">
-                          <Loader2 className="w-3 h-3 animate-spin text-primary" /> Pesquisando...
-                        </div>
-                      ) : (
-                        <>
-                          {msg.role === 'user' ? (
-                            <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
-                          ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 text-sm">
-                              <MarkdownRenderer content={msg.content} />
-
-                              {msg.aiData?.referenced_internal_products &&
-                                msg.aiData.referenced_internal_products.length > 0 && (
-                                  <div className="mt-4 border-t border-border/50 pt-3">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-                                      Soluções Mencionadas:
-                                    </span>
-                                    <ReferencedProducts
-                                      ids={msg.aiData.referenced_internal_products}
-                                      currentProductId={product.id}
-                                    />
-                                  </div>
-                                )}
-
-                              {showWhatsApp && (
-                                <div className="mt-4 pt-3 border-t border-border/50">
-                                  {msg.aiData?.whatsapp_reason && (
-                                    <p className="text-[11px] text-muted-foreground mb-3 font-medium border-l-2 border-primary/40 pl-2">
-                                      {msg.aiData.whatsapp_reason}
-                                    </p>
-                                  )}
-                                  <Button
-                                    onClick={() =>
-                                      window.open(
-                                        `https://wa.me/17867161170?text=${encodeURIComponent(`[Engenharia] Dúvida sobre ${product.name} (SKU: ${product.sku}): ${messages[idx - 1]?.content || ''}`)}`,
-                                        '_blank',
-                                      )
-                                    }
-                                    className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white shadow-md hover:shadow-[#25D366]/20 transition-all h-10 text-sm font-semibold"
-                                  >
-                                    <MessageCircle className="w-4 h-4 mr-2" /> Validar com
-                                    Engenheiro
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
+                  <div key={msg.id} className="flex flex-col items-end gap-1 my-2">
+                    <div className="p-3 bg-primary text-primary-foreground rounded-2xl rounded-tr-sm text-sm leading-[1.5] max-w-[90%] sm:max-w-[85%] shadow-sm">
+                      <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   </div>
                 )

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
+import { AISearchResults } from '@/components/AISearchResults'
 import { searchProducts } from '@/services/database-search'
 import { useDebounce } from '@/hooks/use-debounce'
 import { formatPrice } from '@/utils/priceFormatter'
@@ -325,7 +326,7 @@ export function AIPrompt({
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-4">
       <form
         onSubmit={handleSearch}
-        className="relative group flex items-center shadow-lg rounded-full overflow-hidden border border-border/50 bg-background/50 backdrop-blur-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300"
+        className="relative group flex items-center shadow-lg rounded-full overflow-hidden border border-border/80 bg-background focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300"
       >
         <div className="pl-6 pr-2 py-4">
           {activeSearchType === 'database' ? (
@@ -366,36 +367,41 @@ export function AIPrompt({
             type="submit"
             size="icon"
             disabled={isLoading}
-            className={`h-11 w-11 md:h-12 md:w-12 rounded-full text-white disabled:opacity-50 transition-colors ${activeSearchType === 'database' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary hover:bg-primary/90'}`}
+            className={`h-11 w-11 md:h-12 md:w-12 rounded-full text-white disabled:opacity-50 transition-all shadow-md hover:scale-105 ${activeSearchType === 'database' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none'}`}
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
             ) : (
-              <Search className="w-4 h-4 md:w-5 md:h-5" />
+              <Search className="w-5 h-5 md:w-6 md:h-6" />
             )}
           </Button>
         </div>
       </form>
 
-      {isLoading && activeSearchType === 'ai' && (
-        <div className="flex items-center justify-center gap-2 p-4 text-muted-foreground animate-fade-in">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="font-medium">Processando sua pesquisa...</span>
-        </div>
-      )}
-
-      {error && !isLoading && !restoreError && activeSearchType !== 'database' && (
-        <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up">
-          <p className="text-destructive font-medium">{error}</p>
-          <Button onClick={() => handleSearch()} variant="outline" className="gap-2 h-11 px-6">
-            <RefreshCcw className="w-4 h-4" />
-            Tentar novamente
-          </Button>
-        </div>
-      )}
+      {activeSearchType === 'ai' &&
+        (isLoading || result?.status === 'success' || error) &&
+        !restoreError && (
+          <AISearchResults
+            isLoading={isLoading}
+            result={
+              result?.status === 'success'
+                ? {
+                    message: responseMessage || result.message,
+                    confidence_level: result.confidence_level,
+                    referenced_internal_products:
+                      result.referenced_internal_products || referencedProducts,
+                    should_show_whatsapp_button: result.should_show_whatsapp_button,
+                    whatsapp_reason: result.whatsapp_reason,
+                  }
+                : null
+            }
+            error={error}
+            className="animate-fade-in-up w-full mt-4"
+          />
+        )}
 
       {restoreError && !isLoading && (
-        <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up w-full">
+        <div className="p-6 border border-destructive/30 bg-destructive/10 rounded-2xl flex flex-col items-center justify-center gap-4 text-center animate-fade-in-up w-full mt-4">
           <p className="text-destructive font-medium">
             Nao foi possivel restaurar a busca anterior.
           </p>
@@ -409,32 +415,6 @@ export function AIPrompt({
           >
             Nova Busca
           </Button>
-        </div>
-      )}
-
-      {responseMessage && result?.status === 'success' && !isLoading && (
-        <div className="p-6 md:p-8 bg-card border rounded-2xl shadow-sm animate-fade-in-up w-full">
-          <ResponseFormatter content={responseMessage} />
-          {referencedProducts && referencedProducts.length > 0 && (
-            <div className="mt-6">
-              <ReferencedProducts ids={referencedProducts} currentProductId={activeProductId} />
-            </div>
-          )}
-
-          {result.should_show_whatsapp_button && (
-            <Button
-              className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white rounded-lg p-4 h-auto"
-              onClick={() =>
-                window.open(
-                  'https://wa.me/5561981815050?text=Olá, gostaria de falar com um especialista sobre minha dúvida.',
-                  '_blank',
-                )
-              }
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Quer falar com um especialista? Clique aqui.
-            </Button>
-          )}
         </div>
       )}
 
