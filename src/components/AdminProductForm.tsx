@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/hooks/use-toast'
-import { UploadCloud, Plus, Wand2 } from 'lucide-react'
+import { UploadCloud, Plus, Wand2, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -418,6 +419,17 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="manual_related_ids"
             render={({ field }) => {
+              const selectedIds = field.value || []
+              const selectedProducts = selectedIds.map((id: string) => {
+                return (
+                  allProducts.find((p) => p.id === id) || {
+                    id,
+                    name: 'Produto (ID não encontrado)',
+                    sku: null,
+                  }
+                )
+              })
+
               const filteredProducts = allProducts.filter(
                 (p) =>
                   p.name.toLowerCase().includes(searchRelated.toLowerCase()) ||
@@ -469,6 +481,42 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                         )}
                       </div>
                     </ScrollArea>
+
+                    {selectedProducts.length > 0 && (
+                      <div className="pt-2 border-t border-white/10 mt-3">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">
+                          Produtos Selecionados:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedProducts.map((prod: any) => (
+                            <Badge
+                              key={`badge-${prod.id}`}
+                              variant="secondary"
+                              className="flex items-center gap-1 text-xs py-1 px-2 font-normal"
+                            >
+                              <span className="max-w-[250px] truncate" title={prod.name}>
+                                {prod.name}
+                              </span>
+                              {prod.sku && (
+                                <span className="text-muted-foreground ml-1 opacity-70">
+                                  ({prod.sku})
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  field.onChange(selectedIds.filter((id: string) => id !== prod.id))
+                                }}
+                                className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors focus:outline-none"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <FormMessage />
                 </FormItem>
