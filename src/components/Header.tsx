@@ -286,58 +286,15 @@ export function Header() {
           </DialogHeader>
 
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 shrink-0 pt-6">
-            <form onSubmit={handleMobileDbSearch} className="relative w-full sm:w-1/2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500" />
+            <form onSubmit={handleMobileDbSearch} className="relative w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-500" />
               <Input
                 type="text"
                 placeholder="Pesquisar no catálogo..."
-                className="w-full pl-10 h-12 rounded-xl bg-blue-500/5 border-blue-500/20"
+                className="w-full pl-12 pr-4 h-14 text-base rounded-xl bg-blue-500/5 border-blue-500/20 focus-visible:ring-2 focus-visible:ring-blue-500/30"
                 value={mobileDbQuery}
                 onChange={(e) => setMobileDbQuery(e.target.value)}
               />
-            </form>
-            <form
-              onSubmit={handleMobileAISearch}
-              className="relative w-full sm:w-1/2 group flex items-center shadow-sm rounded-xl border border-primary/20 bg-primary/5 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300 h-12"
-            >
-              <div className="pl-3 pr-2 py-2">
-                <Sparkles className="h-4 w-4 text-primary group-focus-within:animate-pulse transition-all" />
-              </div>
-              <Input
-                type="text"
-                placeholder="Pesquisar com IA..."
-                className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-11"
-                value={mobileAiQuery}
-                onChange={(e) => setMobileAiQuery(e.target.value)}
-                disabled={isMobileAiNavigating}
-              />
-              {mobileAiQuery && !isMobileAiNavigating && (
-                <div className="pr-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setMobileAiQuery('')}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-              <div className="pr-1.5">
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={isMobileAiNavigating || !mobileAiQuery.trim()}
-                  className="h-9 w-9 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
-                >
-                  {isMobileAiNavigating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Search className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
             </form>
           </div>
 
@@ -458,54 +415,9 @@ export function Header() {
                   </Link>
                   <div className="pt-6 border-t border-border/50">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                      Acesso Rápido
+                      Catálogo de Produtos
                     </p>
                     <DirectSearch />
-                  </div>
-                  <div className="pt-4">
-                    <form
-                      onSubmit={handleSheetAISearch}
-                      className="w-full relative group flex items-center shadow-sm rounded-xl border border-primary/20 bg-primary/5 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300 h-10"
-                    >
-                      <div className="pl-3 pr-2 py-2">
-                        <Sparkles className="h-4 w-4 text-primary group-focus-within:animate-pulse transition-all" />
-                      </div>
-                      <Input
-                        type="text"
-                        placeholder="Pergunte à IA Especialista..."
-                        className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-9"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        disabled={isAiNavigating}
-                      />
-                      {searchQuery && !isAiNavigating && (
-                        <div className="pr-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setSearchQuery('')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
-                      <div className="pr-1.5">
-                        <Button
-                          type="submit"
-                          size="icon"
-                          disabled={isAiNavigating || !searchQuery.trim()}
-                          className="h-7 w-7 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
-                        >
-                          {isAiNavigating ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Search className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </form>
                   </div>
                   {!hasLoggedOut && isAdmin && (
                     <div className="pt-4 border-t border-border/50 mt-auto">
@@ -531,73 +443,9 @@ export function Header() {
             </Link>
           </div>
 
-          <div className="hidden lg:flex flex-1 max-w-4xl mx-6 gap-6 items-center">
-            <div className="w-1/2 relative">
+          <div className="hidden lg:flex flex-1 max-w-2xl mx-auto px-6 items-center">
+            <div className="w-full relative">
               <DirectSearch />
-            </div>
-            <div className="w-1/2 relative">
-              <Popover open={showAiDropdown} onOpenChange={setShowAiDropdown}>
-                <PopoverTrigger asChild>
-                  <div className="w-full relative">
-                    <form
-                      onSubmit={handleDesktopAISearch}
-                      className="w-full relative group flex items-center shadow-sm rounded-full border border-primary/20 bg-primary/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-300 h-10"
-                    >
-                      <div className="pl-3 pr-2 py-2">
-                        <Sparkles className="h-4 w-4 text-primary/70 group-focus-within:text-primary group-focus-within:animate-pulse transition-all" />
-                      </div>
-                      <Input
-                        type="text"
-                        placeholder="Pergunte à IA (Ex: Câmera 4K Broadcast?)"
-                        className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-9 placeholder:text-muted-foreground/70"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        disabled={aiSearchLoading}
-                      />
-                      {searchQuery && !aiSearchLoading && (
-                        <div className="pr-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setSearchQuery('')}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
-                      <div className="pr-1.5">
-                        <Button
-                          type="submit"
-                          size="icon"
-                          disabled={aiSearchLoading || !searchQuery.trim()}
-                          className="h-7 w-7 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
-                        >
-                          {aiSearchLoading ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Search className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-[800px] max-w-[90vw] p-0 border-0 bg-transparent shadow-2xl"
-                  align="start"
-                  sideOffset={8}
-                  onOpenAutoFocus={(e) => e.preventDefault()}
-                >
-                  <AISearchResults
-                    isLoading={aiSearchLoading}
-                    result={aiSearchResult}
-                    error={aiSearchError}
-                    className="max-h-[75vh] overflow-y-auto shadow-2xl border border-primary/20 bg-background/95 backdrop-blur-xl"
-                  />
-                </PopoverContent>
-              </Popover>
             </div>
           </div>
 

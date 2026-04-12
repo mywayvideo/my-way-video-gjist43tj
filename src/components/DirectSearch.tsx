@@ -48,10 +48,10 @@ export function DirectSearch() {
   return (
     <div ref={wrapperRef} className="w-full relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           placeholder="Buscar produto (Nome, SKU)..."
-          className="w-full pl-10 rounded-full bg-muted/50 border-transparent focus-visible:bg-background transition-all h-10 shadow-sm"
+          className="w-full pl-11 pr-10 rounded-full bg-muted/30 border-transparent focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 hover:bg-muted/50 transition-all h-11 md:h-12 text-base shadow-sm"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => {
@@ -59,12 +59,12 @@ export function DirectSearch() {
           }}
         />
         {loading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
         )}
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 max-h-[60vh] overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-3 bg-background border border-border rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 max-h-[60vh] overflow-y-auto">
           {results.map((p) => (
             <Link
               key={p.id}
@@ -73,22 +73,22 @@ export function DirectSearch() {
                 setOpen(false)
                 setQuery('')
               }}
-              className="flex items-center gap-3 p-3 hover:bg-muted/80 transition-colors border-b border-border/50 last:border-0"
+              className="flex items-center gap-4 p-4 hover:bg-muted/80 transition-colors border-b border-border/50 last:border-0"
             >
               {p.image_url ? (
                 <img
                   src={p.image_url}
                   alt=""
-                  className="w-10 h-10 object-contain rounded bg-white/5"
+                  className="w-12 h-12 object-contain rounded bg-white/5"
                 />
               ) : (
-                <div className="w-10 h-10 flex items-center justify-center bg-white/5 rounded">
-                  <Package className="w-5 h-5 text-muted-foreground" />
+                <div className="w-12 h-12 flex items-center justify-center bg-white/5 rounded">
+                  <Package className="w-6 h-6 text-muted-foreground" />
                 </div>
               )}
-              <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex flex-col flex-1 overflow-hidden gap-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium truncate">{p.name}</span>
+                  <span className="text-sm md:text-base font-medium truncate">{p.name}</span>
                   {p.is_discontinued && (
                     <span className="bg-yellow-100 text-yellow-700 rounded-md px-2 py-0.5 font-[600] text-[10px] shrink-0">
                       DESCONTINUADO
@@ -106,14 +106,14 @@ export function DirectSearch() {
               setOpen(false)
               navigate(`/search?q=${encodeURIComponent(query)}`)
             }}
-            className="w-full p-3 text-sm text-center text-primary font-medium hover:bg-muted/50 transition-colors"
+            className="w-full p-4 text-sm text-center text-primary font-medium hover:bg-muted/50 transition-colors"
           >
             Ver todos os resultados
           </button>
         </div>
       )}
       {open && !loading && debouncedQuery.length >= 2 && results.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-xl shadow-lg p-4 text-center text-sm text-muted-foreground z-50">
+        <div className="absolute top-full left-0 right-0 mt-3 bg-background border border-border rounded-xl shadow-xl p-6 text-center text-base text-muted-foreground z-50">
           Nenhum equipamento encontrado.
         </div>
       )}
