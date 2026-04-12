@@ -41,6 +41,7 @@ export default function NewProductPage() {
   const [isManufacturerDialogOpen, setIsManufacturerDialogOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newManufacturerName, setNewManufacturerName] = useState('')
+  const [searchRelated, setSearchRelated] = useState('')
 
   const {
     form,
@@ -309,7 +310,7 @@ export default function NewProductPage() {
                     name="price_usa"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço USD</FormLabel>
+                        <FormLabel>Preço Venda USA (USD)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} disabled={isBusy} />
                         </FormControl>
@@ -322,7 +323,7 @@ export default function NewProductPage() {
                     name="price_cost"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço Custo USD</FormLabel>
+                        <FormLabel>Preço Custo USA (USD)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} disabled={isBusy} />
                         </FormControl>
@@ -335,7 +336,7 @@ export default function NewProductPage() {
                     name="price_brl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço BRL Estimado</FormLabel>
+                        <FormLabel>Preço CIF SP Estimado</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -609,45 +610,63 @@ export default function NewProductPage() {
 
               {/* SECTION 6 - FINAL OPTIONS */}
               <div className="space-y-4 p-5 border rounded-lg bg-muted/5">
-                <h3 className="text-lg font-bold">Opções Finais</h3>
+                <h3 className="text-lg font-bold">Relacionamentos e Status</h3>
                 <div className="grid grid-cols-1 gap-6">
                   <FormField
                     control={form.control}
                     name="manual_related_ids"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Produtos Relacionados (Manual)</FormLabel>
-                        <div className="border rounded-md p-2 bg-background">
-                          <ScrollArea className="h-[150px]">
-                            <div className="space-y-2 p-2">
-                              {allProducts.map((prod) => (
-                                <div key={prod.id} className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={`related-${prod.id}`}
-                                    checked={(field.value || []).includes(prod.id)}
-                                    disabled={isBusy}
-                                    onCheckedChange={(checked) => {
-                                      const current = field.value || []
-                                      const updated = checked
-                                        ? [...current, prod.id]
-                                        : current.filter((id: string) => id !== prod.id)
-                                      field.onChange(updated)
-                                    }}
-                                  />
-                                  <label
-                                    htmlFor={`related-${prod.id}`}
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                  >
-                                    {prod.name} {prod.sku ? `(${prod.sku})` : ''}
-                                  </label>
-                                </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const filteredProducts = allProducts.filter(
+                        (p) =>
+                          p.name.toLowerCase().includes(searchRelated.toLowerCase()) ||
+                          (p.sku && p.sku.toLowerCase().includes(searchRelated.toLowerCase())),
+                      )
+                      return (
+                        <FormItem>
+                          <FormLabel>Produtos Relacionados (Manual)</FormLabel>
+                          <div className="border rounded-md p-3 bg-background space-y-3">
+                            <Input
+                              placeholder="Buscar por nome ou SKU..."
+                              value={searchRelated}
+                              onChange={(e) => setSearchRelated(e.target.value)}
+                              disabled={isBusy}
+                            />
+                            <ScrollArea className="h-[150px] border rounded p-2">
+                              <div className="space-y-2">
+                                {filteredProducts.map((prod) => (
+                                  <div key={prod.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`related-${prod.id}`}
+                                      checked={(field.value || []).includes(prod.id)}
+                                      disabled={isBusy}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || []
+                                        const updated = checked
+                                          ? [...current, prod.id]
+                                          : current.filter((id: string) => id !== prod.id)
+                                        field.onChange(updated)
+                                      }}
+                                    />
+                                    <label
+                                      htmlFor={`related-${prod.id}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                    >
+                                      {prod.name} {prod.sku ? `(${prod.sku})` : ''}
+                                    </label>
+                                  </div>
+                                ))}
+                                {filteredProducts.length === 0 && (
+                                  <p className="text-sm text-muted-foreground text-center py-4">
+                                    Nenhum produto encontrado.
+                                  </p>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )
+                    }}
                   />
 
                   <div className="flex flex-col sm:flex-row gap-8">
