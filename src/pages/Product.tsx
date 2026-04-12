@@ -141,6 +141,11 @@ export default function Product() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [showPriceCost, setShowPriceCost] = useState(false)
 
+  // Related Products State
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([])
+  const [isLoadingRelated, setIsLoadingRelated] = useState(false)
+  const [hasFetchedRelated, setHasFetchedRelated] = useState(false)
+
   // BRL Pricing Modal State
   const [isBrlModalOpen, setIsBrlModalOpen] = useState(false)
 
@@ -260,6 +265,81 @@ export default function Product() {
   }, [authUser, isAuthLoading])
 
   useEffect(() => {
+    if (!product) return
+    if (hasFetchedRelated) return
+
+    let isMounted = true
+
+    const fetchRelated = async () => {
+      setIsLoadingRelated(true)
+      try {
+        let manualIds = product.manual_related_ids || []
+        let aiIds = product.ai_related_ids || []
+
+        if ((!aiIds || aiIds.length === 0) && !product.is_discontinued) {
+          const { data, error } = await supabase.functions.invoke('generate-related-products', {
+            body: { productId: product.id },
+          })
+
+          if (!error && data && data.success && data.ai_related_ids) {
+            aiIds = data.ai_related_ids
+          }
+        }
+
+        const allIds = Array.from(new Set([...manualIds, ...aiIds]))
+
+        if (allIds.length === 0) {
+          if (isMounted) {
+            setRelatedProducts([])
+            setIsLoadingRelated(false)
+            setHasFetchedRelated(true)
+          }
+          return
+        }
+
+        const { data: relatedData } = await supabase
+          .from('products')
+          .select('*, manufacturer:manufacturers(*)')
+          .in('id', allIds)
+          .eq('is_discontinued', false)
+
+        if (relatedData && isMounted) {
+          const manualProducts = relatedData.filter((p: any) => manualIds.includes(p.id))
+          const aiProducts = relatedData.filter(
+            (p: any) => aiIds.includes(p.id) && !manualIds.includes(p.id),
+          )
+
+          let combined = [...manualProducts]
+          const remainingSlots = 6 - combined.length
+          if (remainingSlots > 0) {
+            combined = [...combined, ...aiProducts.slice(0, remainingSlots)]
+          }
+
+          for (let i = combined.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[combined[i], combined[j]] = [combined[j], combined[i]]
+          }
+
+          setRelatedProducts(combined.slice(0, 6))
+        }
+      } catch (e) {
+        console.error('Error fetching related products:', e)
+      } finally {
+        if (isMounted) {
+          setIsLoadingRelated(false)
+          setHasFetchedRelated(true)
+        }
+      }
+    }
+
+    fetchRelated()
+
+    return () => {
+      isMounted = false
+    }
+  }, [product, hasFetchedRelated])
+
+  useEffect(() => {
     window.scrollTo(0, 0)
     if (!id) return
 
@@ -271,6 +351,9 @@ export default function Product() {
     setIsBrlModalOpen(false)
     setIsTechnicalInfoOpen(false)
     setIsAiChatOpen(false)
+    setRelatedProducts([])
+    setHasFetchedRelated(false)
+    setIsLoadingRelated(false)
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -703,6 +786,74 @@ export default function Product() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Produtos Relacionados Section */}
+        <div className="mt-16 border-t border-border/50 pt-12">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            Produtos Relacionados
+          </h2>
+
+          {isLoadingRelated ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-card shadow-sm h-full"
+                >
+                  <div className="w-full aspect-square bg-slate-800 animate-pulse rounded-lg" />
+                  <div className="flex flex-col flex-1 mt-2">
+                    <div className="h-3 bg-slate-800 animate-pulse rounded w-1/3 mb-2" />
+                    <div className="h-4 bg-slate-800 animate-pulse rounded w-full mb-1" />
+                    <div className="h-4 bg-slate-800 animate-pulse rounded w-2/3 mb-4" />
+                    <div className="h-6 bg-slate-800 animate-pulse rounded w-1/2 mt-auto" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : relatedProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {relatedProducts.map((p) => (
+                <Link
+                  key={p.id}
+                  to={`/product/${p.id}`}
+                  className="group flex flex-col p-4 rounded-xl border border-border/50 bg-card hover:border-primary/50 hover:shadow-md transition-all h-full shadow-sm"
+                >
+                  <div className="w-full aspect-square relative bg-muted/10 rounded-lg overflow-hidden mb-4 p-4 flex items-center justify-center">
+                    <ImageWithFallback
+                      src={p.image_url}
+                      alt={p.name}
+                      productId={p.id}
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="text-[0.65rem] md:text-xs text-muted-foreground uppercase tracking-wider mb-1.5 font-semibold line-clamp-1">
+                      {p.manufacturer?.name || p.category || 'Equipamento'}
+                    </span>
+                    <h3 className="font-medium text-sm md:text-base leading-snug line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+                      {p.name}
+                    </h3>
+                    <div className="mt-auto">
+                      <span className="text-base md:text-lg font-bold text-foreground tracking-tight">
+                        {new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                        }).format(p.price_usd || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="p-8 text-center bg-muted/20 rounded-xl border border-border/50">
+              <p className="text-muted-foreground">
+                Nenhum produto relacionado encontrado no momento.
+              </p>
+            </div>
+          )}
         </div>
 
         <Dialog open={isAiChatOpen} onOpenChange={setIsAiChatOpen}>
