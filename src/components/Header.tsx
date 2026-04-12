@@ -31,6 +31,7 @@ import useSearchState from '@/hooks/useSearchState'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase/client'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { AISearchResults } from '@/components/AISearchResults'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
@@ -57,6 +58,11 @@ export function Header() {
   const debouncedDbQuery = useDebounce(mobileDbQuery, 300)
 
   const isMobile = useIsMobile()
+  const [aiSearchLoading, setAiSearchLoading] = useState(false)
+  const [aiSearchResult, setAiSearchResult] = useState<any>(null)
+  const [aiSearchError, setAiSearchError] = useState<string | null>(null)
+  const [showAiDropdown, setShowAiDropdown] = useState(false)
+  const [activeSearchType, setActiveSearchType] = useState<'db' | 'ai' | null>(null)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [firstName, setFirstName] = useState('')
@@ -175,6 +181,7 @@ export function Header() {
   useEffect(() => {
     if (debouncedDbQuery.trim().length >= 2) {
       setIsSearchingDb(true)
+      setActiveSearchType('db')
       searchProducts(debouncedDbQuery.trim()).then((results) => {
         setMobileDbResults(results || [])
         setIsSearchingDb(false)
@@ -182,10 +189,11 @@ export function Header() {
     } else {
       setMobileDbResults([])
       setIsSearchingDb(false)
+      if (activeSearchType === 'db') setActiveSearchType(null)
     }
   }, [debouncedDbQuery])
 
-  const handleAISearch = (e: React.FormEvent) => {
+  const handleSheetAISearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
       setIsAiNavigating(true)
@@ -199,17 +207,55 @@ export function Header() {
     }
   }
 
-  const handleMobileAISearch = (e: React.FormEvent) => {
+  const handleDesktopAISearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (mobileAiQuery.trim()) {
-      setIsMobileAiNavigating(true)
-      saveSearchState(mobileAiQuery.trim(), null, [], 'ai')
-      setTimeout(() => {
-        navigate(`/search?type=ai&q=${encodeURIComponent(mobileAiQuery.trim())}`)
-        setShowMobileSearch(false)
-        setMobileAiQuery('')
-        setIsMobileAiNavigating(false)
-      }, 300)
+    if (!searchQuery.trim()) return
+
+    setShowAiDropdown(true)
+    setAiSearchLoading(true)
+    setAiSearchError(null)
+
+    try {
+      const { data, error } = await supabase.functions.invoke('call-ai-agent', {
+        body: { query: searchQuery.trim(), session_id: crypto.randomUUID() },
+      })
+
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      setAiSearchResult(data)
+      saveSearchState(searchQuery.trim(), null, data?.referenced_internal_products || [], 'ai')
+    } catch (err: any) {
+      setAiSearchError(err.message || 'Erro ao processar pesquisa')
+    } finally {
+      setAiSearchLoading(false)
+    }
+  }
+
+  const handleMobileAISearch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!mobileAiQuery.trim()) return
+
+    setAiSearchLoading(true)
+    setAiSearchError(null)
+    setIsMobileAiNavigating(true)
+    setActiveSearchType('ai')
+
+    try {
+      const { data, error } = await supabase.functions.invoke('call-ai-agent', {
+        body: { query: mobileAiQuery.trim(), session_id: crypto.randomUUID() },
+      })
+
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      setAiSearchResult(data)
+      saveSearchState(mobileAiQuery.trim(), null, data?.referenced_internal_products || [], 'ai')
+    } catch (err: any) {
+      setAiSearchError(err.message || 'Erro ao processar pesquisa')
+    } finally {
+      setAiSearchLoading(false)
+      setIsMobileAiNavigating(false)
     }
   }
 
@@ -227,6 +273,7 @@ export function Header() {
     window.dispatchEvent(new CustomEvent('clear-search-response'))
     setMobileAiQuery('')
     setMobileDbQuery('')
+    setActiveSearchType(null)
     setShowMobileSearch(true)
   }
 
@@ -294,7 +341,16 @@ export function Header() {
             </form>
           </div>
 
-          {mobileDbQuery.trim().length >= 2 && (
+          {activeSearchType === 'ai' ? (
+            <div className="flex-1 overflow-y-auto mt-4 scroll-smooth min-h-0 rounded-xl">
+              <AISearchResults
+                isLoading={aiSearchLoading}
+                result={aiSearchResult}
+                error={aiSearchError}
+                className="h-full border-0"
+              />
+            </div>
+          ) : activeSearchType === 'db' && mobileDbQuery.trim().length >= 2 ? (
             <div className="flex-1 overflow-y-auto mt-4 scroll-smooth min-h-0 border border-border/20 rounded-xl bg-muted/10">
               {isSearchingDb ? (
                 <div className="flex flex-col">
@@ -353,21 +409,24 @@ export function Header() {
                 </div>
               )}
             </div>
-          )}
+          ) : null}
 
-          {mobileDbQuery.trim().length >= 2 && !isSearchingDb && mobileDbResults.length > 0 && (
-            <div className="shrink-0 pt-4 mt-auto">
-              <button
-                onClick={() => {
-                  setShowMobileSearch(false)
-                  navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery)}`)
-                }}
-                className="w-full p-4 text-sm text-center text-white bg-blue-500 font-medium hover:bg-blue-600 transition-colors rounded-xl shadow-sm"
-              >
-                Ver todos os resultados
-              </button>
-            </div>
-          )}
+          {activeSearchType === 'db' &&
+            mobileDbQuery.trim().length >= 2 &&
+            !isSearchingDb &&
+            mobileDbResults.length > 0 && (
+              <div className="shrink-0 pt-4 mt-auto">
+                <button
+                  onClick={() => {
+                    setShowMobileSearch(false)
+                    navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery)}`)
+                  }}
+                  className="w-full p-4 text-sm text-center text-white bg-blue-500 font-medium hover:bg-blue-600 transition-colors rounded-xl shadow-sm"
+                >
+                  Ver todos os resultados
+                </button>
+              </div>
+            )}
         </DialogContent>
       </Dialog>
 
@@ -405,7 +464,7 @@ export function Header() {
                   </div>
                   <div className="pt-4">
                     <form
-                      onSubmit={handleAISearch}
+                      onSubmit={handleSheetAISearch}
                       className="w-full relative group flex items-center shadow-sm rounded-xl border border-primary/20 bg-primary/5 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300 h-10"
                     >
                       <div className="pl-3 pr-2 py-2">
@@ -477,49 +536,68 @@ export function Header() {
               <DirectSearch />
             </div>
             <div className="w-1/2 relative">
-              <form
-                onSubmit={handleAISearch}
-                className="w-full relative group flex items-center shadow-sm rounded-full border border-primary/20 bg-primary/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-300 h-10"
-              >
-                <div className="pl-3 pr-2 py-2">
-                  <Sparkles className="h-4 w-4 text-primary/70 group-focus-within:text-primary group-focus-within:animate-pulse transition-all" />
-                </div>
-                <Input
-                  type="text"
-                  placeholder="Pergunte à IA (Ex: Câmera 4K Broadcast?)"
-                  className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-9 placeholder:text-muted-foreground/70"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={isAiNavigating}
-                />
-                {searchQuery && !isAiNavigating && (
-                  <div className="pr-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setSearchQuery('')}
+              <Popover open={showAiDropdown} onOpenChange={setShowAiDropdown}>
+                <PopoverTrigger asChild>
+                  <div className="w-full relative">
+                    <form
+                      onSubmit={handleDesktopAISearch}
+                      className="w-full relative group flex items-center shadow-sm rounded-full border border-primary/20 bg-primary/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-300 h-10"
                     >
-                      <X className="w-3 h-3" />
-                    </Button>
+                      <div className="pl-3 pr-2 py-2">
+                        <Sparkles className="h-4 w-4 text-primary/70 group-focus-within:text-primary group-focus-within:animate-pulse transition-all" />
+                      </div>
+                      <Input
+                        type="text"
+                        placeholder="Pergunte à IA (Ex: Câmera 4K Broadcast?)"
+                        className="flex-1 border-0 bg-transparent text-sm focus-visible:ring-0 shadow-none px-0 h-9 placeholder:text-muted-foreground/70"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        disabled={aiSearchLoading}
+                      />
+                      {searchQuery && !aiSearchLoading && (
+                        <div className="pr-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => setSearchQuery('')}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <div className="pr-1.5">
+                        <Button
+                          type="submit"
+                          size="icon"
+                          disabled={aiSearchLoading || !searchQuery.trim()}
+                          className="h-7 w-7 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
+                        >
+                          {aiSearchLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Search className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </form>
                   </div>
-                )}
-                <div className="pr-1.5">
-                  <Button
-                    type="submit"
-                    size="icon"
-                    disabled={isAiNavigating || !searchQuery.trim()}
-                    className="h-7 w-7 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-500 hover:from-indigo-600 hover:via-purple-600 hover:to-amber-600 border-none text-white shadow-md hover:scale-105 transition-all disabled:opacity-50"
-                  >
-                    {isAiNavigating ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Search className="w-3 h-3" />
-                    )}
-                  </Button>
-                </div>
-              </form>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[800px] max-w-[90vw] p-0 border-0 bg-transparent shadow-2xl"
+                  align="start"
+                  sideOffset={8}
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                  <AISearchResults
+                    isLoading={aiSearchLoading}
+                    result={aiSearchResult}
+                    error={aiSearchError}
+                    className="max-h-[75vh] overflow-y-auto shadow-2xl border border-primary/20 bg-background/95 backdrop-blur-xl"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
