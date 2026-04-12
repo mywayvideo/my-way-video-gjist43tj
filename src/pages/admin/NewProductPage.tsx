@@ -31,6 +31,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { supabase } from '@/lib/supabase/client'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function NewProductPage() {
   const navigate = useNavigate()
@@ -59,6 +61,19 @@ export default function NewProductPage() {
     handleAddCategory,
     handleAddManufacturer,
   } = useProductForm()
+
+  const [allProducts, setAllProducts] = useState<
+    { id: string; name: string; sku: string | null }[]
+  >([])
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('id, name, sku')
+      .then(({ data }) => {
+        if (data) setAllProducts(data)
+      })
+  }, [])
 
   const imageUrl = form.watch('image_url')
   const [debouncedImageUrl, setDebouncedImageUrl] = useState(imageUrl || '')
@@ -335,6 +350,69 @@ export default function NewProductPage() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="price_nationalized_sales"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preço de Venda Nacionalizado</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            value={field.value || ''}
+                            disabled={isBusy}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="price_nationalized_cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preço de Custo Nacionalizado</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            value={field.value || ''}
+                            disabled={isBusy}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="price_nationalized_currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Moeda (Nacionalizado)</FormLabel>
+                        <Select
+                          value={field.value || 'BRL'}
+                          onValueChange={field.onChange}
+                          disabled={isBusy}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="BRL">BRL (Real)</SelectItem>
+                            <SelectItem value="USD">USD (Dólar)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
 
@@ -532,41 +610,82 @@ export default function NewProductPage() {
               {/* SECTION 6 - FINAL OPTIONS */}
               <div className="space-y-4 p-5 border rounded-lg bg-muted/5">
                 <h3 className="text-lg font-bold">Opções Finais</h3>
-                <div className="flex flex-col sm:flex-row gap-8">
+                <div className="grid grid-cols-1 gap-6">
                   <FormField
                     control={form.control}
-                    name="is_special"
+                    name="manual_related_ids"
                     render={({ field }) => (
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isBusy}
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer">Destaque Especial</FormLabel>
+                      <FormItem>
+                        <FormLabel>Produtos Relacionados (Manual)</FormLabel>
+                        <div className="border rounded-md p-2 bg-background">
+                          <ScrollArea className="h-[150px]">
+                            <div className="space-y-2 p-2">
+                              {allProducts.map((prod) => (
+                                <div key={prod.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`related-${prod.id}`}
+                                    checked={(field.value || []).includes(prod.id)}
+                                    disabled={isBusy}
+                                    onCheckedChange={(checked) => {
+                                      const current = field.value || []
+                                      const updated = checked
+                                        ? [...current, prod.id]
+                                        : current.filter((id: string) => id !== prod.id)
+                                      field.onChange(updated)
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor={`related-${prod.id}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                  >
+                                    {prod.name} {prod.sku ? `(${prod.sku})` : ''}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="is_discontinued"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isBusy}
-                          />
-                        </FormControl>
-                        <FormLabel className="cursor-pointer text-destructive">
-                          Descontinuado
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
+
+                  <div className="flex flex-col sm:flex-row gap-8">
+                    <FormField
+                      control={form.control}
+                      name="is_special"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isBusy}
+                            />
+                          </FormControl>
+                          <FormLabel className="cursor-pointer">Destaque Especial</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="is_discontinued"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isBusy}
+                            />
+                          </FormControl>
+                          <FormLabel className="cursor-pointer text-destructive">
+                            Descontinuado
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 
