@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Product, Manufacturer } from '@/types'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,8 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { UploadCloud, Plus, Wand2 } from 'lucide-react'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
 import ReactMarkdown from 'react-markdown'
 import { useProductForm } from '@/hooks/useProductForm'
 import {
@@ -41,6 +43,18 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showMfgDialog, setShowMfgDialog] = useState(false)
   const [extractUrl, setExtractUrl] = useState('')
+  const [allProducts, setAllProducts] = useState<
+    { id: string; name: string; sku: string | null }[]
+  >([])
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('id, name, sku')
+      .then(({ data }) => {
+        if (data) setAllProducts(data)
+      })
+  }, [])
 
   const handleImageDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -292,6 +306,68 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
 
           <FormField
             control={form.control}
+            name="price_nationalized_sales"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço de Venda Nacionalizado</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    value={field.value || ''}
+                    className="bg-background/50"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="price_nationalized_cost"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preço de Custo Nacionalizado</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...field}
+                    value={field.value || ''}
+                    className="bg-background/50"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="price_nationalized_currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Moeda (Nacionalizado)</FormLabel>
+                <Select value={field.value || 'BRL'} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="bg-background/50 border-white/10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL (Real)</SelectItem>
+                    <SelectItem value="USD">USD (Dólar)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="stock"
             render={({ field }) => (
               <FormItem>
@@ -327,6 +403,44 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                 <FormControl>
                   <Input {...field} className="bg-background/50" placeholder="10x10x10" />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="manual_related_ids"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Produtos Relacionados (Manual)</FormLabel>
+                <div className="border border-white/10 rounded-md p-2 bg-background/50">
+                  <ScrollArea className="h-[150px]">
+                    <div className="space-y-2 p-2">
+                      {allProducts.map((prod) => (
+                        <div key={prod.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`related-${prod.id}`}
+                            checked={(field.value || []).includes(prod.id)}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || []
+                              const updated = checked
+                                ? [...current, prod.id]
+                                : current.filter((id: string) => id !== prod.id)
+                              field.onChange(updated)
+                            }}
+                          />
+                          <label
+                            htmlFor={`related-${prod.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {prod.name} {prod.sku ? `(${prod.sku})` : ''}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
