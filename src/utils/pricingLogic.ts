@@ -8,28 +8,32 @@ export interface ProductPricingInfo {
   weight?: number | null
 }
 
+export const safeNum = (val: any) => parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0
+
 export function getEligibilityAndPrice(
   product: ProductPricingInfo,
   destination: Destination,
   exchangeRate: number,
   shippingSettings: { pricePerKg: number; percentageValue: number; additionalWeightKg: number },
 ) {
-  const usdPrice = product.price_usd ?? product.price_usa
+  const usdPrice = safeNum(product.price_usd ?? product.price_usa)
+  const nationalizedPrice = safeNum(product.price_nationalized_sales)
+  const weight = safeNum(product.weight)
 
   if (destination === 'brasil') {
-    if (product.price_nationalized_sales && product.price_nationalized_sales > 0) {
-      let finalPriceBrl = product.price_nationalized_sales
+    if (nationalizedPrice > 0) {
+      let finalPriceBrl = nationalizedPrice
       if (product.price_nationalized_currency === 'USD') {
         finalPriceBrl *= exchangeRate
       }
       return { eligible: true, rule: 'A', price: finalPriceBrl, currency: 'BRL', reason: null }
     }
 
-    if (usdPrice && usdPrice > 0 && product.weight && product.weight > 0) {
-      const weight_kg = product.weight / 2.204
-      const total_weight_kg = weight_kg + shippingSettings.additionalWeightKg
-      const freight_usd = total_weight_kg * shippingSettings.pricePerKg
-      const percentage_charge = (usdPrice * shippingSettings.percentageValue) / 100
+    if (usdPrice > 0 && weight > 0) {
+      const weight_kg = weight / 2.204
+      const total_weight_kg = weight_kg + safeNum(shippingSettings.additionalWeightKg)
+      const freight_usd = total_weight_kg * safeNum(shippingSettings.pricePerKg)
+      const percentage_charge = (usdPrice * safeNum(shippingSettings.percentageValue)) / 100
       const total_usd = usdPrice + freight_usd + percentage_charge
       const finalPriceBrl = total_usd * exchangeRate
       return { eligible: true, rule: 'B', price: finalPriceBrl, currency: 'BRL', reason: null }
@@ -44,7 +48,7 @@ export function getEligibilityAndPrice(
     }
   } else {
     // USA
-    if (usdPrice && usdPrice > 0) {
+    if (usdPrice > 0) {
       return { eligible: true, rule: 'C', price: usdPrice, currency: 'USD', reason: null }
     }
     return {
