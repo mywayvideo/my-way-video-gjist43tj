@@ -16,6 +16,7 @@ import { orderService } from '@/services/orderService'
 import { OrderDetailsModal } from './OrderDetailsModal'
 import { OrderCancelModal } from './OrderCancelModal'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function OrderHistoryTab({
   orders,
@@ -54,6 +55,21 @@ export function OrderHistoryTab({
     return 'bg-secondary text-secondary-foreground'
   }
 
+  const formatOrderCurrency = (order: Order) => {
+    const isBRL =
+      order.shipping_method === 'brazil_delivery' ||
+      order.payment_method_type === 'pix' ||
+      order.payment_method_type === 'transfer' ||
+      order.payment_method_type === 'boleto'
+
+    const currencySymbol = isBRL ? 'R$' : 'US$'
+
+    return `${currencySymbol} ${Number(order.total).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
+
   if (orders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed rounded-lg animate-fade-in">
@@ -69,47 +85,78 @@ export function OrderHistoryTab({
 
   const renderActions = (order: Order) => (
     <div className="flex justify-end gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setSelectedOrder(order)}
-        className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
-      >
-        <Eye className="w-4 h-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        disabled={actionLoading === `invoice-${order.id}` || downloadingId === order.id}
-        onClick={() => onDownloadClick(order)}
-        className="text-muted-foreground"
-      >
-        {downloadingId === order.id ? (
-          <RefreshCw className="w-4 h-4 animate-spin" />
-        ) : (
-          <Download className="w-4 h-4" />
-        )}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        disabled={actionLoading === `reorder-${order.id}`}
-        onClick={() => handleReorder(order.id)}
-        className="text-green-500"
-      >
-        <RefreshCw
-          className={`w-4 h-4 ${actionLoading === `reorder-${order.id}` ? 'animate-spin' : ''}`}
-        />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSelectedOrder(order)}
+            className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Ver Detalhes</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={actionLoading === `invoice-${order.id}` || downloadingId === order.id}
+            onClick={() => onDownloadClick(order)}
+            className="text-muted-foreground"
+          >
+            {downloadingId === order.id ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Baixar Fatura</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={actionLoading === `reorder-${order.id}`}
+            onClick={() => handleReorder(order.id)}
+            className="text-green-500"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${actionLoading === `reorder-${order.id}` ? 'animate-spin' : ''}`}
+            />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Recomprar</p>
+        </TooltipContent>
+      </Tooltip>
+
       {(order.status === 'pending' || order.status === 'pending_payment') && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCancelOrder(order)}
-          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCancelOrder(order)}
+              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Cancelar Pedido</p>
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   )
@@ -132,13 +179,7 @@ export function OrderHistoryTab({
               <TableRow key={order.id}>
                 <TableCell>{new Date(order.created_at).toLocaleDateString('pt-BR')}</TableCell>
                 <TableCell className="font-semibold">{order.order_number}</TableCell>
-                <TableCell className="text-right font-bold">
-                  $
-                  {Number(order.total).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </TableCell>
+                <TableCell className="text-right font-bold">{formatOrderCurrency(order)}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline" className={getStatusColor(order.status)}>
                     {order.status}
@@ -168,13 +209,7 @@ export function OrderHistoryTab({
               </div>
               <div className="flex justify-between font-bold py-2 border-y border-border">
                 <span>Total</span>
-                <span>
-                  $
-                  {Number(order.total).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
+                <span>{formatOrderCurrency(order)}</span>
               </div>
               <div className="flex justify-end gap-2 pt-1">{renderActions(order)}</div>
             </CardContent>

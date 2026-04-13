@@ -4,10 +4,13 @@ import { orderService } from '@/services/orderService'
 import { useNavigate } from 'react-router-dom'
 import { Order } from '@/types/order'
 import { generateOrderPDF } from '@/services/generateOrderPDF'
+import { useCart } from '@/hooks/useCart'
+import { supabase } from '@/lib/supabase/client'
 
 export function useOrderActions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { addItem } = useCart()
 
   const handleDownloadInvoice = async (order: Order) => {
     try {
@@ -29,11 +32,26 @@ export function useOrderActions() {
   const handleReorder = async (orderId: string) => {
     try {
       setActionLoading(`reorder-${orderId}`)
-      await orderService.copyOrderToCart(orderId)
+
+      const { data: orderItems, error } = await supabase
+        .from('order_items')
+        .select('*, products(*)')
+        .eq('order_id', orderId)
+
+      if (error) throw error
+
+      if (orderItems && orderItems.length > 0) {
+        for (const item of orderItems) {
+          if (item.products) {
+            addItem(item.products, item.quantity)
+          }
+        }
+      } else {
+        await orderService.copyOrderToCart(orderId)
+      }
+
       toast.success('Itens adicionados ao carrinho! Revise e confirme.')
-      setTimeout(() => {
-        window.location.href = '/cart'
-      }, 1500)
+      navigate('/cart')
     } catch (e) {
       toast.error('Nao foi possivel copiar itens. Tente novamente.')
     } finally {
