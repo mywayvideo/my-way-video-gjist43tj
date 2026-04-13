@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowLeft, Download, Loader2, Sparkles, Plus } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, Sparkles, Plus, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -615,15 +615,23 @@ export default function NewProductPage() {
                   <FormField
                     control={form.control}
                     name="manual_related_ids"
-                    render={({ field }) => {
+                    render={() => {
+                      const manualIds = form.watch('manual_related_ids') || []
+                      const aiIds = form.watch('ai_related_ids') || []
+
                       const filteredProducts = allProducts.filter(
                         (p) =>
                           p.name.toLowerCase().includes(searchRelated.toLowerCase()) ||
                           (p.sku && p.sku.toLowerCase().includes(searchRelated.toLowerCase())),
                       )
+
+                      const selectedProducts = allProducts.filter(
+                        (p) => manualIds.includes(p.id) || aiIds.includes(p.id),
+                      )
+
                       return (
                         <FormItem>
-                          <FormLabel>Produtos Relacionados (Manual)</FormLabel>
+                          <FormLabel>Produtos Relacionados</FormLabel>
                           <div className="border rounded-md p-3 bg-background space-y-3">
                             <Input
                               placeholder="Buscar por nome ou SKU..."
@@ -631,30 +639,117 @@ export default function NewProductPage() {
                               onChange={(e) => setSearchRelated(e.target.value)}
                               disabled={isBusy}
                             />
+
+                            {selectedProducts.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-4 p-2 bg-muted/20 rounded-md">
+                                {selectedProducts.map((prod) => {
+                                  const isAi = aiIds.includes(prod.id)
+                                  const isManual = manualIds.includes(prod.id)
+
+                                  return (
+                                    <div
+                                      key={`selected-${prod.id}`}
+                                      className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-full border bg-background"
+                                    >
+                                      <span
+                                        className="font-medium max-w-[150px] truncate"
+                                        title={prod.name}
+                                      >
+                                        {prod.name}
+                                      </span>
+
+                                      {isManual && (
+                                        <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                          Manual
+                                        </span>
+                                      )}
+
+                                      {isAi && (
+                                        <span className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                          IA
+                                        </span>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        disabled={isBusy}
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          if (isManual) {
+                                            form.setValue(
+                                              'manual_related_ids',
+                                              manualIds.filter((id: string) => id !== prod.id),
+                                              { shouldDirty: true },
+                                            )
+                                          }
+                                          if (isAi) {
+                                            form.setValue(
+                                              'ai_related_ids',
+                                              aiIds.filter((id: string) => id !== prod.id),
+                                              { shouldDirty: true },
+                                            )
+                                          }
+                                        }}
+                                        className="ml-1 text-muted-foreground hover:text-destructive focus:outline-none"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+
                             <ScrollArea className="h-[150px] border rounded p-2">
                               <div className="space-y-2">
-                                {filteredProducts.map((prod) => (
-                                  <div key={prod.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`related-${prod.id}`}
-                                      checked={(field.value || []).includes(prod.id)}
-                                      disabled={isBusy}
-                                      onCheckedChange={(checked) => {
-                                        const current = field.value || []
-                                        const updated = checked
-                                          ? [...current, prod.id]
-                                          : current.filter((id: string) => id !== prod.id)
-                                        field.onChange(updated)
-                                      }}
-                                    />
-                                    <label
-                                      htmlFor={`related-${prod.id}`}
-                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                    >
-                                      {prod.name} {prod.sku ? `(${prod.sku})` : ''}
-                                    </label>
-                                  </div>
-                                ))}
+                                {filteredProducts.map((prod) => {
+                                  const isChecked =
+                                    manualIds.includes(prod.id) || aiIds.includes(prod.id)
+
+                                  return (
+                                    <div key={prod.id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`related-${prod.id}`}
+                                        checked={isChecked}
+                                        disabled={isBusy}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            if (!aiIds.includes(prod.id)) {
+                                              form.setValue(
+                                                'manual_related_ids',
+                                                [...manualIds, prod.id],
+                                                {
+                                                  shouldDirty: true,
+                                                },
+                                              )
+                                            }
+                                          } else {
+                                            if (manualIds.includes(prod.id)) {
+                                              form.setValue(
+                                                'manual_related_ids',
+                                                manualIds.filter((id: string) => id !== prod.id),
+                                                { shouldDirty: true },
+                                              )
+                                            }
+                                            if (aiIds.includes(prod.id)) {
+                                              form.setValue(
+                                                'ai_related_ids',
+                                                aiIds.filter((id: string) => id !== prod.id),
+                                                { shouldDirty: true },
+                                              )
+                                            }
+                                          }
+                                        }}
+                                      />
+                                      <label
+                                        htmlFor={`related-${prod.id}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                      >
+                                        {prod.name} {prod.sku ? `(${prod.sku})` : ''}
+                                      </label>
+                                    </div>
+                                  )
+                                })}
                                 {filteredProducts.length === 0 && (
                                   <p className="text-sm text-muted-foreground text-center py-4">
                                     Nenhum produto encontrado.
