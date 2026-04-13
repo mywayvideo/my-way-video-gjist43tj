@@ -1,299 +1,266 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { useAuthContext } from '@/contexts/AuthContext'
-import { toast } from 'sonner'
+import { useAuthState } from '@/hooks/useAuthState'
+import { toast } from '@/hooks/use-toast'
 
-interface CartItemDetail {
+export interface CartItem {
   id: string
+  product_id?: string
   name: string
   price: number
-  image_url: string
   quantity: number
-  weight?: number
+  image_url?: string
+  currency?: string
+  price_usa?: number
+  price_nationalized_sales?: number
+  price_nationalized_currency?: string
+  weight?: number | string
 }
 
 interface CartContextType {
-  cartItems: CartItemDetail[]
+  cartItems: CartItem[]
   cartTotal: number
-  itemCount: number
   isLoading: boolean
   error: string | null
-  addToCart: (productId: string, quantity: number) => Promise<void>
+  addToCart: (productId: string, quantity: number, productDetails?: any) => Promise<void>
   removeFromCart: (productId: string) => Promise<void>
   updateQuantity: (productId: string, quantity: number) => Promise<void>
-  getCartItems: () => CartItemDetail[]
-  getCartTotal: () => number
   clearCart: () => Promise<void>
-  syncLocalToSupabase: () => Promise<void>
-  getItemCount: () => number
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export const useCart = () => {
   const context = useContext(CartContext)
-  if (!context) throw new Error('useCart must be used within CartProvider')
+  if (!context) {
+    throw new Error('useCart must be used within CartProvider')
+  }
   return context
 }
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const { currentUser: user } = useAuthContext()
-  const [cartItems, setCartItems] = useState<CartItemDetail[]>([])
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuthState()
 
-  const itemsRef = useRef<CartItemDetail[]>([])
   useEffect(() => {
-    itemsRef.current = cartItems
-  }, [cartItems])
+    const loadCart = async () => {
+      setIsLoading(true)
+      try {
+        const localCart = localStorage.getItem('mw-video-cart-v2')
+        let items: CartItem[] = localCart ? JSON.parse(localCart) : []
 
-  const fetchProductDetails = async (items: { product_id: string; quantity: number }[]) => {
-    if (items.length === 0) return []
-    try {
-      const { data } = await supabase
-        .from('products')
-        .select('id, name, price_usd, image_url, weight')
-        .in(
-          'id',
-          items.map((i) => i.product_id),
-        )
-      if (!data) return []
-      return items
-        .map((item) => {
-          const p = data.find((d) => d.id === item.product_id)
-          if (!p) return null
-          return {
-            id: p.id,
-            name: p.name,
-            price: p.price_usd || 0,
-            image_url: p.image_url || '',
-            quantity: item.quantity,
-            weight: p.weight,
+        if (user) {
+          const { data: cartData } = await supabase
+            .from('shopping_carts')
+            .select('id')
+            .eq('customer_id', user.id)
+            .maybeSingle()
+
+          let cartId = cartData?.id
+          if (!cartId) {
+            const { data: newCart } = await supabase
+              .from('shopping_carts')
+              .insert({ customer_id: user.id })
+              .select('id')
+              .single()
+            cartId = newCart?.id
           }
-        })
-        .filter(Boolean) as CartItemDetail[]
-    } catch (err) {
-      console.error(err)
-      return []
+
+          if (cartId) {
+            const { data: dbItems } = await supabase
+              .from('cart_items')
+              .select(
+                'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight)',
+              )
+              .eq('cart_id', cartId)
+
+            if (dbItems) {
+              items = dbItems.map((item) => ({
+                id: item.product_id,
+                name: (item.products as any)?.name || '',
+                price: (item.products as any)?.price_usd || 0,
+                quantity: item.quantity,
+                image_url: (item.products as any)?.image_url,
+                price_usa: (item.products as any)?.price_usd,
+                price_nationalized_sales: (item.products as any)?.price_nationalized_sales,
+                price_nationalized_currency: (item.products as any)?.price_nationalized_currency,
+                weight: (item.products as any)?.weight,
+              }))
+            }
+          }
+        }
+        setCartItems(items)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
     }
+
+    loadCart()
+  }, [user])
+
+  const saveLocalCart = (items: CartItem[]) => {
+    localStorage.setItem('mw-video-cart-v2', JSON.stringify(items))
+    setCartItems(items)
   }
 
-  const loadLocalCart = async () => {
+  const addToCart = async (productId: string, quantity: number, productDetails?: any) => {
     try {
-      const local = localStorage.getItem('my-way-cart')
-      const items = local ? JSON.parse(local) : []
-      const details = await fetchProductDetails(items)
-      setCartItems(details)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      let itemToAdd: CartItem
 
-  const loadSupabaseCart = async () => {
-    if (!user) return
-    try {
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select('product_id, quantity')
-        .eq('user_id', user.id)
-      if (error) throw error
-      const details = await fetchProductDetails(data || [])
-      setCartItems(details)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      if (productDetails) {
+        itemToAdd = {
+          id: productId,
+          quantity,
+          name: productDetails.name,
+          price: productDetails.price_usd || 0,
+          image_url: productDetails.image_url,
+          price_usa: productDetails.price_usd,
+          price_nationalized_sales: productDetails.price_nationalized_sales,
+          price_nationalized_currency: productDetails.price_nationalized_currency,
+          weight: productDetails.weight,
+        }
+      } else {
+        const { data: prod } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', productId)
+          .single()
+        if (!prod) throw new Error('Product not found')
+        itemToAdd = {
+          id: productId,
+          quantity,
+          name: prod.name,
+          price: prod.price_usd || 0,
+          image_url: prod.image_url,
+          price_usa: prod.price_usd,
+          price_nationalized_sales: prod.price_nationalized_sales,
+          price_nationalized_currency: prod.price_nationalized_currency,
+          weight: prod.weight,
+        }
+      }
 
-  const syncLocalToSupabase = async () => {
-    if (!user) return
-    const local = localStorage.getItem('my-way-cart')
-    if (!local) return
-    try {
-      const items: any[] = JSON.parse(local)
-      if (items.length === 0) return
-
-      for (const item of items) {
-        const { data: existing } = await supabase
-          .from('cart_items')
-          .select('id, quantity')
-          .eq('user_id', user.id)
-          .eq('product_id', item.product_id)
-          .maybeSingle()
+      setCartItems((prev) => {
+        const existing = prev.find((i) => i.id === productId)
+        let newItems
         if (existing) {
-          await supabase
-            .from('cart_items')
-            .update({ quantity: Math.min(50, existing.quantity + item.quantity) })
-            .eq('id', existing.id)
+          newItems = prev.map((i) =>
+            i.id === productId ? { ...i, quantity: i.quantity + quantity } : i,
+          )
         } else {
-          await supabase
+          newItems = [...prev, itemToAdd]
+        }
+        saveLocalCart(newItems)
+        return newItems
+      })
+
+      if (user) {
+        const { data: cartData } = await supabase
+          .from('shopping_carts')
+          .select('id')
+          .eq('customer_id', user.id)
+          .maybeSingle()
+        if (cartData) {
+          const { data: existingDb } = await supabase
             .from('cart_items')
-            .insert({ user_id: user.id, product_id: item.product_id, quantity: item.quantity })
+            .select('id, quantity')
+            .eq('cart_id', cartData.id)
+            .eq('product_id', productId)
+            .maybeSingle()
+          if (existingDb) {
+            await supabase
+              .from('cart_items')
+              .update({ quantity: existingDb.quantity + quantity })
+              .eq('id', existingDb.id)
+          } else {
+            await supabase
+              .from('cart_items')
+              .insert({ cart_id: cartData.id, product_id: productId, quantity })
+          }
         }
       }
-      localStorage.removeItem('my-way-cart')
-      await loadSupabaseCart()
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  useEffect(() => {
-    let sub: any
-    setIsLoading(true)
-    if (user) {
-      const local = localStorage.getItem('my-way-cart')
-      if (local && JSON.parse(local).length > 0) {
-        syncLocalToSupabase().then(() => {
-          toast.success('Carrinho sincronizado!')
-        })
-      } else {
-        loadSupabaseCart()
-      }
-
-      sub = supabase
-        .channel('cart_changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'cart_items', filter: `user_id=eq.${user.id}` },
-          () => {
-            loadSupabaseCart()
-          },
-        )
-        .subscribe()
-    } else {
-      loadLocalCart()
-    }
-    return () => {
-      if (sub) supabase.removeChannel(sub)
-    }
-  }, [user])
-
-  useEffect(() => {
-    if (!user) return
-    const interval = setInterval(
-      async () => {
-        const local = localStorage.getItem('my-way-cart')
-        if (local && JSON.parse(local).length > 0) {
-          await syncLocalToSupabase()
-        }
-      },
-      5 * 60 * 1000,
-    )
-    return () => clearInterval(interval)
-  }, [user])
-
-  const saveLocalCart = (items: { product_id: string; quantity: number }[]) => {
-    localStorage.setItem('my-way-cart', JSON.stringify(items))
-    fetchProductDetails(items).then(setCartItems)
-  }
-
-  const addToCart = async (productId: string, quantity: number) => {
-    if (user) {
-      const { data: existing } = await supabase
-        .from('cart_items')
-        .select('id, quantity')
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-        .maybeSingle()
-      if (existing) {
-        const { error } = await supabase
-          .from('cart_items')
-          .update({ quantity: Math.min(50, existing.quantity + quantity) })
-          .eq('id', existing.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('cart_items')
-          .insert({ user_id: user.id, product_id: productId, quantity })
-        if (error) throw error
-      }
-      await loadSupabaseCart()
-    } else {
-      const local = localStorage.getItem('my-way-cart')
-      const items: any[] = local ? JSON.parse(local) : []
-      const existing = items.find((i) => i.product_id === productId)
-      if (existing) {
-        existing.quantity = Math.min(50, existing.quantity + quantity)
-      } else {
-        items.push({ product_id: productId, quantity })
-      }
-      saveLocalCart(items)
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' })
+      throw e
     }
   }
 
   const removeFromCart = async (productId: string) => {
+    setCartItems((prev) => {
+      const newItems = prev.filter((i) => i.id !== productId)
+      saveLocalCart(newItems)
+      return newItems
+    })
+
     if (user) {
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-      if (error) throw error
-      await loadSupabaseCart()
-    } else {
-      const local = localStorage.getItem('my-way-cart')
-      let items: any[] = local ? JSON.parse(local) : []
-      items = items.filter((i) => i.product_id !== productId)
-      saveLocalCart(items)
+      const { data: cartData } = await supabase
+        .from('shopping_carts')
+        .select('id')
+        .eq('customer_id', user.id)
+        .maybeSingle()
+      if (cartData) {
+        await supabase
+          .from('cart_items')
+          .delete()
+          .eq('cart_id', cartData.id)
+          .eq('product_id', productId)
+      }
     }
   }
 
   const updateQuantity = async (productId: string, quantity: number) => {
-    if (quantity < 1 || quantity > 50) return
+    setCartItems((prev) => {
+      const newItems = prev.map((i) => (i.id === productId ? { ...i, quantity } : i))
+      saveLocalCart(newItems)
+      return newItems
+    })
+
     if (user) {
-      const { error } = await supabase
-        .from('cart_items')
-        .update({ quantity })
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-      if (error) throw error
-      await loadSupabaseCart()
-    } else {
-      const local = localStorage.getItem('my-way-cart')
-      let items: any[] = local ? JSON.parse(local) : []
-      const existing = items.find((i) => i.product_id === productId)
-      if (existing) {
-        existing.quantity = quantity
-        saveLocalCart(items)
+      const { data: cartData } = await supabase
+        .from('shopping_carts')
+        .select('id')
+        .eq('customer_id', user.id)
+        .maybeSingle()
+      if (cartData) {
+        await supabase
+          .from('cart_items')
+          .update({ quantity })
+          .eq('cart_id', cartData.id)
+          .eq('product_id', productId)
       }
     }
   }
 
   const clearCart = async () => {
+    saveLocalCart([])
     if (user) {
-      const { error } = await supabase.from('cart_items').delete().eq('user_id', user.id)
-      if (error) throw error
-      await loadSupabaseCart()
-    } else {
-      localStorage.removeItem('my-way-cart')
-      setCartItems([])
+      const { data: cartData } = await supabase
+        .from('shopping_carts')
+        .select('id')
+        .eq('customer_id', user.id)
+        .maybeSingle()
+      if (cartData) {
+        await supabase.from('cart_items').delete().eq('cart_id', cartData.id)
+      }
     }
   }
 
-  const cartTotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
-  const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0)
+  const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
         cartTotal,
-        itemCount,
         isLoading,
         error,
         addToCart,
         removeFromCart,
         updateQuantity,
         clearCart,
-        syncLocalToSupabase,
-        getCartItems: () => itemsRef.current,
-        getCartTotal: () =>
-          itemsRef.current.reduce((acc, item) => acc + item.price * item.quantity, 0),
-        getItemCount: () => itemsRef.current.reduce((acc, item) => acc + item.quantity, 0),
       }}
     >
       {children}

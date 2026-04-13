@@ -1,62 +1,59 @@
 export type Destination = 'brasil' | 'usa'
 
-export interface ProductPricingInfo {
-  price_nationalized_sales?: number | null
-  price_nationalized_currency?: string | null
-  price_usa?: number | null
-  price_usd?: number | null
-  weight?: number | null
-}
-
 export const safeNum = (val: any) => parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0
 
 export function getEligibilityAndPrice(
-  product: ProductPricingInfo,
+  product: any,
   destination: Destination,
   exchangeRate: number,
   shippingSettings: { pricePerKg: number; percentageValue: number; additionalWeightKg: number },
 ) {
-  const usdPrice = safeNum(product.price_usd ?? product.price_usa)
-  const nationalizedPrice = safeNum(product.price_nationalized_sales)
-  const weight = safeNum(product.weight)
+  let eligible = false
+  let price = 0
+  let reason = ''
+  let rule = ''
+  let currency = 'USD'
+
+  const price_usa = safeNum(product?.price_usa)
+  const weight = safeNum(product?.weight)
+  const price_nationalized_sales = safeNum(product?.price_nationalized_sales)
 
   if (destination === 'brasil') {
-    if (nationalizedPrice > 0) {
-      let finalPriceBrl = nationalizedPrice
-      if (product.price_nationalized_currency === 'USD') {
-        finalPriceBrl *= exchangeRate
-      }
-      return { eligible: true, rule: 'A', price: finalPriceBrl, currency: 'BRL', reason: null }
-    }
+    if (price_nationalized_sales > 0) {
+      eligible = true
+      price = price_nationalized_sales
+      currency = product?.price_nationalized_currency || 'BRL'
+      rule = 'A'
+    } else if (price_usa > 0 && weight > 0) {
+      eligible = true
+      currency = 'BRL'
+      rule = 'B'
+      const pricePerKg = safeNum(shippingSettings?.pricePerKg)
+      const percentageValue = safeNum(shippingSettings?.percentageValue)
+      const additionalWeightKg = safeNum(shippingSettings?.additionalWeightKg)
 
-    if (usdPrice > 0 && weight > 0) {
       const weight_kg = weight / 2.204
-      const total_weight_kg = weight_kg + safeNum(shippingSettings.additionalWeightKg)
-      const freight_usd = total_weight_kg * safeNum(shippingSettings.pricePerKg)
-      const percentage_charge = (usdPrice * safeNum(shippingSettings.percentageValue)) / 100
-      const total_usd = usdPrice + freight_usd + percentage_charge
-      const finalPriceBrl = total_usd * exchangeRate
-      return { eligible: true, rule: 'B', price: finalPriceBrl, currency: 'BRL', reason: null }
-    }
+      const total_weight = weight_kg + additionalWeightKg
+      const freight_usd = total_weight * pricePerKg
+      const percentage_charge_usd = (price_usa * percentageValue) / 100
 
-    return {
-      eligible: false,
-      rule: null,
-      price: 0,
-      currency: 'BRL',
-      reason: 'Requer preço nacionalizado ou peso para importação.',
+      const total_usd = price_usa + freight_usd + percentage_charge_usd
+      price = total_usd * exchangeRate
+    } else {
+      eligible = false
+      reason = 'Indisponível para o destino'
     }
   } else {
-    // USA
-    if (usdPrice > 0) {
-      return { eligible: true, rule: 'C', price: usdPrice, currency: 'USD', reason: null }
-    }
-    return {
-      eligible: false,
-      rule: null,
-      price: 0,
-      currency: 'USD',
-      reason: 'Requer preço em dólar configurado.',
+    if (price_usa > 0) {
+      eligible = true
+      price = price_usa
+      currency = 'USD'
+      rule = 'C'
+    } else {
+      eligible = false
+      reason = 'Indisponível para o destino'
     }
   }
+
+  return { eligible, price, reason, rule, currency }
 }

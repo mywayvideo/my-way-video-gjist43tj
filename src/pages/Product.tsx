@@ -726,7 +726,7 @@ export default function Product() {
                 }
                 onClick={() => {
                   if (!product.is_discontinued) {
-                    addToCart(product.id, 1)
+                    addToCart(product.id, 1, product)
                       .then(() => {
                         toast({
                           title: 'Adicionado ao carrinho!',

@@ -104,6 +104,8 @@ export default function Cart() {
   }, [cartItems])
 
   const evaluatedItems = useMemo(() => {
+    if (isLoading) return []
+
     return cartItems.map((item) => {
       const details = productDetails[item.id] || item
       const evalResult = getEligibilityAndPrice(
@@ -118,7 +120,7 @@ export default function Cart() {
         itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
       }
     })
-  }, [cartItems, productDetails, destination, exchangeRate, shippingSettings])
+  }, [cartItems, productDetails, destination, exchangeRate, shippingSettings, isLoading])
 
   const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
   const dynamicSubtotal = evaluatedItems.reduce((sum, item) => sum + (item.itemTotal || 0), 0)
