@@ -18,7 +18,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { getEligibilityAndPrice, Destination } from '@/utils/pricingLogic'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -39,9 +41,87 @@ export default function Cart() {
   const [waMessage, setWaMessage] = useState('')
   const [isCheckingOut, setIsCheckingOut] = useState(false)
 
+  const [destination, setDestination] = useState<Destination>('brasil')
+  const [productDetails, setProductDetails] = useState<Record<string, any>>({})
+  const [exchangeRate, setExchangeRate] = useState<number>(5)
+  const [shippingSettings, setShippingSettings] = useState({
+    pricePerKg: 120,
+    percentageValue: 10,
+    additionalWeightKg: 0.5,
+  })
+
   useEffect(() => {
     window.scrollTo(0, 0)
+
+    const fetchSettings = async () => {
+      const { data: exData } = await supabase
+        .from('price_settings')
+        .select('exchange_rate, exchange_spread')
+        .single()
+      if (exData) setExchangeRate((exData.exchange_rate || 0) + (exData.exchange_spread || 0))
+
+      const { data: set } = await supabase
+        .from('app_settings')
+        .select('setting_key, setting_value, setting_value_numeric')
+        .in('setting_key', [
+          'shipping_sao_paulo_price_per_kg',
+          'shipping_sao_paulo_percentage_value',
+          'shipping_sao_paulo_additional_weight_kg',
+        ])
+
+      if (set) {
+        let pricePerKg = 120,
+          percentageValue = 10,
+          additionalWeightKg = 0.5
+        const p = set.find((s) => s.setting_key === 'shipping_sao_paulo_price_per_kg')
+        if (p) pricePerKg = p.setting_value_numeric ?? Number(p.setting_value)
+        const pv = set.find((s) => s.setting_key === 'shipping_sao_paulo_percentage_value')
+        if (pv) percentageValue = pv.setting_value_numeric ?? Number(pv.setting_value)
+        const aw = set.find((s) => s.setting_key === 'shipping_sao_paulo_additional_weight_kg')
+        if (aw) additionalWeightKg = aw.setting_value_numeric ?? Number(aw.setting_value)
+
+        setShippingSettings({ pricePerKg, percentageValue, additionalWeightKg })
+      }
+    }
+    fetchSettings()
   }, [])
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const ids = cartItems.map((i) => i.id)
+      if (!ids.length) return
+      const { data } = await supabase
+        .from('products')
+        .select('id, price_nationalized_sales, price_nationalized_currency, price_usa, weight')
+        .in('id', ids)
+      if (data) {
+        const details: Record<string, any> = {}
+        data.forEach((d) => (details[d.id] = d))
+        setProductDetails(details)
+      }
+    }
+    fetchProducts()
+  }, [cartItems])
+
+  const evaluatedItems = useMemo(() => {
+    return cartItems.map((item) => {
+      const details = productDetails[item.id] || item
+      const evalResult = getEligibilityAndPrice(
+        details,
+        destination,
+        exchangeRate,
+        shippingSettings,
+      )
+      return {
+        ...item,
+        ...evalResult,
+        itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
+      }
+    })
+  }, [cartItems, productDetails, destination, exchangeRate, shippingSettings])
+
+  const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
+  const dynamicSubtotal = evaluatedItems.reduce((sum, item) => sum + (item.itemTotal || 0), 0)
 
   const checkBusinessHours = () => {
     const miamiTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
@@ -152,7 +232,7 @@ export default function Cart() {
     )
   }
 
-  const visibleItems = cartItems.filter((item) => !fadingItems.includes(item.id))
+  const visibleItems = evaluatedItems.filter((item) => !fadingItems.includes(item.id))
 
   if (visibleItems.length === 0) {
     return (
@@ -175,9 +255,42 @@ export default function Cart() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl animate-fade-in">
       <h1 className="text-3xl font-bold mb-8">Meu Carrinho</h1>
+
+      <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/20 rounded-xl border border-border">
+        <span className="font-semibold">Destino de Entrega:</span>
+        <div className="flex gap-2">
+          <Button
+            variant={destination === 'brasil' ? 'default' : 'outline'}
+            onClick={() => setDestination('brasil')}
+            size="sm"
+            className="rounded-full px-6"
+          >
+            Brasil
+          </Button>
+          <Button
+            variant={destination === 'usa' ? 'default' : 'outline'}
+            onClick={() => setDestination('usa')}
+            size="sm"
+            className="rounded-full px-6"
+          >
+            EUA
+          </Button>
+        </div>
+      </div>
+
+      {hasIneligibleItems && (
+        <div className="bg-red-50 border border-red-200 p-4 mb-6 rounded-xl text-red-800 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+          <p className="text-sm font-medium">
+            Atenção: Alguns itens do seu carrinho não estão disponíveis para entrega no destino
+            selecionado. Por favor, remova-os ou divida sua compra em pedidos separados.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-4">
-          {cartItems.map((item) => {
+          {evaluatedItems.map((item) => {
             const isFading = fadingItems.includes(item.id)
             const isProcessing = loadingItems.includes(item.id)
             if (isFading) return null
@@ -208,9 +321,16 @@ export default function Cart() {
                   >
                     {item.name}
                   </Link>
-                  <p className="text-muted-foreground font-medium mt-1">
-                    ${item.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </p>
+                  {item.eligible ? (
+                    <p className="text-muted-foreground font-medium mt-1">
+                      {item.currency === 'BRL' ? 'R$ ' : '$'}
+                      {item.price?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  ) : (
+                    <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-red-100 text-red-700">
+                      Indisponível para este destino
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col items-center sm:items-end gap-3 shrink-0">
@@ -236,11 +356,17 @@ export default function Cart() {
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>
-                    <div className="text-right w-24 font-bold text-lg">
-                      $
-                      {(item.price * item.quantity).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                      })}
+                    <div className="text-right w-28 font-bold text-lg">
+                      {item.eligible ? (
+                        <>
+                          {item.currency === 'BRL' ? 'R$ ' : '$'}
+                          {(item.itemTotal || 0).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                          })}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">--</span>
+                      )}
                     </div>
                   </div>
 
@@ -277,11 +403,17 @@ export default function Cart() {
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal ({visibleItems.reduce((a, b) => a + b.quantity, 0)} itens)</span>
-                <span>${cartTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span>
+                  {destination === 'brasil' ? 'R$ ' : '$'}
+                  {dynamicSubtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-4 border-t border-border">
                 <span>Total Estimado</span>
-                <span>${cartTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span>
+                  {destination === 'brasil' ? 'R$ ' : '$'}
+                  {dynamicSubtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground text-center pt-2">
                 Impostos e frete calculados no checkout.
@@ -294,9 +426,9 @@ export default function Cart() {
                   className="w-full min-h-[48px] h-auto py-[16px] px-[16px] rounded-[8px] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-start shadow-sm transition-all border-none"
                   onClick={() => {
                     setIsCheckingOut(true)
-                    navigate('/checkout')
+                    navigate('/checkout?dest=' + destination)
                   }}
-                  disabled={isCheckingOut}
+                  disabled={isCheckingOut || hasIneligibleItems}
                 >
                   {isCheckingOut ? (
                     <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[12px] text-white" />
@@ -313,7 +445,7 @@ export default function Cart() {
                 <Button
                   className="w-full min-h-[48px] h-auto py-[16px] px-[16px] rounded-[8px] bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-start shadow-sm transition-all border-none"
                   onClick={handleWhatsAppCheckout}
-                  disabled={isCheckingOut}
+                  disabled={isCheckingOut || hasIneligibleItems}
                 >
                   {isCheckingOut ? (
                     <Loader2 className="w-[20px] h-[20px] shrink-0 animate-spin mr-[12px] text-white" />

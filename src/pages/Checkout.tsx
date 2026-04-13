@@ -16,6 +16,7 @@ import {
   clearCartFromLocalStorage,
   clearCartFromSupabase,
 } from '@/services/stripeService'
+import { getEligibilityAndPrice, Destination } from '@/utils/pricingLogic'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -33,10 +34,30 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
-}
+const destType: Destination = deliveryMethod === 'brasil' ? 'brasil' : 'usa'
 
+const evaluatedItems = cartItems.map((item) => {
+  const details = productDetails[item.product_id] || productDetails[item.id] || item
+  const evalResult = getEligibilityAndPrice(details, destType, exchangeRate, shippingSettings)
+  return {
+    ...item,
+    ...evalResult,
+    itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
+  }
+})
+
+const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
+const dynamicSubtotal = evaluatedItems.reduce((acc, item) => acc + (item.itemTotal || 0), 0)
+
+const total = dynamicSubtotal - discountAmount + (freight || 0)
+
+const formatCurrency = (value: number, currencyParam?: string) => {
+  const curr = currencyParam || (destType === 'brasil' ? 'BRL' : 'USD')
+  return new Intl.NumberFormat(curr === 'BRL' ? 'pt-BR' : 'en-US', {
+    style: 'currency',
+    currency: curr,
+  }).format(value)
+}
 const btnPrimary =
   'bg-[hsl(152,68%,40%)] text-[hsl(0,0%,100%)] font-semibold py-3 px-6 rounded-lg border-none cursor-pointer transition-all duration-200 ease-out hover:bg-[hsl(152,68%,35%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(152,68%,40%)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-center'
 const btnSecondary =
@@ -148,7 +169,9 @@ export default function Checkout() {
   const [cartItems, setCartItems] = useState<any[]>([])
   const [subtotal, setSubtotal] = useState(0)
 
-  const [deliveryMethod, setDeliveryMethod] = useState('')
+  const [deliveryMethod, setDeliveryMethod] = useState(
+    new URLSearchParams(window.location.search).get('dest') === 'usa' ? 'usa' : 'brasil',
+  )
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false)
@@ -237,6 +260,14 @@ export default function Checkout() {
   const [stripeName, setStripeName] = useState('')
   const [stripeEmail, setStripeEmail] = useState('')
 
+  const [productDetails, setProductDetails] = useState<Record<string, any>>({})
+  const [exchangeRate, setExchangeRate] = useState<number>(5)
+  const [shippingSettings, setShippingSettings] = useState({
+    pricePerKg: 120,
+    percentageValue: 10,
+    additionalWeightKg: 0.5,
+  })
+
   const isGlobalLoading = isLoading || altIsLoading
 
   useEffect(() => {
@@ -277,7 +308,7 @@ export default function Checkout() {
   const fetchAddressesAndDiscounts = async () => {
     if (!user) return
     try {
-      const [custRes, discRes, settingsRes] = await Promise.all([
+      const [custRes, discRes, settingsRes, exchRes] = await Promise.all([
         supabase
           .from('customers')
           .select('id, role, full_name, phone')
@@ -286,9 +317,20 @@ export default function Checkout() {
         supabase.from('discounts').select('*').eq('is_active', true),
         supabase
           .from('app_settings')
-          .select('setting_key, setting_value')
-          .in('setting_key', ['transfer_usa_bank_details', 'zelle_email']),
+          .select('setting_key, setting_value, setting_value_numeric')
+          .in('setting_key', [
+            'transfer_usa_bank_details',
+            'zelle_email',
+            'shipping_sao_paulo_price_per_kg',
+            'shipping_sao_paulo_percentage_value',
+            'shipping_sao_paulo_additional_weight_kg',
+          ]),
+        supabase.from('price_settings').select('exchange_rate, exchange_spread').single(),
       ])
+
+      if (exchRes.data) {
+        setExchangeRate((exchRes.data.exchange_rate || 0) + (exchRes.data.exchange_spread || 0))
+      }
 
       if (settingsRes.data) {
         const bankSetting = settingsRes.data.find(
@@ -305,6 +347,22 @@ export default function Checkout() {
           (s) => s.setting_key === 'zelle_email',
         )?.setting_value
         if (zelleSetting) setZelleEmail(zelleSetting)
+
+        let pKg = 120,
+          pVal = 10,
+          addW = 0.5
+        const p = settingsRes.data.find((s) => s.setting_key === 'shipping_sao_paulo_price_per_kg')
+        if (p) pKg = p.setting_value_numeric ?? Number(p.setting_value)
+        const pv = settingsRes.data.find(
+          (s) => s.setting_key === 'shipping_sao_paulo_percentage_value',
+        )
+        if (pv) pVal = pv.setting_value_numeric ?? Number(pv.setting_value)
+        const aw = settingsRes.data.find(
+          (s) => s.setting_key === 'shipping_sao_paulo_additional_weight_kg',
+        )
+        if (aw) addW = aw.setting_value_numeric ?? Number(aw.setting_value)
+
+        setShippingSettings({ pricePerKg: pKg, percentageValue: pVal, additionalWeightKg: addW })
       }
 
       if (discRes.data) setActiveDiscounts(discRes.data)
@@ -393,6 +451,17 @@ export default function Checkout() {
             }
           }),
         )
+
+        const allIds = formatted.map((i: any) => i.id || i.product_id)
+        const { data: pData } = await supabase
+          .from('products')
+          .select('id, price_nationalized_sales, price_nationalized_currency, price_usa, weight')
+          .in('id', allIds)
+        if (pData) {
+          const details: Record<string, any> = {}
+          pData.forEach((d) => (details[d.id] = d))
+          setProductDetails(details)
+        }
 
         const hasNewDiscount = formatted.some((i) => i.has_discount)
 
@@ -1526,7 +1595,7 @@ export default function Checkout() {
       <div className="flex justify-between py-3 border-b border-slate-200 items-center">
         <span className="text-sm font-medium text-[hsl(215,15%,45%)]">Subtotal</span>
         <span className="text-base font-semibold text-[hsl(215,25%,15%)] font-mono">
-          {formatCurrency(subtotal)}
+          {formatCurrency(dynamicSubtotal)}
         </span>
       </div>
 
@@ -1895,12 +1964,28 @@ Valor: ${formatCurrency(total)}
             title="Revisão do Carrinho"
             onStepClick={setCurrentStep}
           >
+            {hasIneligibleItems && (
+              <div className="bg-red-50 border border-red-200 p-4 mb-6 rounded-xl text-red-800 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                <p className="text-sm font-medium">
+                  Atenção: Alguns itens do seu carrinho não estão disponíveis para entrega no
+                  destino selecionado. Por favor, remova-os ou divida sua compra em pedidos
+                  separados.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
-              {cartItems.map((item, idx) => (
+              {evaluatedItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-5 border-b border-slate-200 gap-5 last:border-0"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-5 border-b border-slate-200 gap-5 last:border-0 relative"
                 >
+                  {!item.eligible && (
+                    <div className="absolute top-2 right-0 inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-red-100 text-red-700">
+                      Indisponível para este destino
+                    </div>
+                  )}
                   <div className="flex items-center gap-5 flex-1">
                     {item.image_url ? (
                       <img
@@ -1917,14 +2002,23 @@ Valor: ${formatCurrency(total)}
                       <p className="font-bold text-slate-900 line-clamp-2 text-lg leading-tight mb-1">
                         {item.name}
                       </p>
-                      <p className="text-sm text-slate-500 font-medium font-mono">
-                        {formatCurrency(item.unit_price)}{' '}
-                        <span className="text-xs font-sans">un.</span>
-                      </p>
+                      {item.eligible ? (
+                        <p className="text-sm text-slate-500 font-medium font-mono">
+                          {formatCurrency(item.price, item.currency)}{' '}
+                          <span className="text-xs font-sans">un.</span>
+                        </p>
+                      ) : (
+                        <p className="text-sm text-red-500 font-medium">{item.reason}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-5 w-full sm:w-auto justify-between sm:justify-end mt-2 sm:mt-0">
-                    <div className="flex items-center border border-[hsl(215,20%,90%)] rounded-lg overflow-hidden bg-[hsl(215,20%,96%)]">
+                    <div
+                      className={cn(
+                        'flex items-center border border-[hsl(215,20%,90%)] rounded-lg overflow-hidden bg-[hsl(215,20%,96%)]',
+                        !item.eligible && 'opacity-50',
+                      )}
+                    >
                       <button
                         onClick={() => updateQuantity(idx, item.quantity - 1)}
                         className="px-4 py-2 hover:bg-[hsl(215,20%,90%)] transition-colors text-[hsl(215,25%,15%)] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(215,25%,15%)]"
@@ -1942,7 +2036,7 @@ Valor: ${formatCurrency(total)}
                       </button>
                     </div>
                     <p className="font-bold text-slate-900 w-28 text-right font-mono text-lg">
-                      {formatCurrency(item.unit_price * item.quantity)}
+                      {item.eligible ? formatCurrency(item.itemTotal, item.currency) : '--'}
                     </p>
                     <button
                       onClick={() => removeItem(idx)}
@@ -1962,7 +2056,7 @@ Valor: ${formatCurrency(total)}
               <button
                 className={btnPrimary}
                 onClick={() => setCurrentStep(2)}
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || hasIneligibleItems}
               >
                 Continuar para Entrega
               </button>
@@ -2042,6 +2136,7 @@ Valor: ${formatCurrency(total)}
                 disabled={
                   !deliveryMethod ||
                   isLoading ||
+                  hasIneligibleItems ||
                   (deliveryMethod !== 'coleta' && !selectedAddressId && !isAddingNewAddress)
                 }
               >

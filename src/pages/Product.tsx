@@ -46,6 +46,7 @@ import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
 import { useAuthState } from '@/hooks/useAuthState'
 import { ProductCard } from '@/components/ProductCard'
+import { getEligibilityAndPrice } from '@/utils/pricingLogic'
 
 type Message = {
   id: string
@@ -189,6 +190,15 @@ export default function Product() {
     }
     fetchExchange()
   }, [])
+
+  const evalResult = useMemo(() => {
+    if (!product || exchangeRate === 0) return null
+    return getEligibilityAndPrice(product as any, 'brasil', exchangeRate, {
+      pricePerKg,
+      percentageValue,
+      additionalWeightKg,
+    })
+  }, [product, exchangeRate, pricePerKg, percentageValue, additionalWeightKg])
 
   const calculatePriceBRL = useCallback(
     (prod: { price_usd: number; weight_lb: number }) => {
@@ -633,17 +643,34 @@ export default function Product() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <span className="text-xs font-bold uppercase tracking-widest">
-                      Preço base usa (USD)
+                      {evalResult?.rule === 'A'
+                        ? 'Preço Nacionalizado (BRL)'
+                        : 'Preço base usa (USD)'}
                     </span>
                   </div>
 
-                  <ProductPrice
-                    originalPrice={product.price_usd}
-                    discountedPrice={discountedPrice}
-                    discountPercentage={discountPercentage}
-                    ruleName={ruleName}
-                    size="lg"
-                  />
+                  {evalResult?.rule === 'A' ? (
+                    <div className="text-4xl font-bold text-green-500 mb-2">
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(evalResult.price)}
+                    </div>
+                  ) : (
+                    <ProductPrice
+                      originalPrice={product.price_usd}
+                      discountedPrice={discountedPrice}
+                      discountPercentage={discountPercentage}
+                      ruleName={ruleName}
+                      size="lg"
+                    />
+                  )}
+
+                  {evalResult && !evalResult.eligible && (
+                    <div className="mt-2 inline-block px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
+                      {evalResult.reason}
+                    </div>
+                  )}
 
                   {isAdmin && showPriceCost && (
                     <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">
@@ -668,20 +695,22 @@ export default function Product() {
                     </div>
                   )}
 
-                  <div className="mt-6 pt-6 border-t border-border/50">
-                    <Button
-                      variant="secondary"
-                      className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
-                      onClick={() => setIsBrlModalOpen(true)}
-                      disabled={isLoading}
-                    >
-                      <span className="flex items-center gap-2 text-foreground font-medium">
-                        <Calculator className="w-4 h-4 text-green-500" />
-                        Estimar Preço Entregue no Brasil
-                      </span>
-                      <ChevronRight className="w-4 h-4 opacity-50" />
-                    </Button>
-                  </div>
+                  {evalResult?.rule !== 'A' && (
+                    <div className="mt-6 pt-6 border-t border-border/50">
+                      <Button
+                        variant="secondary"
+                        className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
+                        onClick={() => setIsBrlModalOpen(true)}
+                        disabled={isLoading}
+                      >
+                        <span className="flex items-center gap-2 text-foreground font-medium">
+                          <Calculator className="w-4 h-4 text-green-500" />
+                          Estimar Preço Entregue no Brasil
+                        </span>
+                        <ChevronRight className="w-4 h-4 opacity-50" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
