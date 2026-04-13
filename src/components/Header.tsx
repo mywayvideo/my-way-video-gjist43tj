@@ -48,7 +48,12 @@ export function Header() {
   const [isAiNavigating, setIsAiNavigating] = useState(false)
   const [isMobileAiNavigating, setIsMobileAiNavigating] = useState(false)
   const [mobileDbQuery, setMobileDbQuery] = useState('')
-  const { itemCount } = useCart()
+  const cartContext = useCart() as any
+  const itemsArray = cartContext?.items || cartContext?.cartItems || cartContext?.cart || []
+  const totalItemCount = itemsArray.reduce(
+    (acc: number, item: any) => acc + (item.quantity || 1),
+    0,
+  )
   const { customer } = useCurrentCustomer()
   const { saveSearchState } = useSearchState()
   const { favorites } = useFavorites()
@@ -490,9 +495,9 @@ export function Header() {
               onClick={() => navigate('/cart')}
             >
               <ShoppingCart className="w-5 h-5 group-hover:text-primary transition-colors" />
-              {itemCount > 0 && (
+              {totalItemCount > 0 && (
                 <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
-                  {itemCount}
+                  {totalItemCount}
                 </span>
               )}
             </Button>

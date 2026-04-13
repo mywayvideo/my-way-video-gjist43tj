@@ -146,9 +146,13 @@ export default function Checkout() {
   const [cartItems, setCartItems] = useState<any[]>([])
   const [subtotal, setSubtotal] = useState(0)
 
-  const [deliveryMethod, setDeliveryMethod] = useState(
-    new URLSearchParams(window.location.search).get('dest') === 'usa' ? 'usa' : 'brasil',
-  )
+  const [deliveryMethod, setDeliveryMethod] = useState(() => {
+    const paramsDest = new URLSearchParams(window.location.search).get('dest')
+    const localDest = localStorage.getItem('cart-destination')
+    const contextDest = cartContext?.destination
+    const dest = contextDest || localDest || paramsDest
+    return dest === 'usa' ? 'usa' : 'brasil'
+  })
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false)
@@ -280,15 +284,55 @@ export default function Checkout() {
     fetchAddressesAndDiscounts()
   }, [user, loading, cartContext])
 
+  const safeNum = (val: any) => parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0
+
   const destType: Destination = deliveryMethod === 'brasil' ? 'brasil' : 'usa'
 
   const evaluatedItems = cartItems.map((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
-    const evalResult = getEligibilityAndPrice(details, destType, exchangeRate, shippingSettings)
+
+    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
+    const weight = safeNum(details.weight || item.weight)
+
+    let eligible = false
+    let price = 0
+    let currency = 'USD'
+    let reason = ''
+
+    if (destType === 'usa') {
+      if (pUsa > 0) {
+        eligible = true
+        price = item.has_discount ? item.unit_price : pUsa
+        currency = 'USD'
+      } else {
+        reason = 'Preço indisponível para entrega nos EUA.'
+      }
+    } else {
+      if (pNat > 0) {
+        eligible = true
+        price = pNat
+        currency = 'BRL'
+      } else if (pUsa > 0 && weight > 0) {
+        eligible = true
+        const weightKg = weight * 0.453592
+        const freight =
+          pUsa * (shippingSettings.percentageValue / 100) +
+          (weightKg + shippingSettings.additionalWeightKg) * shippingSettings.pricePerKg
+        price = (pUsa + freight) * exchangeRate
+        currency = 'BRL'
+      } else {
+        reason = 'Indisponível para o Brasil (falta preço ou peso).'
+      }
+    }
+
     return {
       ...item,
-      ...evalResult,
-      itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
+      eligible,
+      price,
+      currency,
+      reason,
+      itemTotal: eligible ? price * item.quantity : 0,
     }
   })
 
@@ -446,7 +490,10 @@ export default function Checkout() {
               unit_price: price,
               quantity: p.quantity || 1,
               image_url: prod.image_url || p.image_url,
-              weight: prod.weight || p.weight || 1,
+              weight: prod.weight || p.weight || 0,
+              price_usa: prod.price_usa || p.price_usa || 0,
+              price_nationalized_sales:
+                prod.price_nationalized_sales || p.price_nationalized_sales || 0,
               has_discount: hasDiscount,
             }
           }),
@@ -471,16 +518,6 @@ export default function Checkout() {
         if (currentIds !== newIds) {
           setCartItems(formatted)
           calculateSubtotal(formatted)
-
-          if (hasNewDiscount) {
-            toast({
-              title: 'Desconto Aplicado!',
-              description:
-                'Oba! Detectamos um novo desconto aplicável. O valor do carrinho foi atualizado!',
-              variant: 'default',
-              className: 'bg-emerald-600 text-white border-emerald-700',
-            })
-          }
         }
         return
       }
