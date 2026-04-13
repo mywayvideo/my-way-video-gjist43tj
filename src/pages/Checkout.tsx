@@ -339,7 +339,7 @@ export default function Checkout() {
   const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
   const dynamicSubtotal = evaluatedItems.reduce((acc, item) => acc + (item.itemTotal || 0), 0)
 
-  const total = dynamicSubtotal - discountAmount + (freight || 0)
+  const total = dynamicSubtotal - discountAmount + (destType === 'brasil' ? 0 : freight || 0)
 
   const formatCurrency = (value: number, currencyParam?: string) => {
     const curr = currencyParam || (destType === 'brasil' ? 'BRL' : 'USD')
@@ -1103,7 +1103,7 @@ export default function Checkout() {
           total,
           subtotal,
           discountAmount,
-          freight,
+          destType === 'brasil' ? 0 : freight,
           shippingAddressId,
           tempOrderNumber,
         )
@@ -1122,7 +1122,7 @@ export default function Checkout() {
           total,
           subtotal,
           discountAmount,
-          freight,
+          destType === 'brasil' ? 0 : freight,
           shippingAddressId,
           tempOrderNumber,
         )
@@ -1136,7 +1136,7 @@ export default function Checkout() {
           total,
           subtotal,
           discountAmount,
-          freight,
+          destType === 'brasil' ? 0 : freight,
           shippingAddressId,
           tempOrderNumber,
         )
@@ -1162,7 +1162,7 @@ export default function Checkout() {
           total,
           subtotal,
           discountAmount,
-          freight,
+          destType === 'brasil' ? 0 : freight,
           shippingAddressId,
           tempOrderNumber,
         )
@@ -1235,7 +1235,7 @@ export default function Checkout() {
         total,
         subtotal,
         discountAmount,
-        freight,
+        destType === 'brasil' ? 0 : freight,
         shippingAddressId,
         tempOrderNumber,
       )
@@ -1300,7 +1300,7 @@ export default function Checkout() {
             user!.id,
             shippingAddressId,
             dbShippingMethod,
-            freight || null,
+            destType === 'brasil' ? 0 : freight || null,
             discountAmount,
           )
 
@@ -1645,11 +1645,19 @@ export default function Checkout() {
         </div>
       )}
 
-      {freight !== null && (
+      {freight !== null && destType !== 'brasil' && (
         <div className="flex justify-between py-3 border-b border-slate-200 items-center">
           <span className="text-sm font-medium text-[hsl(215,15%,45%)]">Frete</span>
           <span className="text-base font-semibold text-[hsl(215,25%,15%)] font-mono">
             {formatCurrency(freight)}
+          </span>
+        </div>
+      )}
+      {destType === 'brasil' && (
+        <div className="flex justify-between py-3 border-b border-slate-200 items-center">
+          <span className="text-sm font-medium text-[hsl(215,15%,45%)]">Frete e Impostos</span>
+          <span className="text-base font-semibold text-[hsl(152,68%,40%)] font-mono">
+            Incluído nos itens
           </span>
         </div>
       )}
@@ -2254,7 +2262,7 @@ Valor: ${formatCurrency(total)}
                     )}
                   </div>
                   <p className="text-2xl font-bold font-mono text-[hsl(152,68%,40%)] shrink-0">
-                    {formatCurrency(freight)}
+                    {destType === 'brasil' ? 'Incluído nos itens' : formatCurrency(freight)}
                   </p>
                 </div>
               ) : null}
