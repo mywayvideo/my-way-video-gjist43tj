@@ -288,6 +288,49 @@ export default function Checkout() {
 
   const destType: Destination = deliveryMethod === 'brasil' ? 'brasil' : 'usa'
 
+  const canDeliverToUSA = cartItems.every((item) => {
+    const details = productDetails[item.product_id] || productDetails[item.id] || item
+    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const weight = safeNum(details.weight || item.weight)
+    return pUsa > 0 && weight > 0
+  })
+
+  const canDeliverToBrasil = cartItems.every((item) => {
+    const details = productDetails[item.product_id] || productDetails[item.id] || item
+    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
+    const weight = safeNum(details.weight || item.weight)
+    return pNat > 0 || (pUsa > 0 && weight > 0)
+  })
+
+  const canDeliverLocally = cartItems.every((item) => {
+    const details = productDetails[item.product_id] || productDetails[item.id] || item
+    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    return pUsa > 0
+  })
+
+  useEffect(() => {
+    if (deliveryMethod === 'brasil' && !canDeliverToBrasil) setDeliveryMethod('')
+    if (deliveryMethod === 'usa' && !canDeliverToUSA) setDeliveryMethod('')
+    if ((deliveryMethod === 'miami' || deliveryMethod === 'coleta') && !canDeliverLocally)
+      setDeliveryMethod('')
+  }, [cartItems, canDeliverToBrasil, canDeliverToUSA, canDeliverLocally, deliveryMethod])
+
+  let totalUsaWeightKg = 0
+  cartItems.forEach((item) => {
+    const details = productDetails[item.product_id] || productDetails[item.id] || item
+    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
+    const weight = safeNum(details.weight || item.weight)
+
+    if (destType === 'brasil' && pNat <= 0 && pUsa > 0 && weight > 0) {
+      totalUsaWeightKg += weight * 0.453592 * item.quantity
+    }
+  })
+
+  const totalWeightFreight =
+    (totalUsaWeightKg + shippingSettings.additionalWeightKg) * shippingSettings.pricePerKg
+
   const evaluatedItems = cartItems.map((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
 
@@ -315,11 +358,13 @@ export default function Checkout() {
         currency = 'BRL'
       } else if (pUsa > 0 && weight > 0) {
         eligible = true
-        const weightKg = weight * 0.453592
-        const freight =
-          pUsa * (shippingSettings.percentageValue / 100) +
-          (weightKg + shippingSettings.additionalWeightKg) * shippingSettings.pricePerKg
-        price = (pUsa + freight) * exchangeRate
+        const itemWeightKg = weight * 0.453592
+        const weightShare = totalUsaWeightKg > 0 ? itemWeightKg / totalUsaWeightKg : 0
+        const itemWeightFreight = totalWeightFreight * weightShare
+        const itemValueFreight = pUsa * (shippingSettings.percentageValue / 100)
+
+        const freightUsd = itemValueFreight + itemWeightFreight
+        price = (pUsa + freightUsd) * exchangeRate
         currency = 'BRL'
       } else {
         reason = 'Indisponível para o Brasil (falta preço ou peso).'
@@ -2121,29 +2166,60 @@ Valor: ${formatCurrency(total)}
               className="grid grid-cols-1 sm:grid-cols-2 gap-4"
             >
               {[
-                { id: 'coleta', label: 'Coleta na Loja', desc: 'Retirada em Miami - Grátis' },
-                { id: 'miami', label: 'Entrega em Miami', desc: 'Requer endereço completo' },
-                { id: 'usa', label: 'Entrega EUA', desc: 'Requer ZIP code' },
-                { id: 'brasil', label: 'Entrega Brasil (SP)', desc: 'Requer CEP válido' },
+                {
+                  id: 'coleta',
+                  label: 'Coleta na Loja',
+                  desc: 'Retirada em Miami - Grátis',
+                  disabled: !canDeliverLocally,
+                },
+                {
+                  id: 'miami',
+                  label: 'Entrega em Miami',
+                  desc: 'Requer endereço completo',
+                  disabled: !canDeliverLocally,
+                },
+                {
+                  id: 'usa',
+                  label: 'Entrega EUA',
+                  desc: 'Requer ZIP code',
+                  disabled: !canDeliverToUSA,
+                },
+                {
+                  id: 'brasil',
+                  label: 'Entrega Brasil (SP)',
+                  desc: 'Requer CEP válido',
+                  disabled: !canDeliverToBrasil,
+                },
               ].map((opt) => (
                 <div
                   key={opt.id}
-                  onClick={() => handleDeliveryChange(opt.id)}
+                  onClick={() => !opt.disabled && handleDeliveryChange(opt.id)}
                   className={cn(
-                    'group border-2 rounded-xl p-4 cursor-pointer transition-all duration-200 ease-out',
-                    deliveryMethod === opt.id
+                    'group border-2 rounded-xl p-4 transition-all duration-200 ease-out relative',
+                    opt.disabled
+                      ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200'
+                      : 'cursor-pointer',
+                    !opt.disabled && deliveryMethod === opt.id
                       ? 'border-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] shadow-[0_4px_12px_hsl(152,68%,10%)]'
-                      : 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]',
+                      : !opt.disabled
+                        ? 'bg-[hsl(215,20%,96%)] border-[hsl(215,20%,90%)] hover:border-[hsl(152,68%,40%)]'
+                        : '',
                   )}
                 >
-                  <RadioGroupItem value={opt.id} id={opt.id} className="sr-only" />
+                  <RadioGroupItem
+                    value={opt.id}
+                    id={opt.id}
+                    className="sr-only"
+                    disabled={opt.disabled}
+                  />
                   <Label
                     htmlFor={opt.id}
                     className={cn(
-                      'cursor-pointer block text-base font-semibold mb-2 transition-colors',
-                      deliveryMethod === opt.id
+                      'block text-base font-semibold mb-2 transition-colors',
+                      !opt.disabled && deliveryMethod === opt.id
                         ? 'text-[hsl(152,68%,25%)]'
                         : 'text-[hsl(215,25%,15%)]',
+                      opt.disabled && 'cursor-not-allowed text-slate-500',
                     )}
                   >
                     {opt.label}
@@ -2151,13 +2227,18 @@ Valor: ${formatCurrency(total)}
                   <span
                     className={cn(
                       'block text-sm font-medium leading-snug m-0 transition-colors',
-                      deliveryMethod === opt.id
+                      !opt.disabled && deliveryMethod === opt.id
                         ? 'text-[hsl(152,68%,35%)]'
                         : 'text-[hsl(215,25%,25%)]',
                     )}
                   >
                     {opt.desc}
                   </span>
+                  {opt.disabled && (
+                    <span className="block text-xs text-red-500 font-medium mt-2">
+                      Indisponível para os produtos selecionados.
+                    </span>
+                  )}
                 </div>
               ))}
             </RadioGroup>

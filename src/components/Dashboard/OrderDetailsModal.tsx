@@ -77,11 +77,30 @@ export function OrderDetailsModal({
     }
   }, [orderId, open])
 
-  const safeFormatCurrency = (value: any, currency = 'USD') => {
+  const safeFormatCurrency = (value: any, currentOrder: any = order) => {
+    const paymentDataCurrency = (currentOrder?.payment_data as any)?.currency
+    let isBRL = false
+
+    if (paymentDataCurrency) {
+      isBRL = paymentDataCurrency.toUpperCase() === 'BRL'
+    } else {
+      isBRL =
+        currentOrder?.shipping_method === 'brazil_delivery' ||
+        currentOrder?.payment_method_type === 'pix' ||
+        currentOrder?.payment_method_type === 'transferencia_brasil' ||
+        currentOrder?.payment_method_type === 'boleto'
+    }
+
+    const currencySymbol = isBRL ? 'R$' : 'US$'
+    const locale = isBRL ? 'pt-BR' : 'en-US'
+
     try {
-      return formatCurrency(value, currency)
+      return `${currencySymbol} ${Number(value).toLocaleString(locale, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
     } catch {
-      return `US$ ${value}`
+      return `${currencySymbol} ${value}`
     }
   }
 
@@ -208,7 +227,7 @@ export function OrderDetailsModal({
                     </p>
                     <p>
                       <span className="font-medium">Total:</span>{' '}
-                      {safeFormatCurrency(order.total_amount ?? order.total, 'USD')}
+                      {safeFormatCurrency(order.total_amount ?? order.total, order)}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">Status:</span>
@@ -261,14 +280,14 @@ export function OrderDetailsModal({
                               </td>
                               <td className="text-center py-2 px-1">{item.quantity}</td>
                               <td className="text-right py-2 px-1 whitespace-nowrap">
-                                {safeFormatCurrency(item.unit_price, 'USD')}
+                                {safeFormatCurrency(item.unit_price, order)}
                               </td>
                               <td className="text-right py-2 pl-2 whitespace-nowrap font-medium">
                                 {safeFormatCurrency(
                                   item.subtotal ??
                                     item.total_price ??
                                     item.unit_price * item.quantity,
-                                  'USD',
+                                  order,
                                 )}
                               </td>
                             </tr>

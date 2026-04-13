@@ -56,15 +56,23 @@ export function OrderHistoryTab({
   }
 
   const formatOrderCurrency = (order: Order) => {
-    const isBRL =
-      order.shipping_method === 'brazil_delivery' ||
-      order.payment_method_type === 'pix' ||
-      order.payment_method_type === 'transfer' ||
-      order.payment_method_type === 'boleto'
+    const paymentDataCurrency = (order.payment_data as any)?.currency
+    let isBRL = false
+
+    if (paymentDataCurrency) {
+      isBRL = paymentDataCurrency.toUpperCase() === 'BRL'
+    } else {
+      isBRL =
+        order.shipping_method === 'brazil_delivery' ||
+        order.payment_method_type === 'pix' ||
+        order.payment_method_type === 'transferencia_brasil' ||
+        order.payment_method_type === 'boleto'
+    }
 
     const currencySymbol = isBRL ? 'R$' : 'US$'
+    const locale = isBRL ? 'pt-BR' : 'en-US'
 
-    return `${currencySymbol} ${Number(order.total).toLocaleString('pt-BR', {
+    return `${currencySymbol} ${Number(order.total).toLocaleString(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`

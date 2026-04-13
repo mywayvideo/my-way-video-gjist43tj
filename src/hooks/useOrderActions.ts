@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabase/client'
 export function useOrderActions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { addItem } = useCart()
+  const cartContext = useCart() as any
+  const addItem = cartContext?.addItem || cartContext?.addToCart
 
   const handleDownloadInvoice = async (order: Order) => {
     try {
@@ -41,17 +42,38 @@ export function useOrderActions() {
       if (error) throw error
 
       if (orderItems && orderItems.length > 0) {
-        for (const item of orderItems) {
-          if (item.products) {
-            addItem(item.products, item.quantity)
+        if (addItem) {
+          for (const item of orderItems) {
+            if (item.products) {
+              addItem(item.products, item.quantity)
+            }
           }
+        } else {
+          const existingCart = JSON.parse(localStorage.getItem('cart') || '[]')
+          for (const item of orderItems) {
+            if (item.products) {
+              const existingItem = existingCart.find(
+                (i: any) => i.id === item.product_id || i.product_id === item.product_id,
+              )
+              if (existingItem) {
+                existingItem.quantity += item.quantity
+              } else {
+                existingCart.push({
+                  ...item.products,
+                  product_id: item.product_id,
+                  quantity: item.quantity,
+                })
+              }
+            }
+          }
+          localStorage.setItem('cart', JSON.stringify(existingCart))
+          window.dispatchEvent(new Event('storage'))
         }
+        toast.success('Itens adicionados ao carrinho! Revise e confirme.')
+        navigate('/cart')
       } else {
-        await orderService.copyOrderToCart(orderId)
+        toast.error('Não foram encontrados itens neste pedido.')
       }
-
-      toast.success('Itens adicionados ao carrinho! Revise e confirme.')
-      navigate('/cart')
     } catch (e) {
       toast.error('Nao foi possivel copiar itens. Tente novamente.')
     } finally {

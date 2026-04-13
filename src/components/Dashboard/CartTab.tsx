@@ -324,7 +324,7 @@ export function CartTab({
             </div>
 
             <p className="text-sm text-center text-muted-foreground mb-6">
-              Impostos e frete calculados no checkout.
+              Preço final calculado no checkout.
             </p>
 
             <p className="text-sm text-center text-muted-foreground mb-4">2 opcoes de checkout</p>
