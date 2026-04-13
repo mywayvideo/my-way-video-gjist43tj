@@ -19,6 +19,7 @@ export const productSchema = z.object({
   technical_info: z.string().optional(),
   is_discontinued: z.boolean().default(false),
   manual_related_ids: z.array(z.string()).optional().default([]),
+  ai_related_ids: z.array(z.string()).optional().default([]),
   price_nationalized_sales: z.coerce.number().optional(),
   price_nationalized_cost: z.coerce.number().optional(),
   price_nationalized_currency: z.string().optional().default('BRL'),

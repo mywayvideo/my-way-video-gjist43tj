@@ -39,6 +39,7 @@ const productSchema = z.object({
     .transform((v) => (typeof v === 'string' ? v : v ? JSON.stringify(v, null, 2) : '')),
   is_discontinued: z.boolean().catch(false).default(false),
   manual_related_ids: z.array(z.string()).catch([]).default([]),
+  ai_related_ids: z.array(z.string()).catch([]).default([]),
 })
 
 export interface UseProductFormProps {
@@ -89,6 +90,7 @@ export function useProductForm(props?: UseProductFormProps) {
       technical_info: '',
       is_discontinued: false,
       manual_related_ids: [],
+      ai_related_ids: [],
     },
   })
 
@@ -145,6 +147,7 @@ export function useProductForm(props?: UseProductFormProps) {
         technical_info: props.initialData.technical_info || '',
         is_discontinued: props.initialData.is_discontinued || false,
         manual_related_ids: props.initialData.manual_related_ids || [],
+        ai_related_ids: props.initialData.ai_related_ids || [],
       })
       setIsLoadingProduct(false)
     } else if (routeId) {
@@ -180,6 +183,7 @@ export function useProductForm(props?: UseProductFormProps) {
               technical_info: data.technical_info || '',
               is_discontinued: data.is_discontinued || false,
               manual_related_ids: data.manual_related_ids || [],
+              ai_related_ids: data.ai_related_ids || [],
             })
           }
         } catch (e) {

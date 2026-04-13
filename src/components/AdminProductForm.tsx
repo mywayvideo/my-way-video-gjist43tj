@@ -14,8 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/hooks/use-toast'
-import { UploadCloud, Plus, Wand2, X } from 'lucide-react'
+import { UploadCloud, Plus, Wand2, X, Star, Ban, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { AdminManufacturerDialog } from './AdminManufacturerDialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -411,24 +412,16 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
           />
 
           <div className="md:col-span-2 mt-6 mb-2">
-            <h3 className="text-lg font-medium">Relacionamentos e Status</h3>
+            <h3 className="text-lg font-medium">Relacionamentos</h3>
             <div className="h-px bg-white/10 w-full mt-2" />
           </div>
 
           <FormField
             control={form.control}
             name="manual_related_ids"
-            render={({ field }) => {
-              const selectedIds = field.value || []
-              const selectedProducts = selectedIds.map((id: string) => {
-                return (
-                  allProducts.find((p) => p.id === id) || {
-                    id,
-                    name: 'Produto (ID não encontrado)',
-                    sku: null,
-                  }
-                )
-              })
+            render={() => {
+              const manualIds = form.watch('manual_related_ids') || []
+              const aiIds = form.watch('ai_related_ids') || []
 
               const filteredProducts = allProducts.filter(
                 (p) =>
@@ -438,42 +431,63 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
 
               return (
                 <FormItem className="md:col-span-2">
-                  <FormLabel>Produtos Relacionados (Manual)</FormLabel>
-                  <div className="border border-white/10 rounded-md p-3 bg-background/50 space-y-3">
+                  <FormLabel>Gerenciar Produtos Relacionados</FormLabel>
+                  <div className="border border-white/10 rounded-md p-3 bg-background/50 space-y-4 mt-2">
                     <Input
-                      placeholder="Buscar por nome ou SKU..."
+                      placeholder="Buscar por nome ou SKU para relacionar manualmente..."
                       value={searchRelated}
                       onChange={(e) => setSearchRelated(e.target.value)}
                       className="bg-background"
                     />
                     <ScrollArea className="h-[150px] border border-white/5 rounded p-2 bg-black/20">
                       <div className="space-y-3">
-                        {filteredProducts.map((prod) => (
-                          <div key={prod.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`related-${prod.id}`}
-                              checked={(field.value || []).includes(prod.id)}
-                              onCheckedChange={(checked) => {
-                                const current = field.value || []
-                                const updated = checked
-                                  ? [...current, prod.id]
-                                  : current.filter((id: string) => id !== prod.id)
-                                field.onChange(updated)
-                              }}
-                            />
-                            <label
-                              htmlFor={`related-${prod.id}`}
-                              className="text-sm font-medium leading-none cursor-pointer"
-                            >
-                              {prod.name}{' '}
-                              {prod.sku ? (
-                                <span className="text-muted-foreground ml-1">({prod.sku})</span>
-                              ) : (
-                                ''
-                              )}
-                            </label>
-                          </div>
-                        ))}
+                        {filteredProducts.map((prod) => {
+                          const isChecked = manualIds.includes(prod.id) || aiIds.includes(prod.id)
+
+                          return (
+                            <div key={prod.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`related-${prod.id}`}
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    if (!aiIds.includes(prod.id)) {
+                                      form.setValue('manual_related_ids', [...manualIds, prod.id], {
+                                        shouldDirty: true,
+                                      })
+                                    }
+                                  } else {
+                                    if (manualIds.includes(prod.id)) {
+                                      form.setValue(
+                                        'manual_related_ids',
+                                        manualIds.filter((id: string) => id !== prod.id),
+                                        { shouldDirty: true },
+                                      )
+                                    }
+                                    if (aiIds.includes(prod.id)) {
+                                      form.setValue(
+                                        'ai_related_ids',
+                                        aiIds.filter((id: string) => id !== prod.id),
+                                        { shouldDirty: true },
+                                      )
+                                    }
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor={`related-${prod.id}`}
+                                className="text-sm font-medium leading-none cursor-pointer"
+                              >
+                                {prod.name}{' '}
+                                {prod.sku ? (
+                                  <span className="text-muted-foreground ml-1">({prod.sku})</span>
+                                ) : (
+                                  ''
+                                )}
+                              </label>
+                            </div>
+                          )
+                        })}
                         {filteredProducts.length === 0 && (
                           <p className="text-sm text-muted-foreground text-center py-4">
                             Nenhum produto encontrado.
@@ -482,41 +496,71 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                       </div>
                     </ScrollArea>
 
-                    {selectedProducts.length > 0 && (
-                      <div className="pt-2 border-t border-white/10 mt-3">
-                        <p className="text-xs text-muted-foreground mb-2 font-medium">
-                          Produtos Selecionados:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedProducts.map((prod: any) => (
-                            <Badge
-                              key={`badge-${prod.id}`}
-                              variant="secondary"
-                              className="flex items-center gap-1 text-xs py-1 px-2 font-normal"
-                            >
-                              <span className="max-w-[250px] truncate" title={prod.name}>
-                                {prod.name}
-                              </span>
-                              {prod.sku && (
-                                <span className="text-muted-foreground ml-1 opacity-70">
-                                  ({prod.sku})
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  field.onChange(selectedIds.filter((id: string) => id !== prod.id))
-                                }}
-                                className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors focus:outline-none"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ))}
+                    {(() => {
+                      const selectedProducts = allProducts.filter(
+                        (p) => manualIds.includes(p.id) || aiIds.includes(p.id),
+                      )
+
+                      if (selectedProducts.length === 0) return null
+
+                      return (
+                        <div className="pt-3 border-t border-white/10 mt-4">
+                          <p className="text-xs text-muted-foreground mb-3 font-medium">
+                            Produtos Selecionados:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedProducts.map((prod: any) => {
+                              const isAi = aiIds.includes(prod.id)
+                              return (
+                                <Badge
+                                  key={`badge-${prod.id}`}
+                                  variant={isAi ? 'default' : 'secondary'}
+                                  className={cn(
+                                    'flex items-center gap-1.5 text-xs py-1.5 px-3 font-normal border',
+                                    isAi
+                                      ? 'bg-primary/20 hover:bg-primary/30 text-primary-foreground border-primary/30'
+                                      : 'border-transparent',
+                                  )}
+                                >
+                                  {isAi && <Sparkles className="w-3 h-3 text-primary" />}
+                                  <span className="max-w-[250px] truncate" title={prod.name}>
+                                    {prod.name}
+                                  </span>
+                                  {prod.sku && (
+                                    <span className="text-muted-foreground ml-1 opacity-70">
+                                      ({prod.sku})
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      if (manualIds.includes(prod.id)) {
+                                        form.setValue(
+                                          'manual_related_ids',
+                                          manualIds.filter((id: string) => id !== prod.id),
+                                          { shouldDirty: true },
+                                        )
+                                      }
+                                      if (aiIds.includes(prod.id)) {
+                                        form.setValue(
+                                          'ai_related_ids',
+                                          aiIds.filter((id: string) => id !== prod.id),
+                                          { shouldDirty: true },
+                                        )
+                                      }
+                                    }}
+                                    className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors focus:outline-none"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </Badge>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -524,18 +568,54 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             }}
           />
 
+          <div className="md:col-span-2 mt-6 mb-2">
+            <h3 className="text-lg font-medium">Status do Produto</h3>
+            <div className="h-px bg-white/10 w-full mt-2" />
+          </div>
+
           <FormField
             control={form.control}
             name="is_special"
             render={({ field }) => (
-              <FormItem className="flex items-center justify-between rounded-lg border border-white/10 bg-background/50 p-3 md:col-span-2">
-                <div>
-                  <FormLabel className="text-amber-500">Produto "DESTAQUE"</FormLabel>
-                  <p className="text-xs text-muted-foreground">Destacar na página inicial</p>
+              <FormItem
+                className={cn(
+                  'md:col-span-1 relative flex flex-col items-start gap-4 rounded-xl border p-5 shadow-sm cursor-pointer transition-colors',
+                  field.value
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-border bg-background/50 hover:bg-muted/50',
+                )}
+                onClick={() => field.onChange(!field.value)}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'p-2 rounded-full',
+                        field.value ? 'bg-amber-500/20' : 'bg-muted',
+                      )}
+                    >
+                      <Star
+                        className={cn(
+                          'w-5 h-5',
+                          field.value ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground',
+                        )}
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-medium cursor-pointer pointer-events-none">
+                        Destaque Especial
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground">Destacar na página inicial</p>
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </FormControl>
                 </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
               </FormItem>
             )}
           />
@@ -544,16 +624,45 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="is_discontinued"
             render={({ field }) => (
-              <FormItem className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 p-3 md:col-span-2">
-                <div>
-                  <FormLabel className="text-destructive">Produto "DESCONTINUADO"</FormLabel>
-                  <p className="text-xs text-muted-foreground">
-                    Marcar como fora de linha/indisponível
-                  </p>
+              <FormItem
+                className={cn(
+                  'md:col-span-1 relative flex flex-col items-start gap-4 rounded-xl border p-5 shadow-sm cursor-pointer transition-colors',
+                  field.value
+                    ? 'border-destructive bg-destructive/10'
+                    : 'border-border bg-background/50 hover:bg-muted/50',
+                )}
+                onClick={() => field.onChange(!field.value)}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'p-2 rounded-full',
+                        field.value ? 'bg-destructive/20' : 'bg-muted',
+                      )}
+                    >
+                      <Ban
+                        className={cn(
+                          'w-5 h-5',
+                          field.value ? 'text-destructive' : 'text-muted-foreground',
+                        )}
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-medium cursor-pointer pointer-events-none">
+                        Produto Descontinuado
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground">Fora de linha/indisponível</p>
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </FormControl>
                 </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
               </FormItem>
             )}
           />

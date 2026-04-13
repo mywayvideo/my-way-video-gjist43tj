@@ -73,6 +73,8 @@ export const productService = {
       price_nationalized_sales: productData.price_nationalized_sales || null,
       price_nationalized_cost: productData.price_nationalized_cost || null,
       price_nationalized_currency: productData.price_nationalized_currency || 'BRL',
+      manual_related_ids: productData.manual_related_ids || [],
+      ai_related_ids: productData.ai_related_ids || [],
     }
 
     const { data, error } = await supabase.from('products').insert(payload).select().single()
@@ -103,6 +105,8 @@ export const productService = {
       price_nationalized_sales: productData.price_nationalized_sales || null,
       price_nationalized_cost: productData.price_nationalized_cost || null,
       price_nationalized_currency: productData.price_nationalized_currency || 'BRL',
+      manual_related_ids: productData.manual_related_ids || [],
+      ai_related_ids: productData.ai_related_ids || [],
     }
 
     const { error } = await supabase.from('products').update(payload).eq('id', id)
