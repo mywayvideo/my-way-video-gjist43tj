@@ -428,7 +428,7 @@ export default function Cart() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground text-center pt-2">
-                Impostos e frete calculados no checkout.
+                Preço final calculado no checkout.
               </p>
             </div>
             <div>

@@ -4,14 +4,13 @@ import { orderService } from '@/services/orderService'
 import { useNavigate } from 'react-router-dom'
 import { Order } from '@/types/order'
 import { generateOrderPDF } from '@/services/generateOrderPDF'
-import { useCart } from '@/hooks/useCart'
 import { supabase } from '@/lib/supabase/client'
+import { useCartStore } from '@/stores/useCartStore'
 
 export function useOrderActions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const navigate = useNavigate()
-  const cartContext = useCart() as any
-  const addItem = cartContext?.addItem || cartContext?.addToCart
+  const cartStore = useCartStore()
 
   const handleDownloadInvoice = async (order: Order) => {
     try {
@@ -42,40 +41,31 @@ export function useOrderActions() {
       if (error) throw error
 
       if (orderItems && orderItems.length > 0) {
-        if (addItem) {
-          for (const item of orderItems) {
-            if (item.products) {
-              addItem(item.products, item.quantity)
-            }
+        for (const item of orderItems) {
+          if (item.products) {
+            const priceToUse = item.products.price_usd || item.unit_price || 0
+            cartStore.addItem({
+              id: item.product_id,
+              name: item.products.name || 'Produto',
+              price: priceToUse,
+              original_price: priceToUse,
+              cost_price: item.products.price_cost || 0,
+              image_url: item.products.image_url || undefined,
+              quantity: item.quantity,
+              originalPrice: priceToUse,
+            })
           }
-        } else {
-          const existingCart = JSON.parse(localStorage.getItem('cart') || '[]')
-          for (const item of orderItems) {
-            if (item.products) {
-              const existingItem = existingCart.find(
-                (i: any) => i.id === item.product_id || i.product_id === item.product_id,
-              )
-              if (existingItem) {
-                existingItem.quantity += item.quantity
-              } else {
-                existingCart.push({
-                  ...item.products,
-                  product_id: item.product_id,
-                  quantity: item.quantity,
-                })
-              }
-            }
-          }
-          localStorage.setItem('cart', JSON.stringify(existingCart))
-          window.dispatchEvent(new Event('storage'))
         }
+
+        window.dispatchEvent(new Event('storage'))
+
         toast.success('Itens adicionados ao carrinho! Revise e confirme.')
         navigate('/cart')
       } else {
         toast.error('Não foram encontrados itens neste pedido.')
       }
     } catch (e) {
-      toast.error('Nao foi possivel copiar itens. Tente novamente.')
+      toast.error('Não foi possível copiar itens. Tente novamente.')
     } finally {
       setActionLoading(null)
     }

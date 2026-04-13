@@ -482,7 +482,7 @@ export default function Checkout() {
       let itemsArray = cartContext?.items || cartContext?.cartItems || cartContext?.cart || []
 
       if (!itemsArray || itemsArray.length === 0) {
-        const keys = ['cart', 'shopping-cart', 'cart-storage', 'cartItems']
+        const keys = ['mw-video-cart', 'cart', 'shopping-cart', 'cart-storage', 'cartItems']
         for (const key of keys) {
           const local = localStorage.getItem(key)
           if (local) {
@@ -557,8 +557,10 @@ export default function Checkout() {
 
         const hasNewDiscount = formatted.some((i) => i.has_discount)
 
-        const currentIds = cartItems.map((i: any) => `${i.id}-${i.quantity}`).join(',')
-        const newIds = formatted.map((i: any) => `${i.id}-${i.quantity}`).join(',')
+        const currentIds = cartItems
+          .map((i: any) => `${i.id || i.product_id}-${i.quantity}`)
+          .join(',')
+        const newIds = formatted.map((i: any) => `${i.id || i.product_id}-${i.quantity}`).join(',')
 
         if (currentIds !== newIds) {
           setCartItems(formatted)
