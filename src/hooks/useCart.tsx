@@ -118,7 +118,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           name: productDetails.name,
           price: productDetails.price_usd || 0,
           image_url: productDetails.image_url,
-          price_usa: productDetails.price_usd,
+          price_usa: productDetails.price_usd, // Map DB price_usd to state price_usa
           price_nationalized_sales: productDetails.price_nationalized_sales,
           price_nationalized_currency: productDetails.price_nationalized_currency,
           weight: productDetails.weight,

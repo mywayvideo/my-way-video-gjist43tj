@@ -49,6 +49,7 @@ export default function Cart() {
     percentageValue: 10,
     additionalWeightKg: 0.5,
   })
+  const [isHydratingDetails, setIsHydratingDetails] = useState(true)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -89,7 +90,12 @@ export default function Cart() {
   useEffect(() => {
     const fetchProducts = async () => {
       const ids = cartItems.map((i) => i.id)
-      if (!ids.length) return
+      if (!ids.length) {
+        setProductDetails({})
+        setIsHydratingDetails(false)
+        return
+      }
+      setIsHydratingDetails(true)
       const { data } = await supabase
         .from('products')
         .select('id, price_nationalized_sales, price_nationalized_currency, price_usa, weight')
@@ -99,12 +105,16 @@ export default function Cart() {
         data.forEach((d) => (details[d.id] = d))
         setProductDetails(details)
       }
+      setIsHydratingDetails(false)
     }
-    fetchProducts()
-  }, [cartItems])
+
+    if (!isLoading) {
+      fetchProducts()
+    }
+  }, [cartItems, isLoading])
 
   const evaluatedItems = useMemo(() => {
-    if (isLoading) return []
+    if (isLoading || isHydratingDetails) return []
 
     return cartItems.map((item) => {
       const details = productDetails[item.id] || item
@@ -205,7 +215,7 @@ export default function Cart() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isHydratingDetails) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-5xl">
         <h1 className="text-3xl font-bold mb-8">Meu Carrinho</h1>

@@ -46,7 +46,6 @@ import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
 import { useAuthState } from '@/hooks/useAuthState'
 import { ProductCard } from '@/components/ProductCard'
-import { getEligibilityAndPrice } from '@/utils/pricingLogic'
 
 type Message = {
   id: string
@@ -191,14 +190,7 @@ export default function Product() {
     fetchExchange()
   }, [])
 
-  const evalResult = useMemo(() => {
-    if (!product || exchangeRate === 0) return null
-    return getEligibilityAndPrice(product as any, 'brasil', exchangeRate, {
-      pricePerKg,
-      percentageValue,
-      additionalWeightKg,
-    })
-  }, [product, exchangeRate, pricePerKg, percentageValue, additionalWeightKg])
+  const hasNationalizedPrice = (product?.price_nationalized_sales || 0) > 0
 
   const calculatePriceBRL = useCallback(
     (prod: { price_usd: number; weight_lb: number }) => {
@@ -643,18 +635,16 @@ export default function Product() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-muted-foreground mb-2">
                     <span className="text-xs font-bold uppercase tracking-widest">
-                      {evalResult?.rule === 'A'
-                        ? 'Preço Nacionalizado (BRL)'
-                        : 'Preço base usa (USD)'}
+                      {hasNationalizedPrice ? 'Preço Nacionalizado (BRL)' : 'Preço base usa (USD)'}
                     </span>
                   </div>
 
-                  {evalResult?.rule === 'A' ? (
+                  {hasNationalizedPrice ? (
                     <div className="text-4xl font-bold text-green-500 mb-2">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
-                        currency: 'BRL',
-                      }).format(evalResult.price)}
+                        currency: product.price_nationalized_currency || 'BRL',
+                      }).format(product.price_nationalized_sales!)}
                     </div>
                   ) : (
                     <ProductPrice
@@ -664,12 +654,6 @@ export default function Product() {
                       ruleName={ruleName}
                       size="lg"
                     />
-                  )}
-
-                  {evalResult && !evalResult.eligible && (
-                    <div className="mt-2 inline-block px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
-                      {evalResult.reason}
-                    </div>
                   )}
 
                   {isAdmin && showPriceCost && (
@@ -695,7 +679,7 @@ export default function Product() {
                     </div>
                   )}
 
-                  {evalResult?.rule !== 'A' && (
+                  {!hasNationalizedPrice && (
                     <div className="mt-6 pt-6 border-t border-border/50">
                       <Button
                         variant="secondary"
@@ -718,7 +702,7 @@ export default function Product() {
             <div className="order-3 lg:order-none w-full mb-10 lg:mb-0 flex gap-4">
               <Button
                 size="lg"
-                disabled={product.is_discontinued || isLoading}
+                disabled={product.is_discontinued}
                 aria-label={
                   product.is_discontinued
                     ? 'Produto descontinuado. Nao disponivel para adicionar.'
