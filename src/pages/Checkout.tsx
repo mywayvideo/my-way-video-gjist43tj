@@ -30,34 +30,11 @@ import {
   CheckCircle2,
   ShoppingBag,
   Copy,
+  AlertCircle,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-const destType: Destination = deliveryMethod === 'brasil' ? 'brasil' : 'usa'
-
-const evaluatedItems = cartItems.map((item) => {
-  const details = productDetails[item.product_id] || productDetails[item.id] || item
-  const evalResult = getEligibilityAndPrice(details, destType, exchangeRate, shippingSettings)
-  return {
-    ...item,
-    ...evalResult,
-    itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
-  }
-})
-
-const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
-const dynamicSubtotal = evaluatedItems.reduce((acc, item) => acc + (item.itemTotal || 0), 0)
-
-const total = dynamicSubtotal - discountAmount + (freight || 0)
-
-const formatCurrency = (value: number, currencyParam?: string) => {
-  const curr = currencyParam || (destType === 'brasil' ? 'BRL' : 'USD')
-  return new Intl.NumberFormat(curr === 'BRL' ? 'pt-BR' : 'en-US', {
-    style: 'currency',
-    currency: curr,
-  }).format(value)
-}
 const btnPrimary =
   'bg-[hsl(152,68%,40%)] text-[hsl(0,0%,100%)] font-semibold py-3 px-6 rounded-lg border-none cursor-pointer transition-all duration-200 ease-out hover:bg-[hsl(152,68%,35%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(152,68%,40%)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-center'
 const btnSecondary =
@@ -303,7 +280,30 @@ export default function Checkout() {
     fetchAddressesAndDiscounts()
   }, [user, loading, cartContext])
 
-  const total = subtotal - discountAmount + (freight || 0)
+  const destType: Destination = deliveryMethod === 'brasil' ? 'brasil' : 'usa'
+
+  const evaluatedItems = cartItems.map((item) => {
+    const details = productDetails[item.product_id] || productDetails[item.id] || item
+    const evalResult = getEligibilityAndPrice(details, destType, exchangeRate, shippingSettings)
+    return {
+      ...item,
+      ...evalResult,
+      itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
+    }
+  })
+
+  const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
+  const dynamicSubtotal = evaluatedItems.reduce((acc, item) => acc + (item.itemTotal || 0), 0)
+
+  const total = dynamicSubtotal - discountAmount + (freight || 0)
+
+  const formatCurrency = (value: number, currencyParam?: string) => {
+    const curr = currencyParam || (destType === 'brasil' ? 'BRL' : 'USD')
+    return new Intl.NumberFormat(curr === 'BRL' ? 'pt-BR' : 'en-US', {
+      style: 'currency',
+      currency: curr,
+    }).format(value)
+  }
 
   const fetchAddressesAndDiscounts = async () => {
     if (!user) return
