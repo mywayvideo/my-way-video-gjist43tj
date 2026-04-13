@@ -470,6 +470,14 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                                         aiIds.filter((id: string) => id !== prod.id),
                                         { shouldDirty: true },
                                       )
+                                      const rejectedIds = form.watch('rejected_related_ids') || []
+                                      if (!rejectedIds.includes(prod.id)) {
+                                        form.setValue(
+                                          'rejected_related_ids',
+                                          [...rejectedIds, prod.id],
+                                          { shouldDirty: true },
+                                        )
+                                      }
                                     }
                                   }
                                 }}
@@ -548,6 +556,14 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                                           aiIds.filter((id: string) => id !== prod.id),
                                           { shouldDirty: true },
                                         )
+                                        const rejectedIds = form.watch('rejected_related_ids') || []
+                                        if (!rejectedIds.includes(prod.id)) {
+                                          form.setValue(
+                                            'rejected_related_ids',
+                                            [...rejectedIds, prod.id],
+                                            { shouldDirty: true },
+                                          )
+                                        }
                                       }
                                     }}
                                     className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5 transition-colors focus:outline-none"

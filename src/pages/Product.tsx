@@ -310,11 +310,7 @@ export default function Product() {
             (p: any) => aiIds.includes(p.id) && !manualIds.includes(p.id),
           )
 
-          let combined = [...manualProducts]
-          const remainingSlots = 6 - combined.length
-          if (remainingSlots > 0) {
-            combined = [...combined, ...aiProducts.slice(0, remainingSlots)]
-          }
+          let combined = [...manualProducts, ...aiProducts]
 
           for (let i = combined.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1))

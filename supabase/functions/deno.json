@@ -38,6 +38,6 @@
     "send-order-email": 2,
     "send-email": 2,
     "verify-user-role": 2,
-    "generate-related-products": 1
+    "generate-related-products": 2
   }
 }
