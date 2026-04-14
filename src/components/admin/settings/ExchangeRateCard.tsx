@@ -51,15 +51,52 @@ export function ExchangeRateCard() {
 
   let diffMinutes = 0
   let isCached = false
-  let nextUpdateMinutes = 15
 
   if (rateData?.last_updated) {
     const diffMs = Math.max(0, now.getTime() - new Date(rateData.last_updated).getTime())
     diffMinutes = Math.floor(diffMs / 60000)
     if (diffMinutes < 10) {
       isCached = true
-      nextUpdateMinutes = Math.max(1, 10 - diffMinutes)
     }
+  }
+
+  const getNextUpdateDate = (currentDate: Date) => {
+    const next = new Date(currentDate.getTime())
+    next.setUTCMinutes(15)
+    next.setUTCSeconds(0)
+    next.setUTCMilliseconds(0)
+
+    const currentUTCHour = currentDate.getUTCHours()
+    const currentUTCMinute = currentDate.getUTCMinutes()
+
+    const scheduleHours = [12, 15, 18, 21]
+
+    const nextHour = scheduleHours.find(
+      (h) => h > currentUTCHour || (h === currentUTCHour && currentUTCMinute < 15),
+    )
+
+    if (nextHour === undefined) {
+      next.setUTCDate(next.getUTCDate() + 1)
+      next.setUTCHours(12)
+    } else {
+      next.setUTCHours(nextHour)
+    }
+
+    return next
+  }
+
+  const nextUpdate = getNextUpdateDate(now)
+  const nextUpdateDiffMs = Math.max(0, nextUpdate.getTime() - now.getTime())
+  const nextUpdateDiffMinutes = Math.ceil(nextUpdateDiffMs / 60000)
+
+  const formatNextUpdate = () => {
+    if (nextUpdateDiffMinutes < 60) {
+      return `${nextUpdateDiffMinutes} minutos`
+    }
+    const hours = Math.floor(nextUpdateDiffMinutes / 60)
+    const mins = nextUpdateDiffMinutes % 60
+    if (mins === 0) return `${hours} hora${hours > 1 ? 's' : ''}`
+    return `${hours} hora${hours > 1 ? 's' : ''} e ${mins} minuto${mins > 1 ? 's' : ''}`
   }
 
   const formatCurrency = (val: number) =>
@@ -123,7 +160,8 @@ export function ExchangeRateCard() {
             <div>
               <span className="font-semibold">Proxima atualizacao em:</span>{' '}
               <span className="text-muted-foreground">
-                {isCached ? `${nextUpdateMinutes} minutos` : '10 minutos'}
+                {formatNextUpdate()} (às{' '}
+                {nextUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})
               </span>
             </div>
             <div>
