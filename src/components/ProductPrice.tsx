@@ -17,6 +17,7 @@ export function ProductPrice({
   ruleName?: string | null
   className?: string
   size?: 'sm' | 'default' | 'lg'
+  currency?: string
 }) {
   if (originalPrice === null || originalPrice === undefined || originalPrice <= 0) {
     return (
@@ -32,11 +33,12 @@ export function ProductPrice({
     )
   }
 
-  const formatUSD = (val: number) =>
-    new Intl.NumberFormat('en-US', {
+  const formatPrice = (val: number) => {
+    return new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : 'en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency || 'USD',
     }).format(val)
+  }
 
   const showDiscount =
     discountedPrice !== null &&
@@ -55,7 +57,7 @@ export function ProductPrice({
         <>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4]">
-              {formatUSD(originalPrice)}
+              {formatPrice(originalPrice)}
             </span>
             {discountPercentage && discountPercentage > 0 ? (
               <span className="bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
@@ -69,12 +71,12 @@ export function ProductPrice({
               size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
             )}
           >
-            {formatUSD(discountedPrice!)}
+            {formatPrice(discountedPrice!)}
           </span>
           {originalPrice - discountedPrice! > 0 && (
             <div className="mt-1.5 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-1">
               <span className="text-[12px] font-medium text-green-600 dark:text-green-400 animate-pulse">
-                Economize {formatUSD(originalPrice - discountedPrice!)}
+                Economize {formatPrice(originalPrice - discountedPrice!)}
               </span>
               {ruleName && (
                 <span className="text-[10px] text-muted-foreground italic">
@@ -92,7 +94,7 @@ export function ProductPrice({
             size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
           )}
         >
-          {formatUSD(originalPrice)}
+          {formatPrice(originalPrice)}
         </span>
       )}
     </div>

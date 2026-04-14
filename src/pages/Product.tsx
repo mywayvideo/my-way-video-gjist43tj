@@ -632,28 +632,50 @@ export default function Product() {
                   <Globe className="w-32 h-32" />
                 </div>
 
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                    <span className="text-xs font-bold uppercase tracking-widest">
-                      {hasNationalizedPrice ? 'Preço Nacionalizado (BRL)' : 'Preço base usa (USD)'}
-                    </span>
-                  </div>
-
-                  {hasNationalizedPrice ? (
-                    <div className="text-4xl font-bold text-green-500 mb-2">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: product.price_nationalized_currency || 'BRL',
-                      }).format(product.price_nationalized_sales!)}
+                <div className="relative z-10 flex flex-col gap-6">
+                  {product.price_usd !== null && product.price_usd > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                        <span className="text-xs font-bold uppercase tracking-widest">
+                          Preço Miami (FOB)
+                        </span>
+                      </div>
+                      <ProductPrice
+                        originalPrice={product.price_usd}
+                        discountedPrice={discountedPrice}
+                        discountPercentage={discountPercentage}
+                        ruleName={ruleName}
+                        size="lg"
+                      />
                     </div>
-                  ) : (
-                    <ProductPrice
-                      originalPrice={product.price_usd}
-                      discountedPrice={discountedPrice}
-                      discountPercentage={discountPercentage}
-                      ruleName={ruleName}
-                      size="lg"
-                    />
+                  )}
+
+                  {hasNationalizedPrice && (
+                    <div
+                      className={cn(
+                        product.price_usd !== null &&
+                          product.price_usd > 0 &&
+                          'pt-6 border-t border-border/50',
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                        <span className="text-xs font-bold uppercase tracking-widest">
+                          Preço Brasil (Nacionalizado)
+                        </span>
+                      </div>
+                      <ProductPrice
+                        originalPrice={product.price_nationalized_sales!}
+                        discountedPrice={
+                          discountPercentage > 0
+                            ? product.price_nationalized_sales! * (1 - discountPercentage / 100)
+                            : product.price_nationalized_sales!
+                        }
+                        discountPercentage={discountPercentage}
+                        ruleName={ruleName}
+                        size="lg"
+                        currency={product.price_nationalized_currency || 'BRL'}
+                      />
+                    </div>
                   )}
 
                   {isAdmin && showPriceCost && (
@@ -679,8 +701,8 @@ export default function Product() {
                     </div>
                   )}
 
-                  {!hasNationalizedPrice && (
-                    <div className="mt-6 pt-6 border-t border-border/50">
+                  {!hasNationalizedPrice && product.price_usd !== null && product.price_usd > 0 && (
+                    <div className="mt-2 pt-6 border-t border-border/50">
                       <Button
                         variant="secondary"
                         className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"

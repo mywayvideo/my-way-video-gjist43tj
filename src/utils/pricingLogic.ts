@@ -14,7 +14,7 @@ export function getEligibilityAndPrice(
   let rule = ''
   let currency = 'USD'
 
-  const price_usa = safeNum(product?.price_usa)
+  const price_usa = safeNum(product?.price_usd ?? product?.price_usa)
   const weight = safeNum(product?.weight)
   const price_nationalized_sales = safeNum(product?.price_nationalized_sales)
 
