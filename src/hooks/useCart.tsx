@@ -44,6 +44,37 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuthState()
 
+  const getCartId = async () => {
+    if (!user) return null
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!customer) return null
+
+    const { data: cartData } = await supabase
+      .from('shopping_carts')
+      .select('id')
+      .eq('customer_id', customer.id)
+      .maybeSingle()
+
+    if (cartData) return cartData.id
+
+    const { data: newCart, error: insertError } = await supabase
+      .from('shopping_carts')
+      .insert({ customer_id: customer.id })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      console.error('Failed to create cart:', insertError)
+      return null
+    }
+
+    return newCart?.id
+  }
+
   useEffect(() => {
     const loadCart = async () => {
       setIsLoading(true)
@@ -51,44 +82,28 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const localCart = localStorage.getItem('mw-video-cart-v2')
         let items: CartItem[] = localCart ? JSON.parse(localCart) : []
 
-        if (user) {
-          const { data: cartData } = await supabase
-            .from('shopping_carts')
-            .select('id')
-            .eq('customer_id', user.id)
-            .maybeSingle()
+        const cartId = await getCartId()
 
-          let cartId = cartData?.id
-          if (!cartId) {
-            const { data: newCart } = await supabase
-              .from('shopping_carts')
-              .insert({ customer_id: user.id })
-              .select('id')
-              .single()
-            cartId = newCart?.id
-          }
+        if (cartId) {
+          const { data: dbItems } = await supabase
+            .from('cart_items')
+            .select(
+              'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight)',
+            )
+            .eq('cart_id', cartId)
 
-          if (cartId) {
-            const { data: dbItems } = await supabase
-              .from('cart_items')
-              .select(
-                'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight)',
-              )
-              .eq('cart_id', cartId)
-
-            if (dbItems) {
-              items = dbItems.map((item) => ({
-                id: item.product_id,
-                name: (item.products as any)?.name || '',
-                price: (item.products as any)?.price_usd || 0,
-                quantity: item.quantity,
-                image_url: (item.products as any)?.image_url,
-                price_usa: (item.products as any)?.price_usd,
-                price_nationalized_sales: (item.products as any)?.price_nationalized_sales,
-                price_nationalized_currency: (item.products as any)?.price_nationalized_currency,
-                weight: (item.products as any)?.weight,
-              }))
-            }
+          if (dbItems) {
+            items = dbItems.map((item) => ({
+              id: item.product_id,
+              name: (item.products as any)?.name || '',
+              price: (item.products as any)?.price_usd || 0,
+              quantity: item.quantity,
+              image_url: (item.products as any)?.image_url,
+              price_usa: (item.products as any)?.price_usd,
+              price_nationalized_sales: (item.products as any)?.price_nationalized_sales,
+              price_nationalized_currency: (item.products as any)?.price_nationalized_currency,
+              weight: (item.products as any)?.weight,
+            }))
           }
         }
         setCartItems(items)
@@ -118,7 +133,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           name: productDetails.name,
           price: productDetails.price_usd || 0,
           image_url: productDetails.image_url,
-          price_usa: productDetails.price_usd, // Map DB price_usd to state price_usa
+          price_usa: productDetails.price_usd,
           price_nationalized_sales: productDetails.price_nationalized_sales,
           price_nationalized_currency: productDetails.price_nationalized_currency,
           weight: productDetails.weight,
@@ -157,29 +172,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return newItems
       })
 
-      if (user) {
-        const { data: cartData } = await supabase
-          .from('shopping_carts')
-          .select('id')
-          .eq('customer_id', user.id)
+      const cartId = await getCartId()
+      if (cartId) {
+        const { data: existingDb } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('cart_id', cartId)
+          .eq('product_id', productId)
           .maybeSingle()
-        if (cartData) {
-          const { data: existingDb } = await supabase
+        if (existingDb) {
+          await supabase
             .from('cart_items')
-            .select('id, quantity')
-            .eq('cart_id', cartData.id)
-            .eq('product_id', productId)
-            .maybeSingle()
-          if (existingDb) {
-            await supabase
-              .from('cart_items')
-              .update({ quantity: existingDb.quantity + quantity })
-              .eq('id', existingDb.id)
-          } else {
-            await supabase
-              .from('cart_items')
-              .insert({ cart_id: cartData.id, product_id: productId, quantity })
-          }
+            .update({ quantity: existingDb.quantity + quantity })
+            .eq('id', existingDb.id)
+        } else {
+          await supabase
+            .from('cart_items')
+            .insert({ cart_id: cartId, product_id: productId, quantity })
         }
       }
     } catch (e: any) {
@@ -195,19 +204,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return newItems
     })
 
-    if (user) {
-      const { data: cartData } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', user.id)
-        .maybeSingle()
-      if (cartData) {
-        await supabase
-          .from('cart_items')
-          .delete()
-          .eq('cart_id', cartData.id)
-          .eq('product_id', productId)
-      }
+    const cartId = await getCartId()
+    if (cartId) {
+      await supabase.from('cart_items').delete().eq('cart_id', cartId).eq('product_id', productId)
     }
   }
 
@@ -218,33 +217,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return newItems
     })
 
-    if (user) {
-      const { data: cartData } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', user.id)
-        .maybeSingle()
-      if (cartData) {
-        await supabase
-          .from('cart_items')
-          .update({ quantity })
-          .eq('cart_id', cartData.id)
-          .eq('product_id', productId)
-      }
+    const cartId = await getCartId()
+    if (cartId) {
+      await supabase
+        .from('cart_items')
+        .update({ quantity })
+        .eq('cart_id', cartId)
+        .eq('product_id', productId)
     }
   }
 
   const clearCart = async () => {
     saveLocalCart([])
-    if (user) {
-      const { data: cartData } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', user.id)
-        .maybeSingle()
-      if (cartData) {
-        await supabase.from('cart_items').delete().eq('cart_id', cartData.id)
-      }
+    const cartId = await getCartId()
+    if (cartId) {
+      await supabase.from('cart_items').delete().eq('cart_id', cartId)
     }
   }
 

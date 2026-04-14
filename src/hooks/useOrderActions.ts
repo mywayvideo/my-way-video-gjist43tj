@@ -5,12 +5,12 @@ import { useNavigate } from 'react-router-dom'
 import { Order } from '@/types/order'
 import { generateOrderPDF } from '@/services/generateOrderPDF'
 import { supabase } from '@/lib/supabase/client'
-import { useCartStore } from '@/stores/useCartStore'
+import { useCart } from '@/hooks/useCart'
 
 export function useOrderActions() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const navigate = useNavigate()
-  const cartStore = useCartStore()
+  const { addToCart, clearCart } = useCart()
 
   const handleDownloadInvoice = async (order: Order) => {
     try {
@@ -41,31 +41,30 @@ export function useOrderActions() {
       if (error) throw error
 
       if (orderItems && orderItems.length > 0) {
+        const merge = window.confirm(
+          "Deseja mesclar os itens com o carrinho atual? Clique em 'Cancelar' para limpar o carrinho e adicionar apenas os novos itens.",
+        )
+        if (!merge) {
+          await clearCart()
+        }
+
         for (const item of orderItems) {
           if (item.products) {
             const priceToUse = item.products.price_usd || item.unit_price || 0
-            cartStore.addItem({
-              id: item.product_id,
-              name: item.products.name || 'Produto',
-              price: priceToUse,
-              original_price: priceToUse,
-              cost_price: item.products.price_cost || 0,
-              image_url: item.products.image_url || undefined,
-              quantity: item.quantity,
-              originalPrice: priceToUse,
+            await addToCart(item.product_id, item.quantity, {
+              ...item.products,
+              price_usd: priceToUse,
             })
           }
         }
-
-        window.dispatchEvent(new Event('storage'))
 
         toast.success('Itens adicionados ao carrinho! Revise e confirme.')
         navigate('/cart')
       } else {
         toast.error('Não foram encontrados itens neste pedido.')
       }
-    } catch (e) {
-      toast.error('Não foi possível copiar itens. Tente novamente.')
+    } catch (e: any) {
+      toast.error('Não foi possível recriar o carrinho. Verifique sua conexão ou tente novamente.')
     } finally {
       setActionLoading(null)
     }
