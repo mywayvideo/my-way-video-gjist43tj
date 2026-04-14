@@ -143,7 +143,7 @@ export default function Cart() {
 
   const generateWaMessage = () => {
     const items = cartItems.filter((item) => !fadingItems.includes(item.id))
-    return `Ola! Gostaria de fazer checkout com um especialista. Itens:\n${items.map((i) => `- ${i.quantity}x ${i.name} (R$ ${i.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`).join('\n')}\nSubtotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\nTotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    return `Ola! Gostaria de fazer checkout com um especialista. Itens:\n${items.map((i) => `- ${i.quantity}x ${i.name} (R$ ${i.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`).join('\n')}\nSubtotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nTotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const handleWhatsAppCheckout = () => {
@@ -336,7 +336,10 @@ export default function Cart() {
                   {item.eligible ? (
                     <p className="text-muted-foreground font-medium mt-1">
                       {item.currency === 'BRL' ? 'R$ ' : '$'}
-                      {item.price?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      {item.price?.toLocaleString(item.currency === 'BRL' ? 'pt-BR' : 'en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </p>
                   ) : (
                     <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-red-100 text-red-700">
@@ -372,9 +375,13 @@ export default function Cart() {
                       {item.eligible ? (
                         <>
                           {item.currency === 'BRL' ? 'R$ ' : '$'}
-                          {(item.itemTotal || 0).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                          })}
+                          {(item.itemTotal || 0).toLocaleString(
+                            item.currency === 'BRL' ? 'pt-BR' : 'en-US',
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )}
                         </>
                       ) : (
                         <span className="text-muted-foreground text-sm">--</span>
@@ -417,14 +424,20 @@ export default function Cart() {
                 <span>Subtotal ({visibleItems.reduce((a, b) => a + b.quantity, 0)} itens)</span>
                 <span>
                   {destination === 'brasil' ? 'R$ ' : '$'}
-                  {dynamicSubtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {dynamicSubtotal.toLocaleString(destination === 'brasil' ? 'pt-BR' : 'en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-4 border-t border-border">
                 <span>Total Estimado</span>
                 <span>
                   {destination === 'brasil' ? 'R$ ' : '$'}
-                  {dynamicSubtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {dynamicSubtotal.toLocaleString(destination === 'brasil' ? 'pt-BR' : 'en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground text-center pt-2">

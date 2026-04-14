@@ -247,7 +247,11 @@ export function CartTab({
                           {p.name}
                         </h4>
                         <p className="text-muted-foreground text-base">
-                          ${unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          $
+                          {unitPrice.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </p>
                       </div>
 
@@ -276,6 +280,7 @@ export function CartTab({
                             $
                             {(unitPrice * item.quantity).toLocaleString('en-US', {
                               minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
                             })}
                           </span>
                         </div>
@@ -313,13 +318,23 @@ export function CartTab({
 
             <div className="flex justify-between text-muted-foreground mb-6 text-base">
               <span>Subtotal ({items.reduce((a, b) => a + b.quantity, 0)} itens)</span>
-              <span>${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              <span>
+                $
+                {subtotal.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
             </div>
 
             <div className="flex justify-between font-bold text-foreground items-center mb-8">
               <span className="text-xl">Total Estimado</span>
               <span className="text-2xl">
-                ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                $
+                {subtotal.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
             </div>
 
