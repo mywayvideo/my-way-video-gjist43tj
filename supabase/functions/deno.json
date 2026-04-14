@@ -25,6 +25,7 @@
     "verify-paypal-payment": 21,
     "lookup-address": 26,
     "calculate-shipping": 32,
+    "ups-get-token": 20,
     "ups-calculate-rate": 20,
     "extract-product-bhphoto": 25,
     "calculate-price-brl": 17,
