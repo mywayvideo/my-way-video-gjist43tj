@@ -9,6 +9,7 @@ export function ProductPrice({
   ruleName,
   className,
   size,
+  currency,
 }: {
   originalPrice: number | null | undefined
   discountedPrice?: number | null | undefined
