@@ -4,7 +4,7 @@
     "functions": 30,
     "validate-ai-provider": 36,
     "call-ai-agent": 52,
-    "update-exchange-rate": 30,
+    "update-exchange-rate": 31,
     "validate-image-url": 22,
     "change-admin-password": 22,
     "toggle-2fa": 22,
