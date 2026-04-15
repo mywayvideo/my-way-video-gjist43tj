@@ -26,9 +26,16 @@ interface AISearchResultsProps {
   result?: AIResult | null
   error?: string | null
   className?: string
+  isAdmin?: boolean
 }
 
-export function AISearchResults({ isLoading, result, error, className }: AISearchResultsProps) {
+export function AISearchResults({
+  isLoading,
+  result,
+  error,
+  className,
+  isAdmin,
+}: AISearchResultsProps) {
   const { addItem } = useCart()
 
   if (isLoading) {
@@ -145,14 +152,16 @@ export function AISearchResults({ isLoading, result, error, className }: AISearc
             className={cn(
               'inline-flex items-center space-x-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wider w-fit',
               confidenceColor,
+              !isAdmin && 'px-2',
             )}
+            title={!isAdmin ? `Confiança: ${result.confidence_level}` : undefined}
           >
             {result.confidence_level === 'high' ? (
               <CheckCircle2 className="h-3.5 w-3.5" />
             ) : (
               <AlertTriangle className="h-3.5 w-3.5" />
             )}
-            <span>Confiança: {result.confidence_level}</span>
+            {isAdmin && <span>Confiança: {result.confidence_level}</span>}
           </div>
         )}
       </div>

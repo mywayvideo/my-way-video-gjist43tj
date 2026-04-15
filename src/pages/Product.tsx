@@ -679,25 +679,30 @@ export default function Product() {
                   )}
 
                   {isAdmin && showPriceCost && (
-                    <div className="mt-2 text-[0.875rem] text-muted-foreground font-mono flex items-center gap-1">
-                      <span className="font-medium mr-1">Preço de Custo (FOB Miami):</span>
-                      {(() => {
-                        const costPrice = formatPrice(product.price_cost)
-                        return (
-                          <span
-                            className={cn(
-                              costPrice.isPlaceholder
-                                ? 'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 flex items-center gap-1 font-sans'
-                                : 'text-foreground font-mono',
-                            )}
-                          >
-                            {costPrice.isPlaceholder && (
-                              <HelpCircle className="w-[14px] h-[14px]" />
-                            )}
-                            {costPrice.isPlaceholder ? 'Indisponível' : costPrice.text}
-                          </span>
-                        )
-                      })()}
+                    <div className="mt-2 text-xs text-muted-foreground font-mono flex flex-col gap-1">
+                      <span className="font-medium">
+                        Preço de Custo (FOB Miami / Nacionalizado):
+                      </span>
+                      <span className="text-foreground flex items-center gap-1">
+                        {(() => {
+                          const costPrice = formatPrice(product.price_cost)
+                          const natCurrency = product.price_nationalized_currency || 'BRL'
+                          const costPriceNat = product.price_nationalized_cost
+                            ? new Intl.NumberFormat(natCurrency === 'BRL' ? 'pt-BR' : 'en-US', {
+                                style: 'currency',
+                                currency: natCurrency,
+                              }).format(product.price_nationalized_cost)
+                            : null
+
+                          return (
+                            <>
+                              {costPrice.isPlaceholder ? 'US$ N/A' : costPrice.text}
+                              {' / '}
+                              {costPriceNat ? costPriceNat : `${natCurrency} N/A`}
+                            </>
+                          )
+                        })()}
+                      </span>
                     </div>
                   )}
 
@@ -755,7 +760,7 @@ export default function Product() {
                     : 'hover:shadow-primary/20 hover:-translate-y-0.5',
                 )}
               >
-                <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Projeto
+                <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Carrinho
               </Button>
               <Button
                 variant="outline"
@@ -904,6 +909,7 @@ export default function Product() {
                         }
                         error={hasError ? msg.content : null}
                         className="w-full shadow-md"
+                        isAdmin={isAdmin}
                       />
                     </div>
                   )

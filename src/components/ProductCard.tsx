@@ -163,7 +163,7 @@ export function ProductCard({ product }: { product: any }) {
           onClick={() => setShowQtyModal(true)}
         >
           <ShoppingCart className="w-4 h-4" />
-          Adicionar
+          Adicionar ao Carrinho
         </Button>
       </CardFooter>
       {showQtyModal && <QuantityModal product={product} onClose={() => setShowQtyModal(false)} />}

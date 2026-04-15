@@ -1,9 +1,9 @@
 {
   "_versions": {
-    "ai-search": 63,
+    "ai-search": 64,
     "functions": 30,
     "validate-ai-provider": 36,
-    "call-ai-agent": 52,
+    "call-ai-agent": 53,
     "update-exchange-rate": 31,
     "validate-image-url": 22,
     "change-admin-password": 22,
