@@ -125,7 +125,7 @@ export default function Cart() {
       const { data } = await supabase
         .from('products')
         .select(
-          'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight',
+          'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight, manufacturer_id, category_id',
         )
         .in('id', ids)
       if (data) {
@@ -168,6 +168,8 @@ export default function Cart() {
           customer?.role || null,
           originalPriceUsa,
           details.price_cost || 0,
+          details.manufacturer_id,
+          details.category_id,
         )
         if (bestDiscount && bestDiscount.discountedPrice < originalPriceUsa) {
           hasDiscount = true
