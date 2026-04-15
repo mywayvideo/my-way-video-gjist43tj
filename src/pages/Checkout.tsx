@@ -290,14 +290,18 @@ export default function Checkout() {
 
   const canDeliverToUSA = cartItems.every((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
-    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pUsa = safeNum(
+      details.price_usd || details.price_usa || item.price_usa || item.unit_price,
+    )
     const weight = safeNum(details.weight || item.weight)
     return pUsa > 0 && weight > 0
   })
 
   const canDeliverToBrasil = cartItems.every((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
-    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pUsa = safeNum(
+      details.price_usd || details.price_usa || item.price_usa || item.unit_price,
+    )
     const pNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
     const weight = safeNum(details.weight || item.weight)
     return pNat > 0 || (pUsa > 0 && weight > 0)
@@ -305,7 +309,9 @@ export default function Checkout() {
 
   const canDeliverLocally = cartItems.every((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
-    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pUsa = safeNum(
+      details.price_usd || details.price_usa || item.price_usa || item.unit_price,
+    )
     return pUsa > 0
   })
 
@@ -319,7 +325,9 @@ export default function Checkout() {
   let totalUsaWeightKg = 0
   cartItems.forEach((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
-    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
+    const pUsa = safeNum(
+      details.price_usd || details.price_usa || item.price_usa || item.unit_price,
+    )
     const pNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
     const weight = safeNum(details.weight || item.weight)
 
@@ -334,37 +342,56 @@ export default function Checkout() {
   const evaluatedItems = cartItems.map((item) => {
     const details = productDetails[item.product_id] || productDetails[item.id] || item
 
-    const pUsa = safeNum(details.price_usa || item.price_usa || item.unit_price)
-    const pNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
+    const baseUsa = safeNum(
+      details.price_usd ||
+        details.price_usa ||
+        item.price_usa ||
+        item.original_unit_price ||
+        item.unit_price,
+    )
+    const baseNat = safeNum(details.price_nationalized_sales || item.price_nationalized_sales)
     const weight = safeNum(details.weight || item.weight)
+
+    const discountPct = item.discount_pct || 0
+
+    const pUsa = baseUsa * (1 - discountPct)
+    const pNat = baseNat * (1 - discountPct)
 
     let eligible = false
     let price = 0
+    let originalPrice = 0
     let currency = 'USD'
     let reason = ''
 
     if (destType === 'usa') {
-      if (pUsa > 0) {
+      if (baseUsa > 0) {
         eligible = true
-        price = item.has_discount ? item.unit_price : pUsa
+        price = pUsa
+        originalPrice = baseUsa
         currency = 'USD'
       } else {
         reason = 'Preço indisponível para entrega nos EUA.'
       }
     } else {
-      if (pNat > 0) {
+      if (baseNat > 0) {
         eligible = true
         price = pNat
+        originalPrice = baseNat
         currency = 'BRL'
-      } else if (pUsa > 0 && weight > 0) {
+      } else if (baseUsa > 0 && weight > 0) {
         eligible = true
         const itemWeightKg = weight * 0.453592
         const weightShare = totalUsaWeightKg > 0 ? itemWeightKg / totalUsaWeightKg : 0
         const itemWeightFreight = totalWeightFreight * weightShare
         const itemValueFreight = pUsa * (shippingSettings.percentageValue / 100)
 
+        const originalValueFreight = baseUsa * (shippingSettings.percentageValue / 100)
+
         const freightUsd = itemValueFreight + itemWeightFreight
+        const originalFreightUsd = originalValueFreight + itemWeightFreight
+
         price = (pUsa + freightUsd) * exchangeRate
+        originalPrice = (baseUsa + originalFreightUsd) * exchangeRate
         currency = 'BRL'
       } else {
         reason = 'Indisponível para o Brasil (falta preço ou peso).'
@@ -375,6 +402,7 @@ export default function Checkout() {
       ...item,
       eligible,
       price,
+      originalPrice,
       currency,
       reason,
       itemTotal: eligible ? price * item.quantity : 0,
@@ -504,10 +532,21 @@ export default function Checkout() {
         const formatted = await Promise.all(
           itemsArray.map(async (p: any) => {
             const prod = p.product || p
-            let price = p.unit_price || prod.price_usd || prod.price || p.price_usd || p.price || 0
+            let price =
+              p.unit_price ||
+              prod.price_usa ||
+              prod.price_usd ||
+              prod.price ||
+              p.price_usa ||
+              p.price_usd ||
+              p.price ||
+              0
 
             let hasDiscount = false
-            if (discounts.length > 0) {
+            let discountPct = 0
+            let originalPrice = price
+
+            if (discounts.length > 0 && price > 0) {
               const { data: prodData } = await supabase
                 .from('products')
                 .select('price_cost')
@@ -523,8 +562,9 @@ export default function Checkout() {
                 prodData?.price_cost || 0,
               )
               if (bestDiscount.discountedPrice < price) {
-                price = bestDiscount.discountedPrice
                 hasDiscount = true
+                discountPct = (price - bestDiscount.discountedPrice) / price
+                price = bestDiscount.discountedPrice
               }
             }
 
@@ -533,10 +573,12 @@ export default function Checkout() {
               product_id: prod.id || p.product_id || p.id,
               name: prod.name || p.name,
               unit_price: price,
+              original_unit_price: originalPrice,
+              discount_pct: discountPct,
               quantity: p.quantity || 1,
               image_url: prod.image_url || p.image_url,
               weight: prod.weight || p.weight || 0,
-              price_usa: prod.price_usa || p.price_usa || 0,
+              price_usa: prod.price_usd || prod.price_usa || p.price_usd || p.price_usa || 0,
               price_nationalized_sales:
                 prod.price_nationalized_sales || p.price_nationalized_sales || 0,
               has_discount: hasDiscount,
@@ -547,7 +589,9 @@ export default function Checkout() {
         const allIds = formatted.map((i: any) => i.id || i.product_id)
         const { data: pData } = await supabase
           .from('products')
-          .select('id, price_nationalized_sales, price_nationalized_currency, price_usa, weight')
+          .select(
+            'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight',
+          )
           .in('id', allIds)
         if (pData) {
           const details: Record<string, any> = {}
@@ -2095,10 +2139,22 @@ Valor: ${formatCurrency(total)}
                         {item.name}
                       </p>
                       {item.eligible ? (
-                        <p className="text-sm text-slate-500 font-medium font-mono">
-                          {formatCurrency(item.price, item.currency)}{' '}
-                          <span className="text-xs font-sans">un.</span>
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p
+                            className={cn(
+                              'text-sm font-medium font-mono',
+                              item.has_discount ? 'text-emerald-600 font-bold' : 'text-slate-500',
+                            )}
+                          >
+                            {formatCurrency(item.price, item.currency)}{' '}
+                            <span className="text-xs font-sans">un.</span>
+                          </p>
+                          {item.has_discount && item.originalPrice > item.price && (
+                            <p className="text-xs text-slate-400 line-through font-mono">
+                              {formatCurrency(item.originalPrice, item.currency)}
+                            </p>
+                          )}
+                        </div>
                       ) : (
                         <p className="text-sm text-red-500 font-medium">{item.reason}</p>
                       )}
@@ -2127,9 +2183,21 @@ Valor: ${formatCurrency(total)}
                         +
                       </button>
                     </div>
-                    <p className="font-bold text-slate-900 w-28 text-right font-mono text-lg">
-                      {item.eligible ? formatCurrency(item.itemTotal, item.currency) : '--'}
-                    </p>
+                    <div className="flex flex-col items-end w-28">
+                      <p
+                        className={cn(
+                          'font-bold font-mono text-lg',
+                          item.has_discount ? 'text-emerald-600' : 'text-slate-900',
+                        )}
+                      >
+                        {item.eligible ? formatCurrency(item.itemTotal, item.currency) : '--'}
+                      </p>
+                      {item.eligible && item.has_discount && item.originalPrice > item.price && (
+                        <p className="text-xs text-slate-400 line-through font-mono mt-0.5">
+                          {formatCurrency(item.originalPrice * item.quantity, item.currency)}
+                        </p>
+                      )}
+                    </div>
                     <button
                       onClick={() => removeItem(idx)}
                       className="p-2.5 text-[hsl(0,84%,60%)] hover:bg-red-50 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(0,84%,60%)]"

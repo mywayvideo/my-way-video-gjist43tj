@@ -21,6 +21,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { getEligibilityAndPrice, Destination } from '@/utils/pricingLogic'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { getBestDiscount } from '@/services/discountApplicationService'
+import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -32,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog'
 
 export default function Cart() {
+  const { currentUser: user } = useAuthContext()
   const { cartItems, cartTotal, isLoading, error, removeFromCart, updateQuantity } = useCart()
   const { addFavorite } = useFavorites()
   const navigate = useNavigate()
@@ -40,6 +44,9 @@ export default function Cart() {
   const [showHoursModal, setShowHoursModal] = useState(false)
   const [waMessage, setWaMessage] = useState('')
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+
+  const [activeDiscounts, setActiveDiscounts] = useState<any[]>([])
+  const [customer, setCustomer] = useState<any>(null)
 
   const [destination, setDestination] = useState<Destination>('brasil')
   const [productDetails, setProductDetails] = useState<Record<string, any>>({})
@@ -83,9 +90,28 @@ export default function Cart() {
 
         setShippingSettings({ pricePerKg, percentageValue, additionalWeightKg })
       }
+
+      const { data: discData } = await supabase.from('discounts').select('*').eq('is_active', true)
+      if (discData) setActiveDiscounts(discData)
     }
     fetchSettings()
   }, [])
+
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      if (user) {
+        const { data: custData } = await supabase
+          .from('customers')
+          .select('id, role')
+          .eq('user_id', user.id)
+          .single()
+        if (custData) setCustomer(custData)
+      } else {
+        setCustomer(null)
+      }
+    }
+    fetchCustomer()
+  }, [user])
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -98,7 +124,9 @@ export default function Cart() {
       setIsHydratingDetails(true)
       const { data } = await supabase
         .from('products')
-        .select('id, price_nationalized_sales, price_nationalized_currency, price_usa, weight')
+        .select(
+          'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight',
+        )
         .in('id', ids)
       if (data) {
         const details: Record<string, any> = {}
@@ -118,19 +146,69 @@ export default function Cart() {
 
     return cartItems.map((item) => {
       const details = productDetails[item.id] || item
+
+      let discountedDetails = { ...details }
+      // the pricing logic expects details.price_usa, but our DB uses price_usd.
+      // we'll normalize it for getEligibilityAndPrice
+      discountedDetails.price_usa = details.price_usd || details.price_usa || item.price_usa || 0
+      details.price_usa = discountedDetails.price_usa
+
+      let hasDiscount = false
+      let originalPriceUsa = details.price_usa || 0
+      let originalPriceNat = details.price_nationalized_sales || item.price_nationalized_sales || 0
+
+      if (activeDiscounts.length > 0 && originalPriceUsa > 0) {
+        const bestDiscount = getBestDiscount(
+          activeDiscounts,
+          details.id,
+          customer?.id || null,
+          customer?.role || null,
+          originalPriceUsa,
+          details.price_cost || 0,
+        )
+        if (bestDiscount && bestDiscount.discountedPrice < originalPriceUsa) {
+          hasDiscount = true
+          const discountPct = (originalPriceUsa - bestDiscount.discountedPrice) / originalPriceUsa
+
+          discountedDetails.price_usa = bestDiscount.discountedPrice
+          if (discountedDetails.price_nationalized_sales) {
+            discountedDetails.price_nationalized_sales = originalPriceNat * (1 - discountPct)
+          }
+        }
+      }
+
       const evalResult = getEligibilityAndPrice(
+        discountedDetails,
+        destination,
+        exchangeRate,
+        shippingSettings,
+      )
+
+      const originalEvalResult = getEligibilityAndPrice(
         details,
         destination,
         exchangeRate,
         shippingSettings,
       )
+
       return {
         ...item,
         ...evalResult,
+        originalPrice: originalEvalResult.price,
+        hasDiscount,
         itemTotal: evalResult.eligible ? evalResult.price * item.quantity : 0,
       }
     })
-  }, [cartItems, productDetails, destination, exchangeRate, shippingSettings, isLoading])
+  }, [
+    cartItems,
+    productDetails,
+    destination,
+    exchangeRate,
+    shippingSettings,
+    isLoading,
+    activeDiscounts,
+    customer,
+  ])
 
   const hasIneligibleItems = evaluatedItems.some((i) => !i.eligible)
   const dynamicSubtotal = evaluatedItems.reduce((sum, item) => sum + (item.itemTotal || 0), 0)
@@ -334,13 +412,32 @@ export default function Cart() {
                     {item.name}
                   </Link>
                   {item.eligible ? (
-                    <p className="text-muted-foreground font-medium mt-1">
-                      {item.currency === 'BRL' ? 'R$ ' : '$'}
-                      {item.price?.toLocaleString(item.currency === 'BRL' ? 'pt-BR' : 'en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p
+                        className={cn(
+                          'font-medium',
+                          item.hasDiscount ? 'text-emerald-600 font-bold' : 'text-muted-foreground',
+                        )}
+                      >
+                        {item.currency === 'BRL' ? 'R$ ' : '$'}
+                        {item.price?.toLocaleString(item.currency === 'BRL' ? 'pt-BR' : 'en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                      {item.hasDiscount && item.originalPrice > item.price && (
+                        <p className="text-xs text-muted-foreground line-through">
+                          {item.currency === 'BRL' ? 'R$ ' : '$'}
+                          {item.originalPrice?.toLocaleString(
+                            item.currency === 'BRL' ? 'pt-BR' : 'en-US',
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )}
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-red-100 text-red-700">
                       Indisponível para este destino
@@ -371,16 +468,30 @@ export default function Cart() {
                         <Plus className="w-3 h-3" />
                       </Button>
                     </div>
-                    <div className="text-right w-28 font-bold text-lg">
+                    <div className="text-right w-28 font-bold text-lg flex flex-col items-end">
                       {item.eligible ? (
                         <>
-                          {item.currency === 'BRL' ? 'R$ ' : '$'}
-                          {(item.itemTotal || 0).toLocaleString(
-                            item.currency === 'BRL' ? 'pt-BR' : 'en-US',
-                            {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            },
+                          <span className={cn(item.hasDiscount ? 'text-emerald-600' : '')}>
+                            {item.currency === 'BRL' ? 'R$ ' : '$'}
+                            {(item.itemTotal || 0).toLocaleString(
+                              item.currency === 'BRL' ? 'pt-BR' : 'en-US',
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              },
+                            )}
+                          </span>
+                          {item.hasDiscount && item.originalPrice > item.price && (
+                            <span className="text-xs text-muted-foreground line-through font-normal mt-0.5">
+                              {item.currency === 'BRL' ? 'R$ ' : '$'}
+                              {(item.originalPrice * item.quantity).toLocaleString(
+                                item.currency === 'BRL' ? 'pt-BR' : 'en-US',
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
+                            </span>
                           )}
                         </>
                       ) : (
