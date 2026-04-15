@@ -146,7 +146,13 @@ export function ProductCard({ product }: { product: any }) {
             {product.name}
           </h3>
         </Link>
-        <div className="mt-auto pt-1">
+        <div className="mt-auto pt-1 flex flex-col items-start">
+          {(!product.price_usd || product.price_usd <= 0) &&
+            product.price_nationalized_sales > 0 && (
+              <span className="text-[10px] font-bold text-emerald-600/90 bg-emerald-100/50 px-1.5 py-0.5 rounded uppercase tracking-wider mb-1">
+                Preço Brasil
+              </span>
+            )}
           <ProductPrice
             originalPrice={originalPrice}
             discountedPrice={discountedPrice}
@@ -163,7 +169,7 @@ export function ProductCard({ product }: { product: any }) {
           onClick={() => setShowQtyModal(true)}
         >
           <ShoppingCart className="w-4 h-4" />
-          Adicionar ao Carrinho
+          Adicionar
         </Button>
       </CardFooter>
       {showQtyModal && <QuantityModal product={product} onClose={() => setShowQtyModal(false)} />}
