@@ -18,6 +18,7 @@ import { playCoinSound } from '@/utils/sound'
 import { toast } from 'sonner'
 import { useCart } from '@/hooks/useCart'
 import { ProductPrice } from '@/components/ProductPrice'
+import { useProductDiscount } from '@/hooks/useProductDiscount'
 
 interface FavoriteProductCardProps {
   product: any
@@ -41,6 +42,8 @@ export function FavoriteProductCard({
   const [processingAction, setProcessingAction] = useState<'remove' | 'cart' | 'heart' | null>(null)
   const [showExplosion, setShowExplosion] = useState(false)
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
+
+  const discountData = useProductDiscount(product)
 
   const handleRemove = async () => {
     setProcessingAction('remove')
@@ -174,7 +177,14 @@ export function FavoriteProductCard({
             </h3>
           </Link>
           <div className="mt-auto pt-2">
-            <ProductPrice product={product} />
+            <ProductPrice
+              price={discountData?.price ?? discountData?.finalPrice}
+              originalPrice={discountData?.originalPrice}
+              discountPercentage={discountData?.discountPercentage}
+              discountLabel={discountData?.discountLabel}
+              product={product}
+              {...discountData}
+            />
           </div>
         </CardContent>
 
