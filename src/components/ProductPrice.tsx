@@ -10,6 +10,7 @@ export function ProductPrice({
   className,
   size,
   currency,
+  align = 'center',
 }: {
   originalPrice: number | null | undefined
   discountedPrice?: number | null | undefined
@@ -19,12 +20,18 @@ export function ProductPrice({
   className?: string
   size?: 'sm' | 'default' | 'lg'
   currency?: string
+  align?: 'left' | 'center' | 'right'
 }) {
   if (originalPrice === null || originalPrice === undefined || originalPrice <= 0) {
     return (
       <p
         className={cn(
-          'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center justify-center gap-1.5 w-full text-center',
+          'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5 w-full',
+          align === 'center'
+            ? 'justify-center text-center'
+            : align === 'left'
+              ? 'justify-start text-left'
+              : 'justify-end text-right',
           className,
         )}
       >
@@ -50,13 +57,23 @@ export function ProductPrice({
   return (
     <div
       className={cn(
-        'flex flex-col items-center w-full animate-in fade-in zoom-in-[0.95] duration-500 opacity-100',
+        'flex flex-col w-full animate-in fade-in zoom-in-[0.95] duration-500 opacity-100',
+        align === 'center' ? 'items-center' : align === 'left' ? 'items-start' : 'items-end',
         className,
       )}
     >
       {showDiscount ? (
         <>
-          <div className="flex items-center justify-center gap-2 mb-1 w-full">
+          <div
+            className={cn(
+              'flex items-center gap-2 mb-1 w-full',
+              align === 'center'
+                ? 'justify-center'
+                : align === 'left'
+                  ? 'justify-start'
+                  : 'justify-end',
+            )}
+          >
             <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4]">
               {formatPrice(originalPrice)}
             </span>
@@ -68,19 +85,38 @@ export function ProductPrice({
           </div>
           <span
             className={cn(
-              'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit text-center',
+              'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
+              align === 'center' ? 'text-center' : align === 'left' ? 'text-left' : 'text-right',
               size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
             )}
           >
             {formatPrice(discountedPrice!)}
           </span>
           {originalPrice - discountedPrice! > 0 && (
-            <div className="mt-1.5 flex flex-col items-center gap-0.5 animate-in fade-in slide-in-from-top-1 w-full text-center">
+            <div
+              className={cn(
+                'mt-1.5 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-1 w-full',
+                align === 'center'
+                  ? 'items-center text-center'
+                  : align === 'left'
+                    ? 'items-start text-left'
+                    : 'items-end text-right',
+              )}
+            >
               <span className="text-[12px] font-medium text-green-600 dark:text-green-400 animate-pulse">
                 Economize {formatPrice(originalPrice - discountedPrice!)}
               </span>
               {ruleName && (
-                <span className="text-[10px] text-muted-foreground italic text-center">
+                <span
+                  className={cn(
+                    'text-[10px] text-muted-foreground italic',
+                    align === 'center'
+                      ? 'text-center'
+                      : align === 'left'
+                        ? 'text-left'
+                        : 'text-right',
+                  )}
+                >
                   Desconto: {ruleName}
                   {size === 'lg' && ' (Melhor desconto aplicado)'}
                 </span>
@@ -91,7 +127,8 @@ export function ProductPrice({
       ) : (
         <span
           className={cn(
-            'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit text-center',
+            'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
+            align === 'center' ? 'text-center' : align === 'left' ? 'text-left' : 'text-right',
             size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
           )}
         >

@@ -646,6 +646,7 @@ export default function Product() {
                         discountPercentage={discountPercentage}
                         ruleName={ruleName}
                         size="lg"
+                        align="left"
                       />
                     </div>
                   )}
@@ -674,6 +675,7 @@ export default function Product() {
                         ruleName={ruleName}
                         size="lg"
                         currency={product.price_nationalized_currency || 'BRL'}
+                        align="left"
                       />
                     </div>
                   )}
