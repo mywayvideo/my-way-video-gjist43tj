@@ -130,7 +130,7 @@ export function ProductCard({ product }: { product: any }) {
         <Link
           to={linkTo}
           onClick={handleLinkClick}
-          className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
+          className="w-full h-[200px] overflow-hidden rounded-xl bg-muted/30 flex items-center justify-center"
         >
           <ImageWithFallback
             src={product.image_url}
@@ -140,16 +140,16 @@ export function ProductCard({ product }: { product: any }) {
           />
         </Link>
       </CardHeader>
-      <CardContent className="flex-1 p-5 flex flex-col">
-        <Link to={linkTo} onClick={handleLinkClick} className="mb-2">
-          <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px]">
+      <CardContent className="flex-1 p-5 flex flex-col text-left">
+        <Link to={linkTo} onClick={handleLinkClick} className="mb-2 block w-full">
+          <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px] text-left">
             {product.name}
           </h3>
         </Link>
-        <div className="mt-auto pt-1 flex flex-col items-start">
+        <div className="mt-auto pt-1 flex flex-col items-center w-full">
           {(!product.price_usd || product.price_usd <= 0) &&
             product.price_nationalized_sales > 0 && (
-              <span className="text-[10px] font-bold text-emerald-600/90 bg-emerald-100/50 px-1.5 py-0.5 rounded uppercase tracking-wider mb-1">
+              <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1">
                 Preço Brasil
               </span>
             )}

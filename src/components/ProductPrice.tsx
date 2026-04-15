@@ -24,7 +24,7 @@ export function ProductPrice({
     return (
       <p
         className={cn(
-          'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center gap-1.5',
+          'text-[0.875rem] font-[600] text-foreground italic tracking-[0.05em] uppercase opacity-80 whitespace-nowrap flex items-center justify-center gap-1.5 w-full text-center',
           className,
         )}
       >
@@ -50,13 +50,13 @@ export function ProductPrice({
   return (
     <div
       className={cn(
-        'flex flex-col animate-in fade-in zoom-in-[0.95] duration-500 opacity-100',
+        'flex flex-col items-center w-full animate-in fade-in zoom-in-[0.95] duration-500 opacity-100',
         className,
       )}
     >
       {showDiscount ? (
         <>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center justify-center gap-2 mb-1 w-full">
             <span className="text-[14px] line-through text-muted-foreground opacity-[0.85] font-medium leading-[1.4]">
               {formatPrice(originalPrice)}
             </span>
@@ -68,19 +68,19 @@ export function ProductPrice({
           </div>
           <span
             className={cn(
-              'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
+              'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit text-center',
               size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
             )}
           >
             {formatPrice(discountedPrice!)}
           </span>
           {originalPrice - discountedPrice! > 0 && (
-            <div className="mt-1.5 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-1">
+            <div className="mt-1.5 flex flex-col items-center gap-0.5 animate-in fade-in slide-in-from-top-1 w-full text-center">
               <span className="text-[12px] font-medium text-green-600 dark:text-green-400 animate-pulse">
                 Economize {formatPrice(originalPrice - discountedPrice!)}
               </span>
               {ruleName && (
-                <span className="text-[10px] text-muted-foreground italic">
+                <span className="text-[10px] text-muted-foreground italic text-center">
                   Desconto: {ruleName}
                   {size === 'lg' && ' (Melhor desconto aplicado)'}
                 </span>
@@ -91,7 +91,7 @@ export function ProductPrice({
       ) : (
         <span
           className={cn(
-            'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit',
+            'font-extrabold text-green-500 leading-[1.2] bg-green-500/10 px-2 py-1 rounded-md shadow-sm w-fit text-center',
             size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
           )}
         >
