@@ -298,16 +298,26 @@ export function AdminCSVUploader({ manufacturers, onSuccess, onAddManufacturer }
     try {
       let invalidImagesCount = 0
 
-      const validateImageUrl = async (url: string) => {
-        try {
-          const { data, error } = await supabase.functions.invoke('validate-image-url', {
-            body: { imageUrl: url },
-          })
-          if (error) return false
-          return data?.success === true
-        } catch (e) {
-          return false
-        }
+      const validateImageUrl = (url: string): Promise<boolean> => {
+        return new Promise((resolve) => {
+          const img = new Image()
+          const timeoutId = setTimeout(() => {
+            img.src = ''
+            resolve(false)
+          }, 15000)
+
+          img.onload = () => {
+            clearTimeout(timeoutId)
+            resolve(true)
+          }
+
+          img.onerror = () => {
+            clearTimeout(timeoutId)
+            resolve(false)
+          }
+
+          img.src = url
+        })
       }
 
       const parseRow = (p: any) => {
