@@ -3,8 +3,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -15,7 +14,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Método não permitido.' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
@@ -25,16 +24,13 @@ Deno.serve(async (req: Request) => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (
-      typeof amount !== 'number' ||
-      amount <= 0 ||
-      typeof email !== 'string' ||
-      !emailRegex.test(email) ||
-      typeof orderId !== 'string' ||
-      orderId.trim() === ''
+      typeof amount !== 'number' || amount <= 0 ||
+      typeof email !== 'string' || !emailRegex.test(email) ||
+      typeof orderId !== 'string' || orderId.trim() === ''
     ) {
       return new Response(JSON.stringify({ error: 'Dados invalidos para pagamento.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -43,7 +39,7 @@ Deno.serve(async (req: Request) => {
       console.error('PAYPAL_CLIENT_ID not found in environment variables.')
       return new Response(JSON.stringify({ error: 'Configuracao PayPal nao encontrada.' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -61,13 +57,14 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ paypalAuthUrl }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
+
   } catch (error: any) {
     console.error('Error initiating PayPal payment:', error.message || error)
     return new Response(JSON.stringify({ error: 'Erro ao iniciar pagamento PayPal.' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
