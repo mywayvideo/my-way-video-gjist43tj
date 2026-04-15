@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { useAuthState } from '@/hooks/useAuthState'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { toast } from '@/hooks/use-toast'
 
 export interface CartItem {
@@ -42,7 +42,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuthState()
+  const { currentUser: user } = useAuthContext()
 
   const getCartId = async () => {
     if (!user) return null

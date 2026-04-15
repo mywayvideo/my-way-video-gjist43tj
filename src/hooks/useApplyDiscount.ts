@@ -41,6 +41,8 @@ export function useApplyDiscount(
   productId?: string,
   originalPrice?: number | null,
   costPrice?: number | null,
+  originalPriceNat?: number | null,
+  costPriceNat?: number | null,
 ) {
   const { currentUser: user } = useAuthContext()
   const [discounts, setDiscounts] = useState<Discount[]>(globalDiscounts)
@@ -228,17 +230,35 @@ export function useApplyDiscount(
   )
 
   const result = useMemo(() => {
-    if (!productId || originalPrice == null || originalPrice <= 0) {
-      return {
-        originalPrice: originalPrice || 0,
-        discountedPrice: originalPrice || 0,
-        discountPercentage: 0,
-        ruleName: null,
-        discountType: null,
-      }
+    const usdResult =
+      !productId || originalPrice == null || originalPrice <= 0
+        ? {
+            originalPrice: originalPrice || 0,
+            discountedPrice: originalPrice || 0,
+            discountPercentage: 0,
+            ruleName: null,
+            discountType: null,
+          }
+        : calculate(productId, originalPrice, costPrice || 0)
+
+    const natResult =
+      !productId || originalPriceNat == null || originalPriceNat <= 0
+        ? {
+            originalPrice: originalPriceNat || 0,
+            discountedPrice: originalPriceNat || 0,
+            discountPercentage: 0,
+            ruleName: null,
+          }
+        : calculate(productId, originalPriceNat, costPriceNat || 0)
+
+    return {
+      ...usdResult,
+      originalPriceNat: natResult.originalPrice,
+      discountedPriceNat: natResult.discountedPrice,
+      discountPercentageNat: natResult.discountPercentage,
+      ruleNameNat: natResult.ruleName,
     }
-    return calculate(productId, originalPrice, costPrice || 0)
-  }, [productId, originalPrice, costPrice, calculate])
+  }, [productId, originalPrice, costPrice, originalPriceNat, costPriceNat, calculate])
 
   return {
     ...result,

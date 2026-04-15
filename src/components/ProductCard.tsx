@@ -15,7 +15,7 @@ import { QuantityModal } from '@/components/QuantityModal'
 export function ProductCard({ product }: { product: any }) {
   const [showQtyModal, setShowQtyModal] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
-  const { originalPrice, discountedPrice, discountPercentage, ruleName } =
+  const { originalPrice, discountedPrice, discountPercentage, ruleName, currency } =
     useProductDiscount(product)
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
@@ -153,6 +153,7 @@ export function ProductCard({ product }: { product: any }) {
             weight={product.weight}
             discountPercentage={discountPercentage}
             ruleName={ruleName}
+            currency={currency}
           />
         </div>
       </CardContent>
