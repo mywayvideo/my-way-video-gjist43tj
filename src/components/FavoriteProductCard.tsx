@@ -69,7 +69,7 @@ export function FavoriteProductCard({
         await addToCart(product.id, quantity)
       }
       setQuantityModalOpen(false)
-      toast.success('Movido para o carrinho!')
+      toast.success('Produto movido para o carrinho!')
       setIsRemoved(true)
       setTimeout(async () => {
         await onRemove(product.id)

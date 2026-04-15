@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client'
 import { Heart, HeartOff, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FavoriteProductCard } from '@/components/FavoriteProductCard'
-import { useCartStore } from '@/stores/useCartStore'
+import { useCart } from '@/hooks/useCart'
 import { Link } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,7 @@ export default function Favorites() {
   } = useFavorites()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const { addItem } = useCartStore()
+  const { addToCart } = useCart()
 
   const fetchProducts = async (currentFavorites: string[]) => {
     if (currentFavorites.length === 0) {
@@ -147,15 +147,7 @@ export default function Favorites() {
               await removeFavorite(id)
             }}
             onAddToCart={async (id, quantity) => {
-              addItem({
-                id: product.id,
-                name: product.name,
-                price: product.price_usd ?? 0,
-                original_price: product.price_usd || 0,
-                cost_price: product.price_cost || 0,
-                image_url: product.image_url,
-                quantity: quantity,
-              })
+              await addToCart(id, quantity)
             }}
             isFavorited={isFavorite(product.id)}
             onToggleFavorite={async (id, willBeFavorite) => {
