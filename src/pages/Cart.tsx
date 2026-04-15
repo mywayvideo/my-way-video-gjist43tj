@@ -150,11 +150,14 @@ export default function Cart() {
       let discountedDetails = { ...details }
       // the pricing logic expects details.price_usa, but our DB uses price_usd.
       // we'll normalize it for getEligibilityAndPrice
-      discountedDetails.price_usa = details.price_usd || details.price_usa || item.price_usa || 0
-      details.price_usa = discountedDetails.price_usa
+      const normalizedPriceUsa = details.price_usd || details.price_usa || item.price_usa || 0
+      discountedDetails.price_usa = normalizedPriceUsa
+      discountedDetails.price_usd = normalizedPriceUsa
+      details.price_usa = normalizedPriceUsa
+      details.price_usd = normalizedPriceUsa
 
       let hasDiscount = false
-      let originalPriceUsa = details.price_usa || 0
+      let originalPriceUsa = normalizedPriceUsa
       let originalPriceNat = details.price_nationalized_sales || item.price_nationalized_sales || 0
 
       if (activeDiscounts.length > 0 && originalPriceUsa > 0) {
@@ -170,7 +173,9 @@ export default function Cart() {
           hasDiscount = true
           const discountPct = (originalPriceUsa - bestDiscount.discountedPrice) / originalPriceUsa
 
+          discountedDetails.price_usd = bestDiscount.discountedPrice
           discountedDetails.price_usa = bestDiscount.discountedPrice
+
           if (discountedDetails.price_nationalized_sales) {
             discountedDetails.price_nationalized_sales = originalPriceNat * (1 - discountPct)
           }
