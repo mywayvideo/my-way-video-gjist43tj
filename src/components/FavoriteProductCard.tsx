@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { playCoinSound } from '@/utils/sound'
 import { toast } from 'sonner'
 import { useCart } from '@/hooks/useCart'
+import { ProductPrice } from '@/components/ProductPrice'
 
 interface FavoriteProductCardProps {
   product: any
@@ -59,7 +60,11 @@ export function FavoriteProductCard({
   const handleAddToCart = async () => {
     setProcessingAction('cart')
     try {
-      await addToCart(product.id, quantity)
+      if (onAddToCart) {
+        await onAddToCart(product.id, quantity)
+      } else {
+        await addToCart(product.id, quantity)
+      }
       setQuantityModalOpen(false)
       toast.success('Movido para o carrinho!')
       setIsRemoved(true)
@@ -168,8 +173,8 @@ export function FavoriteProductCard({
               {product.name}
             </h3>
           </Link>
-          <div className="mt-auto pt-1 font-bold text-green-600 text-lg">
-            USD {Number(product.price_usd || 0).toFixed(2)}
+          <div className="mt-auto pt-2">
+            <ProductPrice product={product} />
           </div>
         </CardContent>
 
