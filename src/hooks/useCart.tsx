@@ -15,6 +15,9 @@ export interface CartItem {
   price_nationalized_sales?: number
   price_nationalized_currency?: string
   weight?: number | string
+  manufacturer_id?: string | null
+  category_id?: string | null
+  price_cost?: number
 }
 
 interface CartContextType {
@@ -88,7 +91,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           const { data: dbItems } = await supabase
             .from('cart_items')
             .select(
-              'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight)',
+              'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight, manufacturer_id, category_id, price_cost)',
             )
             .eq('cart_id', cartId)
 
@@ -103,6 +106,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               price_nationalized_sales: (item.products as any)?.price_nationalized_sales,
               price_nationalized_currency: (item.products as any)?.price_nationalized_currency,
               weight: (item.products as any)?.weight,
+              manufacturer_id: (item.products as any)?.manufacturer_id,
+              category_id: (item.products as any)?.category_id,
+              price_cost: (item.products as any)?.price_cost,
             }))
           }
         }
@@ -137,6 +143,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           price_nationalized_sales: productDetails.price_nationalized_sales,
           price_nationalized_currency: productDetails.price_nationalized_currency,
           weight: productDetails.weight,
+          manufacturer_id: productDetails.manufacturer_id,
+          category_id: productDetails.category_id,
+          price_cost: productDetails.price_cost,
         }
       } else {
         const { data: prod } = await supabase
@@ -155,6 +164,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           price_nationalized_sales: prod.price_nationalized_sales,
           price_nationalized_currency: prod.price_nationalized_currency,
           weight: prod.weight,
+          manufacturer_id: prod.manufacturer_id,
+          category_id: prod.category_id,
+          price_cost: prod.price_cost,
         }
       }
 

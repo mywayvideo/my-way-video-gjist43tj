@@ -43,8 +43,8 @@ export const getApplicableDiscounts = (
   productId: string,
   userId?: string | null,
   userRole?: string | null,
-  productManufacturerId?: string | null,
-  productCategoryId?: string | null,
+  manufacturer_id?: string | null,
+  category_id?: string | null,
 ): Discount[] => {
   const now = new Date()
 
@@ -79,22 +79,22 @@ export const getApplicableDiscounts = (
         Array.isArray(rule.product_selection) && rule.product_selection.includes(productId)
     } else if (targetType === 'manufacturer') {
       matchesProduct =
-        Array.isArray(rule.manufacturer_ids) && productManufacturerId
-          ? rule.manufacturer_ids.includes(productManufacturerId)
+        Array.isArray(rule.manufacturer_ids) && manufacturer_id
+          ? rule.manufacturer_ids.includes(manufacturer_id)
           : false
     } else if (targetType === 'category') {
       matchesProduct =
-        Array.isArray(rule.category_ids) && productCategoryId
-          ? rule.category_ids.includes(productCategoryId)
+        Array.isArray(rule.category_ids) && category_id
+          ? rule.category_ids.includes(category_id)
           : false
     } else if (targetType === 'manufacturer_category') {
       const hasManufacturer =
-        Array.isArray(rule.manufacturer_ids) && productManufacturerId
-          ? rule.manufacturer_ids.includes(productManufacturerId)
+        Array.isArray(rule.manufacturer_ids) && manufacturer_id
+          ? rule.manufacturer_ids.includes(manufacturer_id)
           : false
       const hasCategory =
-        Array.isArray(rule.category_ids) && productCategoryId
-          ? rule.category_ids.includes(productCategoryId)
+        Array.isArray(rule.category_ids) && category_id
+          ? rule.category_ids.includes(category_id)
           : false
       matchesProduct = hasManufacturer && hasCategory
     } else {
@@ -116,8 +116,8 @@ export const getBestDiscount = (
   userRole: string | null,
   originalPrice: number,
   costPrice: number,
-  productManufacturerId?: string | null,
-  productCategoryId?: string | null,
+  manufacturer_id?: string | null,
+  category_id?: string | null,
 ): DiscountCalculation => {
   const defaultCalc: DiscountCalculation = {
     originalPrice,
@@ -134,8 +134,8 @@ export const getBestDiscount = (
     productId,
     userId,
     userRole,
-    productManufacturerId,
-    productCategoryId,
+    manufacturer_id,
+    category_id,
   )
   if (applicable.length === 0) return defaultCalc
 
