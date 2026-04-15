@@ -103,9 +103,11 @@ export const discountService = {
     userRole: string | null,
     userCustomerId: string | null,
   ) {
-    if (!product || product.price_usd == null || !userRole || !userCustomerId) {
+    const basePrice = product?.price_usd ?? product?.price_nationalized_sales ?? null
+
+    if (!product || basePrice == null || !userRole || !userCustomerId) {
       return {
-        originalPrice: product?.price_usd || 0,
+        originalPrice: basePrice || 0,
         discountedPrice: null,
         discountPercentage: null,
         discountAmount: null,
@@ -169,7 +171,7 @@ export const discountService = {
 
         let discountAmount = 0
         const val = rule.discount_value || 0
-        const price = product.price_usd || 0
+        const price = basePrice
 
         if (
           rule.discount_calculation_type === 'margin_percentage' ||
@@ -188,8 +190,8 @@ export const discountService = {
 
       if (bestRule && maxDiscountAmount > 0) {
         return {
-          originalPrice: product.price_usd,
-          discountedPrice: product.price_usd - maxDiscountAmount,
+          originalPrice: basePrice,
+          discountedPrice: basePrice - maxDiscountAmount,
           discountPercentage: bestRule.discount_value,
           discountAmount: maxDiscountAmount,
           appliedRule: bestRule,
@@ -200,7 +202,7 @@ export const discountService = {
     }
 
     return {
-      originalPrice: product.price_usd || 0,
+      originalPrice: basePrice || 0,
       discountedPrice: null,
       discountPercentage: null,
       discountAmount: null,

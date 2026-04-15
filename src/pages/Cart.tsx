@@ -125,7 +125,7 @@ export default function Cart() {
       const { data } = await supabase
         .from('products')
         .select(
-          'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight, manufacturer_id, category_id',
+          'id, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, price_usd, price_cost, weight, manufacturer_id, category_id',
         )
         .in('id', ids)
       if (data) {
@@ -160,39 +160,49 @@ export default function Cart() {
       let originalPriceUsa = normalizedPriceUsa
       let originalPriceNat = details.price_nationalized_sales || item.price_nationalized_sales || 0
 
-      if (activeDiscounts.length > 0 && originalPriceUsa > 0) {
+      const originalEvalResult = getEligibilityAndPrice(
+        details,
+        destination,
+        exchangeRate,
+        shippingSettings,
+      )
+
+      let originalBasePrice = 0
+      let originalCostPrice = 0
+
+      if (destination === 'brasil' && originalPriceNat > 0) {
+        originalBasePrice = originalPriceNat
+        originalCostPrice = details.price_nationalized_cost || item.price_nationalized_cost || 0
+      } else {
+        originalBasePrice = originalPriceUsa
+        originalCostPrice = details.price_cost || item.price_cost || 0
+      }
+
+      if (activeDiscounts.length > 0 && originalBasePrice > 0) {
         const bestDiscount = getBestDiscount(
           activeDiscounts,
           details.id,
           customer?.id || null,
           customer?.role || null,
-          originalPriceUsa,
-          details.price_cost || 0,
+          originalBasePrice,
+          originalCostPrice,
           details.manufacturer_id,
           details.category_id,
         )
-        if (bestDiscount && bestDiscount.discountedPrice < originalPriceUsa) {
+        if (bestDiscount && bestDiscount.discountedPrice < originalBasePrice) {
           hasDiscount = true
-          const discountPct = (originalPriceUsa - bestDiscount.discountedPrice) / originalPriceUsa
 
-          discountedDetails.price_usd = bestDiscount.discountedPrice
-          discountedDetails.price_usa = bestDiscount.discountedPrice
-
-          if (discountedDetails.price_nationalized_sales) {
-            discountedDetails.price_nationalized_sales = originalPriceNat * (1 - discountPct)
+          if (destination === 'brasil' && originalPriceNat > 0) {
+            discountedDetails.price_nationalized_sales = bestDiscount.discountedPrice
+          } else {
+            discountedDetails.price_usd = bestDiscount.discountedPrice
+            discountedDetails.price_usa = bestDiscount.discountedPrice
           }
         }
       }
 
       const evalResult = getEligibilityAndPrice(
         discountedDetails,
-        destination,
-        exchangeRate,
-        shippingSettings,
-      )
-
-      const originalEvalResult = getEligibilityAndPrice(
-        details,
         destination,
         exchangeRate,
         shippingSettings,
