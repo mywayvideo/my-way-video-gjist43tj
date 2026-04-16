@@ -35,6 +35,8 @@ export default function Login() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [legacyEmail, setLegacyEmail] = useState<string | null>(null)
+  const [showLegacyMessage, setShowLegacyMessage] = useState(false)
   const [captchaL, setCaptchaL] = useState<string | null>(null)
   const captchaRefL = useRef<HCaptcha>(null)
 
@@ -86,7 +88,27 @@ export default function Login() {
     if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
     setLoading(true)
     setError(null)
+    setShowLegacyMessage(false)
+
     try {
+      const { data: userData, error: userError } = await supabase.rpc('check_legacy_user', {
+        p_email: email,
+      })
+
+      if (!userError && userData) {
+        if (!userData.exists) {
+          setError('Usuário não cadastrado.')
+          setLoading(false)
+          return
+        }
+        if (userData.is_imported && !userData.has_migrated) {
+          setLegacyEmail(email)
+          setShowLegacyMessage(true)
+          setLoading(false)
+          return
+        }
+      }
+
       await signIn(email, password)
       setIsLoadingUserData(true)
     } catch (err: any) {
@@ -173,87 +195,116 @@ export default function Login() {
             )}
 
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1">
-                  <Label>Email</Label>
-                  <Field
-                    icon={Mail}
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
-                    value={email}
-                    onChange={(e: any) => setEmail(e.target.value)}
-                    disabled={loading || isLoadingUserData}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Senha</Label>
-                  <Field
-                    icon={Lock}
-                    type={showPwd ? 'text' : 'password'}
-                    placeholder="Sua senha"
-                    required
-                    value={password}
-                    onChange={(e: any) => setPassword(e.target.value)}
-                    disabled={loading || isLoadingUserData}
-                    right={
-                      <button
-                        type="button"
-                        onClick={() => setShowPwd(!showPwd)}
-                        className="text-zinc-500 hover:text-white"
-                        disabled={loading || isLoadingUserData}
-                      >
-                        {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+              {showLegacyMessage ? (
+                <div className="space-y-4 text-center animate-fade-in">
+                  <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-orange-200 text-sm text-left leading-relaxed">
+                    Bem-vindo ao novo site da My Way! Identificamos que você já era nosso cliente.
+                    Por segurança, é necessário cadastrar uma nova senha para este novo ambiente.
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      nav(`/migration-setup?email=${encodeURIComponent(legacyEmail || '')}`)
                     }
-                  />
-                </div>
-                <div className="flex justify-between items-center text-sm pt-1 pb-2">
-                  <label
-                    className={`flex items-center space-x-2 text-zinc-400 cursor-pointer hover:text-zinc-300 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                    className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
                   >
-                    <Checkbox
+                    Definir Nova Senha
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowLegacyMessage(false)
+                      setLegacyEmail(null)
+                    }}
+                    className="w-full text-zinc-400 hover:text-white"
+                  >
+                    Voltar
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-1">
+                    <Label>Email</Label>
+                    <Field
+                      icon={Mail}
+                      type="email"
+                      placeholder="seu@email.com"
+                      required
+                      value={email}
+                      onChange={(e: any) => setEmail(e.target.value)}
                       disabled={loading || isLoadingUserData}
-                      className="border-zinc-700 data-[state=checked]:bg-orange-500"
                     />
-                    <span>Lembrar-me</span>
-                  </label>
-                  <Link
-                    to="/forgot-password"
-                    className={`text-orange-500 hover:text-orange-400 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Senha</Label>
+                    <Field
+                      icon={Lock}
+                      type={showPwd ? 'text' : 'password'}
+                      placeholder="Sua senha"
+                      required
+                      value={password}
+                      onChange={(e: any) => setPassword(e.target.value)}
+                      disabled={loading || isLoadingUserData}
+                      right={
+                        <button
+                          type="button"
+                          onClick={() => setShowPwd(!showPwd)}
+                          className="text-zinc-500 hover:text-white"
+                          disabled={loading || isLoadingUserData}
+                        >
+                          {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-sm pt-1 pb-2">
+                    <label
+                      className={`flex items-center space-x-2 text-zinc-400 cursor-pointer hover:text-zinc-300 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                    >
+                      <Checkbox
+                        disabled={loading || isLoadingUserData}
+                        className="border-zinc-700 data-[state=checked]:bg-orange-500"
+                      />
+                      <span>Lembrar-me</span>
+                    </label>
+                    <Link
+                      to="/forgot-password"
+                      className={`text-orange-500 hover:text-orange-400 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
+                    >
+                      Esqueceu a senha?
+                    </Link>
+                  </div>
+                  <div
+                    className={`flex justify-center overflow-hidden rounded-lg ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
                   >
-                    Esqueceu a senha?
-                  </Link>
-                </div>
-                <div
-                  className={`flex justify-center overflow-hidden rounded-lg ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
-                >
-                  {!siteKey ? (
-                    <div className="text-red-500 text-sm text-center py-2">
-                      Configuracao de CAPTCHA ausente. Contate o administrador.
-                    </div>
-                  ) : (
-                    <HCaptcha
-                      sitekey={siteKey}
-                      theme="dark"
-                      onVerify={setCaptchaL}
-                      onExpire={() => setCaptchaL(null)}
-                      ref={captchaRefL}
-                    />
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  disabled={loading || isLoadingUserData || !captchaL}
-                  className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
-                >
-                  {loading || isLoadingUserData ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    'Entrar'
-                  )}
-                </Button>
-              </form>
+                    {!siteKey ? (
+                      <div className="text-red-500 text-sm text-center py-2">
+                        Configuracao de CAPTCHA ausente. Contate o administrador.
+                      </div>
+                    ) : (
+                      <HCaptcha
+                        sitekey={siteKey}
+                        theme="dark"
+                        onVerify={setCaptchaL}
+                        onExpire={() => setCaptchaL(null)}
+                        ref={captchaRefL}
+                      />
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading || isLoadingUserData || !captchaL}
+                    className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
+                  >
+                    {loading || isLoadingUserData ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      'Entrar'
+                    )}
+                  </Button>
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="register">

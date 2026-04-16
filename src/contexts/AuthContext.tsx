@@ -103,6 +103,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session) {
           setCurrentUser(session.user)
+          if (event === 'SIGNED_IN') {
+            supabase
+              .from('customers')
+              .update({ last_login: new Date().toISOString() })
+              .eq('user_id', session.user.id)
+              .then()
+          }
           supabase
             .from('customers')
             .select('*')
