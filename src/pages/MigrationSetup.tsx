@@ -23,7 +23,8 @@ const Field = ({ id, icon: Icon, right, disabled, ...p }: any) => (
 
 export default function MigrationSetup() {
   const [searchParams] = useSearchParams()
-  const email = searchParams.get('email')
+  const emailParam = searchParams.get('email')
+  const email = emailParam ? emailParam.toLowerCase() : null
 
   const [loadingData, setLoadingData] = useState(true)
   const [customerData, setCustomerData] = useState<any>(null)

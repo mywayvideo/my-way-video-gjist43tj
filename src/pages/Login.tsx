@@ -92,7 +92,7 @@ export default function Login() {
 
     try {
       const { data: userData, error: userError } = await supabase.rpc('check_legacy_user', {
-        p_email: email,
+        p_email: email.toLowerCase(),
       })
 
       if (!userError && userData) {
@@ -102,7 +102,7 @@ export default function Login() {
           return
         }
         if (userData.is_imported && !userData.has_migrated) {
-          setLegacyEmail(email)
+          setLegacyEmail(email.toLowerCase())
           setShowLegacyMessage(true)
           setLoading(false)
           return
@@ -198,8 +198,10 @@ export default function Login() {
               {showLegacyMessage ? (
                 <div className="space-y-4 text-center animate-fade-in">
                   <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-orange-200 text-sm text-left leading-relaxed">
-                    Bem-vindo ao novo site da My Way! Identificamos que você já era nosso cliente.
-                    Por segurança, é necessário cadastrar uma nova senha para este novo ambiente.
+                    Bem-vindo à nova MY WAY VIDEO! Você já é nosso parceiro e agora elevamos o
+                    nível: um portal inteligente com busca por IA, cotações automáticas e suporte
+                    especializado. Por segurança, defina sua nova senha e valide seus dados para
+                    acessar as novas ferramentas.
                   </div>
                   <Button
                     type="button"
