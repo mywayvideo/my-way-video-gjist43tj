@@ -37,6 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<string | null>(null)
   const [userMetadata, setUserMetadata] = useState<CustomerMetadata | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const activeUserIdRef = React.useRef<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -59,7 +60,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const user = session.user
-        if (isMounted) setCurrentUser(user)
+        if (isMounted) {
+          setCurrentUser(user)
+          activeUserIdRef.current = user.id
+        }
 
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
@@ -94,15 +98,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         setCurrentUser(null)
+        activeUserIdRef.current = null
         setUserRole(null)
         setUserMetadata(null)
         localStorage.removeItem('user-session')
         localStorage.removeItem('user-role')
         localStorage.removeItem('user-metadata')
         setIsLoading(false)
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (session) {
+          const isNewLogin = activeUserIdRef.current !== session.user.id
           setCurrentUser(session.user)
+          activeUserIdRef.current = session.user.id
+
+          if (isNewLogin) {
+            setIsLoading(true)
+          }
+
           if (event === 'SIGNED_IN') {
             supabase
               .from('customers')
@@ -110,15 +122,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               .eq('user_id', session.user.id)
               .then()
           }
+
           supabase
             .from('customers')
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle()
             .then(({ data, error }) => {
-              if (isMounted && !error && data) {
-                setUserRole(data.role)
-                setUserMetadata(data as CustomerMetadata)
+              if (isMounted) {
+                if (!error && data) {
+                  setUserRole(data.role)
+                  setUserMetadata(data as CustomerMetadata)
+                }
+                setIsLoading(false)
               }
             })
         }
@@ -161,6 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       keysToDrop.forEach((key) => localStorage.removeItem(key))
 
       setCurrentUser(null)
+      if (activeUserIdRef) activeUserIdRef.current = null
       setUserRole(null)
       setUserMetadata(null)
       setIsLoading(false)

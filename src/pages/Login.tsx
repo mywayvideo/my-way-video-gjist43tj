@@ -96,12 +96,7 @@ export default function Login() {
       })
 
       if (!userError && userData) {
-        if (!userData.exists) {
-          setError('Usuário não cadastrado.')
-          setLoading(false)
-          return
-        }
-        if (userData.is_imported && !userData.has_migrated) {
+        if (userData.exists && userData.is_imported && !userData.has_migrated) {
           setLegacyEmail(email.toLowerCase())
           setShowLegacyMessage(true)
           setLoading(false)

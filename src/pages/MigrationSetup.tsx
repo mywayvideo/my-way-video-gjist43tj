@@ -28,6 +28,7 @@ export default function MigrationSetup() {
 
   const [loadingData, setLoadingData] = useState(true)
   const [customerData, setCustomerData] = useState<any>(null)
+  const [isActivating, setIsActivating] = useState(false)
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -50,6 +51,8 @@ export default function MigrationSetup() {
 
   useEffect(() => {
     const fetchCustomer = async () => {
+      if (isActivating) return
+
       if (!email) {
         nav('/login', { replace: true })
         return
@@ -63,7 +66,9 @@ export default function MigrationSetup() {
         .maybeSingle()
 
       if (error || !data) {
-        nav('/login', { replace: true })
+        if (!isActivating) {
+          nav('/login', { replace: true })
+        }
         return
       }
 
@@ -83,7 +88,7 @@ export default function MigrationSetup() {
     }
 
     fetchCustomer()
-  }, [email, nav])
+  }, [email, nav, isActivating])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,6 +97,7 @@ export default function MigrationSetup() {
     if (password !== confirmPassword) return setError('As senhas não coincidem.')
 
     setLoading(true)
+    setIsActivating(true)
     setError(null)
 
     try {
@@ -137,6 +143,8 @@ export default function MigrationSetup() {
 
       if (updateError) throw updateError
 
+      await supabase.auth.refreshSession()
+
       toast({
         title: 'Conta ativada com sucesso!',
         description: 'Aproveite nosso novo portal.',
@@ -145,6 +153,7 @@ export default function MigrationSetup() {
       nav('/dashboard', { replace: true })
     } catch (err: any) {
       setError(err.message || 'Erro ao ativar conta. Tente novamente.')
+      setIsActivating(false)
     } finally {
       setLoading(false)
     }
