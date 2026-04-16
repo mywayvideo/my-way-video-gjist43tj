@@ -70,7 +70,8 @@ export function CustomerCSVImporter({ open, onOpenChange, onSuccess }: CustomerC
       arr[row][col] += cc
     }
     if (arr.length > 0) {
-      const headers = arr[0].map((h) => h.trim())
+      // Clean headers, removing BOM if exists
+      const headers = arr[0].map((h) => h.replace(/^\uFEFF/, '').trim())
       return arr
         .slice(1)
         .filter((r) => r.some((cell) => cell?.trim()))
@@ -105,20 +106,43 @@ export function CustomerCSVImporter({ open, onOpenChange, onSuccess }: CustomerC
         const batch = rows.slice(i, i + batchSize)
         const payload = batch
           .map((row) => {
-            const address = {
-              street: row['Endereço 1'] || '',
-              neighborhood: row['Endereço 2'] || '',
-              zip_code: row['CEP'] || '',
-              city: row['Cidade'] || '',
-              state: row['Estado'] || '',
-              country: row['País'] || '',
+            const billing_address = {
+              street: row['billing_address_1'] || row['Endereço 1'] || '',
+              neighborhood: row['billing_address_2'] || row['Endereço 2'] || '',
+              zip_code: row['billing_postcode'] || row['CEP'] || '',
+              city: row['billing_city'] || row['Cidade'] || '',
+              state: row['billing_state'] || row['Estado'] || '',
+              country: row['billing_country'] || row['País'] || '',
             }
+
+            const shipping_address = {
+              street: row['shipping_address_1'] || billing_address.street,
+              neighborhood: row['shipping_address_2'] || billing_address.neighborhood,
+              zip_code: row['shipping_postcode'] || billing_address.zip_code,
+              city: row['shipping_city'] || billing_address.city,
+              state: row['shipping_state'] || billing_address.state,
+              country: row['shipping_country'] || billing_address.country,
+            }
+
+            const firstName = row['billing_first_name'] || row['first_name'] || row['Nome'] || ''
+            const lastName = row['billing_last_name'] || row['last_name'] || row['Sobrenome'] || ''
+            let fullName = `${firstName} ${lastName}`.trim()
+            if (!fullName) fullName = row['display_name'] || ''
+
+            const email = (
+              row['user_email'] ||
+              row['billing_email'] ||
+              row['Email'] ||
+              ''
+            ).toLowerCase()
+            const phone = row['billing_phone'] || row['shipping_phone'] || row['Telefone'] || null
+
             return {
-              full_name: `${row['Nome'] || ''} ${row['Sobrenome'] || ''}`.trim(),
-              email: row['Email']?.toLowerCase() || '',
-              phone: row['Telefone'] || null,
-              billing_address: address,
-              shipping_address: address,
+              full_name: fullName,
+              email: email,
+              phone: phone,
+              billing_address,
+              shipping_address,
               is_imported: true,
               has_migrated: false,
               status: 'ativo',
@@ -164,7 +188,8 @@ export function CustomerCSVImporter({ open, onOpenChange, onSuccess }: CustomerC
         <DialogHeader>
           <DialogTitle>Importar Clientes (CSV)</DialogTitle>
           <DialogDescription>
-            Selecione um arquivo CSV com o formato legado para importar clientes.
+            Selecione um arquivo CSV exportado do WooCommerce ou no formato padrão para importar
+            clientes.
           </DialogDescription>
         </DialogHeader>
 
