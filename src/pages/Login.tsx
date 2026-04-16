@@ -58,6 +58,34 @@ export default function Login() {
   const { toast } = useToast()
 
   useEffect(() => {
+    const checkLingeringSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session) {
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('has_migrated, role')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+
+        if (customer && customer.has_migrated === false) {
+          // Sessão antiga não migrada; limpar para forçar login/migração correta
+          await supabase.auth.signOut()
+        } else if (customer && customer.has_migrated !== false) {
+          // Usuário já validado, redireciona ao dashboard
+          if (customer.role === 'admin') {
+            nav('/admin/dashboard', { replace: true })
+          } else {
+            nav('/dashboard', { replace: true })
+          }
+        }
+      }
+    }
+    checkLingeringSession()
+  }, [nav])
+
+  useEffect(() => {
     let timeout: NodeJS.Timeout
     if (isLoadingUserData) {
       if (userRole && userMetadata) {
@@ -91,20 +119,22 @@ export default function Login() {
     setShowLegacyMessage(false)
 
     try {
+      const normalizedEmail = email.toLowerCase().trim()
+
       const { data: userData, error: userError } = await supabase.rpc('check_legacy_user', {
-        p_email: email.toLowerCase(),
+        p_email: normalizedEmail,
       })
 
       if (!userError && userData) {
-        if (userData.exists && userData.is_imported && !userData.has_migrated) {
-          setLegacyEmail(email.toLowerCase())
+        if (userData.exists && userData.is_imported && userData.has_migrated === false) {
+          setLegacyEmail(normalizedEmail)
           setShowLegacyMessage(true)
           setLoading(false)
           return
         }
       }
 
-      await signIn(email, password)
+      await signIn(normalizedEmail, password)
       setIsLoadingUserData(true)
     } catch (err: any) {
       setError('Email ou senha inválidos.')

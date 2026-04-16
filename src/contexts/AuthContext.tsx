@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userMetadata, setUserMetadata] = useState<CustomerMetadata | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const activeUserIdRef = React.useRef<string | null>(null)
+  const activeUserRoleRef = React.useRef<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -74,9 +75,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) {
           if (!customerError && customerData) {
             setUserRole(customerData.role)
+            activeUserRoleRef.current = customerData.role
             setUserMetadata(customerData as CustomerMetadata)
           } else {
             setUserRole(null)
+            activeUserRoleRef.current = null
             setUserMetadata(null)
           }
           setIsLoading(false)
@@ -85,6 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) {
           setCurrentUser(null)
           setUserRole(null)
+          activeUserRoleRef.current = null
           setUserMetadata(null)
           setIsLoading(false)
         }
@@ -100,6 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(null)
         activeUserIdRef.current = null
         setUserRole(null)
+        activeUserRoleRef.current = null
         setUserMetadata(null)
         localStorage.removeItem('user-session')
         localStorage.removeItem('user-role')
@@ -111,7 +116,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setCurrentUser(session.user)
           activeUserIdRef.current = session.user.id
 
-          if (isNewLogin) {
+          // Treat refresh as a trigger to reload metadata if we don't have it yet
+          const needsMetadataLoad = isNewLogin || !activeUserRoleRef.current
+
+          if (needsMetadataLoad) {
             setIsLoading(true)
           }
 
@@ -132,7 +140,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               if (isMounted) {
                 if (!error && data) {
                   setUserRole(data.role)
+                  activeUserRoleRef.current = data.role
                   setUserMetadata(data as CustomerMetadata)
+                } else if (error || !data) {
+                  setUserRole(null)
+                  activeUserRoleRef.current = null
+                  setUserMetadata(null)
                 }
                 setIsLoading(false)
               }
@@ -179,6 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCurrentUser(null)
       if (activeUserIdRef) activeUserIdRef.current = null
       setUserRole(null)
+      if (activeUserRoleRef) activeUserRoleRef.current = null
       setUserMetadata(null)
       setIsLoading(false)
 

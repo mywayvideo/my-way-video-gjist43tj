@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ export default function MigrationSetup() {
   const [loadingData, setLoadingData] = useState(true)
   const [customerData, setCustomerData] = useState<any>(null)
   const [isActivating, setIsActivating] = useState(false)
+  const isActivatingRef = useRef(false)
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -50,8 +51,12 @@ export default function MigrationSetup() {
   const { toast } = useToast()
 
   useEffect(() => {
+    isActivatingRef.current = isActivating
+  }, [isActivating])
+
+  useEffect(() => {
     const fetchCustomer = async () => {
-      if (isActivating) return
+      if (isActivatingRef.current) return
 
       if (!email) {
         nav('/login', { replace: true })
@@ -65,10 +70,10 @@ export default function MigrationSetup() {
         .eq('is_imported', true)
         .maybeSingle()
 
+      if (isActivatingRef.current) return
+
       if (error || !data) {
-        if (!isActivating) {
-          nav('/login', { replace: true })
-        }
+        nav('/login', { replace: true })
         return
       }
 
@@ -98,6 +103,7 @@ export default function MigrationSetup() {
 
     setLoading(true)
     setIsActivating(true)
+    isActivatingRef.current = true
     setError(null)
 
     try {
@@ -106,13 +112,22 @@ export default function MigrationSetup() {
         password,
       })
 
+      let newUserId = authData?.user?.id
+
       if (signUpError) {
         if (!signUpError.message.toLowerCase().includes('already')) {
           throw signUpError
+        } else {
+          // Se já registrado, tenta autenticar para forçar login
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+          if (!signInError && signInData?.user) {
+            newUserId = signInData.user.id
+          }
         }
       }
-
-      const newUserId = authData?.user?.id
 
       const updatedBilling = {
         ...(customerData.billing_address || {}),
@@ -145,6 +160,9 @@ export default function MigrationSetup() {
 
       await supabase.auth.refreshSession()
 
+      // Aguarda o AuthContext sincronizar a sessão antes do redirecionamento final
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
       toast({
         title: 'Conta ativada com sucesso!',
         description: 'Aproveite nosso novo portal.',
@@ -154,6 +172,7 @@ export default function MigrationSetup() {
     } catch (err: any) {
       setError(err.message || 'Erro ao ativar conta. Tente novamente.')
       setIsActivating(false)
+      isActivatingRef.current = false
     } finally {
       setLoading(false)
     }
@@ -368,9 +387,16 @@ export default function MigrationSetup() {
                 !city ||
                 !state
               }
-              className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl mt-6"
+              className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl mt-6 transition-all duration-200"
             >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Ativar Conta'}
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sincronizando dados...
+                </div>
+              ) : (
+                'Ativar Conta'
+              )}
             </Button>
 
             <div className="text-center mt-4">
