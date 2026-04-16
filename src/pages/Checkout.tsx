@@ -406,6 +406,7 @@ export default function Checkout() {
       currency,
       reason,
       itemTotal: eligible ? price * item.quantity : 0,
+      has_discount: discountPct > 0 || item.has_discount,
     }
   })
 
@@ -529,75 +530,86 @@ export default function Checkout() {
       }
 
       if (itemsArray && itemsArray.length > 0) {
+        const allIds = itemsArray.map((p: any) => p.product?.id || p.product_id || p.id)
+        const { data: pData } = await supabase
+          .from('products')
+          .select(
+            'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight, manufacturer_id, category_id',
+          )
+          .in('id', allIds)
+
+        const details: Record<string, any> = {}
+        if (pData) {
+          pData.forEach((d) => (details[d.id] = d))
+          setProductDetails(details)
+        }
+
         const formatted = await Promise.all(
           itemsArray.map(async (p: any) => {
             const prod = p.product || p
-            let price =
-              p.unit_price ||
-              prod.price_usa ||
-              prod.price_usd ||
-              prod.price ||
-              p.price_usa ||
-              p.price_usd ||
-              p.price ||
-              0
+            const prodId = prod.id || p.product_id || p.id
+            const dbData = details[prodId] || {}
+
+            const pNat = safeNum(
+              dbData.price_nationalized_sales ||
+                prod.price_nationalized_sales ||
+                p.price_nationalized_sales,
+            )
+            const pUsa = safeNum(
+              dbData.price_usd ||
+                prod.price_usd ||
+                prod.price_usa ||
+                p.price_usd ||
+                p.price_usa ||
+                p.unit_price,
+            )
+
+            let basePrice = pUsa
+            if (deliveryMethod === 'brasil' && pNat > 0) {
+              basePrice = pNat
+            } else if (pUsa === 0 && pNat > 0) {
+              basePrice = pNat
+            }
 
             let hasDiscount = false
             let discountPct = 0
-            let originalPrice = price
+            let price = basePrice
+            let originalPrice = basePrice
 
-            if (discounts.length > 0 && price > 0) {
-              const { data: prodData } = await supabase
-                .from('products')
-                .select('price_cost')
-                .eq('id', prod.id || p.product_id || p.id)
-                .single()
-
+            if (discounts.length > 0 && basePrice > 0) {
               const bestDiscount = getBestDiscount(
                 discounts,
-                prod.id || p.product_id || p.id,
+                prodId,
                 customer?.id || null,
                 customer?.role || null,
-                price,
-                prodData?.price_cost || 0,
+                basePrice,
+                dbData.price_cost || 0,
+                dbData.manufacturer_id || null,
+                dbData.category_id || null,
               )
-              if (bestDiscount.discountedPrice < price) {
+              if (bestDiscount.discountedPrice < basePrice) {
                 hasDiscount = true
-                discountPct = (price - bestDiscount.discountedPrice) / price
+                discountPct = (basePrice - bestDiscount.discountedPrice) / basePrice
                 price = bestDiscount.discountedPrice
               }
             }
 
             return {
               id: p.id || prod.id,
-              product_id: prod.id || p.product_id || p.id,
+              product_id: prodId,
               name: prod.name || p.name,
               unit_price: price,
               original_unit_price: originalPrice,
               discount_pct: discountPct,
               quantity: p.quantity || 1,
               image_url: prod.image_url || p.image_url,
-              weight: prod.weight || p.weight || 0,
-              price_usa: prod.price_usd || prod.price_usa || p.price_usd || p.price_usa || 0,
-              price_nationalized_sales:
-                prod.price_nationalized_sales || p.price_nationalized_sales || 0,
+              weight: dbData.weight || prod.weight || p.weight || 0,
+              price_usa: pUsa,
+              price_nationalized_sales: pNat,
               has_discount: hasDiscount,
             }
           }),
         )
-
-        const allIds = formatted.map((i: any) => i.id || i.product_id)
-        const { data: pData } = await supabase
-          .from('products')
-          .select(
-            'id, price_nationalized_sales, price_nationalized_currency, price_usd, price_cost, weight',
-          )
-          .in('id', allIds)
-        if (pData) {
-          const details: Record<string, any> = {}
-          pData.forEach((d) => (details[d.id] = d))
-          setProductDetails(details)
-        }
 
         const hasNewDiscount = formatted.some((i) => i.has_discount)
 
