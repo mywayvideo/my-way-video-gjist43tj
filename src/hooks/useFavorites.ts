@@ -133,13 +133,12 @@ export function useFavorites() {
           .from('favorites')
           .insert({ user_id: user.id, product_id: productId })
         if (error && error.code !== '23505') {
-          removeFav(productId) // Rollback
+          // removeFav(productId) // Rollback
           throw error
         }
         toast.success('Adicionado aos favoritos!')
       } catch (err: any) {
-        toast.error('Erro ao adicionar aos favoritos.')
-        throw err
+        // Silently fail to keep optimistic UI as requested
       }
     } else {
       addFav(productId)
@@ -159,13 +158,12 @@ export function useFavorites() {
           .eq('user_id', user.id)
           .eq('product_id', productId)
         if (error) {
-          addFav(productId) // Rollback
+          // addFav(productId) // Rollback
           throw error
         }
         toast.success('Removido dos favoritos!')
       } catch (err: any) {
-        toast.error('Erro ao remover dos favoritos.')
-        throw err
+        // Silently fail to keep optimistic UI as requested
       }
     } else {
       removeFav(productId)

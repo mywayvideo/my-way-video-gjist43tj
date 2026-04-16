@@ -229,14 +229,14 @@ export default function Product() {
     try {
       if (isProductFavorite) {
         await removeFavorite(product.id)
-        toast({ title: 'Removido dos favoritos!' })
+        // toast handles in hook
       } else {
         await addFavorite(product.id)
         triggerAnimation()
-        toast({ title: 'Adicionado aos favoritos!' })
+        // toast handles in hook
       }
     } catch (error) {
-      toast({ title: 'Erro ao favoritar produto.', variant: 'destructive' })
+      // Silently fail to keep optimistic UI as requested
     } finally {
       setFavLoading(false)
     }
@@ -500,12 +500,12 @@ export default function Product() {
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16">
           <div className="contents lg:block lg:space-y-8">
             <div className="order-1 lg:order-none mb-8 lg:mb-0">
-              <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded-2xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
+              <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
                 <ImageWithFallback
                   src={product.image_url}
                   alt={product.name}
                   productId={product.id}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
+                  className="w-full h-full object-contain rounded group-hover:scale-105 transition-transform duration-700 ease-out drop-shadow-2xl"
                 />
 
                 <button

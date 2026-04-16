@@ -24,14 +24,14 @@ export function ImageWithFallback({
   const { displayUrl, isLoading, hasError, retryCount, retry } = useImageFallback(src, productId)
 
   if (isLoading) {
-    return <Skeleton className={cn('w-full h-full', className)} style={{ width, height }} />
+    return <Skeleton className={cn('w-full h-full rounded', className)} style={{ width, height }} />
   }
 
   if (hasError) {
     return (
       <div
         className={cn(
-          'w-full h-full bg-gray-200 flex flex-col items-center justify-center p-4 text-center rounded-md',
+          'w-full h-full bg-gray-200 flex flex-col items-center justify-center p-4 text-center rounded',
           className,
         )}
         style={{ width, height }}
@@ -64,7 +64,7 @@ export function ImageWithFallback({
       loading="lazy"
       width={width}
       height={height}
-      className={className}
+      className={cn('rounded', className)}
       onError={() => retry()}
     />
   )

@@ -130,13 +130,13 @@ export function ProductCard({ product }: { product: any }) {
         <Link
           to={linkTo}
           onClick={handleLinkClick}
-          className="w-full h-[200px] overflow-hidden rounded-xl bg-muted/30 flex items-center justify-center"
+          className="w-full h-[200px] overflow-hidden rounded bg-muted/30 flex items-center justify-center"
         >
           <ImageWithFallback
             src={product.image_url}
             alt={product.name}
             productId={product.id}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover rounded transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
       </CardHeader>

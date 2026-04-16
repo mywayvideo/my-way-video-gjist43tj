@@ -93,12 +93,12 @@ export function FavoriteProductCard({
         setShowExplosion(true)
         playCoinSound()
         setTimeout(() => setShowExplosion(false), 600)
-        toast.success('Adicionado aos favoritos')
+        // toast.success handled in hook
       } else {
-        toast.success('Removido dos favoritos')
+        // toast.success handled in hook
       }
     } catch (e) {
-      toast.error('Erro ao atualizar favoritos. Tente novamente.')
+      // Silently fail to keep optimistic UI as requested
     } finally {
       setProcessingAction(null)
     }
@@ -159,24 +159,30 @@ export function FavoriteProductCard({
           </div>
           <Link
             to={`/product/${product.id}`}
-            className="w-full h-[200px] overflow-hidden bg-muted/30 flex items-center justify-center"
+            className="w-full h-[200px] overflow-hidden rounded bg-muted/30 flex items-center justify-center"
           >
             <ImageWithFallback
               src={product.image_url}
               alt={product.name}
               productId={product.id}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover rounded transition-transform duration-500 group-hover:scale-105"
             />
           </Link>
         </CardHeader>
 
-        <CardContent className="flex-1 p-5 flex flex-col">
-          <Link to={`/product/${product.id}`} className="mb-2">
-            <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px]">
+        <CardContent className="flex-1 p-5 flex flex-col text-left">
+          <Link to={`/product/${product.id}`} className="mb-2 block w-full">
+            <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px] text-left">
               {product.name}
             </h3>
           </Link>
-          <div className="mt-auto pt-2">
+          <div className="mt-auto pt-1 flex flex-col items-center w-full">
+            {(!product.price_usd || product.price_usd <= 0) &&
+              product.price_nationalized_sales > 0 && (
+                <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1">
+                  Preço Brasil
+                </span>
+              )}
             <ProductPrice
               price={discountData?.price ?? discountData?.finalPrice}
               originalPrice={discountData?.originalPrice}
