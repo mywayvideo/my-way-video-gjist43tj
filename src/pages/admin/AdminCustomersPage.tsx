@@ -4,8 +4,11 @@ import { DashboardAdminCustomers } from './DashboardAdminCustomers'
 import { useCustomerManagement } from '@/hooks/useCustomerManagement'
 import { EditCustomerModal } from '@/components/admin/EditCustomerModal'
 import { CreateCustomerModal } from '@/components/admin/CreateCustomerModal'
+import { CustomerCSVImporter } from '@/components/admin/CustomerCSVImporter'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
+import { Upload } from 'lucide-react'
 
 export default function AdminCustomersPage() {
   const customerParams = useCustomerManagement()
@@ -47,6 +50,7 @@ export default function AdminCustomersPage() {
   }
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isImporterOpen, setIsImporterOpen] = useState(false)
   const [newCustomer, setNewCustomer] = useState({
     full_name: '',
     email: '',
@@ -82,11 +86,19 @@ export default function AdminCustomersPage() {
   return (
     <AdminLayout breadcrumb="Gerenciar Clientes">
       <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-up">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gerenciar Clientes</h1>
-          <p className="text-muted-foreground mt-2">
-            Administre a base de clientes, níveis de acesso, endereços e informações.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Gerenciar Clientes</h1>
+            <p className="text-muted-foreground mt-2">
+              Administre a base de clientes, níveis de acesso, endereços e informações.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsImporterOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar CSV
+            </Button>
+          </div>
         </div>
 
         <DashboardAdminCustomers
@@ -109,6 +121,12 @@ export default function AdminCustomersPage() {
           customer={newCustomer}
           setCustomer={setNewCustomer}
           onSave={handleSaveCreate}
+        />
+
+        <CustomerCSVImporter
+          open={isImporterOpen}
+          onOpenChange={setIsImporterOpen}
+          onSuccess={customerParams.refreshCustomers}
         />
       </div>
     </AdminLayout>
