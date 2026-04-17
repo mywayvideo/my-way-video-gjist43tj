@@ -21,11 +21,11 @@ const Field = ({ id, icon: Icon, right, disabled, ...p }: any) => (
 
 export function MigrationForm({
   email,
-  customerData,
+  initialData,
   onCancel,
 }: {
   email: string
-  customerData: any
+  initialData: any
   onCancel: () => void
 }) {
   const [f, setF] = useState({
@@ -47,14 +47,14 @@ export function MigrationForm({
 
   useEffect(() => {
     supabase.auth.signOut().catch(() => {})
-    if (customerData) {
-      const b = customerData.billing_address || {}
+    if (initialData) {
+      const b = initialData.billing_address || {}
       setF({
         pwd: '',
         conf: '',
-        name: customerData.full_name || '',
-        phone: customerData.phone || '',
-        cpf: customerData.cpf || '',
+        name: initialData.full_name || '',
+        phone: initialData.phone || '',
+        cpf: initialData.cpf || '',
         zip: b.zip_code || '',
         st: b.street || '',
         neigh: b.neighborhood || '',
@@ -62,7 +62,7 @@ export function MigrationForm({
         state: b.state || '',
       })
     }
-  }, [customerData])
+  }, [initialData])
 
   const hndl = (k: string) => (e: any) => setF((p) => ({ ...p, [k]: e.target.value }))
 
@@ -94,11 +94,12 @@ export function MigrationForm({
 
       if (cu?.user) {
         const payload = {
+          user_id: cu.user.id,
           full_name: f.name,
           phone: f.phone,
           cpf: f.cpf,
           billing_address: {
-            ...(customerData?.billing_address || {}),
+            ...(initialData?.billing_address || {}),
             zip_code: f.zip,
             street: f.st,
             neighborhood: f.neigh,
@@ -128,8 +129,9 @@ export function MigrationForm({
   return (
     <form onSubmit={submit} className="space-y-4 animate-fade-in">
       <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-xl text-orange-200 text-sm">
-        Você já é nosso parceiro! Defina sua nova senha e valide seus dados para acessar o portal
-        atualizado.
+        Bem-vindo à nova MY WAY VIDEO! Você já é nosso parceiro e agora elevamos o nível: um portal
+        inteligente com busca por IA, cotações automáticas e suporte especializado. Por segurança,
+        defina sua nova senha e valide seus dados para acessar as novas ferramentas.
       </div>
       {err && <div className="p-2 bg-red-500/10 text-red-500 text-sm rounded">{err}</div>}
 
@@ -181,7 +183,7 @@ export function MigrationForm({
           />
         </div>
         <div>
-          <Label>CPF/CNPJ (Opcional)</Label>
+          <Label>CPF/CNPJ</Label>
           <Field icon={FileText} value={f.cpf} onChange={hndl('cpf')} disabled={loading} />
         </div>
       </div>

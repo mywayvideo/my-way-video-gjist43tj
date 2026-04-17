@@ -34,8 +34,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [flowMode, setFlowMode] = useState<'login' | 'migrate' | 'processing'>('login')
-  const [legacyCustomerData, setLegacyCustomerData] = useState<any>(null)
+  const [flowMode, setFlowMode] = useState<'login' | 'migrate' | 'loading'>('login')
+  const [legacyData, setLegacyData] = useState<any>(null)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -132,7 +132,7 @@ export default function Login() {
             .eq('email', normalizedEmail)
             .maybeSingle()
 
-          setLegacyCustomerData(customerData || { email: normalizedEmail })
+          setLegacyData(customerData || { email: normalizedEmail })
           setFlowMode('migrate')
           setLoading(false)
           return
@@ -201,10 +201,10 @@ export default function Login() {
           {flowMode === 'migrate' ? (
             <MigrationForm
               email={email.toLowerCase().trim()}
-              customerData={legacyCustomerData}
+              initialData={legacyData}
               onCancel={() => {
                 setFlowMode('login')
-                setLegacyCustomerData(null)
+                setLegacyData(null)
               }}
             />
           ) : (
