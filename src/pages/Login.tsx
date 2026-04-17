@@ -295,7 +295,7 @@ export default function Login() {
                       to="/forgot-password"
                       className={`text-orange-500 hover:text-orange-400 ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
                     >
-                      Esqueceu a senha?
+                      Esqueci minha senha
                     </Link>
                   </div>
                   <div
