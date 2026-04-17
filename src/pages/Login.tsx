@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { Mail, Lock, Eye, EyeOff, Loader2, User, Phone, Building2 } from 'lucide-react'
+import { MigrationForm } from '@/components/auth/MigrationForm'
 import logoImg from '../assets/mw_logo_horiz_1200x318_fundo_escuro-037e3.png'
 
 const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -33,10 +34,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [flowMode, setFlowMode] = useState<'login' | 'migrate' | 'processing'>('login')
+  const [legacyCustomerData, setLegacyCustomerData] = useState<any>(null)
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [legacyEmail, setLegacyEmail] = useState<string | null>(null)
-  const [showLegacyMessage, setShowLegacyMessage] = useState(false)
   const [captchaL, setCaptchaL] = useState<string | null>(null)
   const captchaRefL = useRef<HCaptcha>(null)
 
@@ -62,7 +64,7 @@ export default function Login() {
       const {
         data: { session },
       } = await supabase.auth.getSession()
-      if (session) {
+      if (session && flowMode !== 'migrate') {
         const { data: customer } = await supabase
           .from('customers')
           .select('has_migrated, role')
@@ -70,10 +72,8 @@ export default function Login() {
           .maybeSingle()
 
         if (customer && customer.has_migrated === false) {
-          // Sessão antiga não migrada; limpar para forçar login/migração correta
           await supabase.auth.signOut()
         } else if (customer && customer.has_migrated !== false) {
-          // Usuário já validado, redireciona ao dashboard
           if (customer.role === 'admin') {
             nav('/admin/dashboard', { replace: true })
           } else {
@@ -83,11 +83,11 @@ export default function Login() {
       }
     }
     checkLingeringSession()
-  }, [nav])
+  }, [nav, flowMode])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
-    if (isLoadingUserData) {
+    if (isLoadingUserData && flowMode !== 'migrate') {
       if (userRole && userMetadata) {
         setIsLoadingUserData(false)
         setLoading(false)
@@ -109,14 +109,13 @@ export default function Login() {
       }
     }
     return () => clearTimeout(timeout)
-  }, [isLoadingUserData, userRole, userMetadata, nav, toast])
+  }, [isLoadingUserData, userRole, userMetadata, nav, toast, flowMode])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
     setLoading(true)
     setError(null)
-    setShowLegacyMessage(false)
 
     try {
       const normalizedEmail = email.toLowerCase().trim()
@@ -127,8 +126,14 @@ export default function Login() {
 
       if (!userError && userData) {
         if (userData.exists && userData.is_imported && userData.has_migrated === false) {
-          setLegacyEmail(normalizedEmail)
-          setShowLegacyMessage(true)
+          const { data: customerData } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('email', normalizedEmail)
+            .maybeSingle()
+
+          setLegacyCustomerData(customerData || { email: normalizedEmail })
+          setFlowMode('migrate')
           setLoading(false)
           return
         }
@@ -184,72 +189,54 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-black flex flex-col justify-center items-center p-4 relative overflow-hidden pt-12 pb-12">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="w-full max-w-[400px] z-10 animate-fade-in-up">
+      <div
+        className={`w-full z-10 animate-fade-in-up ${flowMode === 'migrate' ? 'max-w-[600px]' : 'max-w-[400px]'}`}
+      >
         <div className="flex justify-center mb-6">
           <Link to="/" className="hover:scale-105 transition-transform">
             <img src={logoImg} alt="Logo" className="w-[180px] object-contain" />
           </Link>
         </div>
         <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 relative">
-          <Tabs
-            value={tab}
-            onValueChange={(v) => {
-              setTab(v)
-              setError(null)
-            }}
-          >
-            <TabsList className="grid grid-cols-2 bg-zinc-900 mb-4 p-1">
-              <TabsTrigger
-                value="login"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-              >
-                Entrar
-              </TabsTrigger>
-              <TabsTrigger
-                value="register"
-                className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
-              >
-                Criar Conta
-              </TabsTrigger>
-            </TabsList>
+          {flowMode === 'migrate' ? (
+            <MigrationForm
+              email={email.toLowerCase().trim()}
+              customerData={legacyCustomerData}
+              onCancel={() => {
+                setFlowMode('login')
+                setLegacyCustomerData(null)
+              }}
+            />
+          ) : (
+            <Tabs
+              value={tab}
+              onValueChange={(v) => {
+                setTab(v)
+                setError(null)
+              }}
+            >
+              <TabsList className="grid grid-cols-2 bg-zinc-900 mb-4 p-1">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+                >
+                  Entrar
+                </TabsTrigger>
+                <TabsTrigger
+                  value="register"
+                  className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
+                >
+                  Criar Conta
+                </TabsTrigger>
+              </TabsList>
 
-            {error && (
-              <div className="mb-4 p-2.5 bg-red-500/10 border border-red-500/20 text-red-500 text-sm rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <TabsContent value="login">
-              {showLegacyMessage ? (
-                <div className="space-y-4 text-center animate-fade-in">
-                  <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-orange-200 text-sm text-left leading-relaxed">
-                    Bem-vindo à nova MY WAY VIDEO! Você já é nosso parceiro e agora elevamos o
-                    nível: um portal inteligente com busca por IA, cotações automáticas e suporte
-                    especializado. Por segurança, defina sua nova senha e valide seus dados para
-                    acessar as novas ferramentas.
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() =>
-                      nav(`/migration-setup?email=${encodeURIComponent(legacyEmail || '')}`)
-                    }
-                    className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
-                  >
-                    Definir Nova Senha
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setShowLegacyMessage(false)
-                      setLegacyEmail(null)
-                    }}
-                    className="w-full text-zinc-400 hover:text-white"
-                  >
-                    Voltar
-                  </Button>
+              {error && (
+                <div className="mb-4 p-2.5 bg-red-500/10 border border-red-500/20 text-red-500 text-sm rounded-lg">
+                  {error}
                 </div>
-              ) : (
+              )}
+
+              <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1">
                     <Label>Email</Label>
@@ -331,124 +318,124 @@ export default function Login() {
                     )}
                   </Button>
                 </form>
-              )}
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="register">
-              <form onSubmit={handleReg} className="space-y-3">
-                <div className="space-y-1">
-                  <Label>
-                    Nome <span className="text-red-500">*</span>
-                  </Label>
-                  <Field
-                    icon={User}
-                    placeholder="Seu nome"
-                    required
-                    value={rName}
-                    onChange={(e: any) => setRName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>
-                    Email <span className="text-red-500">*</span>
-                  </Label>
-                  <Field
-                    icon={Mail}
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
-                    value={rEmail}
-                    onChange={(e: any) => setREmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+              <TabsContent value="register">
+                <form onSubmit={handleReg} className="space-y-3">
                   <div className="space-y-1">
-                    <Label>Telefone</Label>
+                    <Label>
+                      Nome <span className="text-red-500">*</span>
+                    </Label>
                     <Field
-                      icon={Phone}
-                      placeholder="(11) 9999-9999"
-                      value={rPhone}
-                      onChange={(e: any) => setRPhone(e.target.value)}
+                      icon={User}
+                      placeholder="Seu nome"
+                      required
+                      value={rName}
+                      onChange={(e: any) => setRName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label>Empresa</Label>
+                    <Label>
+                      Email <span className="text-red-500">*</span>
+                    </Label>
                     <Field
-                      icon={Building2}
-                      placeholder="Sua empresa"
-                      value={rComp}
-                      onChange={(e: any) => setRComp(e.target.value)}
+                      icon={Mail}
+                      type="email"
+                      placeholder="seu@email.com"
+                      required
+                      value={rEmail}
+                      onChange={(e: any) => setREmail(e.target.value)}
                     />
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <Label>
-                    Senha <span className="text-red-500">*</span>
-                  </Label>
-                  <Field
-                    icon={Lock}
-                    type={showPwd ? 'text' : 'password'}
-                    placeholder="Mínimo 8 caract."
-                    required
-                    value={rPwd}
-                    onChange={(e: any) => setRPwd(e.target.value)}
-                    right={
-                      <button
-                        type="button"
-                        onClick={() => setShowPwd(!showPwd)}
-                        className="text-zinc-500"
-                      >
-                        {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>
-                    Confirmar <span className="text-red-500">*</span>
-                  </Label>
-                  <Field
-                    icon={Lock}
-                    type={showPwd ? 'text' : 'password'}
-                    placeholder="Confirme a senha"
-                    required
-                    value={rPwdC}
-                    onChange={(e: any) => setRPwdC(e.target.value)}
-                  />
-                </div>
-                <label className="flex items-center space-x-2 text-sm text-zinc-400 pt-1 pb-1 cursor-pointer">
-                  <Checkbox
-                    checked={rTerms}
-                    onCheckedChange={(c) => setRTerms(!!c)}
-                    className="border-zinc-700 data-[state=checked]:bg-orange-500"
-                  />
-                  <span>Aceito os Termos de Serviço</span>
-                </label>
-                <div className="flex justify-center overflow-hidden rounded-lg">
-                  {!siteKey ? (
-                    <div className="text-red-500 text-sm text-center py-2">
-                      Configuracao de CAPTCHA ausente. Contate o administrador.
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Telefone</Label>
+                      <Field
+                        icon={Phone}
+                        placeholder="(11) 9999-9999"
+                        value={rPhone}
+                        onChange={(e: any) => setRPhone(e.target.value)}
+                      />
                     </div>
-                  ) : (
-                    <HCaptcha
-                      sitekey={siteKey}
-                      theme="dark"
-                      onVerify={setCaptchaR}
-                      onExpire={() => setCaptchaR(null)}
-                      ref={captchaRefR}
+                    <div className="space-y-1">
+                      <Label>Empresa</Label>
+                      <Field
+                        icon={Building2}
+                        placeholder="Sua empresa"
+                        value={rComp}
+                        onChange={(e: any) => setRComp(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>
+                      Senha <span className="text-red-500">*</span>
+                    </Label>
+                    <Field
+                      icon={Lock}
+                      type={showPwd ? 'text' : 'password'}
+                      placeholder="Mínimo 8 caract."
+                      required
+                      value={rPwd}
+                      onChange={(e: any) => setRPwd(e.target.value)}
+                      right={
+                        <button
+                          type="button"
+                          onClick={() => setShowPwd(!showPwd)}
+                          className="text-zinc-500"
+                        >
+                          {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      }
                     />
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  disabled={loading || !captchaR || !rTerms}
-                  className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
-                >
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Criar Conta'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>
+                      Confirmar <span className="text-red-500">*</span>
+                    </Label>
+                    <Field
+                      icon={Lock}
+                      type={showPwd ? 'text' : 'password'}
+                      placeholder="Confirme a senha"
+                      required
+                      value={rPwdC}
+                      onChange={(e: any) => setRPwdC(e.target.value)}
+                    />
+                  </div>
+                  <label className="flex items-center space-x-2 text-sm text-zinc-400 pt-1 pb-1 cursor-pointer">
+                    <Checkbox
+                      checked={rTerms}
+                      onCheckedChange={(c) => setRTerms(!!c)}
+                      className="border-zinc-700 data-[state=checked]:bg-orange-500"
+                    />
+                    <span>Aceito os Termos de Serviço</span>
+                  </label>
+                  <div className="flex justify-center overflow-hidden rounded-lg">
+                    {!siteKey ? (
+                      <div className="text-red-500 text-sm text-center py-2">
+                        Configuracao de CAPTCHA ausente. Contate o administrador.
+                      </div>
+                    ) : (
+                      <HCaptcha
+                        sitekey={siteKey}
+                        theme="dark"
+                        onVerify={setCaptchaR}
+                        onExpire={() => setCaptchaR(null)}
+                        ref={captchaRefR}
+                      />
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading || !captchaR || !rTerms}
+                    className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
+                  >
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Criar Conta'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       </div>
     </div>
