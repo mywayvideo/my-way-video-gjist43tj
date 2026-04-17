@@ -23,10 +23,12 @@ export function MigrationForm({
   email,
   initialData,
   onCancel,
+  onProcessing,
 }: {
   email: string
   initialData: any
   onCancel: () => void
+  onProcessing?: () => void
 }) {
   const [f, setF] = useState({
     pwd: '',
@@ -46,7 +48,6 @@ export function MigrationForm({
   const { toast } = useToast()
 
   useEffect(() => {
-    supabase.auth.signOut().catch(() => {})
     if (initialData) {
       const b = initialData.billing_address || {}
       setF({
@@ -71,9 +72,12 @@ export function MigrationForm({
     if (f.pwd.length < 8) return setErr('A senha deve ter no mínimo 8 caracteres.')
     if (f.pwd !== f.conf) return setErr('As senhas não coincidem.')
     setLoading(true)
+    if (onProcessing) onProcessing()
     setErr(null)
 
     try {
+      await supabase.auth.signOut().catch(() => {})
+
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password: f.pwd,

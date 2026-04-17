@@ -34,7 +34,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [flowMode, setFlowMode] = useState<'login' | 'migrate' | 'loading'>('login')
+  const [flowMode, setFlowMode] = useState<'login' | 'migrate' | 'loading' | 'processing'>('login')
   const [legacyData, setLegacyData] = useState<any>(null)
 
   const [email, setEmail] = useState('')
@@ -64,7 +64,7 @@ export default function Login() {
       const {
         data: { session },
       } = await supabase.auth.getSession()
-      if (session && flowMode !== 'migrate') {
+      if (session && flowMode !== 'migrate' && flowMode !== 'processing') {
         const { data: customer } = await supabase
           .from('customers')
           .select('has_migrated, role, email')
@@ -103,7 +103,7 @@ export default function Login() {
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
-    if (isLoadingUserData && flowMode !== 'migrate') {
+    if (isLoadingUserData && flowMode !== 'migrate' && flowMode !== 'processing') {
       if (userRole && userMetadata) {
         setIsLoadingUserData(false)
         setLoading(false)
@@ -210,7 +210,7 @@ export default function Login() {
     <div className="min-h-screen bg-black flex flex-col justify-center items-center p-4 relative overflow-hidden pt-12 pb-12">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div
-        className={`w-full z-10 animate-fade-in-up ${flowMode === 'migrate' ? 'max-w-[600px]' : 'max-w-[400px]'}`}
+        className={`w-full z-10 animate-fade-in-up ${flowMode === 'migrate' || flowMode === 'processing' ? 'max-w-[600px]' : 'max-w-[400px]'}`}
       >
         <div className="flex justify-center mb-6">
           <Link to="/" className="hover:scale-105 transition-transform">
@@ -223,7 +223,7 @@ export default function Login() {
               <Loader2 className="h-8 w-8 animate-spin text-orange-500 mb-4" />
               <p className="text-zinc-400">Verificando dados...</p>
             </div>
-          ) : flowMode === 'migrate' ? (
+          ) : flowMode === 'migrate' || flowMode === 'processing' ? (
             <MigrationForm
               email={email.toLowerCase().trim()}
               initialData={legacyData}
@@ -232,6 +232,7 @@ export default function Login() {
                 setFlowMode('login')
                 setLegacyData(null)
               }}
+              onProcessing={() => setFlowMode('processing')}
             />
           ) : (
             <Tabs
