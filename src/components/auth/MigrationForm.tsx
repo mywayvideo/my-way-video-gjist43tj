@@ -115,7 +115,8 @@ export function MigrationForm({
       toast({ title: 'Conta ativada!', description: 'Aproveite nosso novo portal.' })
 
       const role = initialData?.role || 'customer'
-      window.location.href = role === 'admin' ? '/admin' : '/dashboard'
+      const targetPath = role === 'admin' ? '/admin' : '/dashboard'
+      window.location.href = targetPath
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
       setLoading(false)

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,11 +13,8 @@ export default function ResetPassword() {
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
-  const navigate = useNavigate()
 
   useEffect(() => {
-    // Optionally we can verify if there is an active session
-    // since Supabase handles the token in the URL automatically and creates a session
     const checkSession = async () => {
       const {
         data: { session },
@@ -64,7 +60,7 @@ export default function ResetPassword() {
       })
 
       setTimeout(() => {
-        navigate('/login')
+        window.location.href = '/dashboard'
       }, 2000)
     } catch (err: any) {
       toast({
