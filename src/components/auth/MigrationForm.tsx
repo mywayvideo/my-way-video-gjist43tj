@@ -137,7 +137,8 @@ export function MigrationForm({
       setActivationStatus('success')
 
       setTimeout(() => {
-        window.location.href = '/login?activated=true'
+        const targetPath = initialData?.role === 'admin' ? '/admin/dashboard' : '/dashboard'
+        window.location.href = targetPath
       }, 3000)
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
@@ -157,7 +158,7 @@ export function MigrationForm({
             Conta Ativada com Sucesso!
           </h2>
           <p className="text-zinc-400 text-center max-w-md px-4">
-            Conta ativada! Redirecionando para o login para você entrar com sua nova senha.
+            Conta ativada! Redirecionando para o seu painel...
           </p>
         </div>
       )}

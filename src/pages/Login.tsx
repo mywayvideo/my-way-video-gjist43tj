@@ -182,6 +182,38 @@ export default function Login() {
         throw new Error('E-mail ou Senha não cadastrados.')
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session) {
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('has_migrated, role')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+
+        if (customer) {
+          if (customer.has_migrated === false) {
+            const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
+              email_input: normalizedEmail,
+            } as any)) as any
+            const legacyUser =
+              legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
+            if (legacyUser && legacyUser.found) {
+              setLegacyData(legacyUser)
+              setFlowMode('migrate')
+              setLoading(false)
+              return
+            }
+          } else {
+            const targetPath = customer.role === 'admin' ? '/admin/dashboard' : '/dashboard'
+            window.location.href = targetPath
+            return
+          }
+        }
+      }
+
       setIsLoadingUserData(true)
       setFlowMode('login')
     } catch (err: any) {
