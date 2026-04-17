@@ -129,17 +129,17 @@ export default function Login() {
       if (!customerData) {
         toast({
           title: 'Aviso',
-          description:
-            'E-mail não identificado em nossa base de parceiros. Por favor, crie uma nova conta.',
+          description: 'E-mail ou Senha não cadastrados.',
           variant: 'destructive',
         })
+        setError('E-mail ou Senha não cadastrados.')
         setFlowMode('login')
         captchaRefL.current?.resetCaptcha()
         setCaptchaL(null)
         return
       }
 
-      if (customerData.is_imported && customerData.has_migrated === false) {
+      if (customerData.is_imported === true || customerData.has_migrated === false) {
         setLegacyData(customerData)
         setFlowMode('migrate')
         return
@@ -150,8 +150,12 @@ export default function Login() {
       setIsLoadingUserData(true)
       setFlowMode('login')
     } catch (err: any) {
-      setError('Email ou senha inválidos.')
-      toast({ title: 'Erro', description: 'Email ou senha inválidos.', variant: 'destructive' })
+      setError('E-mail ou Senha não cadastrados.')
+      toast({
+        title: 'Erro',
+        description: 'E-mail ou Senha não cadastrados.',
+        variant: 'destructive',
+      })
       captchaRefL.current?.resetCaptcha()
       setCaptchaL(null)
       setLoading(false)

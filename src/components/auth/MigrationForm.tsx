@@ -55,11 +55,11 @@ export function MigrationForm({
         name: initialData.full_name || '',
         phone: initialData.phone || '',
         cpf: initialData.cpf || '',
-        zip: b.zip_code || '',
-        st: b.street || '',
-        neigh: b.neighborhood || '',
-        city: b.city || '',
-        state: b.state || '',
+        zip: b.zip_code ?? '',
+        st: b.street ?? '',
+        neigh: b.neighborhood ?? '',
+        city: b.city ?? '',
+        state: b.state ?? '',
       })
     }
   }, [initialData])
@@ -109,7 +109,7 @@ export function MigrationForm({
           is_imported: false,
           has_migrated: true,
         }
-        await supabase.from('customers').update(payload).eq('user_id', cu.user.id)
+        await supabase.from('customers').update(payload).eq('id', initialData.id)
       }
 
       toast({ title: 'Conta ativada!', description: 'Aproveite nosso novo portal.' })
@@ -179,7 +179,7 @@ export function MigrationForm({
           />
         </div>
         <div>
-          <Label>CPF/CNPJ</Label>
+          <Label>CPF/CNPJ (Opcional)</Label>
           <Field icon={FileText} value={f.cpf} onChange={hndl('cpf')} disabled={loading} />
         </div>
       </div>
