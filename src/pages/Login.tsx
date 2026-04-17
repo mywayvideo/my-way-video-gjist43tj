@@ -280,7 +280,7 @@ export default function Login() {
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-500">
           <Loader2 className="h-12 w-12 animate-spin text-orange-500 mb-6" />
           <h2 className="text-2xl font-bold text-white mb-2 text-center">
-            Sincronizando sua conta... Por favor, aguarde.
+            Finalizando sincronização segura... Quase lá!
           </h2>
         </div>
       )}

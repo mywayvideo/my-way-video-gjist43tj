@@ -112,12 +112,22 @@ export function MigrationForm({
       }
 
       if (finalUserId) {
-        const { error: rpcError } = await supabase.rpc('complete_user_migration', {
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+
+        let rpcRes = await supabase.rpc('complete_user_migration', {
           cust_id: initialData.id,
           new_uid: finalUserId,
         })
 
-        if (rpcError) throw new Error('Falha ao vincular usuário.')
+        if (rpcRes.error && rpcRes.error.code === '23503') {
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+          rpcRes = await supabase.rpc('complete_user_migration', {
+            cust_id: initialData.id,
+            new_uid: finalUserId,
+          })
+        }
+
+        if (rpcRes.error) throw new Error('Falha ao vincular usuário.')
 
         const payload = {
           full_name: f.name,
