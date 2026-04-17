@@ -63,10 +63,12 @@ export default function Login() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search)
     if (searchParams.get('activated') === 'true') {
-      window.history.replaceState({}, '', '/login')
-      toast({
-        title: 'Sucesso',
-        description: 'Sua conta está pronta! Entre com seu e-mail e a nova senha.',
+      supabase.auth.signOut().then(() => {
+        window.history.replaceState({}, '', '/login')
+        toast({
+          title: 'Sucesso',
+          description: 'Sua conta está pronta! Entre com seu e-mail e a nova senha.',
+        })
       })
     }
   }, [location.search, toast])
@@ -92,7 +94,7 @@ export default function Login() {
             const legacyUser =
               legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
 
-            if (legacyUser && legacyUser.found) {
+            if (legacyUser && legacyUser.found && !legacyUser.has_migrated) {
               setLegacyData(legacyUser)
               setEmail(emailToCheck)
               setFlowMode('migrate')
@@ -186,7 +188,7 @@ export default function Login() {
             } as any)) as any
             const legacyUser =
               legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
-            if (legacyUser && legacyUser.found) {
+            if (legacyUser && legacyUser.found && !legacyUser.has_migrated) {
               setLegacyData(legacyUser)
               setFlowMode('migrate')
               setLoading(false)
@@ -213,7 +215,7 @@ export default function Login() {
         const legacyUser =
           legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
 
-        if (legacyUser && legacyUser.found) {
+        if (legacyUser && legacyUser.found && !legacyUser.has_migrated) {
           setLegacyData(legacyUser)
           setFlowMode('migrate')
           setLoading(false)

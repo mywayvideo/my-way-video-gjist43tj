@@ -92,27 +92,34 @@ export function MigrationForm({
     try {
       await supabase.auth.signOut().catch(() => {})
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: f.pwd,
         options: { data: { name: f.name } },
       })
 
       if (signUpError && !signUpError.message.toLowerCase().includes('already')) throw signUpError
+
+      let finalUserId = signUpData?.user?.id
+
       if (signUpError) {
-        const { error: signInErr } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
           email,
           password: f.pwd,
         })
         if (signInErr) throw signInErr
+        finalUserId = signInData?.user?.id
       }
 
-      await new Promise((r) => setTimeout(r, 1500))
-      const { data: cu } = await supabase.auth.getUser()
+      if (finalUserId) {
+        const { error: rpcError } = await supabase.rpc('complete_user_migration', {
+          cust_id: initialData.id,
+          new_uid: finalUserId,
+        })
 
-      if (cu?.user) {
+        if (rpcError) throw new Error('Falha ao vincular usuário.')
+
         const payload = {
-          user_id: cu.user.id,
           full_name: f.name,
           phone: f.phone,
           cpf: f.cpf,
@@ -124,21 +131,19 @@ export function MigrationForm({
             city: f.city,
             state: f.state,
           },
-          is_imported: false,
-          has_migrated: true,
         }
         const { error: updateError } = await supabase
           .from('customers')
           .update(payload)
           .eq('id', initialData.id)
-        if (updateError) throw updateError
+
+        if (updateError) console.error('Erro ao atualizar dados extras:', updateError)
       }
 
       setActivationStatus('success')
 
       setTimeout(() => {
-        const targetPath = initialData?.role === 'admin' ? '/admin/dashboard' : '/dashboard'
-        window.location.href = targetPath
+        window.location.href = '/login?activated=true'
       }, 3000)
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
