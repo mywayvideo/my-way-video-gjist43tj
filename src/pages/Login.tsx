@@ -165,20 +165,6 @@ export default function Login() {
       const res = await signIn(normalizedEmail, password)
 
       if (res?.error) {
-        const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
-          email_input: normalizedEmail,
-        } as any)) as any
-
-        const legacyUser =
-          legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
-
-        if (legacyUser && legacyUser.found) {
-          setLegacyData(legacyUser)
-          setFlowMode('migrate')
-          setLoading(false)
-          return
-        }
-
         throw new Error('E-mail ou Senha não cadastrados.')
       }
 
@@ -217,6 +203,26 @@ export default function Login() {
       setIsLoadingUserData(true)
       setFlowMode('login')
     } catch (err: any) {
+      const normalizedEmail = email.toLowerCase().trim()
+
+      try {
+        const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
+          email_input: normalizedEmail,
+        } as any)) as any
+
+        const legacyUser =
+          legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
+
+        if (legacyUser && legacyUser.found) {
+          setLegacyData(legacyUser)
+          setFlowMode('migrate')
+          setLoading(false)
+          return
+        }
+      } catch (rpcErr) {
+        console.error('Error checking legacy user:', rpcErr)
+      }
+
       setError('E-mail ou Senha não cadastrados.')
       toast({
         title: 'Erro',
