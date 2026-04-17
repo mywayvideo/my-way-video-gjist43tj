@@ -61,6 +61,17 @@ export default function Login() {
   const { toast } = useToast()
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.get('activated') === 'true') {
+      window.history.replaceState({}, '', '/login')
+      toast({
+        title: 'Sucesso',
+        description: 'Sua conta está pronta! Entre com seu e-mail e a nova senha.',
+      })
+    }
+  }, [location.search, toast])
+
+  useEffect(() => {
     const handleSession = async (session: any) => {
       if (flowMode === 'migrate' || flowMode === 'processing' || isMigrating) return
 
