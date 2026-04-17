@@ -157,28 +157,31 @@ export default function Login() {
     if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
     setFlowMode('loading')
     setError(null)
+    setLoading(true)
 
     try {
       const normalizedEmail = email.toLowerCase().trim()
 
-      const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
-        email_input: normalizedEmail,
-      } as any)) as any
-
-      const legacyUser =
-        legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
-
-      if (legacyUser && legacyUser.found) {
-        setLegacyData(legacyUser)
-        setFlowMode('migrate')
-        return
-      }
-
-      setLoading(true)
       const res = await signIn(normalizedEmail, password)
+
       if (res?.error) {
+        const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
+          email_input: normalizedEmail,
+        } as any)) as any
+
+        const legacyUser =
+          legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
+
+        if (legacyUser && legacyUser.found) {
+          setLegacyData(legacyUser)
+          setFlowMode('migrate')
+          setLoading(false)
+          return
+        }
+
         throw new Error('E-mail ou Senha não cadastrados.')
       }
+
       setIsLoadingUserData(true)
       setFlowMode('login')
     } catch (err: any) {

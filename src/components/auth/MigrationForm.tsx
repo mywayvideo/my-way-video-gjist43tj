@@ -157,8 +157,7 @@ export function MigrationForm({
             Conta Ativada com Sucesso!
           </h2>
           <p className="text-zinc-400 text-center max-w-md px-4">
-            Sua nova senha foi cadastrada. Você será redirecionado para a tela de login para acessar
-            o painel com suas novas credenciais.
+            Conta ativada! Redirecionando para o login para você entrar com sua nova senha.
           </p>
         </div>
       )}
