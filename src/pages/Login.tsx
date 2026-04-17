@@ -214,6 +214,25 @@ export default function Login() {
         } = await supabase.auth.getSession()
 
         if (session) {
+          const { data: legacyCheckList } = await supabase
+            .from('customers')
+            .select('id, has_migrated')
+            .eq('email', normalizedEmail)
+            .limit(1)
+
+          const legacyCheck = legacyCheckList?.[0]
+
+          if (legacyCheck && legacyCheck.has_migrated === false) {
+            await supabase
+              .from('customers')
+              .update({
+                user_id: session.user.id,
+                has_migrated: true,
+                is_imported: false,
+              })
+              .eq('id', legacyCheck.id)
+          }
+
           const { data: customer } = await supabase
             .from('customers')
             .select('has_migrated, role')
@@ -221,23 +240,9 @@ export default function Login() {
             .maybeSingle()
 
           if (customer) {
-            if (customer.has_migrated === false) {
-              const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
-                email_input: normalizedEmail,
-              })) as any
-              const legacyUser =
-                legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
-              if (legacyUser && legacyUser.found && !legacyUser.has_migrated) {
-                setLegacyData(legacyUser)
-                setFlowMode('migrate')
-                setLoading(false)
-                return
-              }
-            } else {
-              const targetPath = customer.role === 'admin' ? '/admin/dashboard' : '/dashboard'
-              window.location.href = targetPath
-              return
-            }
+            const targetPath = customer.role === 'admin' ? '/admin/dashboard' : '/dashboard'
+            window.location.href = targetPath
+            return
           }
         }
 

@@ -54,7 +54,7 @@ export function MigrationForm({
     try {
       await supabase.auth.signOut().catch(() => {})
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password: f.pwd,
         options: { data: { name: initialData?.full_name || '' } },
@@ -62,30 +62,10 @@ export function MigrationForm({
 
       if (signUpError && !signUpError.message.toLowerCase().includes('already')) throw signUpError
 
-      let finalUserId = signUpData?.user?.id
-
-      if (signUpError) {
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-          email,
-          password: f.pwd,
-        })
-        if (signInErr) throw signInErr
-        finalUserId = signInData?.user?.id
-      }
-
-      if (finalUserId) {
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        const rpcRes = await supabase.rpc('complete_user_migration', {
-          cust_id: initialData.id,
-          new_uid: finalUserId,
-        })
-
-        if (rpcRes.error) throw new Error('Falha ao vincular usuário.')
-      }
-
       setActivationStatus('success')
-      window.location.href = '/login?activated=true'
+      setTimeout(() => {
+        window.location.href = '/login?activated=true'
+      }, 2000)
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
       setActivationStatus('error')
@@ -101,19 +81,15 @@ export function MigrationForm({
       {activationStatus === 'success' && (
         <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm animate-in fade-in duration-500">
           <CheckCircle className="h-16 w-16 text-green-500 mb-6" />
-          <h2 className="text-2xl font-bold text-white mb-2 text-center">
-            Conta Ativada com Sucesso!
+          <h2 className="text-2xl font-bold text-white mb-2 text-center px-4">
+            Senha cadastrada com sucesso! Redirecionando para o login...
           </h2>
-          <p className="text-zinc-400 text-center max-w-md px-4">
-            Conta ativada! Redirecionando para o seu painel...
-          </p>
         </div>
       )}
 
       <form onSubmit={submit} className="space-y-4 animate-fade-in">
         <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-orange-200 text-sm leading-relaxed">
-          Olá <strong>{nome}</strong>, detectamos que você é um cliente My Way. Para sua segurança,
-          crie uma nova senha para acessar nosso novo painel.
+          Olá <strong>{nome}</strong>, crie sua nova senha para acessar o novo painel My Way.
         </div>
         {err && <div className="p-2 bg-red-500/10 text-red-500 text-sm rounded">{err}</div>}
 
