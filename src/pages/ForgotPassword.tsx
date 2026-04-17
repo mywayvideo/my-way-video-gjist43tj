@@ -27,7 +27,7 @@ export default function ForgotPassword() {
 
       toast({
         title: 'Sucesso',
-        description: 'Se o e-mail estiver cadastrado, você receberá um link em instantes.',
+        description: 'Se o e-mail estiver cadastrado, você receberá as instruções em instantes.',
       })
       setEmail('')
     } catch (err: any) {
