@@ -28,4 +28,4 @@ BEGIN
         updated_at = NOW()
     WHERE id = cust_id;
 END;
-$;
+$$;
