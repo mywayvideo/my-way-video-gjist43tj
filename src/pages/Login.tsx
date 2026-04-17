@@ -67,7 +67,7 @@ export default function Login() {
         window.history.replaceState({}, '', '/login')
         toast({
           title: 'Sucesso',
-          description: 'Sua conta está pronta! Entre com seu e-mail e a nova senha.',
+          description: 'Conta pronta! Entre com sua nova senha.',
         })
       })
     }
