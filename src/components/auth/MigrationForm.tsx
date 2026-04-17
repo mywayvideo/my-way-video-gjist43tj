@@ -1,20 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/hooks/use-toast'
-import {
-  Lock,
-  Eye,
-  EyeOff,
-  Loader2,
-  User,
-  Phone,
-  FileText,
-  MapPin,
-  CheckCircle,
-} from 'lucide-react'
+import { Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 
 const Field = ({ id, icon: Icon, right, disabled, ...p }: any) => (
   <div className="relative">
@@ -48,36 +37,9 @@ export function MigrationForm({
   const [f, setF] = useState({
     pwd: '',
     conf: '',
-    name: '',
-    phone: '',
-    cpf: '',
-    zip: '',
-    st: '',
-    neigh: '',
-    city: '',
-    state: '',
   })
   const [showPwd, setShowPwd] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const { toast } = useToast()
-
-  useEffect(() => {
-    if (initialData) {
-      const b = initialData.billing_address || {}
-      setF({
-        pwd: '',
-        conf: '',
-        name: initialData.full_name || '',
-        phone: initialData.phone || '',
-        cpf: initialData.cpf || '',
-        zip: b.zip_code ?? '',
-        st: b.street ?? '',
-        neigh: b.neighborhood ?? '',
-        city: b.city ?? '',
-        state: b.state ?? '',
-      })
-    }
-  }, [initialData])
 
   const hndl = (k: string) => (e: any) => setF((p) => ({ ...p, [k]: e.target.value }))
 
@@ -95,7 +57,7 @@ export function MigrationForm({
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: f.pwd,
-        options: { data: { name: f.name } },
+        options: { data: { name: initialData?.full_name || '' } },
       })
 
       if (signUpError && !signUpError.message.toLowerCase().includes('already')) throw signUpError
@@ -120,30 +82,9 @@ export function MigrationForm({
         })
 
         if (rpcRes.error) throw new Error('Falha ao vincular usuário.')
-
-        const payload = {
-          full_name: f.name,
-          phone: f.phone,
-          cpf: f.cpf,
-          billing_address: {
-            ...(initialData?.billing_address || {}),
-            zip_code: f.zip,
-            street: f.st,
-            neighborhood: f.neigh,
-            city: f.city,
-            state: f.state,
-          },
-        }
-        const { error: updateError } = await supabase
-          .from('customers')
-          .update(payload)
-          .eq('id', initialData.id)
-
-        if (updateError) console.error('Erro ao atualizar dados extras:', updateError)
       }
 
       setActivationStatus('success')
-
       window.location.href = '/login?activated=true'
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
@@ -153,6 +94,7 @@ export function MigrationForm({
   }
 
   const isProcessing = activationStatus === 'processing' || activationStatus === 'success'
+  const nome = initialData?.full_name?.split(' ')[0] || 'Cliente'
 
   return (
     <>
@@ -169,15 +111,13 @@ export function MigrationForm({
       )}
 
       <form onSubmit={submit} className="space-y-4 animate-fade-in">
-        <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-xl text-orange-200 text-sm">
-          Bem-vindo à nova MY WAY VIDEO! Você já é nosso parceiro e agora elevamos o nível: um
-          portal inteligente com busca por IA, cotações automáticas e suporte especializado. Por
-          segurança, defina sua nova senha e valide seus dados para acessar as novas ferramentas.
+        <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-orange-200 text-sm leading-relaxed">
+          Olá <strong>{nome}</strong>, detectamos que você é um cliente My Way. Para sua segurança,
+          crie uma nova senha para acessar nosso novo painel.
         </div>
         {err && <div className="p-2 bg-red-500/10 text-red-500 text-sm rounded">{err}</div>}
 
-        <h3 className="text-sm text-zinc-400 border-b border-zinc-800 pb-1 mt-2">Segurança</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 mt-4">
           <div>
             <Label>Nova Senha *</Label>
             <Field
@@ -191,7 +131,7 @@ export function MigrationForm({
                 <button
                   type="button"
                   onClick={() => setShowPwd(!showPwd)}
-                  className="text-zinc-500"
+                  className="text-zinc-500 hover:text-white"
                 >
                   {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -211,72 +151,14 @@ export function MigrationForm({
           </div>
         </div>
 
-        <h3 className="text-sm text-zinc-400 border-b border-zinc-800 pb-1 mt-2">Pessoais</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <Label>Nome Completo *</Label>
-            <Field
-              icon={User}
-              required
-              value={f.name}
-              onChange={hndl('name')}
-              disabled={isProcessing}
-            />
-          </div>
-          <div>
-            <Label>Telefone *</Label>
-            <Field
-              icon={Phone}
-              required
-              value={f.phone}
-              onChange={hndl('phone')}
-              disabled={isProcessing}
-            />
-          </div>
-          <div>
-            <Label>CPF/CNPJ (Opcional)</Label>
-            <Field icon={FileText} value={f.cpf} onChange={hndl('cpf')} disabled={isProcessing} />
-          </div>
-        </div>
-
-        <h3 className="text-sm text-zinc-400 border-b border-zinc-800 pb-1 mt-2">Endereço</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>CEP *</Label>
-            <Field
-              icon={MapPin}
-              required
-              value={f.zip}
-              onChange={hndl('zip')}
-              disabled={isProcessing}
-            />
-          </div>
-          <div className="col-span-2">
-            <Label>Logradouro / Rua *</Label>
-            <Field required value={f.st} onChange={hndl('st')} disabled={isProcessing} />
-          </div>
-          <div>
-            <Label>Bairro *</Label>
-            <Field required value={f.neigh} onChange={hndl('neigh')} disabled={isProcessing} />
-          </div>
-          <div>
-            <Label>Cidade *</Label>
-            <Field required value={f.city} onChange={hndl('city')} disabled={isProcessing} />
-          </div>
-          <div className="col-span-2">
-            <Label>Estado *</Label>
-            <Field required value={f.state} onChange={hndl('state')} disabled={isProcessing} />
-          </div>
-        </div>
-
-        <div className="pt-2 space-y-2">
+        <div className="pt-4 space-y-2">
           <Button
             type="submit"
             disabled={isProcessing}
             className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
           >
             {isProcessing ? (
-              <div className="flex">
+              <div className="flex items-center justify-center">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Sincronizando...
               </div>
