@@ -45,7 +45,7 @@ export function MigrationForm({
     state: '',
   })
   const [showPwd, setShowPwd] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const { toast } = useToast()
 
@@ -73,7 +73,7 @@ export function MigrationForm({
     e.preventDefault()
     if (f.pwd.length < 8) return setErr('A senha deve ter no mínimo 8 caracteres.')
     if (f.pwd !== f.conf) return setErr('As senhas não coincidem.')
-    setLoading(true)
+    setIsMigrating(true)
     if (onProcessing) onProcessing()
     setErr(null)
 
@@ -131,7 +131,7 @@ export function MigrationForm({
       window.location.href = targetPath
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
-      setLoading(false)
+      setIsMigrating(false)
       if (onError) onError()
     }
   }
@@ -155,7 +155,7 @@ export function MigrationForm({
             required
             value={f.pwd}
             onChange={hndl('pwd')}
-            disabled={loading}
+            disabled={isMigrating}
             right={
               <button type="button" onClick={() => setShowPwd(!showPwd)} className="text-zinc-500">
                 {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -171,7 +171,7 @@ export function MigrationForm({
             required
             value={f.conf}
             onChange={hndl('conf')}
-            disabled={loading}
+            disabled={isMigrating}
           />
         </div>
       </div>
@@ -180,7 +180,13 @@ export function MigrationForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
           <Label>Nome Completo *</Label>
-          <Field icon={User} required value={f.name} onChange={hndl('name')} disabled={loading} />
+          <Field
+            icon={User}
+            required
+            value={f.name}
+            onChange={hndl('name')}
+            disabled={isMigrating}
+          />
         </div>
         <div>
           <Label>Telefone *</Label>
@@ -189,12 +195,12 @@ export function MigrationForm({
             required
             value={f.phone}
             onChange={hndl('phone')}
-            disabled={loading}
+            disabled={isMigrating}
           />
         </div>
         <div>
           <Label>CPF/CNPJ (Opcional)</Label>
-          <Field icon={FileText} value={f.cpf} onChange={hndl('cpf')} disabled={loading} />
+          <Field icon={FileText} value={f.cpf} onChange={hndl('cpf')} disabled={isMigrating} />
         </div>
       </div>
 
@@ -202,33 +208,39 @@ export function MigrationForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>CEP *</Label>
-          <Field icon={MapPin} required value={f.zip} onChange={hndl('zip')} disabled={loading} />
+          <Field
+            icon={MapPin}
+            required
+            value={f.zip}
+            onChange={hndl('zip')}
+            disabled={isMigrating}
+          />
         </div>
         <div className="col-span-2">
           <Label>Logradouro / Rua *</Label>
-          <Field required value={f.st} onChange={hndl('st')} disabled={loading} />
+          <Field required value={f.st} onChange={hndl('st')} disabled={isMigrating} />
         </div>
         <div>
           <Label>Bairro *</Label>
-          <Field required value={f.neigh} onChange={hndl('neigh')} disabled={loading} />
+          <Field required value={f.neigh} onChange={hndl('neigh')} disabled={isMigrating} />
         </div>
         <div>
           <Label>Cidade *</Label>
-          <Field required value={f.city} onChange={hndl('city')} disabled={loading} />
+          <Field required value={f.city} onChange={hndl('city')} disabled={isMigrating} />
         </div>
         <div className="col-span-2">
           <Label>Estado *</Label>
-          <Field required value={f.state} onChange={hndl('state')} disabled={loading} />
+          <Field required value={f.state} onChange={hndl('state')} disabled={isMigrating} />
         </div>
       </div>
 
       <div className="pt-2 space-y-2">
         <Button
           type="submit"
-          disabled={loading}
+          disabled={isMigrating}
           className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
         >
-          {loading ? (
+          {isMigrating ? (
             <div className="flex">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Sincronizando...
@@ -241,7 +253,7 @@ export function MigrationForm({
           type="button"
           variant="ghost"
           onClick={onCancel}
-          disabled={loading}
+          disabled={isMigrating}
           className="w-full text-zinc-400 hover:text-white"
         >
           Voltar para Login

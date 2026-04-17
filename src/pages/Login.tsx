@@ -60,12 +60,8 @@ export default function Login() {
   const { toast } = useToast()
 
   useEffect(() => {
-    const checkLingeringSession = async () => {
+    const handleSession = async (session: any) => {
       if (flowMode === 'migrate' || flowMode === 'processing') return
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
 
       if (session) {
         const { data: customer } = await supabase
@@ -101,7 +97,21 @@ export default function Login() {
         }
       }
     }
-    checkLingeringSession()
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (flowMode === 'migrate' || flowMode === 'processing') return
+      handleSession(session)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [nav, flowMode])
 
   useEffect(() => {
@@ -214,10 +224,9 @@ export default function Login() {
       {flowMode === 'processing' && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-500">
           <Loader2 className="h-12 w-12 animate-spin text-orange-500 mb-6" />
-          <h2 className="text-2xl font-bold text-white mb-2">Finalizando migração...</h2>
-          <p className="text-zinc-400">
-            Sincronizando dados e preparando seu novo ambiente de trabalho.
-          </p>
+          <h2 className="text-2xl font-bold text-white mb-2 text-center">
+            Sincronizando sua conta... Por favor, aguarde.
+          </h2>
         </div>
       )}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] pointer-events-none" />
