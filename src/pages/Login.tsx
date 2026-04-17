@@ -120,33 +120,24 @@ export default function Login() {
     try {
       const normalizedEmail = email.toLowerCase().trim()
 
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select('*')
-        .ilike('email', normalizedEmail)
-        .maybeSingle()
+      const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
+        email_input: normalizedEmail,
+      } as any)) as any
 
-      if (!customerData) {
-        toast({
-          title: 'Aviso',
-          description: 'E-mail ou Senha não cadastrados.',
-          variant: 'destructive',
-        })
-        setError('E-mail ou Senha não cadastrados.')
-        setFlowMode('login')
-        captchaRefL.current?.resetCaptcha()
-        setCaptchaL(null)
-        return
-      }
+      const legacyUser =
+        legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
 
-      if (customerData.is_imported === true || customerData.has_migrated === false) {
-        setLegacyData(customerData)
+      if (legacyUser && legacyUser.found) {
+        setLegacyData(legacyUser)
         setFlowMode('migrate')
         return
       }
 
       setLoading(true)
-      await signIn(normalizedEmail, password)
+      const res = await signIn(normalizedEmail, password)
+      if (res?.error) {
+        throw new Error('E-mail ou Senha não cadastrados.')
+      }
       setIsLoadingUserData(true)
       setFlowMode('login')
     } catch (err: any) {
