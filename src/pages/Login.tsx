@@ -114,39 +114,48 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
-    setLoading(true)
+    setFlowMode('loading')
     setError(null)
 
     try {
       const normalizedEmail = email.toLowerCase().trim()
 
-      const { data: userData, error: userError } = await supabase.rpc('check_legacy_user', {
-        p_email: normalizedEmail,
-      })
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select('*')
+        .ilike('email', normalizedEmail)
+        .maybeSingle()
 
-      if (!userError && userData) {
-        if (userData.exists && userData.is_imported && userData.has_migrated === false) {
-          const { data: customerData } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('email', normalizedEmail)
-            .maybeSingle()
-
-          setLegacyData(customerData || { email: normalizedEmail })
-          setFlowMode('migrate')
-          setLoading(false)
-          return
-        }
+      if (!customerData) {
+        toast({
+          title: 'Aviso',
+          description:
+            'E-mail não identificado em nossa base de parceiros. Por favor, crie uma nova conta.',
+          variant: 'destructive',
+        })
+        setFlowMode('login')
+        captchaRefL.current?.resetCaptcha()
+        setCaptchaL(null)
+        return
       }
 
+      if (customerData.is_imported && customerData.has_migrated === false) {
+        setLegacyData(customerData)
+        setFlowMode('migrate')
+        return
+      }
+
+      setLoading(true)
       await signIn(normalizedEmail, password)
       setIsLoadingUserData(true)
+      setFlowMode('login')
     } catch (err: any) {
       setError('Email ou senha inválidos.')
       toast({ title: 'Erro', description: 'Email ou senha inválidos.', variant: 'destructive' })
       captchaRefL.current?.resetCaptcha()
       setCaptchaL(null)
       setLoading(false)
+      setFlowMode('login')
     }
   }
 
@@ -198,7 +207,12 @@ export default function Login() {
           </Link>
         </div>
         <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 relative">
-          {flowMode === 'migrate' ? (
+          {flowMode === 'loading' ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-500 mb-4" />
+              <p className="text-zinc-400">Verificando dados...</p>
+            </div>
+          ) : flowMode === 'migrate' ? (
             <MigrationForm
               email={email.toLowerCase().trim()}
               initialData={legacyData}

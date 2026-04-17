@@ -113,13 +113,9 @@ export function MigrationForm({
       }
 
       toast({ title: 'Conta ativada!', description: 'Aproveite nosso novo portal.' })
-      const { data: roleData } = await supabase
-        .from('customers')
-        .select('role')
-        .eq('email', email)
-        .maybeSingle()
 
-      window.location.href = roleData?.role === 'admin' ? '/admin' : '/dashboard'
+      const role = initialData?.role || 'customer'
+      window.location.href = role === 'admin' ? '/admin' : '/dashboard'
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
       setLoading(false)
