@@ -24,11 +24,13 @@ export function MigrationForm({
   initialData,
   onCancel,
   onProcessing,
+  onError,
 }: {
   email: string
   initialData: any
   onCancel: () => void
   onProcessing?: () => void
+  onError?: () => void
 }) {
   const [f, setF] = useState({
     pwd: '',
@@ -93,7 +95,7 @@ export function MigrationForm({
         if (signInErr) throw signInErr
       }
 
-      await new Promise((r) => setTimeout(r, 800))
+      await new Promise((r) => setTimeout(r, 1500))
       const { data: cu } = await supabase.auth.getUser()
 
       if (cu?.user) {
@@ -113,17 +115,24 @@ export function MigrationForm({
           is_imported: false,
           has_migrated: true,
         }
-        await supabase.from('customers').update(payload).eq('id', initialData.id)
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update(payload)
+          .eq('id', initialData.id)
+        if (updateError) throw updateError
       }
 
-      toast({ title: 'Conta ativada!', description: 'Aproveite nosso novo portal.' })
+      toast({ title: 'Conta ativada!', description: 'Sincronizando sessão...' })
 
       const role = initialData?.role || 'customer'
-      const targetPath = role === 'admin' ? '/admin' : '/dashboard'
+      const targetPath = role === 'admin' ? '/admin/dashboard' : '/dashboard'
+
+      // FINAL FIX: Hard redirect to force the browser to recognize the new session
       window.location.href = targetPath
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
       setLoading(false)
+      if (onError) onError()
     }
   }
 
