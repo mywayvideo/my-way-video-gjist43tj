@@ -35,6 +35,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
 
   const [flowMode, setFlowMode] = useState<'login' | 'migrate' | 'loading' | 'processing'>('login')
+  const [isMigrating, setIsMigrating] = useState(false)
   const [legacyData, setLegacyData] = useState<any>(null)
 
   const [email, setEmail] = useState('')
@@ -61,7 +62,7 @@ export default function Login() {
 
   useEffect(() => {
     const handleSession = async (session: any) => {
-      if (flowMode === 'migrate' || flowMode === 'processing') return
+      if (flowMode === 'migrate' || flowMode === 'processing' || isMigrating) return
 
       if (session) {
         const { data: customer } = await supabase
@@ -105,18 +106,18 @@ export default function Login() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (flowMode === 'migrate' || flowMode === 'processing') return
+      if (flowMode === 'migrate' || flowMode === 'processing' || isMigrating) return
       handleSession(session)
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [nav, flowMode])
+  }, [nav, flowMode, isMigrating])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
-    if (isLoadingUserData && flowMode !== 'migrate' && flowMode !== 'processing') {
+    if (isLoadingUserData && flowMode !== 'migrate' && flowMode !== 'processing' && !isMigrating) {
       if (userRole && userMetadata) {
         setIsLoadingUserData(false)
         setLoading(false)
@@ -221,7 +222,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-black flex flex-col justify-center items-center p-4 relative overflow-hidden pt-12 pb-12">
-      {flowMode === 'processing' && (
+      {(flowMode === 'processing' || isMigrating) && (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-500">
           <Loader2 className="h-12 w-12 animate-spin text-orange-500 mb-6" />
           <h2 className="text-2xl font-bold text-white mb-2 text-center">
@@ -231,7 +232,7 @@ export default function Login() {
       )}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div
-        className={`w-full z-10 animate-fade-in-up ${flowMode === 'migrate' || flowMode === 'processing' ? 'max-w-[600px]' : 'max-w-[400px]'}`}
+        className={`w-full z-10 animate-fade-in-up ${flowMode === 'migrate' || flowMode === 'processing' || isMigrating ? 'max-w-[600px]' : 'max-w-[400px]'}`}
       >
         <div className="flex justify-center mb-6">
           <Link to="/" className="hover:scale-105 transition-transform">
@@ -251,10 +252,17 @@ export default function Login() {
               onCancel={async () => {
                 await supabase.auth.signOut()
                 setFlowMode('login')
+                setIsMigrating(false)
                 setLegacyData(null)
               }}
-              onProcessing={() => setFlowMode('processing')}
-              onError={() => setFlowMode('migrate')}
+              onProcessing={() => {
+                setFlowMode('processing')
+                setIsMigrating(true)
+              }}
+              onError={() => {
+                setFlowMode('migrate')
+                setIsMigrating(false)
+              }}
             />
           ) : (
             <Tabs
