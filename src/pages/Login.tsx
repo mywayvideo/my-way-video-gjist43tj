@@ -67,11 +67,27 @@ export default function Login() {
       if (session && flowMode !== 'migrate') {
         const { data: customer } = await supabase
           .from('customers')
-          .select('has_migrated, role')
+          .select('has_migrated, role, email')
           .eq('user_id', session.user.id)
           .maybeSingle()
 
         if (customer && customer.has_migrated === false) {
+          const emailToCheck = customer.email || session.user.email
+          if (emailToCheck) {
+            const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
+              email_input: emailToCheck.toLowerCase().trim(),
+            } as any)) as any
+
+            const legacyUser =
+              legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
+
+            if (legacyUser && legacyUser.found) {
+              setLegacyData(legacyUser)
+              setEmail(emailToCheck)
+              setFlowMode('migrate')
+              return
+            }
+          }
           await supabase.auth.signOut()
         } else if (customer && customer.has_migrated !== false) {
           if (customer.role === 'admin') {
@@ -211,7 +227,8 @@ export default function Login() {
             <MigrationForm
               email={email.toLowerCase().trim()}
               initialData={legacyData}
-              onCancel={() => {
+              onCancel={async () => {
+                await supabase.auth.signOut()
                 setFlowMode('login')
                 setLegacyData(null)
               }}
