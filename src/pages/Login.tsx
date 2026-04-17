@@ -161,15 +161,25 @@ export default function Login() {
     setError(null)
     setLoading(true)
 
+    const normalizedEmail = email.toLowerCase().trim()
+    let loginSuccess = false
+
     try {
-      const normalizedEmail = email.toLowerCase().trim()
+      const res = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      })
 
-      const res = await signIn(normalizedEmail, password)
+      if (res.error) {
+        throw res.error
+      }
 
-      if (res?.error) {
+      loginSuccess = true
+    } catch (err: any) {
+      try {
         const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
           email_input: normalizedEmail,
-        } as any)) as any
+        })) as any
 
         const legacyUser =
           legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
@@ -180,45 +190,10 @@ export default function Login() {
           setLoading(false)
           return
         }
-
-        throw new Error('E-mail ou Senha não cadastrados.')
+      } catch (rpcErr) {
+        console.error('Erro ao verificar usuario legado:', rpcErr)
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (session) {
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('has_migrated, role')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-
-        if (customer) {
-          if (customer.has_migrated === false) {
-            const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
-              email_input: normalizedEmail,
-            } as any)) as any
-            const legacyUser =
-              legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
-            if (legacyUser && legacyUser.found && !legacyUser.has_migrated) {
-              setLegacyData(legacyUser)
-              setFlowMode('migrate')
-              setLoading(false)
-              return
-            }
-          } else {
-            const targetPath = customer.role === 'admin' ? '/admin/dashboard' : '/dashboard'
-            window.location.href = targetPath
-            return
-          }
-        }
-      }
-
-      setIsLoadingUserData(true)
-      setFlowMode('login')
-    } catch (err: any) {
       setError('E-mail ou Senha não cadastrados.')
       toast({
         title: 'Erro',
@@ -229,6 +204,49 @@ export default function Login() {
       setCaptchaL(null)
       setLoading(false)
       setFlowMode('login')
+      return
+    }
+
+    if (loginSuccess) {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session) {
+          const { data: customer } = await supabase
+            .from('customers')
+            .select('has_migrated, role')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
+
+          if (customer) {
+            if (customer.has_migrated === false) {
+              const { data: legacyDataResponse } = (await supabase.rpc('check_legacy_user', {
+                email_input: normalizedEmail,
+              })) as any
+              const legacyUser =
+                legacyDataResponse && legacyDataResponse.length > 0 ? legacyDataResponse[0] : null
+              if (legacyUser && legacyUser.found && !legacyUser.has_migrated) {
+                setLegacyData(legacyUser)
+                setFlowMode('migrate')
+                setLoading(false)
+                return
+              }
+            } else {
+              const targetPath = customer.role === 'admin' ? '/admin/dashboard' : '/dashboard'
+              window.location.href = targetPath
+              return
+            }
+          }
+        }
+
+        setIsLoadingUserData(true)
+        setFlowMode('login')
+      } catch (err: any) {
+        setLoading(false)
+        setFlowMode('login')
+      }
     }
   }
 

@@ -144,9 +144,7 @@ export function MigrationForm({
 
       setActivationStatus('success')
 
-      setTimeout(() => {
-        window.location.href = '/login?activated=true'
-      }, 1000)
+      window.location.href = '/login?activated=true'
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
       setActivationStatus('error')
