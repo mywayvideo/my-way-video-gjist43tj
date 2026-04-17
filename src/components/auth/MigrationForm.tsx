@@ -54,7 +54,7 @@ export function MigrationForm({
     try {
       await supabase.auth.signOut().catch(() => {})
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: f.pwd,
         options: { data: { name: initialData?.full_name || '' } },
@@ -62,10 +62,24 @@ export function MigrationForm({
 
       if (signUpError && !signUpError.message.toLowerCase().includes('already')) throw signUpError
 
+      const userId = signUpData?.user?.id
+      if (userId && initialData?.id) {
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+
+        const { error: rpcError } = await supabase.rpc('complete_user_migration', {
+          cust_id: initialData.id,
+          new_uid: userId,
+        })
+
+        if (rpcError) {
+          alert(
+            'Aviso: Erro ao sincronizar o perfil, mas sua senha foi criada. Você será redirecionado para o login.',
+          )
+        }
+      }
+
       setActivationStatus('success')
-      setTimeout(() => {
-        window.location.href = '/login?activated=true'
-      }, 2000)
+      window.location.href = '/login?activated=true'
     } catch (e: any) {
       setErr(e.message || 'Erro ao ativar.')
       setActivationStatus('error')

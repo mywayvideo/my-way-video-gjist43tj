@@ -65,6 +65,8 @@ export default function Login() {
     if (searchParams.get('activated') === 'true') {
       supabase.auth.signOut().then(() => {
         window.history.replaceState({}, '', '/login')
+        setFlowMode('login')
+        setIsMigrating(false)
         toast({
           title: 'Sucesso',
           description: 'Conta pronta! Entre com sua nova senha.',
