@@ -39,6 +39,6 @@
     "send-email": 5,
     "verify-user-role": 5,
     "generate-related-products": 5,
-    "square-payment": 2
+    "square-payment": 3
   }
 }
