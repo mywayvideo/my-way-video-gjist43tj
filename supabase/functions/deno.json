@@ -38,6 +38,7 @@
     "send-order-email": 4,
     "send-email": 4,
     "verify-user-role": 4,
-    "generate-related-products": 4
+    "generate-related-products": 4,
+    "square-payment": 1
   }
 }
