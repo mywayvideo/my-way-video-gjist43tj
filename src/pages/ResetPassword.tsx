@@ -1,46 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Lock, Loader2 } from 'lucide-react'
 import logoImg from '../assets/mw_logo_horiz_1200x318_fundo_escuro-037e3.png'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (!session) {
-        console.warn('No active session found. The password reset might fail.')
-      }
-    }
-    checkSession()
-  }, [])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password !== confirmPassword) {
+    if (!password || password !== confirmPassword) {
       toast({
         title: 'Erro',
         description: 'As senhas não coincidem.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (password.length < 8) {
-      toast({
-        title: 'Erro',
-        description: 'A senha deve ter no mínimo 8 caracteres.',
         variant: 'destructive',
       })
       return
@@ -56,16 +34,14 @@ export default function ResetPassword() {
 
       toast({
         title: 'Sucesso',
-        description: 'Senha atualizada com sucesso!',
+        description: 'Senha atualizada com sucesso.',
       })
 
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 2000)
+      window.location.href = '/login?activated=true'
     } catch (err: any) {
       toast({
         title: 'Erro',
-        description: 'Erro ao atualizar a senha. O link pode ter expirado.',
+        description: 'Erro ao atualizar senha. ' + err.message,
         variant: 'destructive',
       })
     } finally {
@@ -83,7 +59,7 @@ export default function ResetPassword() {
 
         <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 relative">
           <div className="mb-6">
-            <h1 className="text-xl font-bold text-white mb-2">Redefinir Senha</h1>
+            <h1 className="text-xl font-bold text-white mb-2">Definir Nova Senha</h1>
             <p className="text-sm text-zinc-400">Digite sua nova senha abaixo.</p>
           </div>
 
@@ -93,22 +69,13 @@ export default function ResetPassword() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                 <Input
-                  type={showPwd ? 'text' : 'password'}
-                  placeholder="Mínimo 8 caracteres"
+                  type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  className="bg-zinc-900 border-zinc-800 text-white h-11 rounded-xl text-sm pl-9 pr-9 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-zinc-900 border-zinc-800 text-white h-11 rounded-xl text-sm pl-9 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
-                  disabled={loading}
-                >
-                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
               </div>
             </div>
 
@@ -117,13 +84,12 @@ export default function ResetPassword() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                 <Input
-                  type={showPwd ? 'text' : 'password'}
-                  placeholder="Confirme a senha"
+                  type="password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={loading}
-                  className="bg-zinc-900 border-zinc-800 text-white h-11 rounded-xl text-sm pl-9 pr-9 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-zinc-900 border-zinc-800 text-white h-11 rounded-xl text-sm pl-9 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>

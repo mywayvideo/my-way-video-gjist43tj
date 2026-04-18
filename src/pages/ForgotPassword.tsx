@@ -19,7 +19,20 @@ export default function ForgotPassword() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const emailTrimmed = email.trim()
+
+      const { data: legacyUsers } = await supabase.rpc('check_legacy_user', {
+        email_input: emailTrimmed,
+      })
+
+      if (legacyUsers && legacyUsers.length > 0) {
+        const legacyUser = legacyUsers[0]
+        if (legacyUser.found) {
+          await supabase.rpc('mark_migration_started', { target_email: emailTrimmed })
+        }
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(emailTrimmed, {
         redirectTo: window.location.origin + '/reset-password',
       })
 
@@ -27,7 +40,8 @@ export default function ForgotPassword() {
 
       toast({
         title: 'Sucesso',
-        description: 'Se o e-mail estiver cadastrado, você receberá as instruções em instantes.',
+        description:
+          'Se este e-mail estiver em nossa base, você receberá um link para definir sua nova senha.',
       })
       setEmail('')
     } catch (err: any) {
