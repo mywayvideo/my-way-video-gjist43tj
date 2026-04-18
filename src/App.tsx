@@ -43,6 +43,18 @@ const App = () => {
   const [isCleaningUp, setIsCleaningUp] = useState(false)
 
   useEffect(() => {
+    if (import.meta.env.PROD) {
+      const hostname = window.location.hostname
+      if (
+        hostname.includes('skip.tools') ||
+        hostname.includes('vercel.app') ||
+        hostname.includes('goskip.app')
+      ) {
+        window.location.href =
+          'https://mywayvideo.com' + window.location.pathname + window.location.search
+      }
+    }
+
     const handleLogout = () => {
       setIsCleaningUp(true)
       window.history.pushState({}, '', '/login')

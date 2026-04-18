@@ -58,6 +58,13 @@ export const useAuth = () => {
     }
   }
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    return { error }
+  }
+
   const refreshProfile = async () => {
     // Handled by AuthContext realtime subscription
   }
@@ -70,6 +77,7 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    resetPassword,
     refreshProfile,
     loading: context.isLoading,
   }
