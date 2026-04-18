@@ -273,13 +273,8 @@ function DashboardContent() {
           </TabsContent>
 
           <TabsContent value="carrinho" className="m-0 focus-visible:outline-none">
-            {loading ? (
-              <Skeleton className="h-[400px] w-full" />
-            ) : (
-              <CartTab cart={cart} customerId={user.id} onRefresh={refresh} />
-            )}
+            <CartTab cart={cart} cartLoading={loading} onRefresh={refresh} />
           </TabsContent>
-
           <TabsContent value="historico" className="m-0 focus-visible:outline-none">
             {loading ? (
               <Skeleton className="h-[400px] w-full" />

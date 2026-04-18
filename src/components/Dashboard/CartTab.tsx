@@ -19,14 +19,27 @@ export function CartTab({
 }: {
   cartItems?: any[]
   cartLoading?: boolean
-  cart?: any[]
+  cart?: any[] | any
   onRefresh?: () => void
 }) {
   const navigate = useNavigate()
   const { currentUser: user } = useAuthContext()
 
   const cartContext = useCart() as any
-  const items = propsCartItems || propsCart || cartContext?.cartItems || cartContext?.items || []
+
+  let rawData = propsCartItems || propsCart || cartContext?.cartItems || cartContext?.items
+  let items: any[] = []
+
+  if (Array.isArray(rawData)) {
+    items = rawData
+  } else if (rawData && typeof rawData === 'object') {
+    if (Array.isArray(rawData.items)) {
+      items = rawData.items
+    } else if (Array.isArray(rawData.cartItems)) {
+      items = rawData.cartItems
+    }
+  }
+
   const loading =
     propsCartLoading !== undefined
       ? propsCartLoading
@@ -172,13 +185,13 @@ export function CartTab({
                 <ShoppingCart className="w-[48px] h-[48px]" />
                 <div className="absolute top-1/2 left-[-20%] right-[-20%] h-[3px] bg-muted-foreground -rotate-45" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground">Carrinho Vazio</h3>
+              <h3 className="text-xl font-bold mb-2 text-foreground">Seu carrinho está vazio</h3>
               <p className="text-muted-foreground mb-6 max-w-sm">
                 Adicione produtos ao carrinho para continuar.
               </p>
-              <Button className="w-full sm:w-auto rounded-xl" onClick={() => navigate('/products')}>
-                Explorar Produtos
-              </Button>
+              <Button className="w-full sm:w-auto rounded-xl" onClick={() => navigate('/produtos')}>
+                Ir para Produtos
+              </Button>{' '}
             </div>
           ) : (
             items.map((item: any, index: number) => {
