@@ -66,12 +66,17 @@ export default function Login() {
         setEmail('')
         setPassword('')
         window.localStorage.clear()
-        window.history.replaceState(null, '', '/login')
+        window.sessionStorage.clear()
+
+        setTimeout(() => {
+          window.history.replaceState(null, '', '/login')
+        }, 100)
+
         setFlowMode('login')
         setIsMigrating(false)
         toast({
           title: 'Sucesso',
-          description: 'Conta pronta! Entre com sua nova senha.',
+          description: 'Conta ativada! Por favor, faça login com sua nova senha.',
         })
       })
     }
@@ -408,7 +413,7 @@ export default function Login() {
               )}
 
               <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
                   <div className="space-y-1">
                     <Label>Email</Label>
                     <Field
@@ -496,7 +501,7 @@ export default function Login() {
               </TabsContent>
 
               <TabsContent value="register">
-                <form onSubmit={handleReg} className="space-y-3">
+                <form onSubmit={handleReg} className="space-y-3" autoComplete="off">
                   <div className="space-y-1">
                     <Label>
                       Nome <span className="text-red-500">*</span>

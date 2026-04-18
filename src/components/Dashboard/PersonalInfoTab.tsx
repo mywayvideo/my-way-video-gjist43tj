@@ -99,28 +99,52 @@ export function PersonalInfoTab({
     if (!user) return
     try {
       setProfileLoading(true)
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('customers')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (error) {
-        if (error.code === 'PGRST116' && !retried) {
-          setRetried(true)
-          await supabase.rpc('sync_current_user_profile')
-          const { data: retryData, error: retryError } = await supabase
+      if (!data && user.email) {
+        const { data: emailData, error: emailError } = await supabase
+          .from('customers')
+          .select('*')
+          .ilike('email', user.email.trim())
+          .maybeSingle()
+
+        if (emailData) {
+          data = emailData
+          error = emailError
+        }
+      }
+
+      if (!data && !retried) {
+        setRetried(true)
+        await supabase.rpc('sync_current_user_profile')
+
+        let { data: retryData, error: retryError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (!retryData && user.email) {
+          const { data: finalEmailData, error: finalEmailError } = await supabase
             .from('customers')
             .select('*')
-            .eq('user_id', user.id)
-            .single()
+            .ilike('email', user.email.trim())
+            .maybeSingle()
 
-          if (retryError) throw retryError
-          setLocalCustomer(retryData)
-        } else {
-          throw error
+          if (finalEmailData) {
+            retryData = finalEmailData
+            retryError = finalEmailError
+          }
         }
+
+        if (retryError && retryError.code !== 'PGRST116') throw retryError
+        setLocalCustomer(retryData)
       } else {
+        if (error && error.code !== 'PGRST116') throw error
         setLocalCustomer(data)
       }
     } catch (err: any) {
