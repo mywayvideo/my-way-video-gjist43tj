@@ -3,7 +3,6 @@ import { PersonalInfoTab } from '@/components/Dashboard/PersonalInfoTab'
 import { AddressTab } from '@/components/Dashboard/AddressTab'
 import { SummaryTab } from '@/components/Dashboard/SummaryTab'
 import { FavoritesTab } from '@/components/Dashboard/FavoritesTab'
-import { CartTab } from '@/components/Dashboard/CartTab'
 import { OrderHistoryTab } from '@/components/Dashboard/OrderHistoryTab'
 import { useCustomerDashboard } from '@/hooks/useCustomerDashboard'
 import { customerService } from '@/services/customerService'
@@ -74,6 +73,12 @@ function DashboardContent() {
     refresh,
   } = useCustomerDashboard()
   const [isEditingProfile, setIsEditingProfile] = useState(false)
+
+  useEffect(() => {
+    if (activeTab === 'carrinho') {
+      setActiveTab('historico')
+    }
+  }, [activeTab, setActiveTab])
 
   if (roleLoading) {
     return (
@@ -220,7 +225,6 @@ function DashboardContent() {
                 { id: 'cobranca', label: 'Endereço de Cobrança' },
                 { id: 'entrega', label: 'Endereço de Entrega' },
                 { id: 'favoritos', label: 'Favoritos' },
-                { id: 'carrinho', label: 'Carrinho' },
                 { id: 'historico', label: 'Histórico de Compras' },
               ].map((tab) => (
                 <TabsTrigger
@@ -268,13 +272,10 @@ function DashboardContent() {
             {loading ? (
               <Skeleton className="h-[400px] w-full" />
             ) : (
-              <FavoritesTab favorites={favorites} customerId={user.id} onRefresh={refresh} />
+              <FavoritesTab customerId={user.id} onRefresh={refresh} />
             )}
           </TabsContent>
 
-          <TabsContent value="carrinho" className="m-0 focus-visible:outline-none">
-            <CartTab cart={cart} cartLoading={loading} onRefresh={refresh} />
-          </TabsContent>
           <TabsContent value="historico" className="m-0 focus-visible:outline-none">
             {loading ? (
               <Skeleton className="h-[400px] w-full" />

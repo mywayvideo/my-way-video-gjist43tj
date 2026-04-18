@@ -142,6 +142,11 @@ export function ProductCard({ product }: { product: any }) {
       </CardHeader>
       <CardContent className="flex-1 p-5 flex flex-col text-left">
         <Link to={linkTo} onClick={handleLinkClick} className="mb-2 block w-full">
+          {product.manufacturers?.name && (
+            <span className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+              {product.manufacturers.name}
+            </span>
+          )}
           <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px] text-left">
             {product.name}
           </h3>
