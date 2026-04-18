@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { Mail, Lock, Eye, EyeOff, Loader2, User, Phone, Building2 } from 'lucide-react'
-import { MigrationForm } from '@/components/auth/MigrationForm'
 import logoImg from '../assets/mw_logo_horiz_1200x318_fundo_escuro-037e3.png'
 
 const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -319,24 +318,79 @@ export default function Login() {
               <p className="text-zinc-400">Verificando dados...</p>
             </div>
           ) : flowMode === 'migrate' || flowMode === 'processing' ? (
-            <MigrationForm
-              email={email.toLowerCase().trim()}
-              initialData={legacyData}
-              onCancel={async () => {
-                await supabase.auth.signOut()
-                setFlowMode('login')
-                setIsMigrating(false)
-                setLegacyData(null)
-              }}
-              onProcessing={() => {
-                setFlowMode('processing')
-                setIsMigrating(true)
-              }}
-              onError={() => {
-                setFlowMode('migrate')
-                setIsMigrating(false)
-              }}
-            />
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-xl text-orange-200 text-sm leading-relaxed text-center">
+                <h3 className="text-lg font-bold text-white mb-3">
+                  Bem-vindo à Nova Plataforma My Way!
+                </h3>
+                <p className="mb-6">
+                  Olá! Identificamos que você já é nosso cliente. Estamos de cara nova para te
+                  atender melhor! Por questões de segurança, nesta primeira visita, precisamos que
+                  você defina uma nova senha de acesso. Clique no botão abaixo e enviaremos um link
+                  de ativação agora mesmo para o seu e-mail.
+                </p>
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      setIsMigrating(true)
+                      try {
+                        const targetEmail = legacyData?.email || email
+                        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+                          targetEmail,
+                          {
+                            redirectTo: `${window.location.origin}/reset-password`,
+                          },
+                        )
+                        if (resetError) throw resetError
+
+                        const { error: rpcError } = await supabase.rpc('mark_migration_started', {
+                          target_email: targetEmail.toLowerCase().trim(),
+                        } as any)
+                        if (rpcError) console.error('Error marking migration started:', rpcError)
+
+                        toast({
+                          title: 'Sucesso',
+                          description: 'Link enviado! Verifique seu e-mail para ativar sua conta.',
+                        })
+                        setFlowMode('login')
+                        setLegacyData(null)
+                      } catch (err: any) {
+                        toast({
+                          title: 'Erro',
+                          description: err.message || 'Erro ao enviar link de ativação.',
+                          variant: 'destructive',
+                        })
+                      } finally {
+                        setIsMigrating(false)
+                      }
+                    }}
+                    disabled={isMigrating}
+                    className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
+                  >
+                    {isMigrating ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      'Ativar Minha Conta'
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={async () => {
+                      await supabase.auth.signOut()
+                      setFlowMode('login')
+                      setIsMigrating(false)
+                      setLegacyData(null)
+                    }}
+                    disabled={isMigrating}
+                    className="w-full text-zinc-400 hover:text-white"
+                  >
+                    Voltar para Login
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : (
             <Tabs
               value={tab}
