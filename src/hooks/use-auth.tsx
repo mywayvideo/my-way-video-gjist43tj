@@ -3,6 +3,13 @@ import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { useAuthContext } from '@/contexts/AuthContext'
 
+// Background sync for SIGNED_IN events
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    supabase.rpc('sync_current_user_profile').then()
+  }
+})
+
 export interface CustomerProfile {
   id: string
   user_id: string

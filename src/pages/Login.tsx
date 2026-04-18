@@ -210,30 +210,13 @@ export default function Login() {
 
     if (loginSuccess) {
       try {
+        await supabase.rpc('sync_current_user_profile')
+
         const {
           data: { session },
         } = await supabase.auth.getSession()
 
         if (session) {
-          const { data: legacyCheckList } = await supabase
-            .from('customers')
-            .select('id, has_migrated')
-            .eq('email', normalizedEmail)
-            .limit(1)
-
-          const legacyCheck = legacyCheckList?.[0]
-
-          if (legacyCheck && legacyCheck.has_migrated === false) {
-            await supabase
-              .from('customers')
-              .update({
-                user_id: session.user.id,
-                has_migrated: true,
-                is_imported: false,
-              })
-              .eq('id', legacyCheck.id)
-          }
-
           const { data: customer } = await supabase
             .from('customers')
             .select('has_migrated, role')

@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUserRole } from '@/hooks/use-user-role'
+import { supabase } from '@/lib/supabase/client'
 
 import React from 'react'
 
@@ -127,8 +128,14 @@ function DashboardContent() {
         <div className="container max-w-6xl mx-auto py-16 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
           <AlertCircle className="w-16 h-16 text-muted-foreground mb-4" />
           <h2 className="text-2xl font-bold mb-2">Nenhum dado encontrado</h2>
-          <Button onClick={refresh} variant="outline">
-            Atualizar
+          <Button
+            onClick={async () => {
+              await supabase.rpc('sync_current_user_profile')
+              refresh()
+            }}
+            variant="outline"
+          >
+            Sincronizar e Atualizar
           </Button>
         </div>
       )
