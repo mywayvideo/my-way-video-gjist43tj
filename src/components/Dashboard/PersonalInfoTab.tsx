@@ -295,7 +295,7 @@ export function PersonalInfoTab({
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <RefreshCcw className="w-4 h-4 mr-2" />
-            Sincronizar Dados
+            Sincronizar Meus Dados
           </Button>
         </div>
       </div>

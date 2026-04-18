@@ -42,6 +42,7 @@ export const useAuth = () => {
   const signIn = async (email: string, password: string) => {
     try {
       await context.signIn(email, password)
+      await supabase.rpc('sync_current_user_profile')
       return { error: null }
     } catch (error) {
       return { error }
