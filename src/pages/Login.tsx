@@ -65,6 +65,9 @@ export default function Login() {
       supabase.auth.signOut().then(() => {
         setEmail('')
         setPassword('')
+        window.localStorage.removeItem('email')
+        window.localStorage.removeItem('password')
+        window.localStorage.clear()
         window.history.replaceState(null, '', '/login')
         setFlowMode('login')
         setIsMigrating(false)

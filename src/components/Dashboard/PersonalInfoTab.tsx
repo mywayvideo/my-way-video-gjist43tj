@@ -222,7 +222,7 @@ export function PersonalInfoTab({
     }
   }
 
-  if (loading || isAuthLoading) {
+  if (isAuthLoading || (loading && user)) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
