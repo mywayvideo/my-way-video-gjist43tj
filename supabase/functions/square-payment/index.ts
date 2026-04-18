@@ -3,7 +3,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -13,11 +14,11 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { sourceId, amount, orderId } = await req.json()
-    
+
     if (!sourceId || !amount) {
       return new Response(JSON.stringify({ error: 'Dados de pagamento incompletos.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -25,36 +26,36 @@ Deno.serve(async (req: Request) => {
     const locationId = Deno.env.get('SQUARE_LOCATION_ID')
 
     if (!accessToken || !locationId) {
-      return new Response(JSON.stringify({ error: 'Configuração do Square ausente no servidor.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      return new Response(
+        JSON.stringify({ error: 'Configuração do Square ausente no servidor.' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const idempotencyKey = crypto.randomUUID()
 
-    const isSandbox = accessToken?.includes('sandbox') || accessToken?.startsWith('EAAA') || sourceId?.startsWith('cnon:') || Deno.env.get('PAYMENT_MODE') === 'sandbox'
-    const endpoint = isSandbox 
-      ? 'https://connect.squareupsandbox.com/v2/payments'
-      : 'https://connect.squareup.com/v2/payments'
+    const endpoint = 'https://connect.squareup.com/v2/payments'
 
     const squareRes = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'Square-Version': '2024-01-18'
+        'Square-Version': '2024-01-18',
       },
       body: JSON.stringify({
         source_id: sourceId,
         idempotency_key: idempotencyKey,
         amount_money: {
           amount: Math.round(amount * 100),
-          currency: 'USD'
+          currency: 'USD',
         },
         location_id: locationId,
-        reference_id: orderId
-      })
+        reference_id: orderId,
+      }),
     })
 
     const squareData = await squareRes.json()
@@ -63,19 +64,19 @@ Deno.serve(async (req: Request) => {
       console.error('Square API Error:', squareData)
       return new Response(JSON.stringify({ error: 'Pagamento recusado pelo provedor.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     return new Response(JSON.stringify({ success: true, transactionId: squareData.payment.id }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
     console.error('Square Payment Exception:', error)
     return new Response(JSON.stringify({ error: 'Erro interno ao processar pagamento.' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })

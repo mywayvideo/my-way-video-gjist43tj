@@ -32,13 +32,13 @@
     "validate-ncm-suggestion": 25,
     "cancel-stripe-charge": 13,
     "notify-admin-refund": 13,
-    "initiate-paypal-payment": 13,
+    "initiate-paypal-payment": 14,
     "notify-admin-transferencia-brasil": 12,
     "notify-admin-pix": 12,
     "send-order-email": 8,
     "send-email": 8,
     "verify-user-role": 8,
     "generate-related-products": 8,
-    "square-payment": 6
+    "square-payment": 7
   }
 }

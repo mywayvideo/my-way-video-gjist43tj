@@ -251,10 +251,7 @@ export default function Checkout() {
     if (!document.getElementById('square-sdk')) {
       const script = document.createElement('script')
       script.id = 'square-sdk'
-      script.src =
-        import.meta.env.VITE_PAYMENT_MODE === 'sandbox'
-          ? 'https://sandbox.web.squarecdn.com/v1/square.js'
-          : 'https://web.squarecdn.com/v1/square.js'
+      script.src = 'https://web.squarecdn.com/v1/square.js'
       script.onload = initializeSquare
       document.body.appendChild(script)
     } else {
@@ -1527,7 +1524,7 @@ export default function Checkout() {
           })
 
           setTimeout(() => {
-            navigate('/dashboard')
+            navigate('/dashboard/orders')
           }, 1000)
         }
       }
@@ -2186,7 +2183,10 @@ Valor: ${formatCurrency(total)}
             será notificado assim que o processo for concluído.
           </p>
           <div className="flex flex-col gap-3">
-            <button onClick={() => navigate('/dashboard')} className={cn(btnPrimary, 'w-full')}>
+            <button
+              onClick={() => navigate('/dashboard/orders')}
+              className={cn(btnPrimary, 'w-full')}
+            >
               Acompanhar Pedido
             </button>
             <button onClick={() => navigate('/')} className={cn(btnSecondary, 'w-full')}>
