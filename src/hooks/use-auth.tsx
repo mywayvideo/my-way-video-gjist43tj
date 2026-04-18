@@ -64,6 +64,7 @@ export const useAuth = () => {
 
   return {
     user: context.currentUser,
+    currentUser: context.currentUser,
     session: null as Session | null, // Session not exposed by modern context
     profile: context.userMetadata as unknown as CustomerProfile | null,
     signUp,

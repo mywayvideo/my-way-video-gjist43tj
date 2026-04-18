@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { customerService } from '@/services/customerService'
 import { useAuthContext } from '../../contexts/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { supabase } from '@/lib/supabase/client'
@@ -84,20 +85,20 @@ export function PersonalInfoTab({
   isEditing?: boolean
   setEditing?: (editing: boolean) => void
 }) {
-  const { user, isLoading: isAuthLoading } = useAuthContext() as any
+  const { currentUser: user, loading: authLoading } = useAuth() as any
   const nav = useNavigate()
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [localCustomer, setLocalCustomer] = useState<Customer | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [retried, setRetried] = useState(false)
 
   const fetchProfile = async () => {
     if (!user) return
     try {
-      setLoading(true)
+      setProfileLoading(true)
       const { data, error } = await supabase
         .from('customers')
         .select('*')
@@ -125,24 +126,24 @@ export function PersonalInfoTab({
     } catch (err: any) {
       setErrorMsg(err.message)
     } finally {
-      setLoading(false)
+      setProfileLoading(false)
     }
   }
 
   useEffect(() => {
     if (propCustomer) {
       setLocalCustomer(propCustomer)
-      setLoading(false)
+      setProfileLoading(false)
       return
     }
     if (user) {
       fetchProfile()
-    } else if (isAuthLoading === false) {
+    } else if (authLoading === false) {
       nav('/login', { replace: true })
     } else {
-      setLoading(true)
+      setProfileLoading(true)
     }
-  }, [user, isAuthLoading, propCustomer, retried, nav])
+  }, [user, authLoading, propCustomer, retried, nav])
 
   const updateProfile = async (data: Partial<Customer>) => {
     if (!user) return
@@ -222,7 +223,7 @@ export function PersonalInfoTab({
     }
   }
 
-  if (isAuthLoading || (loading && user)) {
+  if (authLoading || profileLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
@@ -248,7 +249,7 @@ export function PersonalInfoTab({
     )
   }
 
-  if (!user && !isAuthLoading) {
+  if (!user && !authLoading) {
     return null
   }
 
@@ -270,7 +271,7 @@ export function PersonalInfoTab({
     )
   }
 
-  if (!customer && !loading) {
+  if (!customer && !profileLoading && !authLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card">
         <p className="text-lg font-medium text-muted-foreground">
@@ -283,13 +284,13 @@ export function PersonalInfoTab({
           </Button>
           <Button
             onClick={async () => {
-              setLoading(true)
+              setProfileLoading(true)
               try {
                 await supabase.rpc('sync_current_user_profile')
                 await fetchProfile()
               } catch (err: any) {
                 toast.error('Erro ao sincronizar: ' + err.message)
-                setLoading(false)
+                setProfileLoading(false)
               }
             }}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
