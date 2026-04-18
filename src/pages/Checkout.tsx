@@ -17,6 +17,13 @@ import {
   clearCartFromSupabase,
 } from '@/services/stripeService'
 import { getEligibilityAndPrice, Destination } from '@/utils/pricingLogic'
+import { processSquarePayment } from '@/services/square'
+
+declare global {
+  interface Window {
+    Square?: any
+  }
+}
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -237,6 +244,35 @@ export default function Checkout() {
 
   const { mountCardElement, stripe, cardElement, unmountCardElement, isCardReady } =
     useStripePayment()
+
+  const [squarePaymentForm, setSquarePaymentForm] = useState<any>(null)
+
+  useEffect(() => {
+    if (!document.getElementById('square-sdk')) {
+      const script = document.createElement('script')
+      script.id = 'square-sdk'
+      script.src = 'https://web.squarecdn.com/v1/square.js'
+      script.onload = initializeSquare
+      document.body.appendChild(script)
+    } else {
+      initializeSquare()
+    }
+
+    async function initializeSquare() {
+      if (!window.Square) return
+      try {
+        const appId = import.meta.env.VITE_SQUARE_APPLICATION_ID
+        const locId = import.meta.env.VITE_SQUARE_LOCATION_ID
+        if (!appId || !locId) return
+        const payments = window.Square.payments(appId, locId)
+        const card = await payments.card()
+        await card.attach('#square-card-container')
+        setSquarePaymentForm(card)
+      } catch (e) {
+        console.error('Square init error', e)
+      }
+    }
+  }, [])
 
   const [stripeName, setStripeName] = useState('')
   const [stripeEmail, setStripeEmail] = useState('')
@@ -1305,6 +1341,77 @@ export default function Checkout() {
     }
   }
 
+  const handleSquareSubmit = async () => {
+    if (!validateCustomerData()) return
+    if (!tempOrderNumber) {
+      toast({
+        description: 'Numero do pedido nao foi gerado. Tente novamente.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!squarePaymentForm) {
+      toast({
+        description: 'Formulário de pagamento Square não carregado.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const result = await squarePaymentForm.tokenize()
+      if (result.status === 'OK') {
+        const dbShippingMethod = getDBShippingMethod(deliveryMethod)
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('user_id', user!.id)
+          .single()
+        if (!customer) throw new Error('Cliente não encontrado')
+
+        const shippingAddressId = await ensureShippingAddress(customer.id)
+
+        const paymentData = await processSquarePayment(result.token, total, tempOrderNumber)
+
+        await createOrderAfterPayment(
+          paymentData.transactionId || 'sq_' + tempOrderNumber,
+          total,
+          cartItems,
+          customerData.email,
+          user!.id,
+          shippingAddressId,
+          dbShippingMethod,
+          destType === 'brasil' ? 0 : freight || null,
+          discountAmount,
+        )
+
+        clearCartFromLocalStorage()
+        await clearCartFromSupabase(user!.id)
+        if (cartContext?.clearCart) cartContext.clearCart()
+
+        toast({
+          description: 'Pagamento Square confirmado! Redirecionando...',
+          className: 'bg-emerald-600 text-white border-emerald-700',
+        })
+
+        setTimeout(() => navigate('/dashboard/orders'), 1000)
+      } else {
+        toast({
+          description: result.errors?.[0]?.message || 'Erro no cartão.',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        description: err.message || 'Erro ao processar pagamento com Square.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handlePayPalSubmit = async () => {
     if (!validateCustomerData()) return
     const dbShippingMethod = getDBShippingMethod(deliveryMethod)
@@ -1438,8 +1545,16 @@ export default function Checkout() {
     const allOptions = [
       {
         id: 'stripe',
-        label: 'Cartão de Crédito',
+        label: 'Cartão de Crédito (Stripe)',
         desc: 'Pagamento seguro via Stripe',
+        icon: (
+          <CreditCard className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+        ),
+      },
+      {
+        id: 'square',
+        label: 'Cartão de Crédito',
+        desc: 'Pagamento seguro via Square',
         icon: (
           <CreditCard className="w-8 h-8 text-slate-600 group-hover:text-emerald-600 transition-colors" />
         ),
@@ -1484,7 +1599,9 @@ export default function Checkout() {
       },
     ]
 
-    return allOptions.filter((opt) => availableIds.includes(opt.id as PaymentMethod))
+    return allOptions.filter(
+      (opt) => opt.id === 'square' || availableIds.includes(opt.id as PaymentMethod),
+    )
   }
 
   const renderAddresses = () => {
@@ -2574,6 +2691,21 @@ Valor: ${formatCurrency(total)}
 
             {renderManualPaymentDetails()}
 
+            {paymentMethod === 'square' && (
+              <div
+                ref={paymentDetailsRef}
+                className="bg-[hsl(215,20%,96%)] p-6 rounded-xl border border-[hsl(215,20%,90%)] mt-6 animate-in fade-in duration-300 space-y-5"
+              >
+                <div>
+                  <Label className="text-[hsl(215,25%,15%)] font-semibold">Dados do Cartão</Label>
+                  <div
+                    id="square-card-container"
+                    className="bg-white border-2 border-[hsl(215,20%,90%)] rounded-lg p-4 mt-1 min-h-[56px]"
+                  />
+                </div>
+              </div>
+            )}
+
             {paymentMethod === 'stripe' && (
               <div
                 ref={paymentDetailsRef}
@@ -2612,7 +2744,8 @@ Valor: ${formatCurrency(total)}
               <button
                 className="w-full bg-emerald-600 text-white p-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 onClick={() => {
-                  if (paymentMethod === 'stripe') handleStripeSubmit()
+                  if (paymentMethod === 'square') handleSquareSubmit()
+                  else if (paymentMethod === 'stripe') handleStripeSubmit()
                   else if (paymentMethod === 'paypal') handlePayPalSubmit()
                   else handleConfirmManualPayment()
                 }}
@@ -2620,7 +2753,8 @@ Valor: ${formatCurrency(total)}
                   !paymentMethod ||
                   isGlobalLoading ||
                   (paymentMethod === 'stripe' &&
-                    (!isCardReady || stripeName.length < 5 || !stripeEmail.includes('@')))
+                    (!isCardReady || stripeName.length < 5 || !stripeEmail.includes('@'))) ||
+                  (paymentMethod === 'square' && !squarePaymentForm)
                 }
               >
                 {isGlobalLoading ? (

@@ -27,18 +27,14 @@ export function CartTab({
 
   const cartContext = useCart() as any
 
-  let rawData = propsCartItems || propsCart || cartContext?.cartItems || cartContext?.items
-  let items: any[] = []
-
-  if (Array.isArray(rawData)) {
-    items = rawData
-  } else if (rawData && typeof rawData === 'object') {
-    if (Array.isArray(rawData.items)) {
-      items = rawData.items
-    } else if (Array.isArray(rawData.cartItems)) {
-      items = rawData.cartItems
-    }
-  }
+  const cart =
+    propsCartItems ||
+    propsCart ||
+    cartContext?.cartItems ||
+    cartContext?.items ||
+    cartContext?.cart ||
+    []
+  const items: any[] = Array.isArray(cart) ? cart : cart?.items || []
 
   const loading =
     propsCartLoading !== undefined
