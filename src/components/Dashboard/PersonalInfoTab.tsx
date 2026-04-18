@@ -105,19 +105,6 @@ export function PersonalInfoTab({
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (!data && user.email) {
-        const { data: emailData, error: emailError } = await supabase
-          .from('customers')
-          .select('*')
-          .ilike('email', user.email.trim())
-          .maybeSingle()
-
-        if (emailData) {
-          data = emailData
-          error = emailError
-        }
-      }
-
       if (!data && !retried) {
         setRetried(true)
         await supabase.rpc('sync_current_user_profile')
@@ -132,7 +119,7 @@ export function PersonalInfoTab({
           const { data: finalEmailData, error: finalEmailError } = await supabase
             .from('customers')
             .select('*')
-            .ilike('email', user.email.trim())
+            .eq('email', user.email.trim().toLowerCase())
             .maybeSingle()
 
           if (finalEmailData) {
@@ -144,6 +131,18 @@ export function PersonalInfoTab({
         if (retryError && retryError.code !== 'PGRST116') throw retryError
         setLocalCustomer(retryData)
       } else {
+        if (!data && user.email) {
+          const { data: emailData, error: emailError } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('email', user.email.trim().toLowerCase())
+            .maybeSingle()
+
+          if (emailData) {
+            data = emailData
+            error = emailError
+          }
+        }
         if (error && error.code !== 'PGRST116') throw error
         setLocalCustomer(data)
       }

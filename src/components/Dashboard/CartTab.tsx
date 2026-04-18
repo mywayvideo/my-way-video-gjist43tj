@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, ShoppingCart, AlertCircle, Heart, Zap, MessageCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useMultipleProductDiscounts } from '@/hooks/useProductDiscount'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
@@ -12,91 +12,47 @@ import { useCart } from '@/hooks/useCart'
 import { cn } from '@/lib/utils'
 
 export function CartTab({
+  cartItems: propsCartItems,
+  cartLoading: propsCartLoading,
   cart: propsCart,
-  customerId,
-  onRefresh: propsOnRefresh,
+  onRefresh,
 }: {
-  cart: CartItem[]
-  customerId: string
-  onRefresh: () => void
+  cartItems?: any[]
+  cartLoading?: boolean
+  cart?: any[]
+  onRefresh?: () => void
 }) {
   const navigate = useNavigate()
   const { currentUser: user } = useAuthContext()
 
   const cartContext = useCart() as any
+  const items = propsCartItems || propsCart || cartContext?.cartItems || cartContext?.items || []
+  const loading =
+    propsCartLoading !== undefined
+      ? propsCartLoading
+      : cartContext?.isLoading || cartContext?.loading || false
   const globalRefresh =
     cartContext?.refreshCart ||
     cartContext?.fetchCart ||
     cartContext?.loadCart ||
     cartContext?.fetchCartItems
 
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [processing, setProcessing] = useState<string | null>(null)
   const [removingIds, setRemovingIds] = useState<string[]>([])
-
-  const fetchCart = async () => {
-    if (!user) return
-    try {
-      const { data, error: fetchErr } = await supabase
-        .from('cart_items')
-        .select(`id, quantity, product_id, products (*)`)
-        .eq('user_id', user.id)
-        .order('added_at', { ascending: false })
-
-      if (fetchErr) throw fetchErr
-      setItems(data || [])
-      setError(false)
-    } catch (e) {
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchCart()
-
-    if (!user) return
-
-    const channel = supabase
-      .channel('dashboard_cart_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cart_items',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchCart()
-          if (globalRefresh) globalRefresh()
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
 
   const executeWithAnimation = async (id: string, action: () => Promise<void>) => {
     if (processing) return
     setProcessing(id)
     setRemovingIds((prev) => [...prev, id])
 
-    // Wait for the fade-out animation to complete
     await new Promise((res) => setTimeout(res, 300))
 
     try {
       await action()
       if (globalRefresh) globalRefresh()
-      if (propsOnRefresh) propsOnRefresh()
+      if (onRefresh) onRefresh()
     } catch (e) {
-      // Revert animation on error
       setRemovingIds((prev) => prev.filter((i) => i !== id))
     } finally {
       setProcessing(null)
@@ -105,8 +61,12 @@ export function CartTab({
 
   const handleRemove = (id: string) => {
     executeWithAnimation(id, async () => {
-      const { error } = await supabase.from('cart_items').delete().eq('id', id)
-      if (error) throw error
+      if (cartContext?.removeItem) {
+        await cartContext.removeItem(id)
+      } else {
+        const { error } = await supabase.from('cart_items').delete().eq('id', id)
+        if (error) throw error
+      }
       toast.success('Item removido do carrinho')
     })
   }
@@ -119,8 +79,12 @@ export function CartTab({
 
       if (favError && favError.code !== '23505') throw favError
 
-      const { error: rmError } = await supabase.from('cart_items').delete().eq('id', item.id)
-      if (rmError) throw rmError
+      if (cartContext?.removeItem) {
+        await cartContext.removeItem(item.id)
+      } else {
+        const { error: rmError } = await supabase.from('cart_items').delete().eq('id', item.id)
+        if (rmError) throw rmError
+      }
 
       toast.success('Movido para favoritos!')
     })
@@ -130,10 +94,17 @@ export function CartTab({
     if (newQty < 1 || processing) return
     setProcessing(`qty-${id}`)
     try {
-      const { error } = await supabase.from('cart_items').update({ quantity: newQty }).eq('id', id)
-      if (error) throw error
+      if (cartContext?.updateQuantity) {
+        await cartContext.updateQuantity(id, newQty)
+      } else {
+        const { error } = await supabase
+          .from('cart_items')
+          .update({ quantity: newQty })
+          .eq('id', id)
+        if (error) throw error
+      }
       if (globalRefresh) globalRefresh()
-      if (propsOnRefresh) propsOnRefresh()
+      if (onRefresh) onRefresh()
     } catch (e) {
       toast.error('Erro ao atualizar quantidade')
     } finally {
@@ -141,12 +112,12 @@ export function CartTab({
     }
   }
 
-  const products = items.map((item) => item.products).filter(Boolean)
+  const products = items.map((item: any) => item.products || item.product).filter(Boolean)
   const { discounts } = useMultipleProductDiscounts(products)
 
   let subtotal = 0
-  items.forEach((item) => {
-    const p = item.products
+  items.forEach((item: any) => {
+    const p = item.products || item.product
     if (!p) return
     const discountedPrice = discounts[p.id]?.discountedPrice ?? p.price_usd ?? 0
     subtotal += discountedPrice * item.quantity
@@ -176,7 +147,12 @@ export function CartTab({
         <p className="text-muted-foreground mb-6 max-w-sm">
           Nao foi possivel carregar seu carrinho. Tente novamente.
         </p>
-        <Button className="w-full sm:w-auto" onClick={fetchCart}>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => {
+            if (globalRefresh) globalRefresh()
+          }}
+        >
           Tentar Novamente
         </Button>
       </div>
@@ -196,7 +172,7 @@ export function CartTab({
                 <ShoppingCart className="w-[48px] h-[48px]" />
                 <div className="absolute top-1/2 left-[-20%] right-[-20%] h-[3px] bg-muted-foreground -rotate-45" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground">Seu carrinho esta vazio</h3>
+              <h3 className="text-xl font-bold mb-2 text-foreground">Carrinho Vazio</h3>
               <p className="text-muted-foreground mb-6 max-w-sm">
                 Adicione produtos ao carrinho para continuar.
               </p>
@@ -205,8 +181,8 @@ export function CartTab({
               </Button>
             </div>
           ) : (
-            items.map((item, index) => {
-              const p = item.products
+            items.map((item: any, index: number) => {
+              const p = item.products || item.product
               if (!p) return null
               const isProcessing = processing === item.id || processing === `qty-${item.id}`
               const isRemoving = removingIds.includes(item.id)
@@ -317,7 +293,7 @@ export function CartTab({
             <h3 className="text-xl font-bold text-foreground mb-6">Resumo</h3>
 
             <div className="flex justify-between text-muted-foreground mb-6 text-base">
-              <span>Subtotal ({items.reduce((a, b) => a + b.quantity, 0)} itens)</span>
+              <span>Subtotal ({items.reduce((a: number, b: any) => a + b.quantity, 0)} itens)</span>
               <span>
                 $
                 {subtotal.toLocaleString('en-US', {

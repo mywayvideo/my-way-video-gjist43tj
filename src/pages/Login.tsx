@@ -62,12 +62,12 @@ export default function Login() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search)
     if (searchParams.get('activated') === 'true') {
-      supabase.auth.signOut().then(() => {
-        setEmail('')
-        setPassword('')
-        window.localStorage.clear()
-        window.sessionStorage.clear()
+      setEmail('')
+      setPassword('')
+      window.localStorage.clear()
+      window.sessionStorage.clear()
 
+      supabase.auth.signOut().then(() => {
         setTimeout(() => {
           window.history.replaceState(null, '', '/login')
         }, 100)
@@ -87,6 +87,7 @@ export default function Login() {
       if (flowMode === 'migrate' || flowMode === 'processing' || isMigrating) return
 
       if (session) {
+        await supabase.rpc('sync_current_user_profile')
         const { data: customer } = await supabase
           .from('customers')
           .select('has_migrated, role, email')
