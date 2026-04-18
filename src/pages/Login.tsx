@@ -63,11 +63,11 @@ export default function Login() {
     const searchParams = new URLSearchParams(location.search)
     if (searchParams.get('activated') === 'true') {
       supabase.auth.signOut().then(() => {
-        window.history.replaceState({}, '', '/login')
-        setFlowMode('login')
-        setIsMigrating(false)
         setEmail('')
         setPassword('')
+        window.history.replaceState(null, '', '/login')
+        setFlowMode('login')
+        setIsMigrating(false)
         toast({
           title: 'Sucesso',
           description: 'Conta pronta! Entre com sua nova senha.',
@@ -227,7 +227,7 @@ export default function Login() {
 
           if (customer) {
             const targetPath = customer.role === 'admin' ? '/admin/dashboard' : '/dashboard'
-            window.location.href = targetPath
+            nav(targetPath, { replace: true })
             return
           }
         }
@@ -460,6 +460,7 @@ export default function Login() {
                       Esqueci minha senha
                     </Link>
                   </div>
+                  {/* HCaptcha temporariamente desabilitado para testes no Login
                   <div
                     className={`flex justify-center overflow-hidden rounded-lg ${loading || isLoadingUserData ? 'pointer-events-none opacity-50' : ''}`}
                   >
@@ -477,6 +478,7 @@ export default function Login() {
                       />
                     )}
                   </div>
+                  */}
                   <Button
                     type="submit"
                     disabled={loading || isLoadingUserData}

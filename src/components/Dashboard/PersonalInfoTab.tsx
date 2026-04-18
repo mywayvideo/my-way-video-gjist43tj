@@ -28,6 +28,7 @@ import { useAuthContext } from '../../contexts/AuthContext'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { supabase } from '@/lib/supabase/client'
+import { useNavigate } from 'react-router-dom'
 
 const formatPhone = (value: string) => {
   if (!value) return ''
@@ -83,7 +84,8 @@ export function PersonalInfoTab({
   isEditing?: boolean
   setEditing?: (editing: boolean) => void
 }) {
-  const { user } = useAuthContext() as any
+  const { user, isLoading: isAuthLoading } = useAuthContext() as any
+  const nav = useNavigate()
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -135,10 +137,12 @@ export function PersonalInfoTab({
     }
     if (user) {
       fetchProfile()
+    } else if (isAuthLoading === false) {
+      nav('/login', { replace: true })
     } else {
       setLoading(true)
     }
-  }, [user, propCustomer, retried])
+  }, [user, isAuthLoading, propCustomer, retried, nav])
 
   const updateProfile = async (data: Partial<Customer>) => {
     if (!user) return
@@ -218,7 +222,7 @@ export function PersonalInfoTab({
     }
   }
 
-  if (!user || loading || (!customer && !errorMsg)) {
+  if (loading || isAuthLoading || (user && !customer && !errorMsg)) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
@@ -242,6 +246,10 @@ export function PersonalInfoTab({
         </div>
       </div>
     )
+  }
+
+  if (!user && !isAuthLoading) {
+    return null
   }
 
   if (errorMsg && !propCustomer) {
