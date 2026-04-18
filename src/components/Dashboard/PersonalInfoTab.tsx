@@ -24,10 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { customerService } from '@/services/customerService'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuthContext } from '../../contexts/AuthContext'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCustomerProfile } from '@/hooks/useCustomerProfile'
+import { supabase } from '@/lib/supabase/client'
 
 const formatPhone = (value: string) => {
   if (!value) return ''
@@ -83,19 +83,76 @@ export function PersonalInfoTab({
   isEditing?: boolean
   setEditing?: (editing: boolean) => void
 }) {
-  const { currentUser: user } = useAuthContext()
+  const { user } = useAuthContext() as any
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const {
-    customer: hookCustomer,
-    state,
-    errorMsg,
-    fetchProfile,
-    updateProfile,
-  } = useCustomerProfile()
+  const [localCustomer, setLocalCustomer] = useState<Customer | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [retried, setRetried] = useState(false)
 
-  const customer = propCustomer !== undefined ? propCustomer : hookCustomer
+  const fetchProfile = async () => {
+    if (!user) return
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116' && !retried) {
+          setRetried(true)
+          await supabase.rpc('sync_current_user_profile')
+          const { data: retryData, error: retryError } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('user_id', user.id)
+            .single()
+
+          if (retryError) throw retryError
+          setLocalCustomer(retryData)
+        } else {
+          throw error
+        }
+      } else {
+        setLocalCustomer(data)
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (propCustomer) {
+      setLocalCustomer(propCustomer)
+      setLoading(false)
+      return
+    }
+    if (user) {
+      fetchProfile()
+    } else {
+      setLoading(true)
+    }
+  }, [user, propCustomer, retried])
+
+  const updateProfile = async (data: Partial<Customer>) => {
+    if (!user) return
+    try {
+      const { error } = await supabase.from('customers').update(data).eq('user_id', user.id)
+      if (error) throw error
+      setLocalCustomer((prev: any) => (prev ? { ...prev, ...data } : null))
+      toast.success('Perfil atualizado com sucesso!')
+    } catch (err) {
+      toast.error('Erro ao atualizar perfil.')
+    }
+  }
+
+  const customer = propCustomer !== undefined ? propCustomer : localCustomer
   const onSave = propOnSave || updateProfile
 
   const [localIsEditing, setLocalIsEditing] = useState(false)
@@ -161,7 +218,7 @@ export function PersonalInfoTab({
     }
   }
 
-  if (state === 'LOADING' && !propCustomer) {
+  if (!user || loading || (!customer && !errorMsg)) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
@@ -187,19 +244,7 @@ export function PersonalInfoTab({
     )
   }
 
-  if (state === 'EMPTY' && !propCustomer) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card">
-        <p className="text-lg font-medium text-muted-foreground">Nenhum dado encontrado.</p>
-        <Button onClick={fetchProfile} variant="outline" className="mt-2">
-          <RefreshCcw className="w-4 h-4 mr-2" />
-          Atualizar
-        </Button>
-      </div>
-    )
-  }
-
-  if (state === 'ERROR' && !propCustomer) {
+  if (errorMsg && !propCustomer) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card border-destructive/50">
         <p className="text-lg font-medium text-destructive">
@@ -212,6 +257,18 @@ export function PersonalInfoTab({
         >
           <RefreshCcw className="w-4 h-4 mr-2" />
           Tentar novamente
+        </Button>
+      </div>
+    )
+  }
+
+  if (!customer && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card">
+        <p className="text-lg font-medium text-muted-foreground">Nenhum dado encontrado.</p>
+        <Button onClick={fetchProfile} variant="outline" className="mt-2">
+          <RefreshCcw className="w-4 h-4 mr-2" />
+          Atualizar
         </Button>
       </div>
     )

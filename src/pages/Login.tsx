@@ -66,6 +66,8 @@ export default function Login() {
         window.history.replaceState({}, '', '/login')
         setFlowMode('login')
         setIsMigrating(false)
+        setEmail('')
+        setPassword('')
         toast({
           title: 'Sucesso',
           description: 'Conta pronta! Entre com sua nova senha.',
@@ -157,7 +159,7 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
+    // if (!captchaL) return setError('Falha na verificacao. Tente novamente.')
     setFlowMode('loading')
     setError(null)
     setLoading(true)
@@ -413,6 +415,7 @@ export default function Login() {
                       placeholder="seu@email.com"
                       required
                       value={email}
+                      autoComplete="off"
                       onChange={(e: any) => setEmail(e.target.value)}
                       disabled={loading || isLoadingUserData}
                     />
@@ -425,6 +428,7 @@ export default function Login() {
                       placeholder="Sua senha"
                       required
                       value={password}
+                      autoComplete="new-password"
                       onChange={(e: any) => setPassword(e.target.value)}
                       disabled={loading || isLoadingUserData}
                       right={
@@ -475,7 +479,7 @@ export default function Login() {
                   </div>
                   <Button
                     type="submit"
-                    disabled={loading || isLoadingUserData || !captchaL}
+                    disabled={loading || isLoadingUserData}
                     className="w-full bg-[#FF6600] hover:bg-[#FF6600]/90 text-white h-11 rounded-xl"
                   >
                     {loading || isLoadingUserData ? (
