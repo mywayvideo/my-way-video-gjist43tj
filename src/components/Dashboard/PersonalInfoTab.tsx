@@ -222,7 +222,7 @@ export function PersonalInfoTab({
     }
   }
 
-  if (loading || isAuthLoading || (user && !customer && !errorMsg)) {
+  if (loading || isAuthLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex justify-between items-start">
@@ -273,11 +273,31 @@ export function PersonalInfoTab({
   if (!customer && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-4 border rounded-lg bg-card">
-        <p className="text-lg font-medium text-muted-foreground">Nenhum dado encontrado.</p>
-        <Button onClick={fetchProfile} variant="outline" className="mt-2">
-          <RefreshCcw className="w-4 h-4 mr-2" />
-          Atualizar
-        </Button>
+        <p className="text-lg font-medium text-muted-foreground">
+          Perfil não encontrado ou não vinculado.
+        </p>
+        <div className="flex gap-4 mt-4">
+          <Button onClick={fetchProfile} variant="outline">
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Tentar Novamente
+          </Button>
+          <Button
+            onClick={async () => {
+              setLoading(true)
+              try {
+                await supabase.rpc('sync_current_user_profile')
+                await fetchProfile()
+              } catch (err: any) {
+                toast.error('Erro ao sincronizar: ' + err.message)
+                setLoading(false)
+              }
+            }}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Sincronizar Dados
+          </Button>
+        </div>
       </div>
     )
   }

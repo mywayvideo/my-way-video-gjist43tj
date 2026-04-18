@@ -343,7 +343,8 @@ export default function Login() {
                       } catch (err: any) {
                         toast({
                           title: 'Erro',
-                          description: err.message || 'Erro ao enviar link de ativação.',
+                          description:
+                            'Não foi possível enviar o e-mail. Por favor, tente novamente em alguns instantes.',
                           variant: 'destructive',
                         })
                       } finally {
