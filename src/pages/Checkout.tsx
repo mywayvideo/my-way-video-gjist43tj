@@ -251,7 +251,10 @@ export default function Checkout() {
     if (!document.getElementById('square-sdk')) {
       const script = document.createElement('script')
       script.id = 'square-sdk'
-      script.src = 'https://web.squarecdn.com/v1/square.js'
+      script.src =
+        import.meta.env.VITE_PAYMENT_MODE === 'sandbox'
+          ? 'https://sandbox.web.squarecdn.com/v1/square.js'
+          : 'https://web.squarecdn.com/v1/square.js'
       script.onload = initializeSquare
       document.body.appendChild(script)
     } else {
