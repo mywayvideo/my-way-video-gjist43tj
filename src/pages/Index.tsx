@@ -70,9 +70,14 @@ export default function Index() {
 
           <div className="pt-8 w-full animate-fade-in" style={{ animationDelay: '200ms' }}>
             <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
+            {isSearchLoading && (
+              <p className="text-center text-muted-foreground mt-6 animate-pulse text-lg">
+                Buscando produtos e novidades...
+              </p>
+            )}
           </div>
 
-          {results && (
+          {results && !Array.isArray(results) && (
             <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up">
               <div className="prose prose-invert max-w-none">
                 <p className="text-lg leading-relaxed whitespace-pre-wrap">{results.message}</p>
