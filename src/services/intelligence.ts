@@ -203,9 +203,23 @@ export const generateAgentResponse = async (
       technical_info: cleanString(p.technical_info),
     }))
 
+    let enhancedQuery = query
+    if (cleanedProducts.length > 0) {
+      const dbProductsList = cleanedProducts
+        .map((p) => `- ${p.name} (Preço: USD ${p.price_usd || 'Consulte'})`)
+        .join('\n')
+      const systemContextUpdate = `
+DADOS DO ESTOQUE ENCONTRADOS:
+${dbProductsList}
+
+INSTRUÇÃO IMPORTANTE: Se houver produtos na lista 'DADOS DO ESTOQUE ENCONTRADOS', você DEVE confirmar que eles estão disponíveis em Miami para envio imediato. NUNCA diga que não encontrou um produto se ele estiver nesta lista. ${!isNABQuery ? 'Comece sua resposta com uma confirmação direta do produto.' : ''}
+`
+      enhancedQuery = `${systemContextUpdate}\n\nPergunta do usuário: ${query}`
+    }
+
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
-        query,
+        query: enhancedQuery,
         products: cleanedProducts,
         intelligence: isNABQuery ? intelligence : [],
         agentId,

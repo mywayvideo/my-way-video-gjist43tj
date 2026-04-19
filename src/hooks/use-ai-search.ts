@@ -14,13 +14,9 @@ export function useAiSearch() {
     setIsLoading(true)
 
     try {
-      // 1. Fetch active agent
       const activeAgent = await getActiveAgent()
-
-      // Intent Detection Logic
       const isNABQuery = /(nab|las vegas|news|novidades|lançamentos|2026)/i.test(query)
 
-      // Smart Keyword Extraction
       const stopWords = new Set([
         'o',
         'a',
@@ -59,7 +55,6 @@ export function useAiSearch() {
         .map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`)
         .join(',')
 
-      // Search 1: Query 'products' table using ilike on name and description
       const { data: productsData, error: productsError } = await supabase
         .schema('public')
         .from('products')
@@ -70,7 +65,6 @@ export function useAiSearch() {
 
       if (productsError) throw productsError
 
-      // Search 2: Query 'market_intelligence' table using flexible keywords
       let miData: any[] = []
       if (isNABQuery) {
         miData = await searchIntelligence(query)
@@ -79,7 +73,8 @@ export function useAiSearch() {
       const hasNabIntelligence = miData && miData.length > 0
       const hasProducts = productsData && productsData.length > 0
 
-      // Generate Agent Response using Edge Function
+      const finalProductsToDisplay = productsData || []
+
       let message = ''
       if (!activeAgent) {
         message =
@@ -91,14 +86,13 @@ export function useAiSearch() {
       } else {
         message = await generateAgentResponse(
           query,
-          productsData || [],
+          finalProductsToDisplay,
           miData || [],
           activeAgent.id,
           isNABQuery,
         )
       }
 
-      // UI Feedback constraint
       if (
         isNABQuery &&
         hasNabIntelligence &&
@@ -111,60 +105,10 @@ export function useAiSearch() {
         message = message.replace(/^Confirmamos diretamente da NAB 2026:\s*/i, '')
       }
 
-      // --- POST-PROCESSING: Product Extraction Logic ---
-      const boldMatches =
-        message.match(/\*\*(.*?)\*\*/g)?.map((m) => m.replace(/\*\*/g, '').trim()) || []
-      const uppercaseMatches =
-        message.match(/\b([A-Z][a-zA-Z0-9-]*\s+[A-Z0-9][a-zA-Z0-9-]*)\b/g) || []
-      const words = message
-        .replace(/[^\w\s-]/g, '')
-        .split(/\s+/)
-        .filter((w) => w.length > 3 && /^[A-Z]/.test(w))
-      const searchTerms = [...new Set([...boldMatches, ...uppercaseMatches, ...words])]
-        .filter((t) => t.length > 2)
-        .slice(0, 3)
-
-      let secondaryProducts: any[] = []
-      if (searchTerms.length > 0) {
-        const orQuery = searchTerms.map((t) => `name.ilike.%${t}%`).join(',')
-        const { data: secondaryData } = await supabase
-          .schema('public')
-          .from('products')
-          .select('*, manufacturers(name)')
-          .or(orQuery)
-          .eq('is_discontinued', false)
-          .limit(10)
-        if (secondaryData) secondaryProducts = secondaryData
-      }
-
-      const allPotentialProducts = [...(productsData || []), ...secondaryProducts]
-      const uniqueProducts = Array.from(
-        new Map(allPotentialProducts.map((p) => [p.id, p])).values(),
-      )
-
-      const finalProductsToDisplay: any[] = []
-      let mentionedCount = 0
-
-      const messageLower = message.toLowerCase()
-      uniqueProducts.forEach((p) => {
-        const nameMatch = messageLower.includes(p.name.toLowerCase())
-        const skuMatch = p.sku && messageLower.includes(p.sku.toLowerCase())
-        const isFuzzyMatch = secondaryProducts.some((sp) => sp.id === p.id)
-
-        if (nameMatch || skuMatch || isFuzzyMatch) {
-          finalProductsToDisplay.push(p)
-          mentionedCount++
-        }
-      })
-
-      if (finalProductsToDisplay.length === 0 && productsData && productsData.length > 0) {
-        finalProductsToDisplay.push(...productsData)
-      }
-
       const combinedResults = {
         message,
-        referenced_internal_products: finalProductsToDisplay.slice(0, 6),
-        mentioned_products_count: mentionedCount,
+        referenced_internal_products: finalProductsToDisplay,
+        mentioned_products_count: finalProductsToDisplay.length,
         should_show_whatsapp_button: !hasProducts || (!hasNabIntelligence && isNABQuery),
         whatsapp_reason: !hasProducts
           ? 'Nenhum produto exato encontrado. Fale com um especialista.'
@@ -185,7 +129,7 @@ export function useAiSearch() {
       return combinedResults
     } catch (err: any) {
       console.error('[useAiSearch] Database query error:', err)
-      setResults([]) // Set results to empty array on error
+      setResults([])
       toast({
         title: 'Erro',
         description: 'Erro ao consultar base de dados.',

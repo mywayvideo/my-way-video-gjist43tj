@@ -182,7 +182,7 @@ export function AIPrompt({
             localResult.referenced_internal_products.length > 0 && (
               <div className="w-full animate-fade-in-up delay-150">
                 <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
-                  {localResult.mentioned_products_count > 0
+                  {localResult.referenced_internal_products.length > 0
                     ? 'Equipamentos Citados na Resposta'
                     : 'Produtos Relacionados'}
                 </h3>
