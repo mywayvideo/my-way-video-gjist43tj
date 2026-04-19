@@ -1,38 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 
 export const searchIntelligence = async (query: string) => {
-  const keywords = query
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\s]/g, '')
-    .split(/\s+/)
-    .filter(Boolean)
-
-  if (keywords.length === 0) keywords.push(query.trim())
-
-  const exactMatch = `title.ilike.%${query.trim()}%,raw_content.ilike.%${query.trim()}%,ai_summary.ilike.%${query.trim()}%`
-  const termsMatch = keywords
-    .map((k) => `title.ilike.%${k}%,raw_content.ilike.%${k}%,ai_summary.ilike.%${k}%`)
-    .join(',')
-
-  const orQuery = keywords.length > 1 ? `${exactMatch},${termsMatch}` : exactMatch
-
-  try {
-    const { data, error } = await supabase
-      .schema('public')
-      .from('market_intelligence')
-      .select('*')
-      .eq('status', 'published')
-      .or(orQuery)
-      .limit(3)
-
-    if (error) throw error
-    return data || []
-  } catch (error) {
-    console.error('Error in searchIntelligence:', error)
-    return []
-  }
+  return []
 }
 
 export const getIntelligences = async () => {
@@ -124,94 +93,48 @@ export const getActiveAgent = async () => {
   }
 }
 
-export const generateAgentResponse = async (
-  query: string,
-  products: any[],
-  intelligence: any[],
-  agentId?: string,
-  isNABQuery: boolean = false,
-) => {
+export const generateAgentResponse = async (query: string, contextData: any, agentId?: string) => {
   try {
-    const productsList = products
-      .map((p) => `Nome: ${p.name}, Modelo: ${p.sku || 'N/A'}`)
-      .join('; ')
-    const stringifiedFullProducts = JSON.stringify(products)
-    const systemContextUpdate = `
-IDENTIDADE: Você é um Vendedor Senior.
-DADOS REAIS DO ESTOQUE: ${productsList}
-DETALHES COMPLETOS DOS PRODUTOS: ${stringifiedFullProducts}
+    const systemPrompt = `Você é o Especialista My Way Business.
+Sua única fonte de verdade são os 'DADOS DO BANCO' enviados no contexto.
+REGRA 1: Se houver produtos na lista, eles ESTÃO em estoque em Miami. Confirme isso imediatamente.
+REGRA 2: Se houver notícias na lista, use-as para detalhar a NAB 2026.
+REGRA 3: É PROIBIDO dizer que não encontrou algo que esteja na lista de contexto.
+REGRA 4: Responda APENAS em Português (PT-BR).
+REGRA 5: Mantenha os parágrafos curtos: máximo de 2 frases por parágrafo.
+REGRA 6: Use blocos de código (\`\`\`) para formatar especificações técnicas.
+REGRA 7: Sempre mencione garantia do fabricante no Brasil/LATAM.`
 
-REGRAS OBRIGATÓRIAS:
-1. Responda APENAS em Português (PT-BR).
-2. Parágrafos curtos: máximo de 2 frases por parágrafo.
-3. Se houver itens em 'DADOS REAIS DO ESTOQUE', você DEVE confirmar a disponibilidade em Miami. É PROIBIDO dizer que não encontrou o produto se a lista contiver dados.
-4. Sempre mencione a garantia do fabricante no Brasil/LATAM. Exemplo: "Disponível para envio imediato de Miami com garantia do fabricante no Brasil/LATAM."
-5. Use blocos de código (\`\`\`) para formatar especificações técnicas.
-6. Nunca mencione IDs de produtos. Use os preços em USD informados.
-7. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
-`
-    const enhancedQuery = `${systemContextUpdate}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemPrompt}\n\nDADOS DO BANCO: ${JSON.stringify(contextData)}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
         query: enhancedQuery,
-        products: products,
-        intelligence: isNABQuery ? intelligence : [],
+        products: contextData.products || [],
+        intelligence: contextData.news || [],
         agentId,
-        isNABQuery,
+        isNABQuery: contextData.news?.length > 0,
       },
     })
 
     if (error) throw error
     if (data?.message) return data.message
 
-    return buildFallbackMessage(query, products, isNABQuery ? intelligence : [], isNABQuery)
+    return buildFallbackMessage(query, contextData)
   } catch (e) {
     console.error('Edge function call failed:', e)
-    return buildFallbackMessage(query, products, isNABQuery ? intelligence : [], isNABQuery)
+    return buildFallbackMessage(query, contextData)
   }
 }
 
-function buildFallbackMessage(
-  query: string,
-  products: any[],
-  intelligence: any[],
-  isNABQuery: boolean,
-) {
-  let response = ''
-
-  if (isNABQuery) {
-    const hasNab = intelligence.some(
-      (i: any) =>
-        i.title?.toLowerCase().includes('nab') ||
-        i.raw_content?.toLowerCase().includes('nab') ||
-        i.ai_summary?.toLowerCase().includes('nab'),
-    )
-
-    if (hasNab) {
-      response += 'Confirmamos diretamente da NAB 2026:\n\n'
-    }
-
-    if (intelligence.length > 0) {
-      response +=
-        'Encontramos atualizações importantes na nossa base de conhecimento sobre este assunto. '
-      response += 'Essas informações são fresquinhas e podem impactar sua decisão.\n\n'
-      intelligence.slice(0, 2).forEach((i: any) => {
-        response += `**${i.title}**\n${i.ai_summary || i.raw_content?.substring(0, 150)}...\n\n`
-      })
-    }
-  } else {
-    response += 'Consultor My Way: '
-  }
+function buildFallbackMessage(query: string, contextData: any) {
+  let response = 'Especialista My Way:\n\n'
+  const products = contextData.products || []
+  const news = contextData.news || []
 
   if (products.length > 0) {
-    if (!isNABQuery) {
-      response +=
-        'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo e confirmo estoque em Miami. Disponível para envio imediato de Miami com garantia do fabricante no Brasil/LATAM:\n\n'
-    } else {
-      response +=
-        'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca e confirmo estoque em Miami. Disponível para envio imediato de Miami com garantia do fabricante no Brasil/LATAM:\n\n'
-    }
+    response +=
+      'Encontrei as seguintes opções no nosso catálogo. Confirmo estoque em Miami e garantia do fabricante no Brasil/LATAM:\n\n'
     products.forEach((p: any) => {
       response += `**${p.name}**\n`
       const tech = p.technical_info || p.description || 'Especificações sob consulta.'
@@ -219,8 +142,15 @@ function buildFallbackMessage(
     })
   }
 
-  if (products.length === 0 && (!isNABQuery || intelligence.length === 0)) {
-    response =
+  if (news.length > 0) {
+    response += 'Confirmamos diretamente da NAB 2026:\n\n'
+    news.forEach((n: any) => {
+      response += `**${n.title}**\n${n.ai_summary || n.raw_content?.substring(0, 150)}...\n\n`
+    })
+  }
+
+  if (products.length === 0 && news.length === 0) {
+    response +=
       'Não possuo essa informação exata no momento em nossa base de dados. Recomendo falar com um de nossos especialistas.'
   }
 
