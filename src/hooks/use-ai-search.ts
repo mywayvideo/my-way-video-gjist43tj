@@ -17,42 +17,10 @@ export function useAiSearch() {
       const activeAgent = await getActiveAgent()
       const isNABQuery = /(nab|las vegas|news|novidades|lançamentos|2026)/i.test(query)
 
-      const stopWords = new Set([
-        'o',
-        'a',
-        'os',
-        'as',
-        'de',
-        'da',
-        'do',
-        'dos',
-        'das',
-        'em',
-        'para',
-        'quais',
-        'na',
-        'no',
-        'nas',
-        'nos',
-        'qual',
-        'que',
-        'e',
-        'ou',
-        'com',
-        'por',
-      ])
-      const keywords = query
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w\s]/g, '')
-        .split(/\s+/)
-        .filter((word) => word.length > 2 && !stopWords.has(word))
-
-      if (keywords.length === 0) keywords.push(query.trim())
-
-      const orProductQuery = keywords
-        .map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`)
+      const rawQuery = query.trim()
+      const searchTerms = rawQuery.split(/\s+/).filter(Boolean)
+      const orProductQuery = searchTerms
+        .map((term) => `name.ilike.%${term}%,sku.ilike.%${term}%`)
         .join(',')
 
       const { data: productsData, error: productsError } = await supabase

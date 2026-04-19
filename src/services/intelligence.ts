@@ -207,26 +207,29 @@ export const generateAgentResponse = async (
     const dbProductsList =
       cleanedProducts.length > 0
         ? cleanedProducts
-            .map((p) => `- ${p.name} (Preço: USD ${p.price_usd || 'Consulte'})`)
+            .map(
+              (p) =>
+                `- ${p.name} (SKU/Model: ${p.sku || 'N/A'}, Preço: USD ${p.price_usd || 'Consulte'})`,
+            )
             .join('\n')
-        : 'Nenhum produto encontrado no estoque.'
+        : ''
 
-    const contextData = `
-PRODUTOS NO ESTOQUE (contextData):
-${dbProductsList}
-`
+    const contextData = dbProductsList
+      ? `PRODUTOS ENCONTRADOS NO BANCO:\n${dbProductsList}`
+      : 'Nenhum produto encontrado no banco de dados.'
+
     const systemContextUpdate = `
 IDENTIDADE: Você é o "Especialista My Way Business em Audiovisual".
 REGRAS OBRIGATÓRIAS:
 1. Responda APENAS em Português (PT-BR).
 2. Parágrafos curtos: máximo de 2 a 3 frases por parágrafo.
-3. Se um produto estiver no 'contextData' acima, ele ESTÁ em estoque em Miami para envio imediato. Nunca diga que não encontrou.
+3. Se a lista de PRODUTOS ENCONTRADOS NO BANCO não estiver vazia, você DEVE confirmar que os produtos estão em estoque em Miami. É PROIBIDO dizer que não encontrou o produto.
 4. Mencione sempre que os produtos contam com garantia do fabricante no Brasil/LATAM.
 5. Use blocos de código (\`\`\`) para formatar especificações técnicas.
 6. Nunca mencione IDs de produtos. Use os preços em USD informados.
 7. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
 `
-    enhancedQuery = `${systemContextUpdate}\n${contextData}\nPergunta do usuário: ${query}`
+    enhancedQuery = `${systemContextUpdate}\n\n${contextData}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {

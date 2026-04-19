@@ -230,29 +230,17 @@ export function AIPrompt({
               </div>
             )}
 
-          {localResult?.should_show_whatsapp_button && (
-            <div className="w-full flex justify-center mt-4">
-              <a
-                href="https://wa.me/13055551234"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
-              >
-                Falar com Especialista
-              </a>
-            </div>
-          )}
-
-          {!localResult?.should_show_whatsapp_button &&
-            localResult?.referenced_internal_products?.length > 0 && (
+          {localResult?.should_show_whatsapp_button &&
+            (!localResult?.referenced_internal_products ||
+              localResult.referenced_internal_products.length === 0) && (
               <div className="w-full flex justify-center mt-4">
                 <a
                   href="https://wa.me/13055551234"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-3 rounded-full font-semibold transition-all flex items-center gap-2 text-sm"
+                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
                 >
-                  Dúvidas? Fale com um especialista
+                  Falar com Especialista
                 </a>
               </div>
             )}
