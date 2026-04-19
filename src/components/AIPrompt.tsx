@@ -326,7 +326,7 @@ export function AIPrompt({
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-4">
       <form
         onSubmit={handleSearch}
-        className="relative group flex items-center shadow-lg rounded-full overflow-hidden border border-border/80 bg-background focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-300"
+        className="relative group flex items-center shadow-[0_0_15px_rgba(255,255,255,0.3)] rounded-full overflow-hidden border-2 border-white bg-background transition-all duration-300"
       >
         <div className="pl-6 pr-2 py-4">
           {activeSearchType === 'database' ? (

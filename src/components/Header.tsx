@@ -443,7 +443,7 @@ export function Header() {
               <img
                 src={logoUrl}
                 alt="My Way Video"
-                className="h-12 md:h-14 w-auto hover:opacity-90 transition-opacity cursor-pointer"
+                className="h-12 md:h-14 w-auto max-w-[140px] md:max-w-none hover:opacity-90 transition-opacity cursor-pointer"
               />
             </Link>
           </div>
@@ -488,19 +488,6 @@ export function Header() {
               )}
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative group hover:bg-primary/10 transition-colors"
-              onClick={() => navigate('/cart')}
-            >
-              <ShoppingCart className="w-5 h-5 group-hover:text-primary transition-colors" />
-              {totalItemCount > 0 && (
-                <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
-                  {totalItemCount}
-                </span>
-              )}
-            </Button>
             {user && !hasLoggedOut ? (
               isMobile ? (
                 <Sheet open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
@@ -557,6 +544,20 @@ export function Header() {
                 <User className="w-5 h-5" />
               </Button>
             )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative group hover:bg-primary/10 transition-colors"
+              onClick={() => navigate('/cart')}
+            >
+              <ShoppingCart className="w-5 h-5 group-hover:text-primary transition-colors" />
+              {totalItemCount > 0 && (
+                <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
+                  {totalItemCount}
+                </span>
+              )}
+            </Button>
           </div>
         </div>
       </header>

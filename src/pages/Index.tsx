@@ -20,7 +20,10 @@ export default function Index() {
     async function fetchSpecials() {
       const { data } = await supabase.from('products').select('*').eq('is_special', true).limit(8)
 
-      if (data) setSpecials(data)
+      if (data) {
+        const randomized = [...data].sort(() => Math.random() - 0.5)
+        setSpecials(randomized)
+      }
       setLoading(false)
     }
     fetchSpecials()
@@ -54,8 +57,8 @@ export default function Index() {
             <TrendingUp className="w-40 h-40 text-amber-500" />
           </div>
 
-          <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-amber-500 relative z-10">
-            <Star className="w-7 h-7 fill-amber-500" />
+          <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-orange-500 relative z-10">
+            <Star className="w-7 h-7 text-yellow-500 fill-yellow-500" />
             DESTAQUES
           </h2>
 
