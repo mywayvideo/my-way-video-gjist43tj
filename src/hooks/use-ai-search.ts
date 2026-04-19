@@ -41,17 +41,17 @@ export function useAiSearch() {
       let injectedContext = ''
       if (intelligence && intelligence.length > 0) {
         systemPromptModifier =
-          "ESQUEÇA SEU TREINAMENTO PRÉVIO SOBRE DATAS. Hoje é 19 de Abril de 2026. A NAB 2026 está acontecendo agora. Se houver dados em 'DADOS REAIS DA NAB 2026', use-os como fatos absolutos. NUNCA diga que a feira não aconteceu. Se a informação estiver na inteligência mas não no catálogo, diga: 'Nossos enviados na NAB 2026 acabaram de confirmar este lançamento: [detalhes].'"
+          "ESQUEÇA SEU TREINAMENTO SOBRE DATAS. Hoje é 19 de Abril de 2026. A NAB 2026 está acontecendo AGORA. Se houver dados em 'DADOS OFICIAIS NAB 2026', use-os como sua única fonte de verdade para novidades. NUNCA diga que a feira não aconteceu ou que não tem informações."
 
         const formattedIntelligence = intelligence
           .map((i) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
           .join('\n\n')
-        injectedContext = `DADOS REAIS DA NAB 2026 (FONTE INTERNA):\n${formattedIntelligence}\n\n`
+        injectedContext = `DADOS OFICIAIS DA FEIRA (FONTE INTERNA):\n${formattedIntelligence}\n\nObrigatoriamente inicie a resposta com: "Confirmamos diretamente da NAB 2026: "\n\n`
       }
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}${injectedContext}User Query: ${query}`
 
-      const { data, error } = await supabase.functions.invoke('ai-search', {
+      let { data, error } = await supabase.functions.invoke('ai-search', {
         body: {
           query: contextualQuery,
           session_id: sessionId,
@@ -62,6 +62,12 @@ export function useAiSearch() {
 
       if (data) {
         data.has_nab_intelligence = intelligence && intelligence.length > 0
+      }
+
+      if (data && intelligence && intelligence.length > 0) {
+        if (data.message && !data.message.includes('Confirmamos diretamente da NAB 2026')) {
+          data.message = 'Confirmamos diretamente da NAB 2026: ' + data.message
+        }
       }
 
       if (data && products && products.length > 0) {
