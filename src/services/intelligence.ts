@@ -93,63 +93,76 @@ export const getActiveAgent = async () => {
   }
 }
 
-export const generateAgentResponse = async (query: string, contextData: any, agentId?: string) => {
+export const generateAgentResponse = async (
+  query: string,
+  unifiedContext: any,
+  agentId?: string,
+) => {
   try {
     const systemPrompt = `Você é o Especialista My Way Business.
 Sua única fonte de verdade são os 'DADOS DO BANCO' enviados no contexto.
-REGRA 1: Se houver produtos na lista, eles ESTÃO em estoque em Miami. Confirme isso imediatamente.
-REGRA 2: Se houver notícias na lista, use-as para detalhar a NAB 2026.
-REGRA 3: É PROIBIDO dizer que não encontrou algo que esteja na lista de contexto.
+PRIORIDADE 1: Se o produto está em 'products', confirme estoque imediato em Miami.
+PRIORIDADE 2: Se a info está em 'market_intelligence', use-a para detalhes técnicos/NAB.
+PRIORIDADE 3: Se veio da Web, apresente como 'Informação de Mercado' e salve no cache.
+PROIBIÇÃO: Nunca diga 'não encontrei' se houver qualquer dado no contexto enviado.
 REGRA 4: Responda APENAS em Português (PT-BR).
 REGRA 5: Mantenha os parágrafos curtos: máximo de 2 frases por parágrafo.
 REGRA 6: Use blocos de código (\`\`\`) para formatar especificações técnicas.
-REGRA 7: Sempre mencione garantia do fabricante no Brasil/LATAM.`
+REGRA 7: Sempre mencione garantia do fabricante no Brasil/LATAM e preços em USD.`
 
-    const enhancedQuery = `${systemPrompt}\n\nDADOS DO BANCO: ${JSON.stringify(contextData)}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemPrompt}\n\nDADOS DO BANCO: ${JSON.stringify(unifiedContext)}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
         query: enhancedQuery,
-        products: contextData.products || [],
-        intelligence: contextData.news || [],
+        products: unifiedContext.products || [],
+        intelligence: [...(unifiedContext.news || []), ...(unifiedContext.web || [])],
         agentId,
-        isNABQuery: contextData.news?.length > 0,
+        isNABQuery: unifiedContext.news?.length > 0 || unifiedContext.web?.length > 0,
       },
     })
 
     if (error) throw error
     if (data?.message) return data.message
 
-    return buildFallbackMessage(query, contextData)
+    return buildFallbackMessage(query, unifiedContext)
   } catch (e) {
     console.error('Edge function call failed:', e)
-    return buildFallbackMessage(query, contextData)
+    return buildFallbackMessage(query, unifiedContext)
   }
 }
 
-function buildFallbackMessage(query: string, contextData: any) {
+function buildFallbackMessage(query: string, unifiedContext: any) {
   let response = 'Especialista My Way:\n\n'
-  const products = contextData.products || []
-  const news = contextData.news || []
+  const products = unifiedContext.products || []
+  const news = unifiedContext.news || []
+  const web = unifiedContext.web || []
 
   if (products.length > 0) {
     response +=
-      'Encontrei as seguintes opções no nosso catálogo. Confirmo estoque em Miami e garantia do fabricante no Brasil/LATAM:\n\n'
+      'Encontrei as seguintes opções no nosso catálogo. Confirmo estoque imediato em Miami, garantia do fabricante no Brasil/LATAM e preços em USD:\n\n'
     products.forEach((p: any) => {
       response += `**${p.name}**\n`
       const tech = p.technical_info || p.description || 'Especificações sob consulta.'
-      response += `\`\`\`\n${tech.substring(0, 150)}...\n\`\`\`\n\n`
+      response += `\`\`\`\n${tech.substring(0, 150)}...\n\`\`\`\nPreço: USD ${p.price_usd || 'Consulte'}\n\n`
     })
   }
 
   if (news.length > 0) {
-    response += 'Confirmamos diretamente da NAB 2026:\n\n'
+    response += 'Detalhes Técnicos / Informações:\n\n'
     news.forEach((n: any) => {
       response += `**${n.title}**\n${n.ai_summary || n.raw_content?.substring(0, 150)}...\n\n`
     })
   }
 
-  if (products.length === 0 && news.length === 0) {
+  if (web.length > 0) {
+    response += 'Informação de Mercado (Web):\n\n'
+    web.forEach((w: any) => {
+      response += `**${w.title}**\n${w.raw_content?.substring(0, 200)}...\n\n`
+    })
+  }
+
+  if (products.length === 0 && news.length === 0 && web.length === 0) {
     response +=
       'Não possuo essa informação exata no momento em nossa base de dados. Recomendo falar com um de nossos especialistas.'
   }

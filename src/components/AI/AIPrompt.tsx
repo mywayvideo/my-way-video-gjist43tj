@@ -160,8 +160,8 @@ export function AIPrompt({
           <Bot className="w-5 h-5 text-primary animate-bounce" />
           <span className="font-medium tracking-wide">
             {query.match(/(nab|las vegas|news|novidades|lançamentos|2026)/i)
-              ? 'Analisando inteligência da NAB 2026...'
-              : 'Consultando catálogo My Way...'}
+              ? 'Analisando inteligência e cache Web...'
+              : 'Consultando estoque e catálogo My Way...'}
           </span>
         </div>
       )}
@@ -232,8 +232,8 @@ export function AIPrompt({
             </div>
           )}
 
-          {(!localResult?.products || localResult.products.length === 0) && (
-            <div className="w-full flex justify-center mt-4">
+          {localResult?.should_show_whatsapp_button && (
+            <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
               <a
                 href="https://wa.me/13055551234"
                 target="_blank"
