@@ -39,6 +39,7 @@
     "send-email": 8,
     "verify-user-role": 8,
     "generate-related-products": 8,
-    "square-payment": 7
+    "square-payment": 7,
+    "process-knowledge": 1
   }
 }
