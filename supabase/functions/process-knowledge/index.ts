@@ -12,10 +12,7 @@ Deno.serve(async (req: Request) => {
     const { url, manufacturer_id, record_id } = body
 
     if (!url) {
-      return new Response(JSON.stringify({ error: 'URL is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'URL is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
@@ -25,12 +22,12 @@ Deno.serve(async (req: Request) => {
     // Fetch HTML
     const htmlRes = await fetch(url)
     const htmlText = await htmlRes.text()
-
+    
     // Truncate HTML to avoid token limits
     const truncatedHtml = htmlText.substring(0, 15000)
 
     const aiKey = Deno.env.get('KNOWLEDGE_AI_KEY') || Deno.env.get('OPENAI_API_KEY')
-
+    
     let aiTitle = ''
     let aiSummary = ''
     let aiSpecs = ''
@@ -51,17 +48,17 @@ Return ONLY a valid JSON in this format:
       const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${aiKey}`,
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${aiKey}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: prompt },
-            { role: 'user', content: truncatedHtml },
+            { role: 'user', content: truncatedHtml }
           ],
-          response_format: { type: 'json_object' },
-        }),
+          response_format: { type: 'json_object' }
+        })
       })
 
       if (aiRes.ok) {
@@ -71,9 +68,9 @@ Return ONLY a valid JSON in this format:
           if (parsed.title) aiTitle = parsed.title
           if (parsed.specs) aiSpecs = parsed.specs
           if (parsed.summary) aiSummary = parsed.summary
-        } catch (e) {}
+        } catch(e) {}
       } else {
-        console.error('AI API Error:', await aiRes.text())
+        console.error("AI API Error:", await aiRes.text())
       }
     }
 
@@ -90,7 +87,7 @@ Return ONLY a valid JSON in this format:
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-
+      
       if (existing) {
         targetRecordId = existing.id
       }
@@ -103,7 +100,7 @@ Return ONLY a valid JSON in this format:
           title: aiTitle || 'Processado Automaticamente',
           ai_summary: combinedContent,
           raw_content: truncatedHtml,
-          status: 'published',
+          status: 'published'
         })
         .eq('id', targetRecordId)
         .select()
@@ -113,7 +110,7 @@ Return ONLY a valid JSON in this format:
 
       return new Response(JSON.stringify({ success: true, data }), {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     } else {
       // Insert new if not found
@@ -125,7 +122,7 @@ Return ONLY a valid JSON in this format:
           manufacturer_id: manufacturer_id || null,
           ai_summary: combinedContent,
           raw_content: truncatedHtml,
-          status: 'published',
+          status: 'published'
         })
         .select()
         .single()
@@ -134,13 +131,14 @@ Return ONLY a valid JSON in this format:
 
       return new Response(JSON.stringify({ success: true, data }), {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
