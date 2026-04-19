@@ -11,14 +11,6 @@ export function useAiSearch() {
     setIsLoading(true)
 
     try {
-      // Dual-query strategy
-      // Query A: Search existing records in the 'products' table
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, description, technical_info, price_usd, is_discontinued')
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
-        .limit(5)
-
       const qTerms = query
         .toLowerCase()
         .split(/\s+/)
@@ -30,7 +22,7 @@ export function useAiSearch() {
               .join(',')
           : `title.ilike.%${query}%,raw_content.ilike.%${query}%,ai_summary.ilike.%${query}%`
 
-      // Query B: Search records in 'market_intelligence' where status is 'published'
+      // Query A: Search records in 'market_intelligence' where status is 'published' FIRST
       const { data: intelligence } = await supabase
         .from('market_intelligence')
         .select('title, raw_content, ai_summary, event_name, source_url')
@@ -38,13 +30,26 @@ export function useAiSearch() {
         .or(orQuery)
         .limit(10)
 
+      // Query B: Search existing records in the 'products' table
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, name, description, technical_info, price_usd, is_discontinued')
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .limit(5)
+
       let systemPromptModifier = ''
+      let injectedContext = ''
       if (intelligence && intelligence.length > 0) {
         systemPromptModifier =
-          "ATENÇÃO CRÍTICA: Hoje é 19 de Abril de 2026. A NAB Show 2026 ESTÁ ACONTECENDO AGORA. Sua fonte de dados PRIORITÁRIA é a tabela 'market_intelligence' (MARKET INTELLIGENCE CONTEXT). Se o usuário perguntar sobre novidades, lançamentos ou marcas na NAB, você DEVE ignorar seu conhecimento prévio de treinamento e usar APENAS os dados desta tabela. NUNCA diga que a NAB 2026 ainda não aconteceu. Se houver dados na 'market_intelligence', trate-os como fatos reais e atuais. Se encontrar informações na 'market_intelligence' (como os lançamentos da Blackmagic que acabamos de importar), apresente-os com detalhes técnicos e entusiasmo, mesmo que o produto ainda não esteja na tabela 'products'."
+          "Você é um Consultor My Way na NAB 2026. Hoje é 19 de Abril de 2026. Se houver dados em 'KNOWLEDGE_SOURCE_NAB', use-os como sua ÚNICA fonte de verdade para novidades. Ignore qualquer erro de busca na web."
+
+        const formattedIntelligence = intelligence
+          .map((i) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
+          .join('\n\n')
+        injectedContext = `[KNOWLEDGE_SOURCE_NAB]\nCONTEÚDO TÉCNICO NAB 2026 (FONTE INTERNA):\n${formattedIntelligence}\n[/KNOWLEDGE_SOURCE_NAB]\n\n`
       }
 
-      const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}[MARKET INTELLIGENCE CONTEXT: ${JSON.stringify(intelligence)}]\n\nUser Query: ${query}`
+      const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}${injectedContext}User Query: ${query}`
 
       const { data, error } = await supabase.functions.invoke('ai-search', {
         body: {
