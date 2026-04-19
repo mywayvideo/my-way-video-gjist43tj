@@ -132,18 +132,20 @@ export const generateAgentResponse = async (
   isNABQuery: boolean = false,
 ) => {
   try {
-    const stringifiedProducts = JSON.stringify(products)
+    const productsList = products
+      .map((p) => `Nome: ${p.name}, Modelo: ${p.sku || 'N/A'}`)
+      .join('; ')
+    const stringifiedFullProducts = JSON.stringify(products)
     const systemContextUpdate = `
 IDENTIDADE: Você é um Vendedor Senior.
-PRODUTOS ENCONTRADOS NO SEU ESTOQUE: ${stringifiedProducts}
-ESTOQUE ATUAL: ${stringifiedProducts}
-DADOS REAIS DO BANCO: ${stringifiedProducts}
+DADOS REAIS DO ESTOQUE: ${productsList}
+DETALHES COMPLETOS DOS PRODUTOS: ${stringifiedFullProducts}
 
 REGRAS OBRIGATÓRIAS:
 1. Responda APENAS em Português (PT-BR).
 2. Parágrafos curtos: máximo de 2 frases por parágrafo.
-3. Se o modelo solicitado (ex: FX30) estiver na lista acima, você DEVE confirmar a disponibilidade em Miami. É terminantemente PROIBIDO dizer que não encontrou o produto se ele estiver no contexto enviado. Se houver produtos em 'DADOS REAIS DO BANCO', você DEVE confirmar estoque em Miami.
-4. Sempre mencione: "Disponível para envio imediato de Miami com garantia no Brasil."
+3. Se houver itens em 'DADOS REAIS DO ESTOQUE', você DEVE confirmar a disponibilidade em Miami. É PROIBIDO dizer que não encontrou o produto se a lista contiver dados.
+4. Sempre mencione a garantia do fabricante no Brasil/LATAM. Exemplo: "Disponível para envio imediato de Miami com garantia do fabricante no Brasil/LATAM."
 5. Use blocos de código (\`\`\`) para formatar especificações técnicas.
 6. Nunca mencione IDs de produtos. Use os preços em USD informados.
 7. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
@@ -205,10 +207,10 @@ function buildFallbackMessage(
   if (products.length > 0) {
     if (!isNABQuery) {
       response +=
-        'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo e confirmo estoque em Miami:\n\n'
+        'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo e confirmo estoque em Miami. Disponível para envio imediato de Miami com garantia do fabricante no Brasil/LATAM:\n\n'
     } else {
       response +=
-        'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca e confirmo estoque em Miami:\n\n'
+        'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca e confirmo estoque em Miami. Disponível para envio imediato de Miami com garantia do fabricante no Brasil/LATAM:\n\n'
     }
     products.forEach((p: any) => {
       response += `**${p.name}**\n`

@@ -44,6 +44,12 @@ export function AIPrompt({
       if (onSearch) {
         const result = await onSearch(query.trim())
         if (result) {
+          const hasProducts =
+            result.products?.length > 0 || result.referenced_internal_products?.length > 0
+          if (hasProducts) {
+            result.confidence_level = 'high'
+            result.should_show_whatsapp_button = false
+          }
           setLocalResult(result)
           if (onResult) onResult(result)
         }
@@ -182,7 +188,7 @@ export function AIPrompt({
             (localResult.products || localResult.referenced_internal_products).length > 0 && (
               <div className="w-full animate-fade-in-up delay-150">
                 <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
-                  Equipamentos em Estoque
+                  Produtos Encontrados em Nosso Catálogo
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {(localResult.products || localResult.referenced_internal_products).map(

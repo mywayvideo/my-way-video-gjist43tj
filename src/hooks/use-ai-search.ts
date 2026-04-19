@@ -18,11 +18,13 @@ export function useAiSearch() {
       const isNABQuery = /(nab|las vegas|news|novidades|lançamentos|2026)/i.test(query)
 
       const rawQuery = query.trim()
+      const words = rawQuery.split(/\s+/).filter(Boolean)
+      const orConditions = words.map((w) => `name.ilike.%${w}%,sku.ilike.%${w}%`).join(',')
 
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*, manufacturers(name)')
-        .or(`name.ilike.%${rawQuery}%,sku.ilike.%${rawQuery}%`)
+        .or(orConditions)
         .limit(10)
 
       if (productsData) {
