@@ -46,7 +46,7 @@ export function useAiSearch() {
         const formattedIntelligence = intelligence
           .map((i) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
           .join('\n\n')
-        injectedContext = `DADOS REAIS NAB 2026:\n${formattedIntelligence}\n\nObrigatoriamente inicie a resposta com: "Confirmamos diretamente da NAB 2026: "\n\n`
+        injectedContext = `DADOS REAIS DA NAB 2026:\n${formattedIntelligence}\n\nObrigatoriamente inicie a resposta com: "Confirmamos diretamente da NAB 2026: "\n\n`
       }
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}${injectedContext}User Query: ${query}`
@@ -71,7 +71,7 @@ export function useAiSearch() {
       }
 
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 20000)
+      const timeoutId = setTimeout(() => controller.abort(), 60000)
 
       let data
       try {

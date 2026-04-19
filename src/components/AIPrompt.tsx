@@ -27,10 +27,14 @@ export function AIPrompt({
   initialQuery = '',
   productId,
   searchType: propSearchType,
+  onSearch,
+  isExternalLoading = false,
 }: {
   initialQuery?: string
   productId?: string
   searchType?: 'ai' | 'database'
+  onSearch?: (query: string, sessionId?: string) => Promise<any>
+  isExternalLoading?: boolean
 }) {
   const { id: routeId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -40,7 +44,8 @@ export function AIPrompt({
   const activeSearchType = propSearchType || routeSearchType || 'ai'
 
   const [query, setQuery] = useState(initialQuery)
-  const [isLoading, setIsLoading] = useState(false)
+  const [internalLoading, setInternalLoading] = useState(false)
+  const isLoading = internalLoading || isExternalLoading
   const [result, setResult] = useState<any>(null)
   const [dbResults, setDbResults] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -152,9 +157,8 @@ export function AIPrompt({
   }, [debouncedQuery, activeSearchType])
 
   const performDatabaseSearch = async (searchQuery: string, isRestore = false) => {
-    setIsLoading(true)
-    setError(null)
-    setResponseMessage(null)
+    setInternalLoading(true)
+    setError(null)    setResponseMessage(null)
     setReferencedProducts([])
 
     try {
@@ -190,12 +194,11 @@ export function AIPrompt({
       })
       setResult({ status: 'database_empty' })
     } finally {
-      setIsLoading(false)
+      setInternalLoading(false)
     }
   }
 
-  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string, isRestore = false) => {
-    if (e) e.preventDefault()
+  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string, isRestore = false) => {    if (e) e.preventDefault()
 
     const queryToUse = overrideQuery || query
     if (!queryToUse.trim() || isLoading) return
@@ -205,9 +208,8 @@ export function AIPrompt({
       return
     }
 
-    setIsLoading(true)
-    setError(null)
-    setResult(null)
+    setInternalLoading(true)
+    setError(null)    setResult(null)
     setDbResults([])
     setResponseMessage(null)
     setReferencedProducts([])
@@ -221,13 +223,13 @@ export function AIPrompt({
         localStorage.setItem('ai-session-id', sessionId)
       }
 
-      const data = await aiSearch(
+      const searchFn = onSearch || aiSearch
+      const data = await searchFn(
         activeProductId
           ? `${queryToUse.trim()} [Contexto: Produto ${activeProductId}]`
           : queryToUse.trim(),
         sessionId,
       )
-
       if (!data) {
         throw new Error('Ocorreu um erro ao processar sua pesquisa. Por favor, tente novamente.')
       }
@@ -258,11 +260,10 @@ export function AIPrompt({
         data.referenced_internal_products || [],
         'ai',
         [],
-        data.should_show_whatsapp_button || data.confidence_level === 'low',
+        data.should_show_whatsapp_button || data.confidence_level !== 'high',
       )
 
-      if (!isRestore) {
-        setSearchParams(
+      if (!isRestore) {        setSearchParams(
           (prev) => {
             prev.set('q', queryToUse.trim())
             prev.set('type', 'ai')
@@ -282,12 +283,11 @@ export function AIPrompt({
         description: errorMsg,
       })
     } finally {
-      setIsLoading(false)
+      setInternalLoading(false)
     }
   }
 
-  const handleClear = () => {
-    clearResponse()
+  const handleClear = () => {    clearResponse()
     searchStore.clearSearchState()
     setSearchParams(
       (prev) => {
@@ -378,15 +378,14 @@ export function AIPrompt({
                       referenced_internal_products:
                         result.referenced_internal_products || referencedProducts,
                       should_show_whatsapp_button:
-                        result.should_show_whatsapp_button || result.confidence_level === 'low',
+                        result.should_show_whatsapp_button || result.confidence_level !== 'high',
                       whatsapp_reason: result.whatsapp_reason,
                     }
                   : null
               }
               error={error}
               className="w-full"
-            />
-          </div>
+            />          </div>
         )}
 
       {restoreError && !isLoading && (

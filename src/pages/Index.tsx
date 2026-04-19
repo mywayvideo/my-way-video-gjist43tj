@@ -5,16 +5,12 @@ import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Star, TrendingUp } from 'lucide-react'
-import useSearchState from '@/hooks/useSearchState'
+import { useAiSearch } from '@/hooks/use-ai-search'
 
 export default function Index() {
-  const { searchQuery, saveSearchState, restoreSearchState } = useSearchState()
+  const { search: aiSearch, isLoading: isSearchLoading } = useAiSearch()
   const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-
-  const handleSearch = (query: string, response: string, products: any[]) => {
-    saveSearchState(query, response, products)
-  }
 
   useEffect(() => {
     async function fetchSpecials() {
@@ -46,7 +42,7 @@ export default function Index() {
           </p>
 
           <div className="pt-8 w-full animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <AIPrompt onSearch={handleSearch} />
+            <AIPrompt onSearch={aiSearch} isExternalLoading={isSearchLoading} />
           </div>
         </div>
       </section>
