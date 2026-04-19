@@ -39,6 +39,7 @@ export function AIPrompt({
 
     setIsLoading(true)
     if (onLoadingChange) onLoadingChange(true)
+    setLocalResult(null)
 
     try {
       if (onSearch) {
@@ -159,9 +160,7 @@ export function AIPrompt({
         <div className="w-full max-w-3xl mt-6 flex items-center gap-3 text-white/70 animate-pulse bg-black/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
           <Bot className="w-5 h-5 text-primary animate-bounce" />
           <span className="font-medium tracking-wide">
-            {query.match(/(nab|las vegas|news|novidades|lançamentos|2026)/i)
-              ? 'Analisando inteligência e cache Web...'
-              : 'Consultando estoque e catálogo My Way...'}
+            Buscando no catálogo, inteligência e web...
           </span>
         </div>
       )}
@@ -186,7 +185,7 @@ export function AIPrompt({
           {localResult?.products && localResult.products.length > 0 && (
             <div className="w-full animate-fade-in-up delay-150">
               <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
-                Produtos Encontrados em Nosso Catálogo
+                Produtos Relacionados
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {localResult.products.map((product: any) => (

@@ -93,22 +93,17 @@ export const getActiveAgent = async () => {
   }
 }
 
-export const generateAgentResponse = async (
-  query: string,
-  unifiedContext: any,
-  agentId?: string,
-) => {
+export const generateResponse = async (query: string, unifiedContext: any, agentId?: string) => {
   try {
-    const systemPrompt = `Você é o Especialista My Way Business.
-Sua única fonte de verdade são os 'DADOS DO BANCO' enviados no contexto.
-PRIORIDADE 1: Se o produto está em 'products', confirme estoque imediato em Miami.
-PRIORIDADE 2: Se a info está em 'market_intelligence', use-a para detalhes técnicos/NAB.
-PRIORIDADE 3: Se veio da Web, apresente como 'Informação de Mercado' e salve no cache.
-PROIBIÇÃO: Nunca diga 'não encontrei' se houver qualquer dado no contexto enviado.
-REGRA 4: Responda APENAS em Português (PT-BR).
-REGRA 5: Mantenha os parágrafos curtos: máximo de 2 frases por parágrafo.
-REGRA 6: Use blocos de código (\`\`\`) para formatar especificações técnicas.
-REGRA 7: Sempre mencione garantia do fabricante no Brasil/LATAM e preços em USD.`
+    const systemPrompt = `Você é o Especialista My Way Business. Sua resposta deve ser baseada EXCLUSIVAMENTE nos dados fornecidos.
+- Se houver produtos no contexto, confirme estoque imediato em Miami e cite os preços em USD.
+- Se houver dados de inteligência/NAB, use-os como fonte primária de verdade.
+- É TERMINANTEMENTE PROIBIDO dizer 'não encontrei' se houver dados no contexto.
+- Se o usuário perguntou por um modelo (ex: FX30) e ele está no contexto, você DEVE confirmar sua existência.
+- Responda APENAS em Português (PT-BR).
+- Parágrafos: máximo de 2 frases.
+- Use blocos de código (\`\`\`) para formatar especificações técnicas.
+- Sempre mencione a garantia do fabricante no Brasil/LATAM.`
 
     const enhancedQuery = `${systemPrompt}\n\nDADOS DO BANCO: ${JSON.stringify(unifiedContext)}\n\nPergunta do usuário: ${query}`
 
@@ -169,3 +164,5 @@ function buildFallbackMessage(query: string, unifiedContext: any) {
 
   return response
 }
+
+export const generateAgentResponse = generateResponse

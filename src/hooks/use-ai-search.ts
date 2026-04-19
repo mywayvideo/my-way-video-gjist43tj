@@ -1,13 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import {
-  getActiveAgent,
-  generateAgentResponse,
-  ingestManualKnowledge,
-} from '@/services/intelligence'
+import { getActiveAgent, generateResponse, ingestManualKnowledge } from '@/services/intelligence'
 
-export function useAiSearch() {
+export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
   const { toast } = useToast()
@@ -16,19 +12,31 @@ export function useAiSearch() {
     if (!query || !query.trim()) return
 
     setIsLoading(true)
+    setResults(null)
 
     try {
       const activeAgent = await getActiveAgent()
-      const term = query.trim()
-      const searchPattern = `%${term}%`
+      const terms = query
+        .trim()
+        .split(/\s+/)
+        .filter((t) => t.length > 1)
+      const fallbackTerm = query.trim()
+
+      let productsOr = `name.ilike.%${fallbackTerm}%,sku.ilike.%${fallbackTerm}%,description.ilike.%${fallbackTerm}%`
+      let newsOr = `title.ilike.%${fallbackTerm}%,raw_content.ilike.%${fallbackTerm}%`
+
+      if (terms.length > 0) {
+        productsOr = terms
+          .map((t) => `name.ilike.%${t}%,sku.ilike.%${t}%,description.ilike.%${t}%`)
+          .join(',')
+        newsOr = terms.map((t) => `title.ilike.%${t}%,raw_content.ilike.%${t}%`).join(',')
+      }
 
       // STEP 1: Local Stock
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*, manufacturers(name)')
-        .or(
-          `name.ilike.${searchPattern},sku.ilike.${searchPattern},description.ilike.${searchPattern}`,
-        )
+        .or(productsOr)
         .limit(20)
 
       if (productsError) throw productsError
@@ -37,13 +45,12 @@ export function useAiSearch() {
       const { data: newsData, error: newsError } = await supabase
         .from('market_intelligence')
         .select('*')
-        .or(`title.ilike.${searchPattern},raw_content.ilike.${searchPattern}`)
+        .or(newsOr)
         .limit(10)
 
       if (newsError) throw newsError
 
       let webData: any = null
-      let usedWebSearch = false
 
       // STEP 3: Web Fallback
       if ((!productsData || productsData.length === 0) && (!newsData || newsData.length === 0)) {
@@ -51,21 +58,20 @@ export function useAiSearch() {
           const { data: aiSearchData, error: aiSearchError } = await supabase.functions.invoke(
             'ai-search',
             {
-              body: { query: term },
+              body: { query: fallbackTerm },
             },
           )
 
           if (!aiSearchError && aiSearchData && aiSearchData.message) {
             webData = {
-              title: `Pesquisa Web: ${term}`,
+              title: `Pesquisa Web: ${fallbackTerm}`,
               raw_content: aiSearchData.message,
               source: 'web',
             }
-            usedWebSearch = true
 
             // IMMEDIATELY save it to 'market_intelligence' with status 'published'
             await ingestManualKnowledge({
-              title: `Pesquisa Web: ${term}`,
+              title: `Pesquisa Web: ${fallbackTerm}`,
               raw_content: aiSearchData.message,
               status: 'published',
             })
@@ -94,7 +100,7 @@ export function useAiSearch() {
           description: 'Nenhum agente configurado. Exibindo busca básica.',
         })
       } else {
-        message = await generateAgentResponse(query, unifiedContext, activeAgent.id)
+        message = await generateResponse(query, unifiedContext, activeAgent.id)
       }
 
       const combinedResults = {
@@ -105,17 +111,17 @@ export function useAiSearch() {
         confidence_level: hasAnyResult ? 'high' : 'low',
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
         has_nab_intelligence: hasNews || hasWeb,
-        is_nab_query: hasNews || hasWeb || term.toLowerCase().includes('nab'),
+        is_nab_query: hasNews || hasWeb || fallbackTerm.toLowerCase().includes('nab'),
       }
 
       setResults(combinedResults)
       return combinedResults
     } catch (err: any) {
-      console.error('[useAiSearch] Database query error:', err)
+      console.error('[useUnifiedSearch] Database query error:', err)
       setResults(null)
       toast({
-        title: 'Erro',
-        description: 'Erro ao consultar base de dados.',
+        title: 'Erro de Busca',
+        description: 'Ocorreu um erro ao consultar nossa base de dados.',
         variant: 'destructive',
       })
       return null
@@ -126,3 +132,5 @@ export function useAiSearch() {
 
   return { search, isLoading, results }
 }
+
+export const useAiSearch = useUnifiedSearch
