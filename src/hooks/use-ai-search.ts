@@ -74,6 +74,7 @@ export function useAiSearch() {
       const hasProducts = productsData && productsData.length > 0
 
       const finalProductsToDisplay = productsData || []
+      const confidenceLevel = hasProducts ? 'high' : 'low'
 
       let message = ''
       if (!activeAgent) {
@@ -109,20 +110,17 @@ export function useAiSearch() {
         message,
         referenced_internal_products: finalProductsToDisplay,
         mentioned_products_count: finalProductsToDisplay.length,
-        should_show_whatsapp_button: !hasProducts || (!hasNabIntelligence && isNABQuery),
-        whatsapp_reason: !hasProducts
-          ? 'Nenhum produto exato encontrado. Fale com um especialista.'
-          : 'Fale com um especialista para confirmar disponibilidade e projetos.',
+        should_show_whatsapp_button: !hasProducts && confidenceLevel === 'low',
+        whatsapp_reason:
+          !hasProducts && confidenceLevel === 'low'
+            ? 'Nenhum produto exato encontrado. Fale com um especialista.'
+            : '',
         price_context: 'fob_miami',
         used_web_search: false,
-        confidence_level: hasProducts ? 'high' : 'low',
+        confidence_level: confidenceLevel,
         has_nab_intelligence: hasNabIntelligence,
         is_nab_query: isNABQuery,
-        agent_name: activeAgent?.provider_name
-          ? isNABQuery
-            ? 'Agente NAB'
-            : 'Consultor My Way'
-          : 'Busca Básica',
+        agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
       }
 
       setResults(combinedResults)
