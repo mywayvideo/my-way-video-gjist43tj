@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
 import { Loader2, Search, Sparkles, Flame } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
 interface AIPromptProps {
-  onSearch?: (query: string) => void
+  onSearch?: (query: string) => Promise<any> | void
   onResult?: (data: any) => void
   onError?: (error: string) => void
   onLoadingChange?: (isLoading: boolean) => void
@@ -32,25 +31,13 @@ export function AIPrompt({
     setIsLoading(true)
     if (onLoadingChange) onLoadingChange(true)
 
-    if (onSearch) {
-      onSearch(query.trim())
-    }
-
-    console.log('Iniciando chamada para ai-search...')
-
     try {
-      const { data, error } = await supabase.functions.invoke('ai-search', {
-        body: { query: query.trim() },
-      })
-
-      if (error) {
-        console.error('FunctionsFetchError:', error)
-        throw new Error(error.message || 'Erro ao comunicar com a inteligência artificial.')
-      }
-
-      if (data) {
-        setLocalResult(data)
-        if (onResult) onResult(data)
+      if (onSearch) {
+        const result = await onSearch(query.trim())
+        if (result) {
+          setLocalResult(result)
+          if (onResult) onResult(result)
+        }
       }
     } catch (err: any) {
       console.error('AIPrompt Error:', err)
@@ -85,7 +72,10 @@ export function AIPrompt({
         <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-white/5 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-500"></div>
         <div className="relative flex flex-col sm:flex-row items-center bg-black/60 border border-white/20 rounded-[2rem] shadow-[0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-2 sm:p-3 overflow-hidden focus-within:border-white/50 focus-within:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-300">
           <div className="hidden sm:flex items-center justify-center pl-4 pr-2 text-white/50">
-            <Sparkles size={24} className={isLoading ? 'animate-pulse text-white' : ''} />
+            <Sparkles
+              size={24}
+              className={isLoading || isExternalLoading ? 'animate-pulse text-white' : ''}
+            />
           </div>
           <textarea
             value={query}
