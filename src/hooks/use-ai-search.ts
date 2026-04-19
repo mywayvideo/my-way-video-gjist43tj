@@ -55,6 +55,7 @@ export function useAiSearch() {
 
       let data
       try {
+        console.log('Iniciando chamada para ai-search...')
         const { data: responseData, error } = await supabase.functions.invoke('ai-search', {
           body: {
             query: contextualQuery,
