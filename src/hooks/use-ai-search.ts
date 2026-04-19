@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { generateAgentResponse } from '@/services/intelligence'
 
 export function useAiSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -42,34 +43,13 @@ export function useAiSearch() {
       const hasNabIntelligence = miData && miData.length > 0
       const hasProducts = productsData && productsData.length > 0
 
-      // Merge results: Combine both arrays into a single state mimicking the AI response
-      let message = ''
-      if (hasNabIntelligence || hasProducts) {
-        message = `Resultados encontrados na nossa base de dados para "${query}":\n\n`
-
-        if (hasNabIntelligence) {
-          message +=
-            '**Base de Conhecimento (Notícias e Atualizações):**\n' +
-            miData
-              .map(
-                (d: any) =>
-                  `- **${d.title}**: ${d.ai_summary || d.raw_content?.substring(0, 100) + '...'}`,
-              )
-              .join('\n') +
-            '\n\n'
-        }
-
-        if (hasProducts) {
-          message += '**Produtos correspondentes no nosso catálogo:**'
-        }
-      } else {
-        message = `Não encontramos resultados exatos para "${query}". Recomendamos falar com um especialista para opções alternativas ou produtos sob encomenda.`
-      }
+      // Generate Agent Response using the new logic
+      const message = await generateAgentResponse(query, productsData || [], miData || [])
 
       const combinedResults = {
         message,
         referenced_internal_products: productsData || [],
-        should_show_whatsapp_button: true, // Always offer the specialist option
+        should_show_whatsapp_button: !hasProducts || !hasNabIntelligence,
         whatsapp_reason: !hasProducts
           ? 'Nenhum produto exato encontrado. Fale com um especialista.'
           : 'Fale com um especialista para confirmar disponibilidade e projetos.',

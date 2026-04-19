@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, Search, Sparkles, Flame } from 'lucide-react'
+import { Loader2, Search, Sparkles, Flame, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
@@ -57,6 +57,38 @@ export function AIPrompt({
     }
   }
 
+  const formatMessage = (text: string) => {
+    if (!text) return null
+    const parts = text.split('```')
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return (
+          <pre
+            key={index}
+            className="bg-black/60 border border-white/10 p-4 rounded-lg my-4 overflow-x-auto text-sm font-mono text-white/80"
+          >
+            {part.trim()}
+          </pre>
+        )
+      }
+      const boldParts = part.split('**')
+      const formatted = boldParts.map((bp, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} className="text-white font-semibold">
+            {bp}
+          </strong>
+        ) : (
+          bp
+        ),
+      )
+      return (
+        <p key={index} className="mb-4 whitespace-pre-wrap leading-relaxed">
+          {formatted}
+        </p>
+      )
+    })
+  }
+
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
       {localResult?.has_nab_intelligence && (
@@ -108,6 +140,25 @@ export function AIPrompt({
           </button>
         </div>
       </form>
+
+      {localResult?.message && !isLoading && !isExternalLoading && (
+        <div className="w-full max-w-3xl mt-8 animate-fade-in-up">
+          <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Agente My Way</h3>
+                <p className="text-xs text-white/50">Especialista em Audiovisual</p>
+              </div>
+            </div>
+            <div className="text-white/80 prose-invert max-w-none">
+              {formatMessage(localResult.message)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
