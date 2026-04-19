@@ -11,11 +11,13 @@ import {
   ingestManualKnowledge,
   updateIntelligenceStatus,
   deleteIntelligence,
+  processKnowledgeUrl,
 } from '@/services/intelligence'
 
 export default function NABHub() {
   const [intelligences, setIntelligences] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState('Sincronizando Inteligência...')
   const [isFetching, setIsFetching] = useState(true)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
@@ -39,10 +41,10 @@ export default function NABHub() {
   }, [])
 
   const handleIngest = async () => {
-    if (!title.trim()) {
+    if (!title.trim() && !url.trim()) {
       toast({
         title: 'Aviso',
-        description: 'O título é obrigatório.',
+        description: 'O título ou URL são obrigatórios.',
         variant: 'destructive',
       })
       return
@@ -58,17 +60,26 @@ export default function NABHub() {
     }
 
     setIsLoading(true)
+    const hasUrl = !!url.trim()
+    setLoadingMessage(
+      hasUrl ? 'A IA está lendo o conteúdo da feira...' : 'Sincronizando Inteligência...',
+    )
+
     try {
-      await ingestManualKnowledge({
-        title,
+      const record = await ingestManualKnowledge({
+        title: title.trim() || 'Processando URL...',
         source_url: url || undefined,
         raw_content: content || undefined,
         status: 'draft',
       })
 
+      if (hasUrl) {
+        await processKnowledgeUrl({ url, manufacturer_id: undefined, record_id: record.id })
+      }
+
       toast({
         title: 'Sucesso',
-        description: 'Conhecimento integrado ao consultor de IA',
+        description: 'Cérebro da IA atualizado com sucesso!',
       })
 
       setTitle('')
@@ -174,7 +185,7 @@ export default function NABHub() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Sincronizando Inteligência...
+                  {loadingMessage}
                 </>
               ) : (
                 'Alimentar Cérebro da IA'

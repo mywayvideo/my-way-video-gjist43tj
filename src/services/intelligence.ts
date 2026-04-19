@@ -39,3 +39,15 @@ export const deleteIntelligence = async (id: string) => {
   const { error } = await supabase.from('market_intelligence').delete().eq('id', id)
   if (error) throw error
 }
+
+export const processKnowledgeUrl = async (payload: {
+  url: string
+  manufacturer_id?: string
+  record_id?: string
+}) => {
+  const { data, error } = await supabase.functions.invoke('process-knowledge', {
+    body: payload,
+  })
+  if (error) throw error
+  return data
+}
