@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import { getActiveAgent, generateAgentResponse } from '@/services/intelligence'
+import { getActiveAgent, generateAgentResponse, searchIntelligence } from '@/services/intelligence'
 
 export function useAiSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -17,31 +17,58 @@ export function useAiSearch() {
       // 1. Fetch active agent
       const activeAgent = await getActiveAgent()
 
-      const searchTerm = `%${query.trim()}%`
+      // Smart Keyword Extraction
+      const stopWords = new Set([
+        'o',
+        'a',
+        'os',
+        'as',
+        'de',
+        'da',
+        'do',
+        'dos',
+        'das',
+        'em',
+        'para',
+        'quais',
+        'na',
+        'no',
+        'nas',
+        'nos',
+        'qual',
+        'que',
+        'e',
+        'ou',
+        'com',
+        'por',
+      ])
+      const keywords = query
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .filter((word) => word.length > 2 && !stopWords.has(word))
+
+      if (keywords.length === 0) keywords.push(query.trim())
+
+      const orProductQuery = keywords
+        .map((k) => `name.ilike.%${k}%,description.ilike.%${k}%`)
+        .join(',')
 
       // Search 1: Query 'products' table using ilike on name and description
       const { data: productsData, error: productsError } = await supabase
         .schema('public')
         .from('products')
         .select('*')
-        .or(`name.ilike.${searchTerm},description.ilike.${searchTerm}`)
+        .or(orProductQuery)
         .eq('is_discontinued', false)
         .limit(6)
 
       if (productsError) throw productsError
 
-      // Search 2: Query 'market_intelligence' table where status is 'published'
-      const { data: miData, error: miError } = await supabase
-        .schema('public')
-        .from('market_intelligence')
-        .select('*')
-        .eq('status', 'published')
-        .or(
-          `title.ilike.${searchTerm},raw_content.ilike.${searchTerm},ai_summary.ilike.${searchTerm}`,
-        )
-        .limit(3)
-
-      if (miError) throw miError
+      // Search 2: Query 'market_intelligence' table using flexible keywords
+      const miData = await searchIntelligence(query)
 
       const hasNabIntelligence = miData && miData.length > 0
       const hasProducts = productsData && productsData.length > 0
@@ -62,6 +89,16 @@ export function useAiSearch() {
           miData || [],
           activeAgent.id,
         )
+      }
+
+      // UI Feedback constraint
+      if (
+        hasNabIntelligence &&
+        message &&
+        !message.startsWith('Confirmamos diretamente da NAB 2026:')
+      ) {
+        const cleanMsg = message.replace(/^Confirmamos diretamente da NAB 2026:\s*/i, '')
+        message = 'Confirmamos diretamente da NAB 2026: ' + cleanMsg
       }
 
       const combinedResults = {

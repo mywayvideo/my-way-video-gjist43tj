@@ -152,9 +152,7 @@ export function AIPrompt({
       {(isLoading || isExternalLoading) && (
         <div className="w-full max-w-3xl mt-6 flex items-center gap-3 text-white/70 animate-pulse bg-black/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
           <Bot className="w-5 h-5 text-primary animate-bounce" />
-          <span className="font-medium tracking-wide">
-            {agentName} está processando sua solicitação...
-          </span>
+          <span className="font-medium tracking-wide">Analisando inteligência da NAB 2026...</span>
         </div>
       )}
 

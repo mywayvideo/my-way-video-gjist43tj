@@ -1,5 +1,61 @@
 import { supabase } from '@/lib/supabase/client'
 
+export const searchIntelligence = async (query: string) => {
+  const stopWords = new Set([
+    'o',
+    'a',
+    'os',
+    'as',
+    'de',
+    'da',
+    'do',
+    'dos',
+    'das',
+    'em',
+    'para',
+    'quais',
+    'na',
+    'no',
+    'nas',
+    'nos',
+    'qual',
+    'que',
+    'e',
+    'ou',
+    'com',
+    'por',
+  ])
+  const keywords = query
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, '')
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopWords.has(word))
+
+  if (keywords.length === 0) keywords.push(query.trim())
+
+  const orQuery = keywords
+    .map((k) => `title.ilike.%${k}%,raw_content.ilike.%${k}%,ai_summary.ilike.%${k}%`)
+    .join(',')
+
+  try {
+    const { data, error } = await supabase
+      .schema('public')
+      .from('market_intelligence')
+      .select('*')
+      .eq('status', 'published')
+      .or(orQuery)
+      .limit(3)
+
+    if (error) throw error
+    return data || []
+  } catch (error) {
+    console.error('Error in searchIntelligence:', error)
+    return []
+  }
+}
+
 export const getIntelligences = async () => {
   try {
     const { data, error } = await supabase
