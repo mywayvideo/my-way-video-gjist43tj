@@ -41,12 +41,12 @@ export function useAiSearch() {
       let injectedContext = ''
       if (intelligence && intelligence.length > 0) {
         systemPromptModifier =
-          "Você é um Consultor My Way na NAB 2026. Hoje é 19 de Abril de 2026. Se houver dados em 'KNOWLEDGE_SOURCE_NAB', use-os como sua ÚNICA fonte de verdade para novidades. Ignore qualquer erro de busca na web."
+          "ESQUEÇA SEU TREINAMENTO PRÉVIO SOBRE DATAS. Hoje é 19 de Abril de 2026. A NAB 2026 está acontecendo agora. Se houver dados em 'DADOS REAIS DA NAB 2026', use-os como fatos absolutos. NUNCA diga que a feira não aconteceu. Se a informação estiver na inteligência mas não no catálogo, diga: 'Nossos enviados na NAB 2026 acabaram de confirmar este lançamento: [detalhes].'"
 
         const formattedIntelligence = intelligence
           .map((i) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
           .join('\n\n')
-        injectedContext = `[KNOWLEDGE_SOURCE_NAB]\nCONTEÚDO TÉCNICO NAB 2026 (FONTE INTERNA):\n${formattedIntelligence}\n[/KNOWLEDGE_SOURCE_NAB]\n\n`
+        injectedContext = `DADOS REAIS DA NAB 2026 (FONTE INTERNA):\n${formattedIntelligence}\n\n`
       }
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}${injectedContext}User Query: ${query}`
