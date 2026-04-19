@@ -60,7 +60,7 @@ export function useAiSearch() {
       const { data: productsData, error: productsError } = await supabase
         .schema('public')
         .from('products')
-        .select('*')
+        .select('*, manufacturers(name)')
         .or(orProductQuery)
         .eq('is_discontinued', false)
         .limit(6)
@@ -101,9 +101,55 @@ export function useAiSearch() {
         message = 'Confirmamos diretamente da NAB 2026: ' + cleanMsg
       }
 
+      // --- POST-PROCESSING: Product Extraction Logic ---
+      const boldMatches =
+        message.match(/\*\*(.*?)\*\*/g)?.map((m) => m.replace(/\*\*/g, '').trim()) || []
+      const uppercaseMatches =
+        message.match(/\b([A-Z][a-zA-Z0-9-]*\s+[A-Z0-9][a-zA-Z0-9-]*)\b/g) || []
+      const searchTerms = [...new Set([...boldMatches, ...uppercaseMatches])]
+        .filter((t) => t.length > 3)
+        .slice(0, 10)
+
+      let secondaryProducts: any[] = []
+      if (searchTerms.length > 0) {
+        const orQuery = searchTerms.map((t) => `name.ilike.%${t}%`).join(',')
+        const { data: secondaryData } = await supabase
+          .schema('public')
+          .from('products')
+          .select('*, manufacturers(name)')
+          .or(orQuery)
+          .eq('is_discontinued', false)
+          .limit(6)
+        if (secondaryData) secondaryProducts = secondaryData
+      }
+
+      const allPotentialProducts = [...(productsData || []), ...secondaryProducts]
+      const uniqueProducts = Array.from(
+        new Map(allPotentialProducts.map((p) => [p.id, p])).values(),
+      )
+
+      const finalProductsToDisplay: any[] = []
+      let mentionedCount = 0
+
+      const messageLower = message.toLowerCase()
+      uniqueProducts.forEach((p) => {
+        const nameMatch = messageLower.includes(p.name.toLowerCase())
+        const skuMatch = p.sku && messageLower.includes(p.sku.toLowerCase())
+
+        if (nameMatch || skuMatch) {
+          finalProductsToDisplay.push(p)
+          mentionedCount++
+        }
+      })
+
+      if (finalProductsToDisplay.length === 0 && productsData && productsData.length > 0) {
+        finalProductsToDisplay.push(...productsData)
+      }
+
       const combinedResults = {
         message,
-        referenced_internal_products: productsData || [],
+        referenced_internal_products: finalProductsToDisplay.slice(0, 6),
+        mentioned_products_count: mentionedCount,
         should_show_whatsapp_button: !hasProducts || !hasNabIntelligence,
         whatsapp_reason: !hasProducts
           ? 'Nenhum produto exato encontrado. Fale com um especialista.'

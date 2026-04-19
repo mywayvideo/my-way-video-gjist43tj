@@ -152,14 +152,55 @@ export const generateAgentResponse = async (
   agentId?: string,
 ) => {
   try {
+    // Context Enrichment
+    let enrichedProducts = [...products]
+    if (intelligence && intelligence.length > 0) {
+      const miManufacturers = [
+        ...new Set(intelligence.map((i) => i.manufacturer_id).filter(Boolean)),
+      ]
+
+      const titlesWords = intelligence
+        .map((i) => i.title)
+        .join(' ')
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .filter((w) => w.length > 4)
+
+      const topWords = [...new Set(titlesWords)].slice(0, 5)
+
+      let q = supabase
+        .schema('public')
+        .from('products')
+        .select('*, manufacturers(name)')
+        .eq('is_discontinued', false)
+
+      if (miManufacturers.length > 0) {
+        q = q.in('manufacturer_id', miManufacturers)
+      } else if (topWords.length > 0) {
+        const orQ = topWords.map((t) => `name.ilike.%${t}%`).join(',')
+        q = q.or(orQ)
+      }
+
+      const { data: relatedProducts } = await q.limit(5)
+
+      if (relatedProducts && relatedProducts.length > 0) {
+        const existingIds = new Set(enrichedProducts.map((p) => p.id))
+        relatedProducts.forEach((rp) => {
+          if (!existingIds.has(rp.id)) {
+            enrichedProducts.push(rp)
+          }
+        })
+      }
+    }
+
     const { data, error } = await supabase.functions.invoke('process-query', {
-      body: { query, products, intelligence, agentId },
+      body: { query, products: enrichedProducts, intelligence, agentId },
     })
 
     if (error) throw error
     if (data?.message) return data.message
 
-    return buildFallbackMessage(query, products, intelligence)
+    return buildFallbackMessage(query, enrichedProducts, intelligence)
   } catch (e) {
     console.error('Edge function call failed:', e)
     return buildFallbackMessage(query, products, intelligence)

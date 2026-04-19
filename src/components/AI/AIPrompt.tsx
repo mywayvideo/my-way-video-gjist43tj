@@ -3,6 +3,7 @@ import { Loader2, Search, Sparkles, Flame, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { getActiveAgent } from '@/services/intelligence'
+import { Link } from 'react-router-dom'
 
 interface AIPromptProps {
   onSearch?: (query: string) => Promise<any> | void
@@ -157,7 +158,7 @@ export function AIPrompt({
       )}
 
       {localResult?.message && !isLoading && !isExternalLoading && (
-        <div className="w-full max-w-3xl mt-8 animate-fade-in-up">
+        <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
           <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
@@ -172,6 +173,58 @@ export function AIPrompt({
               {formatMessage(localResult.message)}
             </div>
           </div>
+
+          {localResult?.referenced_internal_products &&
+            localResult.referenced_internal_products.length > 0 && (
+              <div className="w-full animate-fade-in-up delay-150">
+                <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
+                  {localResult.mentioned_products_count > 0
+                    ? 'Produtos Mencionados'
+                    : 'Produtos Relacionados'}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {localResult.referenced_internal_products.map((product: any) => (
+                    <Link
+                      key={product.id}
+                      to={`/product/${product.id}`}
+                      className="bg-black/60 border border-white/10 rounded-xl p-4 hover:border-white/30 hover:bg-white/5 transition-all flex flex-col gap-3 group shadow-lg"
+                    >
+                      <div className="aspect-square rounded-lg bg-black/40 overflow-hidden relative border border-white/5">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">
+                            Sem Imagem
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col flex-1 justify-between">
+                        <div>
+                          <p className="text-primary text-xs font-bold uppercase tracking-wider mb-1">
+                            {product.manufacturers?.name || 'My Way Video'}
+                          </p>
+                          <h4 className="text-white font-semibold line-clamp-2 text-sm group-hover:text-primary transition-colors">
+                            {product.name}
+                          </h4>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
+                          <div className="text-white/50 text-xs">Price USA</div>
+                          <div className="font-bold text-white">
+                            {product.price_usd
+                              ? `USD ${product.price_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                              : 'Consulte'}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       )}
     </div>
