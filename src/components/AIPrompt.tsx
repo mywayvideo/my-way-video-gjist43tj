@@ -158,7 +158,8 @@ export function AIPrompt({
 
   const performDatabaseSearch = async (searchQuery: string, isRestore = false) => {
     setInternalLoading(true)
-    setError(null)    setResponseMessage(null)
+    setError(null)
+    setResponseMessage(null)
     setReferencedProducts([])
 
     try {
@@ -198,7 +199,8 @@ export function AIPrompt({
     }
   }
 
-  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string, isRestore = false) => {    if (e) e.preventDefault()
+  const handleSearch = async (e?: React.FormEvent, overrideQuery?: string, isRestore = false) => {
+    if (e) e.preventDefault()
 
     const queryToUse = overrideQuery || query
     if (!queryToUse.trim() || isLoading) return
@@ -209,7 +211,8 @@ export function AIPrompt({
     }
 
     setInternalLoading(true)
-    setError(null)    setResult(null)
+    setError(null)
+    setResult(null)
     setDbResults([])
     setResponseMessage(null)
     setReferencedProducts([])
@@ -263,7 +266,8 @@ export function AIPrompt({
         data.should_show_whatsapp_button || data.confidence_level !== 'high',
       )
 
-      if (!isRestore) {        setSearchParams(
+      if (!isRestore) {
+        setSearchParams(
           (prev) => {
             prev.set('q', queryToUse.trim())
             prev.set('type', 'ai')
@@ -287,7 +291,8 @@ export function AIPrompt({
     }
   }
 
-  const handleClear = () => {    clearResponse()
+  const handleClear = () => {
+    clearResponse()
     searchStore.clearSearchState()
     setSearchParams(
       (prev) => {
@@ -385,7 +390,8 @@ export function AIPrompt({
               }
               error={error}
               className="w-full"
-            />          </div>
+            />{' '}
+          </div>
         )}
 
       {restoreError && !isLoading && (
