@@ -15,6 +15,8 @@ import {
   processKnowledgeUrl,
 } from '@/services/intelligence'
 
+import { supabase } from '@/lib/supabase/client'
+
 export default function NABHub() {
   const [intelligences, setIntelligences] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -23,7 +25,27 @@ export default function NABHub() {
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [content, setContent] = useState('')
+  const [activeProvider, setActiveProvider] = useState<string>('')
   const { toast } = useToast()
+
+  const fetchActiveProvider = async () => {
+    try {
+      const { data } = await supabase
+        .from('ai_providers')
+        .select('provider_name, model_id')
+        .eq('is_active', true)
+        .order('priority_order', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (data) {
+        const providerName =
+          data.provider_name.charAt(0).toUpperCase() + data.provider_name.slice(1)
+        setActiveProvider(`${providerName} (${data.model_id})`)
+      }
+    } catch (e) {
+      console.error('Failed to fetch AI provider', e)
+    }
+  }
 
   const fetchIntelligences = async () => {
     setIsFetching(true)
@@ -39,13 +61,14 @@ export default function NABHub() {
 
   useEffect(() => {
     fetchIntelligences()
+    fetchActiveProvider()
   }, [])
 
   const handleIngest = async () => {
-    if (!title.trim() && !url.trim()) {
+    if (!title.trim() && !url.trim() && !content.trim()) {
       toast({
         title: 'Aviso',
-        description: 'O título ou URL são obrigatórios.',
+        description: 'O título, URL ou conteúdo manual são obrigatórios.',
         variant: 'destructive',
       })
       return
@@ -62,21 +85,22 @@ export default function NABHub() {
 
     setIsLoading(true)
     const hasUrl = !!url.trim()
-    setLoadingMessage(
-      hasUrl ? 'A IA está lendo o conteúdo da feira...' : 'Sincronizando Inteligência...',
-    )
+    setLoadingMessage('A IA está lendo o conteúdo da feira...')
 
     try {
       const record = await ingestManualKnowledge({
-        title: title.trim() || 'Processando URL...',
+        title: title.trim() || (hasUrl ? 'Processando URL...' : 'Processando Texto...'),
         source_url: url || undefined,
         raw_content: content || undefined,
         status: 'draft',
       })
 
-      if (hasUrl) {
-        await processKnowledgeUrl({ url, manufacturer_id: undefined, record_id: record.id })
-      }
+      await processKnowledgeUrl({
+        url: url || undefined,
+        raw_content: content || undefined,
+        manufacturer_id: undefined,
+        record_id: record.id,
+      })
 
       toast({
         title: 'Sucesso',
@@ -136,9 +160,20 @@ export default function NABHub() {
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary">
-              NAB 2026 - Inteligência de Mercado
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-primary">
+                NAB 2026 - Inteligência de Mercado
+              </h1>
+              {activeProvider && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <p className="text-sm font-medium text-emerald-600">Usando: {activeProvider}</p>
+                </div>
+              )}
+            </div>
           </div>
           <p className="text-muted-foreground mt-2">
             Gerencie o conhecimento de IA sobre atualizações de mercado e lançamentos.

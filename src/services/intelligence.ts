@@ -41,7 +41,8 @@ export const deleteIntelligence = async (id: string) => {
 }
 
 export const processKnowledgeUrl = async (payload: {
-  url: string
+  url?: string
+  raw_content?: string
   manufacturer_id?: string
   record_id?: string
 }) => {
