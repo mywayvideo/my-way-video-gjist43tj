@@ -11,7 +11,9 @@ export function useAiSearch() {
     setIsLoading(true)
 
     try {
-      const qTerms = query
+      // Remove caracteres especiais que podem quebrar a sintaxe do PostgREST (.or)
+      const safeQuery = query.replace(/[%_,()[\]{}"'\\]/g, ' ')
+      const qTerms = safeQuery
         .toLowerCase()
         .split(/\s+/)
         .filter((t) => t.length > 2)
@@ -20,7 +22,7 @@ export function useAiSearch() {
           ? qTerms
               .map((t) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`)
               .join(',')
-          : `title.ilike.%${query}%,raw_content.ilike.%${query}%,ai_summary.ilike.%${query}%`
+          : `title.ilike.%${safeQuery}%,raw_content.ilike.%${safeQuery}%,ai_summary.ilike.%${safeQuery}%`
 
       // Query A: Search records in 'market_intelligence' where status is 'published' FIRST
       const { data: intelligence } = await supabase
@@ -34,7 +36,7 @@ export function useAiSearch() {
       const { data: products } = await supabase
         .from('products')
         .select('id, name, description, technical_info, price_usd, is_discontinued')
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .or(`name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%`)
         .limit(5)
 
       let systemPromptModifier = ''

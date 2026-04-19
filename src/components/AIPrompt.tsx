@@ -21,7 +21,6 @@ import { searchProducts } from '@/services/database-search'
 import { useDebounce } from '@/hooks/use-debounce'
 import { formatPrice } from '@/utils/priceFormatter'
 import { useSearchState } from '@/hooks/useSearchState'
-import { useAiSearch } from '@/hooks/use-ai-search'
 
 export function AIPrompt({
   initialQuery = '',
@@ -62,8 +61,6 @@ export function AIPrompt({
 
   const searchStore = useSearchState()
   const initialized = useRef(false)
-
-  const { search: aiSearch } = useAiSearch()
 
   const clearResponse = () => {
     setResponseMessage(null)
@@ -226,8 +223,11 @@ export function AIPrompt({
         localStorage.setItem('ai-session-id', sessionId)
       }
 
-      const searchFn = onSearch || aiSearch
-      const data = await searchFn(
+      if (!onSearch) {
+        throw new Error('A funcionalidade de busca AI não está configurada neste contexto.')
+      }
+
+      const data = await onSearch(
         activeProductId
           ? `${queryToUse.trim()} [Contexto: Produto ${activeProductId}]`
           : queryToUse.trim(),
