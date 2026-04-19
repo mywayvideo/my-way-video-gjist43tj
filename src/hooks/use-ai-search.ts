@@ -17,6 +17,9 @@ export function useAiSearch() {
       })
 
       if (error) {
+        if (error.message === 'Failed to fetch' || error.message.includes('Failed to fetch')) {
+          throw new Error('Erro de conexao com o banco. Verifique se o Supabase esta conectado.')
+        }
         throw error
       }
 
@@ -24,11 +27,58 @@ export function useAiSearch() {
       return data
     } catch (err: any) {
       console.error('[useAiSearch] Error:', err)
-      toast({
-        title: 'Erro',
-        description: 'Falha ao buscar informações técnicas. Tente novamente.',
-        variant: 'destructive',
-      })
+
+      const isConnectionError =
+        err.message === 'Failed to fetch' ||
+        err.message?.includes('Erro de conexao com o banco') ||
+        err.message?.includes('Failed to fetch')
+
+      if (isConnectionError) {
+        toast({
+          title: 'Erro',
+          description: 'Erro de conexao com o banco. Verifique se o Supabase esta conectado.',
+          variant: 'destructive',
+        })
+
+        try {
+          const { data: dbData, error: dbError } = await supabase
+            .schema('public')
+            .from('market_intelligence')
+            .select('*')
+            .eq('status', 'published')
+            .limit(3)
+
+          if (!dbError && dbData && dbData.length > 0) {
+            const fallbackResult = {
+              message:
+                'Conexão com a IA temporariamente indisponível. Aqui estão algumas informações do nosso banco de dados:\n\n' +
+                dbData
+                  .map(
+                    (d: any) =>
+                      `**${d.title}**\n${d.ai_summary || d.raw_content?.substring(0, 100) + '...'}`,
+                  )
+                  .join('\n\n'),
+              referenced_internal_products: [],
+              should_show_whatsapp_button: true,
+              whatsapp_reason: 'Sistema de IA temporariamente indisponível.',
+              price_context: 'fob_miami',
+              used_web_search: false,
+              confidence_level: 'low',
+              has_nab_intelligence: true,
+            }
+            setResults(fallbackResult)
+            return fallbackResult
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback query failed', fallbackErr)
+        }
+      } else {
+        toast({
+          title: 'Erro',
+          description: 'Falha ao buscar informações técnicas. Tente novamente.',
+          variant: 'destructive',
+        })
+      }
       return null
     } finally {
       setIsLoading(false)

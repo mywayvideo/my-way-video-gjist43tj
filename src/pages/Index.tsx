@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { AIPrompt } from '@/components/AI/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
@@ -13,6 +13,22 @@ export default function Index() {
   const { search: aiSearch, isLoading: isSearchLoading, results } = useAiSearch()
   const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const debounceTimerRef = useRef<number | null>(null)
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      if (debounceTimerRef.current) {
+        window.clearTimeout(debounceTimerRef.current)
+      }
+
+      debounceTimerRef.current = window.setTimeout(() => {
+        if (query && query.trim()) {
+          aiSearch(query)
+        }
+      }, 300)
+    },
+    [aiSearch],
+  )
 
   useEffect(() => {
     async function fetchSpecials() {
@@ -53,7 +69,7 @@ export default function Index() {
           </p>
 
           <div className="pt-8 w-full animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <AIPrompt onSearch={aiSearch} isExternalLoading={isSearchLoading} />
+            <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
           </div>
 
           {results && (
