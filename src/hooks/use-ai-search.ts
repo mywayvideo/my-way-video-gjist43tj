@@ -19,9 +19,11 @@ export function useAiSearch() {
 
       const rawQuery = query.trim()
       const searchTerms = rawQuery.split(/\s+/).filter(Boolean)
-      const orProductQuery = searchTerms
+      const exactMatch = `name.ilike.%${rawQuery}%,sku.ilike.%${rawQuery}%`
+      const termsMatch = searchTerms
         .map((term) => `name.ilike.%${term}%,sku.ilike.%${term}%`)
         .join(',')
+      const orProductQuery = searchTerms.length > 1 ? `${exactMatch},${termsMatch}` : exactMatch
 
       const { data: productsData, error: productsError } = await supabase
         .schema('public')
@@ -76,13 +78,13 @@ export function useAiSearch() {
 
       const combinedResults = {
         message,
+        products: finalProductsToDisplay,
         referenced_internal_products: finalProductsToDisplay,
         mentioned_products_count: finalProductsToDisplay.length,
-        should_show_whatsapp_button: !hasProducts && confidenceLevel === 'low',
-        whatsapp_reason:
-          !hasProducts && confidenceLevel === 'low'
-            ? 'Nenhum produto exato encontrado. Fale com um especialista.'
-            : '',
+        should_show_whatsapp_button: !hasProducts,
+        whatsapp_reason: !hasProducts
+          ? 'Nenhum produto exato encontrado. Fale com um especialista.'
+          : '',
         price_context: 'fob_miami',
         used_web_search: false,
         confidence_level: confidenceLevel,

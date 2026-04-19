@@ -1,43 +1,22 @@
 import { supabase } from '@/lib/supabase/client'
 
 export const searchIntelligence = async (query: string) => {
-  const stopWords = new Set([
-    'o',
-    'a',
-    'os',
-    'as',
-    'de',
-    'da',
-    'do',
-    'dos',
-    'das',
-    'em',
-    'para',
-    'quais',
-    'na',
-    'no',
-    'nas',
-    'nos',
-    'qual',
-    'que',
-    'e',
-    'ou',
-    'com',
-    'por',
-  ])
   const keywords = query
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\w\s]/g, '')
     .split(/\s+/)
-    .filter((word) => word.length > 2 && !stopWords.has(word))
+    .filter(Boolean)
 
   if (keywords.length === 0) keywords.push(query.trim())
 
-  const orQuery = keywords
+  const exactMatch = `title.ilike.%${query.trim()}%,raw_content.ilike.%${query.trim()}%,ai_summary.ilike.%${query.trim()}%`
+  const termsMatch = keywords
     .map((k) => `title.ilike.%${k}%,raw_content.ilike.%${k}%,ai_summary.ilike.%${k}%`)
     .join(',')
+
+  const orQuery = keywords.length > 1 ? `${exactMatch},${termsMatch}` : exactMatch
 
   try {
     const { data, error } = await supabase
@@ -215,7 +194,7 @@ export const generateAgentResponse = async (
         : ''
 
     const contextData = dbProductsList
-      ? `PRODUTOS ENCONTRADOS NO BANCO:\n${dbProductsList}`
+      ? `ESTOQUE ATUAL:\n${dbProductsList}`
       : 'Nenhum produto encontrado no banco de dados.'
 
     const systemContextUpdate = `
@@ -223,7 +202,7 @@ IDENTIDADE: Você é o "Especialista My Way Business em Audiovisual".
 REGRAS OBRIGATÓRIAS:
 1. Responda APENAS em Português (PT-BR).
 2. Parágrafos curtos: máximo de 2 a 3 frases por parágrafo.
-3. Se a lista de PRODUTOS ENCONTRADOS NO BANCO não estiver vazia, você DEVE confirmar que os produtos estão em estoque em Miami. É PROIBIDO dizer que não encontrou o produto.
+3. Se a lista ESTOQUE ATUAL não estiver vazia, você DEVE confirmar a disponibilidade em Miami. É PROIBIDO dizer que não encontrou o produto.
 4. Mencione sempre que os produtos contam com garantia do fabricante no Brasil/LATAM.
 5. Use blocos de código (\`\`\`) para formatar especificações técnicas.
 6. Nunca mencione IDs de produtos. Use os preços em USD informados.
@@ -285,9 +264,11 @@ function buildFallbackMessage(
 
   if (products.length > 0) {
     if (!isNABQuery) {
-      response += 'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo:\n\n'
+      response +=
+        'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo e confirmo a disponibilidade em Miami:\n\n'
     } else {
-      response += 'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca.\n\n'
+      response +=
+        'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca e confirmo a disponibilidade em Miami:\n\n'
     }
     products.slice(0, 3).forEach((p: any) => {
       response += `**${p.name}**\n`
