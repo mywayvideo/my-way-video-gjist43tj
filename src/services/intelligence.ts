@@ -12,6 +12,7 @@ const supabase =
 export const getIntelligences = async () => {
   try {
     const { data, error } = await supabase
+      .schema('public')
       .from('market_intelligence')
       .select('*')
       .order('created_at', { ascending: false })
@@ -31,6 +32,7 @@ export const ingestManualKnowledge = async (payload: {
 }) => {
   try {
     const { data, error } = await supabase
+      .schema('public')
       .from('market_intelligence')
       .insert([payload])
       .select()
@@ -46,6 +48,7 @@ export const ingestManualKnowledge = async (payload: {
 export const updateIntelligenceStatus = async (id: string, status: string) => {
   try {
     const { data, error } = await supabase
+      .schema('public')
       .from('market_intelligence')
       .update({ status })
       .eq('id', id)
@@ -61,29 +64,15 @@ export const updateIntelligenceStatus = async (id: string, status: string) => {
 
 export const deleteIntelligence = async (id: string) => {
   try {
-    const { error } = await supabase.from('market_intelligence').delete().eq('id', id)
+    const { error } = await supabase
+      .schema('public')
+      .from('market_intelligence')
+      .delete()
+      .eq('id', id)
     if (error) throw error
     return true
   } catch (error) {
     console.error('Error deleting intelligence:', error)
     return false
-  }
-}
-
-export const processKnowledgeUrl = async (payload: {
-  url?: string
-  raw_content?: string
-  manufacturer_id?: string
-  record_id?: string
-}) => {
-  try {
-    const { data, error } = await supabase.functions.invoke('process-knowledge', {
-      body: payload,
-    })
-    if (error) throw error
-    return data
-  } catch (error) {
-    console.error('Error processing knowledge url:', error)
-    return null
   }
 }

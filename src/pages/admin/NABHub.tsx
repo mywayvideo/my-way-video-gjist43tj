@@ -12,7 +12,6 @@ import {
   ingestManualKnowledge,
   updateIntelligenceStatus,
   deleteIntelligence,
-  processKnowledgeUrl,
 } from '@/services/intelligence'
 
 import { supabase } from '@/lib/supabase/client'
@@ -20,7 +19,7 @@ import { supabase } from '@/lib/supabase/client'
 export default function NABHub() {
   const [intelligences, setIntelligences] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [loadingMessage, setLoadingMessage] = useState('Sincronizando Inteligência...')
+  const [loadingMessage, setLoadingMessage] = useState('Salvando Informação...')
   const [isFetching, setIsFetching] = useState(true)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
@@ -31,6 +30,7 @@ export default function NABHub() {
   const fetchActiveProvider = async () => {
     try {
       const { data } = await supabase
+        .schema('public')
         .from('ai_providers')
         .select('provider_name, model_id')
         .eq('is_active', true)
@@ -85,26 +85,19 @@ export default function NABHub() {
 
     setIsLoading(true)
     const hasUrl = !!url.trim()
-    setLoadingMessage('A IA está lendo o conteúdo da feira...')
+    setLoadingMessage('Salvando Informação...')
 
     try {
-      const record = await ingestManualKnowledge({
-        title: title.trim() || (hasUrl ? 'Processando URL...' : 'Processando Texto...'),
+      await ingestManualKnowledge({
+        title: title.trim() || (hasUrl ? 'Link Adicionado' : 'Nota Manual'),
         source_url: url || undefined,
         raw_content: content || undefined,
-        status: 'draft',
-      })
-
-      await processKnowledgeUrl({
-        url: url || undefined,
-        raw_content: content || undefined,
-        manufacturer_id: undefined,
-        record_id: record.id,
+        status: 'published',
       })
 
       toast({
         title: 'Sucesso',
-        description: 'Cérebro da IA atualizado com sucesso!',
+        description: 'Informação salva na base de conhecimento',
       })
 
       setTitle('')

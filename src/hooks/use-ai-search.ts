@@ -69,8 +69,10 @@ export function useAiSearch() {
             setResults(fallbackResult)
             return fallbackResult
           }
+          return []
         } catch (fallbackErr) {
           console.error('Fallback query failed', fallbackErr)
+          return []
         }
       } else {
         toast({
@@ -78,8 +80,8 @@ export function useAiSearch() {
           description: 'Falha ao buscar informações técnicas. Tente novamente.',
           variant: 'destructive',
         })
+        return []
       }
-      return null
     } finally {
       setIsLoading(false)
     }
