@@ -90,9 +90,8 @@ export function AIPrompt({
             type="submit"
             disabled={isLoading || isExternalLoading || !query.trim()}
             className={cn(
-              'mt-2 sm:mt-0 sm:ml-2 w-full sm:w-auto px-8 py-4 rounded-full flex items-center justify-center gap-2 font-semibold transition-all duration-300',
-              'border border-white/40 bg-white/10 text-white hover:bg-white/20 hover:border-white/80',
-              'shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]',
+              'mt-2 sm:mt-0 sm:ml-2 w-full sm:w-auto px-8 py-4 rounded-full flex items-center justify-center gap-2 font-semibold transition-all duration-300 text-center',
+              'bg-black border border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:bg-white/10 hover:border-white/40',
               isLoading || isExternalLoading || !query.trim()
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer',

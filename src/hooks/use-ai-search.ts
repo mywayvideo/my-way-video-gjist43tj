@@ -7,16 +7,13 @@ export function useAiSearch() {
   const [results, setResults] = useState<any>(null)
   const { toast } = useToast()
 
-  const search = async (query: string, sessionId?: string) => {
+  const search = async (query: string) => {
     setIsLoading(true)
 
     try {
       console.log('Iniciando chamada otimizada para ai-search...')
       const { data, error } = await supabase.functions.invoke('ai-search', {
-        body: {
-          query: query.trim(),
-          session_id: sessionId,
-        },
+        body: { query: query.trim() },
       })
 
       if (error) {
