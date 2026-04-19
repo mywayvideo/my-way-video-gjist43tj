@@ -30,7 +30,7 @@ export function useAiSearch() {
       let systemPromptModifier = ''
       if (intelligence && intelligence.length > 0) {
         systemPromptModifier =
-          "If a match is found in intelligence but not in products, explain it as a 'Market Update' or 'NAB Launch'. Prioritize this technical knowledge when answering about new technologies or NAB launches."
+          "Sempre que um usuário perguntar sobre novidades, lançamentos ou tecnologias da NAB 2026, você deve consultar o contexto de 'MARKET INTELLIGENCE' fornecido antes de qualquer outra fonte. Se encontrar uma informação lá que não existe nos produtos, responda com entusiasmo técnico: 'Temos uma atualização quente da NAB 2026 sobre isso! Nossos especialistas coletaram o seguinte: [resumo].'. Mencione sempre que são 'Lançamentos Recentes' e ofereça o botão de falar com especialista para pré-venda ou reservas. NUNCA invente informações de produtos que não estejam no contexto."
       }
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}[MARKET INTELLIGENCE CONTEXT: ${JSON.stringify(intelligence)}]\n\nUser Query: ${query}`
@@ -43,6 +43,10 @@ export function useAiSearch() {
       })
 
       if (error) throw error
+
+      if (data) {
+        data.has_nab_intelligence = intelligence && intelligence.length > 0
+      }
 
       if (data && products && products.length > 0) {
         if (!data.referenced_internal_products) {
