@@ -179,7 +179,7 @@ export function AIPrompt({
               <div className="w-full animate-fade-in-up delay-150">
                 <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
                   {localResult.mentioned_products_count > 0
-                    ? 'Produtos Mencionados'
+                    ? 'Equipamentos Citados na Resposta'
                     : 'Produtos Relacionados'}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

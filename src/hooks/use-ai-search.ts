@@ -106,9 +106,13 @@ export function useAiSearch() {
         message.match(/\*\*(.*?)\*\*/g)?.map((m) => m.replace(/\*\*/g, '').trim()) || []
       const uppercaseMatches =
         message.match(/\b([A-Z][a-zA-Z0-9-]*\s+[A-Z0-9][a-zA-Z0-9-]*)\b/g) || []
-      const searchTerms = [...new Set([...boldMatches, ...uppercaseMatches])]
-        .filter((t) => t.length > 3)
-        .slice(0, 10)
+      const words = message
+        .replace(/[^\w\s-]/g, '')
+        .split(/\s+/)
+        .filter((w) => w.length > 3 && /^[A-Z]/.test(w))
+      const searchTerms = [...new Set([...boldMatches, ...uppercaseMatches, ...words])]
+        .filter((t) => t.length > 2)
+        .slice(0, 3)
 
       let secondaryProducts: any[] = []
       if (searchTerms.length > 0) {
@@ -119,7 +123,7 @@ export function useAiSearch() {
           .select('*, manufacturers(name)')
           .or(orQuery)
           .eq('is_discontinued', false)
-          .limit(6)
+          .limit(10)
         if (secondaryData) secondaryProducts = secondaryData
       }
 
@@ -135,8 +139,9 @@ export function useAiSearch() {
       uniqueProducts.forEach((p) => {
         const nameMatch = messageLower.includes(p.name.toLowerCase())
         const skuMatch = p.sku && messageLower.includes(p.sku.toLowerCase())
+        const isFuzzyMatch = secondaryProducts.some((sp) => sp.id === p.id)
 
-        if (nameMatch || skuMatch) {
+        if (nameMatch || skuMatch || isFuzzyMatch) {
           finalProductsToDisplay.push(p)
           mentionedCount++
         }

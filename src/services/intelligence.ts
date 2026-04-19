@@ -193,8 +193,17 @@ export const generateAgentResponse = async (
       }
     }
 
+    const cleanString = (str: any) =>
+      typeof str === 'string' ? str.replace(/[^\w\s\u00C0-\u00FF-]/g, '') : str
+    const cleanedProducts = enrichedProducts.map((p) => ({
+      ...p,
+      name: cleanString(p.name),
+      description: cleanString(p.description),
+      technical_info: cleanString(p.technical_info),
+    }))
+
     const { data, error } = await supabase.functions.invoke('process-query', {
-      body: { query, products: enrichedProducts, intelligence, agentId },
+      body: { query, products: cleanedProducts, intelligence, agentId },
     })
 
     if (error) throw error
