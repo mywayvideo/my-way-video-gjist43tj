@@ -25,6 +25,7 @@ import AdminMetricsPage from './pages/admin/AdminMetricsPage'
 import AdminProfilePage from './pages/admin/AdminProfilePage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AssistedCheckoutPage from './pages/admin/AssistedCheckoutPage'
+import NABHub from './pages/admin/NABHub'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotFound from './pages/NotFound'
@@ -181,6 +182,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/nab-hub"
+                  element={
+                    <ProtectedRoute>
+                      <NABHub />
                     </ProtectedRoute>
                   }
                 />
