@@ -18,20 +18,17 @@ export function useAiSearch() {
       const isNABQuery = /(nab|las vegas|news|novidades|lançamentos|2026)/i.test(query)
 
       const rawQuery = query.trim()
-      const searchTerms = rawQuery.split(/\s+/).filter(Boolean)
-      const exactMatch = `name.ilike.%${rawQuery}%,sku.ilike.%${rawQuery}%`
-      const termsMatch = searchTerms
-        .map((term) => `name.ilike.%${term}%,sku.ilike.%${term}%`)
-        .join(',')
-      const orProductQuery = searchTerms.length > 1 ? `${exactMatch},${termsMatch}` : exactMatch
+      const orProductQuery = `name.ilike.%${rawQuery}%,sku.ilike.%${rawQuery}%`
 
       const { data: productsData, error: productsError } = await supabase
-        .schema('public')
         .from('products')
         .select('*, manufacturers(name)')
         .or(orProductQuery)
-        .eq('is_discontinued', false)
-        .limit(6)
+        .limit(10)
+
+      if (productsData) {
+        console.log('DEBUG_PRODUCTS:', productsData)
+      }
 
       if (productsError) throw productsError
 

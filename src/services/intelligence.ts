@@ -132,88 +132,23 @@ export const generateAgentResponse = async (
   isNABQuery: boolean = false,
 ) => {
   try {
-    // Context Enrichment
-    let enrichedProducts = [...products]
-    if (isNABQuery && intelligence && intelligence.length > 0) {
-      const miManufacturers = [
-        ...new Set(intelligence.map((i) => i.manufacturer_id).filter(Boolean)),
-      ]
-
-      const titlesWords = intelligence
-        .map((i) => i.title)
-        .join(' ')
-        .replace(/[^\w\s]/g, '')
-        .split(/\s+/)
-        .filter((w) => w.length > 4)
-
-      const topWords = [...new Set(titlesWords)].slice(0, 5)
-
-      let q = supabase
-        .schema('public')
-        .from('products')
-        .select('*, manufacturers(name)')
-        .eq('is_discontinued', false)
-
-      if (miManufacturers.length > 0) {
-        q = q.in('manufacturer_id', miManufacturers)
-      } else if (topWords.length > 0) {
-        const orQ = topWords.map((t) => `name.ilike.%${t}%`).join(',')
-        q = q.or(orQ)
-      }
-
-      const { data: relatedProducts } = await q.limit(5)
-
-      if (relatedProducts && relatedProducts.length > 0) {
-        const existingIds = new Set(enrichedProducts.map((p) => p.id))
-        relatedProducts.forEach((rp) => {
-          if (!existingIds.has(rp.id)) {
-            enrichedProducts.push(rp)
-          }
-        })
-      }
-    }
-
-    const cleanString = (str: any) =>
-      typeof str === 'string' ? str.replace(/[^\w\s\u00C0-\u00FF-]/g, '') : str
-    const cleanedProducts = enrichedProducts.map((p) => ({
-      ...p,
-      name: cleanString(p.name),
-      description: cleanString(p.description),
-      technical_info: cleanString(p.technical_info),
-    }))
-
-    let enhancedQuery = query
-    const dbProductsList =
-      cleanedProducts.length > 0
-        ? cleanedProducts
-            .map(
-              (p) =>
-                `- ${p.name} (SKU/Model: ${p.sku || 'N/A'}, Preço: USD ${p.price_usd || 'Consulte'})`,
-            )
-            .join('\n')
-        : ''
-
-    const contextData = dbProductsList
-      ? `ESTOQUE ATUAL:\n${dbProductsList}`
-      : 'Nenhum produto encontrado no banco de dados.'
-
+    const stringifiedProducts = JSON.stringify(products)
     const systemContextUpdate = `
-IDENTIDADE: Você é o "Especialista My Way Business em Audiovisual".
+IDENTIDADE: Você é um Vendedor Senior.
 REGRAS OBRIGATÓRIAS:
 1. Responda APENAS em Português (PT-BR).
-2. Parágrafos curtos: máximo de 2 a 3 frases por parágrafo.
-3. Se a lista ESTOQUE ATUAL não estiver vazia, você DEVE confirmar a disponibilidade em Miami. É PROIBIDO dizer que não encontrou o produto.
-4. Mencione sempre que os produtos contam com garantia do fabricante no Brasil/LATAM.
-5. Use blocos de código (\`\`\`) para formatar especificações técnicas.
-6. Nunca mencione IDs de produtos. Use os preços em USD informados.
-7. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
+2. Parágrafos curtos: máximo de 2 frases por parágrafo.
+3. Se houver produtos em 'DADOS REAIS DO BANCO', você DEVE confirmar estoque em Miami. É PROIBIDO dizer que não encontrou se a lista tiver dados.
+4. Use blocos de código (\`\`\`) para formatar especificações técnicas.
+5. Nunca mencione IDs de produtos. Use os preços em USD informados.
+6. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
 `
-    enhancedQuery = `${systemContextUpdate}\n\n${contextData}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemContextUpdate}\n\nDADOS REAIS DO BANCO: ${stringifiedProducts}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
         query: enhancedQuery,
-        products: cleanedProducts,
+        products: products,
         intelligence: isNABQuery ? intelligence : [],
         agentId,
         isNABQuery,
@@ -265,23 +200,21 @@ function buildFallbackMessage(
   if (products.length > 0) {
     if (!isNABQuery) {
       response +=
-        'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo e confirmo a disponibilidade em Miami:\n\n'
+        'Analisando sua solicitação, encontrei as seguintes opções em nosso catálogo e confirmo estoque em Miami:\n\n'
     } else {
       response +=
-        'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca e confirmo a disponibilidade em Miami:\n\n'
+        'Aqui estão as opções disponíveis no nosso catálogo que atendem à sua busca e confirmo estoque em Miami:\n\n'
     }
-    products.slice(0, 3).forEach((p: any) => {
+    products.forEach((p: any) => {
       response += `**${p.name}**\n`
       const tech = p.technical_info || p.description || 'Especificações sob consulta.'
       response += `\`\`\`\n${tech.substring(0, 150)}...\n\`\`\`\n\n`
     })
-    response +=
-      'Recomendação Final: Os produtos acima são excelentes opções baseadas na sua necessidade.'
   }
 
   if (products.length === 0 && (!isNABQuery || intelligence.length === 0)) {
     response =
-      'Não possuo essa informação exata no momento em nossa base de dados. Recomendo falar com um de nossos especialistas para analisarmos o seu projeto em detalhes e encontrarmos a solução ideal.'
+      'Não possuo essa informação exata no momento em nossa base de dados. Recomendo falar com um de nossos especialistas.'
   }
 
   return response
