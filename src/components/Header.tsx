@@ -439,11 +439,14 @@ export function Header() {
               </SheetContent>
             </Sheet>
 
-            <Link to="/" className="flex items-center space-x-2 shrink-0">
+            <Link
+              to="/"
+              className="flex items-center space-x-2 shrink-0 max-w-[130px] md:max-w-[180px]"
+            >
               <img
                 src={logoUrl}
                 alt="My Way Video"
-                className="h-12 md:h-14 w-auto max-w-[140px] md:max-w-none hover:opacity-90 transition-opacity cursor-pointer"
+                className="h-7 md:h-10 w-auto object-contain hover:opacity-90 transition-opacity cursor-pointer"
               />
             </Link>
           </div>
