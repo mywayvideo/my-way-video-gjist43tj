@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AIPrompt } from '@/components/AIPrompt'
+import { AIPrompt } from '@/components/AI/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
