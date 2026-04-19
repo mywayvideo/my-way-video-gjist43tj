@@ -488,11 +488,25 @@ export function Header() {
               )}
             </Button>
 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative group hover:bg-primary/10 transition-colors"
+              onClick={() => navigate('/cart')}
+            >
+              <ShoppingCart className="w-5 h-5 group-hover:text-primary transition-colors" />
+              {totalItemCount > 0 && (
+                <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
+                  {totalItemCount}
+                </span>
+              )}
+            </Button>
+
             {user && !hasLoggedOut ? (
               isMobile ? (
                 <Sheet open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
                   <SheetTrigger asChild>
-                    <Avatar className="h-11 w-11 cursor-pointer hover:opacity-80 transition-opacity">
+                    <Avatar className="h-10 w-10 md:h-11 md:w-11 cursor-pointer hover:opacity-80 transition-opacity ml-1">
                       {profilePhotoUrl && (
                         <AvatarImage
                           src={profilePhotoUrl}
@@ -500,7 +514,7 @@ export function Header() {
                           className="object-cover"
                         />
                       )}
-                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
                         {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -516,7 +530,7 @@ export function Header() {
               ) : (
                 <Popover open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
                   <PopoverTrigger asChild>
-                    <Avatar className="h-11 w-11 cursor-pointer hover:opacity-80 transition-opacity">
+                    <Avatar className="h-10 w-10 md:h-11 md:w-11 cursor-pointer hover:opacity-80 transition-opacity ml-1">
                       {profilePhotoUrl && (
                         <AvatarImage
                           src={profilePhotoUrl}
@@ -524,7 +538,7 @@ export function Header() {
                           className="object-cover"
                         />
                       )}
-                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm">
                         {firstName ? firstName.charAt(0).toUpperCase() : 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -540,24 +554,15 @@ export function Header() {
                 </Popover>
               )
             ) : (
-              <Button variant="ghost" size="icon" onClick={() => navigate('/login')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/login')}
+                className="ml-1"
+              >
                 <User className="w-5 h-5" />
               </Button>
             )}
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative group hover:bg-primary/10 transition-colors"
-              onClick={() => navigate('/cart')}
-            >
-              <ShoppingCart className="w-5 h-5 group-hover:text-primary transition-colors" />
-              {totalItemCount > 0 && (
-                <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-in zoom-in border-2 border-background">
-                  {totalItemCount}
-                </span>
-              )}
-            </Button>
           </div>
         </div>
       </header>

@@ -344,7 +344,7 @@ export function AIPrompt({
               ? 'Pesquisar no catálogo...'
               : 'O que você precisa? Pesquise produtos ou pergunte a IA.'
           }
-          className="flex-1 border-0 bg-transparent text-sm md:text-lg focus-visible:ring-0 shadow-none px-2 py-5 md:py-6 h-auto disabled:opacity-50"
+          className="flex-1 border-0 bg-transparent text-sm md:text-lg focus-visible:ring-0 shadow-none px-2 py-5 md:py-6 h-auto disabled:opacity-50 text-foreground placeholder:text-muted-foreground/70"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={activeSearchType === 'ai' ? isLoading : false}

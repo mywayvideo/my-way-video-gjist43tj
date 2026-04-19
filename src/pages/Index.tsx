@@ -51,40 +51,29 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4">
-        <div className="bg-gradient-to-br from-amber-500/10 via-background to-background border border-amber-500/20 rounded-2xl p-6 md:p-10 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-            <TrendingUp className="w-40 h-40 text-amber-500" />
+      <section className="container mx-auto px-4 pb-12">
+        <h2 className="text-2xl md:text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-yellow-500">
+          <Star className="w-6 h-6 md:w-8 md:h-8 text-yellow-500 fill-yellow-500" />
+          DESTAQUES
+        </h2>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
+            ))}
           </div>
-
-          <h2 className="text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-orange-500 relative z-10">
-            <Star className="w-7 h-7 text-yellow-500 fill-yellow-500" />
-            DESTAQUES
-          </h2>
-
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
-              ))}
-            </div>
-          ) : specials.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10">
-              {specials.map((product) => (
-                <div key={product.id} className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/50 to-yellow-500/50 rounded-xl opacity-0 group-hover:opacity-100 blur transition duration-500"></div>
-                  <div className="relative h-full bg-card rounded-xl">
-                    <ProductCard product={product} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-10 relative z-10 border border-dashed border-amber-500/20 rounded-xl">
-              Nenhum produto em destaque no momento.
-            </p>
-          )}
-        </div>
+        ) : specials.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {specials.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-10 border border-dashed border-border rounded-xl">
+            Nenhum produto em destaque no momento.
+          </p>
+        )}
       </section>
     </div>
   )
