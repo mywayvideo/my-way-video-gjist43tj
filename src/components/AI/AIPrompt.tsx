@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Search, Sparkles, Flame, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { getActiveAgent } from '@/services/intelligence'
 
 interface AIPromptProps {
   onSearch?: (query: string) => Promise<any> | void
@@ -23,6 +24,13 @@ export function AIPrompt({
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [localResult, setLocalResult] = useState<any>(null)
+  const [agentName, setAgentName] = useState('Agente My Way')
+
+  useEffect(() => {
+    getActiveAgent().then((agent) => {
+      if (agent) setAgentName(agent.provider_name)
+    })
+  }, [])
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -141,6 +149,15 @@ export function AIPrompt({
         </div>
       </form>
 
+      {(isLoading || isExternalLoading) && (
+        <div className="w-full max-w-3xl mt-6 flex items-center gap-3 text-white/70 animate-pulse bg-black/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+          <Bot className="w-5 h-5 text-primary animate-bounce" />
+          <span className="font-medium tracking-wide">
+            {agentName} está processando sua solicitação...
+          </span>
+        </div>
+      )}
+
       {localResult?.message && !isLoading && !isExternalLoading && (
         <div className="w-full max-w-3xl mt-8 animate-fade-in-up">
           <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
@@ -149,7 +166,7 @@ export function AIPrompt({
                 <Bot className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">Agente My Way</h3>
+                <h3 className="font-semibold text-white">{localResult?.agent_name || agentName}</h3>
                 <p className="text-xs text-white/50">Especialista em Audiovisual</p>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import { generateAgentResponse } from '@/services/intelligence'
+import { getActiveAgent, generateAgentResponse } from '@/services/intelligence'
 
 export function useAiSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -14,6 +14,9 @@ export function useAiSearch() {
     setIsLoading(true)
 
     try {
+      // 1. Fetch active agent
+      const activeAgent = await getActiveAgent()
+
       const searchTerm = `%${query.trim()}%`
 
       // Search 1: Query 'products' table using ilike on name and description
@@ -43,8 +46,23 @@ export function useAiSearch() {
       const hasNabIntelligence = miData && miData.length > 0
       const hasProducts = productsData && productsData.length > 0
 
-      // Generate Agent Response using the new logic
-      const message = await generateAgentResponse(query, productsData || [], miData || [])
+      // Generate Agent Response using Edge Function
+      let message = ''
+      if (!activeAgent) {
+        message =
+          'Nenhum agente de IA configurado. Exibindo resultados básicos de busca. Por favor, configure um agente no painel administrativo.'
+        toast({
+          title: 'Aviso',
+          description: 'Nenhum agente configurado. Exibindo busca básica.',
+        })
+      } else {
+        message = await generateAgentResponse(
+          query,
+          productsData || [],
+          miData || [],
+          activeAgent.id,
+        )
+      }
 
       const combinedResults = {
         message,
@@ -57,6 +75,7 @@ export function useAiSearch() {
         used_web_search: false,
         confidence_level: hasProducts ? 'high' : 'low',
         has_nab_intelligence: hasNabIntelligence,
+        agent_name: activeAgent?.provider_name || 'Busca Básica',
       }
 
       setResults(combinedResults)

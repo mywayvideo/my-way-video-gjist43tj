@@ -68,51 +68,49 @@ export const deleteIntelligence = async (id: string) => {
   }
 }
 
+export const getActiveAgent = async () => {
+  try {
+    const { data, error } = await supabase
+      .schema('public')
+      .from('ai_providers')
+      .select('*')
+      .eq('is_active', true)
+      .order('priority_order', { ascending: true })
+      .limit(1)
+      .single()
+    if (error) {
+      if (error.code !== 'PGRST116') throw error
+      return null
+    }
+    return data
+  } catch (error) {
+    console.error('Error fetching active agent:', error)
+    return null
+  }
+}
+
 export const generateAgentResponse = async (
   query: string,
   products: any[],
   intelligence: any[],
+  agentId?: string,
 ) => {
-  const systemPrompt =
-    'Você é o Agente My Way Business, especialista em audiovisual. Use os dados fornecidos para responder. Se os dados forem da NAB 2026, use o selo de cobertura ao vivo. Mantenha parágrafos curtos (2-3 frases), use blocos de código (```) para especificações. Responda em PT-BR.'
+  try {
+    const { data, error } = await supabase.functions.invoke('process-query', {
+      body: { query, products, intelligence, agentId },
+    })
 
-  const dataContext = `
-PRODUTOS ENCONTRADOS:
-${JSON.stringify(products.map((p) => ({ nome: p.name, desc: p.description, tech: p.technical_info })))}
+    if (error) throw error
+    if (data?.message) return data.message
 
-INTELIGÊNCIA DE MERCADO (NAB 2026 etc):
-${JSON.stringify(intelligence.map((i) => ({ titulo: i.title, resumo: i.ai_summary, conteudo: i.raw_content })))}
-  `
-
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
-  if (apiKey) {
-    try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Contexto:\n${dataContext}\n\nPergunta do usuário: ${query}` },
-          ],
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.choices && data.choices[0]) {
-          return data.choices[0].message.content
-        }
-      }
-    } catch (e) {
-      console.error('OpenAI direct call failed', e)
-    }
+    return buildFallbackMessage(query, products, intelligence)
+  } catch (e) {
+    console.error('Edge function call failed:', e)
+    return buildFallbackMessage(query, products, intelligence)
   }
+}
 
-  // Fallback conversacional simulado
+function buildFallbackMessage(query: string, products: any[], intelligence: any[]) {
   let response = ''
   const hasNab = intelligence.some(
     (i: any) =>
