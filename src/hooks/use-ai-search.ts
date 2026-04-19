@@ -51,14 +51,54 @@ export function useAiSearch() {
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}${injectedContext}User Query: ${query}`
 
-      let { data, error } = await supabase.functions.invoke('ai-search', {
-        body: {
-          query: contextualQuery,
-          session_id: sessionId,
-        },
-      })
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-      if (error) throw error
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        apikey: supabaseAnonKey,
+      }
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      } else {
+        headers['Authorization'] = `Bearer ${supabaseAnonKey}`
+      }
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 20000)
+
+      let data
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/ai-search`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            query: contextualQuery,
+            session_id: sessionId,
+          }),
+          mode: 'cors',
+          credentials: 'omit',
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+        }
+
+        data = await response.json()
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        throw fetchError
+      }
 
       if (data) {
         data.has_nab_intelligence = intelligence && intelligence.length > 0
