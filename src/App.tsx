@@ -43,6 +43,8 @@ const App = () => {
   const [isCleaningUp, setIsCleaningUp] = useState(false)
 
   useEffect(() => {
+    // Redirect logic temporarily disabled for development/testing
+    /*
     if (import.meta.env.PROD) {
       const hostname = window.location.hostname
       if (
@@ -54,6 +56,7 @@ const App = () => {
           'https://mywayvideo.com' + window.location.pathname + window.location.search
       }
     }
+    */
 
     const handleLogout = () => {
       setIsCleaningUp(true)

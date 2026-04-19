@@ -52,7 +52,7 @@ export default function Index() {
       </section>
 
       <section className="container mx-auto px-4 pb-12">
-        <h2 className="text-2xl md:text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-yellow-500">
+        <h2 className="text-2xl md:text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-orange-500">
           <Star className="w-6 h-6 md:w-8 md:h-8 text-yellow-500 fill-yellow-500" />
           DESTAQUES
         </h2>
