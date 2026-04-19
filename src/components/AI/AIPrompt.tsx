@@ -100,7 +100,7 @@ export function AIPrompt({
 
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
-      {localResult?.has_nab_intelligence && (
+      {localResult?.has_nab_intelligence && localResult?.is_nab_query && (
         <Badge
           variant="destructive"
           className="mb-4 bg-red-600 animate-pulse text-white px-4 py-1 text-sm font-bold tracking-wider border-none"
@@ -153,7 +153,11 @@ export function AIPrompt({
       {(isLoading || isExternalLoading) && (
         <div className="w-full max-w-3xl mt-6 flex items-center gap-3 text-white/70 animate-pulse bg-black/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
           <Bot className="w-5 h-5 text-primary animate-bounce" />
-          <span className="font-medium tracking-wide">Analisando inteligência da NAB 2026...</span>
+          <span className="font-medium tracking-wide">
+            {query.match(/(nab|las vegas|news|novidades|lançamentos|2026)/i)
+              ? 'Analisando inteligência da NAB 2026...'
+              : 'Consultando catálogo My Way...'}
+          </span>
         </div>
       )}
 

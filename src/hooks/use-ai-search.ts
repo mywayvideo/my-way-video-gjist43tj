@@ -17,6 +17,9 @@ export function useAiSearch() {
       // 1. Fetch active agent
       const activeAgent = await getActiveAgent()
 
+      // Intent Detection Logic
+      const isNABQuery = /(nab|las vegas|news|novidades|lançamentos|2026)/i.test(query)
+
       // Smart Keyword Extraction
       const stopWords = new Set([
         'o',
@@ -68,7 +71,10 @@ export function useAiSearch() {
       if (productsError) throw productsError
 
       // Search 2: Query 'market_intelligence' table using flexible keywords
-      const miData = await searchIntelligence(query)
+      let miData: any[] = []
+      if (isNABQuery) {
+        miData = await searchIntelligence(query)
+      }
 
       const hasNabIntelligence = miData && miData.length > 0
       const hasProducts = productsData && productsData.length > 0
@@ -88,17 +94,21 @@ export function useAiSearch() {
           productsData || [],
           miData || [],
           activeAgent.id,
+          isNABQuery,
         )
       }
 
       // UI Feedback constraint
       if (
+        isNABQuery &&
         hasNabIntelligence &&
         message &&
         !message.startsWith('Confirmamos diretamente da NAB 2026:')
       ) {
         const cleanMsg = message.replace(/^Confirmamos diretamente da NAB 2026:\s*/i, '')
         message = 'Confirmamos diretamente da NAB 2026: ' + cleanMsg
+      } else if (!isNABQuery) {
+        message = message.replace(/^Confirmamos diretamente da NAB 2026:\s*/i, '')
       }
 
       // --- POST-PROCESSING: Product Extraction Logic ---
@@ -155,7 +165,7 @@ export function useAiSearch() {
         message,
         referenced_internal_products: finalProductsToDisplay.slice(0, 6),
         mentioned_products_count: mentionedCount,
-        should_show_whatsapp_button: !hasProducts || !hasNabIntelligence,
+        should_show_whatsapp_button: !hasProducts || (!hasNabIntelligence && isNABQuery),
         whatsapp_reason: !hasProducts
           ? 'Nenhum produto exato encontrado. Fale com um especialista.'
           : 'Fale com um especialista para confirmar disponibilidade e projetos.',
@@ -163,7 +173,12 @@ export function useAiSearch() {
         used_web_search: false,
         confidence_level: hasProducts ? 'high' : 'low',
         has_nab_intelligence: hasNabIntelligence,
-        agent_name: activeAgent?.provider_name || 'Busca Básica',
+        is_nab_query: isNABQuery,
+        agent_name: activeAgent?.provider_name
+          ? isNABQuery
+            ? 'Agente NAB'
+            : 'Consultor My Way'
+          : 'Busca Básica',
       }
 
       setResults(combinedResults)
