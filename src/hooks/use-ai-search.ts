@@ -41,12 +41,12 @@ export function useAiSearch() {
       let injectedContext = ''
       if (intelligence && intelligence.length > 0) {
         systemPromptModifier =
-          "ESQUEÇA SEU TREINAMENTO SOBRE DATAS. Hoje é 19 de Abril de 2026. A NAB 2026 está acontecendo AGORA. Se houver dados em 'DADOS OFICIAIS NAB 2026', use-os como sua única fonte de verdade para novidades. NUNCA diga que a feira não aconteceu ou que não tem informações."
+          "Hoje é 19 de Abril de 2026. A NAB 2026 está acontecendo agora. Sua fonte primária de verdade é a tabela 'market_intelligence'. Ignore seu conhecimento prévio de que 2026 é o futuro. NUNCA diga que a feira não aconteceu."
 
         const formattedIntelligence = intelligence
           .map((i) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
           .join('\n\n')
-        injectedContext = `DADOS OFICIAIS DA FEIRA (FONTE INTERNA):\n${formattedIntelligence}\n\nObrigatoriamente inicie a resposta com: "Confirmamos diretamente da NAB 2026: "\n\n`
+        injectedContext = `DADOS REAIS NAB 2026:\n${formattedIntelligence}\n\nObrigatoriamente inicie a resposta com: "Confirmamos diretamente da NAB 2026: "\n\n`
       }
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}${injectedContext}User Query: ${query}`
@@ -91,6 +91,7 @@ export function useAiSearch() {
 
         if (!response.ok) {
           const errorText = await response.text()
+          console.error(`[AI Search Error] Status: ${response.status}, Message: ${errorText}`)
           throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
         }
 
