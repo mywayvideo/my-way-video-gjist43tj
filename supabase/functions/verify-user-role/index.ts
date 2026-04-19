@@ -15,7 +15,7 @@ Deno.serve(async (req: Request) => {
   const defaultResponse = {
     role: 'customer',
     user_id: null,
-    authenticated: false,
+    authenticated: false
   }
 
   try {
@@ -24,12 +24,12 @@ Deno.serve(async (req: Request) => {
 
     try {
       const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
-
+      
       if (!authHeader) {
         clearTimeout(timeoutId)
         return new Response(JSON.stringify(defaultResponse), {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
 
@@ -38,17 +38,14 @@ Deno.serve(async (req: Request) => {
       const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 
       const token = authHeader.replace('Bearer ', '')
-      const {
-        data: { user },
-        error: authError,
-      } = await supabaseAdmin.auth.getUser(token)
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
 
       if (authError || !user) {
         clearTimeout(timeoutId)
         console.error('Auth error or user not found:', authError?.message)
         return new Response(JSON.stringify(defaultResponse), {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
 
@@ -68,12 +65,12 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           role: customerData?.role || 'customer',
           user_id: user.id,
-          authenticated: true,
+          authenticated: true
         }),
         {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       )
     } catch (innerError: any) {
       clearTimeout(timeoutId)
@@ -83,7 +80,7 @@ Deno.serve(async (req: Request) => {
     console.error('Error verifying user role:', error.message || error)
     return new Response(JSON.stringify(defaultResponse), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
