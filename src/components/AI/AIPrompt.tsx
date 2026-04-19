@@ -230,9 +230,10 @@ export function AIPrompt({
               </div>
             )}
 
-          {localResult?.should_show_whatsapp_button &&
-            (!(localResult?.products || localResult?.referenced_internal_products) ||
-              (localResult.products || localResult.referenced_internal_products).length === 0) && (
+          {(localResult?.should_show_whatsapp_button || localResult?.confidence_level === 'low') &&
+            (!localResult?.products || localResult.products.length === 0) &&
+            (!localResult?.referenced_internal_products ||
+              localResult.referenced_internal_products.length === 0) && (
               <div className="w-full flex justify-center mt-4">
                 <a
                   href="https://wa.me/13055551234"

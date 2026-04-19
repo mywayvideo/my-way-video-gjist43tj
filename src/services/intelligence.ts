@@ -135,15 +135,20 @@ export const generateAgentResponse = async (
     const stringifiedProducts = JSON.stringify(products)
     const systemContextUpdate = `
 IDENTIDADE: Você é um Vendedor Senior.
+PRODUTOS ENCONTRADOS NO SEU ESTOQUE: ${stringifiedProducts}
+ESTOQUE ATUAL: ${stringifiedProducts}
+DADOS REAIS DO BANCO: ${stringifiedProducts}
+
 REGRAS OBRIGATÓRIAS:
 1. Responda APENAS em Português (PT-BR).
 2. Parágrafos curtos: máximo de 2 frases por parágrafo.
-3. Se houver produtos em 'DADOS REAIS DO BANCO', você DEVE confirmar estoque em Miami. É PROIBIDO dizer que não encontrou se a lista tiver dados.
-4. Use blocos de código (\`\`\`) para formatar especificações técnicas.
-5. Nunca mencione IDs de produtos. Use os preços em USD informados.
-6. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
+3. Se o modelo solicitado (ex: FX30) estiver na lista acima, você DEVE confirmar a disponibilidade em Miami. É terminantemente PROIBIDO dizer que não encontrou o produto se ele estiver no contexto enviado. Se houver produtos em 'DADOS REAIS DO BANCO', você DEVE confirmar estoque em Miami.
+4. Sempre mencione: "Disponível para envio imediato de Miami com garantia no Brasil."
+5. Use blocos de código (\`\`\`) para formatar especificações técnicas.
+6. Nunca mencione IDs de produtos. Use os preços em USD informados.
+7. Use o selo NAB 2026 apenas se a informação vier especificamente da tabela market_intelligence.
 `
-    const enhancedQuery = `${systemContextUpdate}\n\nDADOS REAIS DO BANCO: ${stringifiedProducts}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemContextUpdate}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
@@ -158,7 +163,7 @@ REGRAS OBRIGATÓRIAS:
     if (error) throw error
     if (data?.message) return data.message
 
-    return buildFallbackMessage(query, enrichedProducts, isNABQuery ? intelligence : [], isNABQuery)
+    return buildFallbackMessage(query, products, isNABQuery ? intelligence : [], isNABQuery)
   } catch (e) {
     console.error('Edge function call failed:', e)
     return buildFallbackMessage(query, products, isNABQuery ? intelligence : [], isNABQuery)
