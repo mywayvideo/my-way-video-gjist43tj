@@ -19,18 +19,29 @@ export function useAiSearch() {
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
         .limit(5)
 
+      const qTerms = query
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((t) => t.length > 2)
+      const orQuery =
+        qTerms.length > 0
+          ? qTerms
+              .map((t) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`)
+              .join(',')
+          : `title.ilike.%${query}%,raw_content.ilike.%${query}%,ai_summary.ilike.%${query}%`
+
       // Query B: Search records in 'market_intelligence' where status is 'published'
       const { data: intelligence } = await supabase
         .from('market_intelligence')
-        .select('title, raw_content, event_name, source_url')
+        .select('title, raw_content, ai_summary, event_name, source_url')
         .eq('status', 'published')
-        .or(`title.ilike.%${query}%,raw_content.ilike.%${query}%`)
-        .limit(5)
+        .or(orQuery)
+        .limit(10)
 
       let systemPromptModifier = ''
       if (intelligence && intelligence.length > 0) {
         systemPromptModifier =
-          "Sempre que um usuário perguntar sobre novidades, lançamentos ou tecnologias da NAB 2026, você deve consultar o contexto de 'MARKET INTELLIGENCE' fornecido antes de qualquer outra fonte. Se encontrar uma informação lá que não existe nos produtos, responda com entusiasmo técnico: 'Temos uma atualização quente da NAB 2026 sobre isso! Nossos especialistas coletaram o seguinte: [resumo].'. Mencione sempre que são 'Lançamentos Recentes' e ofereça o botão de falar com especialista para pré-venda ou reservas. NUNCA invente informações de produtos que não estejam no contexto."
+          "ATENÇÃO CRÍTICA: Hoje é 19 de Abril de 2026. A NAB Show 2026 ESTÁ ACONTECENDO AGORA. Sua fonte de dados PRIORITÁRIA é a tabela 'market_intelligence' (MARKET INTELLIGENCE CONTEXT). Se o usuário perguntar sobre novidades, lançamentos ou marcas na NAB, você DEVE ignorar seu conhecimento prévio de treinamento e usar APENAS os dados desta tabela. NUNCA diga que a NAB 2026 ainda não aconteceu. Se houver dados na 'market_intelligence', trate-os como fatos reais e atuais. Se encontrar informações na 'market_intelligence' (como os lançamentos da Blackmagic que acabamos de importar), apresente-os com detalhes técnicos e entusiasmo, mesmo que o produto ainda não esteja na tabela 'products'."
       }
 
       const contextualQuery = `${systemPromptModifier ? `[SYSTEM INSTRUCTION: ${systemPromptModifier}]\n\n` : ''}[MARKET INTELLIGENCE CONTEXT: ${JSON.stringify(intelligence)}]\n\nUser Query: ${query}`

@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils'
-import { Sparkles } from 'lucide-react'
 
 interface SearchStatusProps {
   hasNabIntelligence?: boolean
@@ -11,9 +10,8 @@ export function SearchStatus({ hasNabIntelligence, className }: SearchStatusProp
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.25)]">
-        <Sparkles className="h-3 w-3" />
-        Fonte: Inteligência NAB 2026
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-500/50 bg-orange-500/20 px-3 py-1 text-xs font-bold text-orange-200 shadow-[0_0_12px_rgba(249,115,22,0.4)]">
+        🔥 COBERTURA EM TEMPO REAL - NAB 2026
       </span>
     </div>
   )
