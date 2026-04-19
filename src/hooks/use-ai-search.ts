@@ -98,6 +98,7 @@ export function useAiSearch() {
         data = await response.json()
       } catch (fetchError: any) {
         clearTimeout(timeoutId)
+        console.error(`[AI Search Error] Fetch Exception:`, fetchError)
         throw fetchError
       }
 
@@ -126,10 +127,10 @@ export function useAiSearch() {
       setResults(data)
       return data
     } catch (err: any) {
-      console.error(err)
+      console.error('[useAiSearch] Error:', err)
       toast({
         title: 'Erro',
-        description: 'Falha ao buscar informações técnicas',
+        description: 'Falha ao buscar informações técnicas. Tente novamente.',
         variant: 'destructive',
       })
       return null

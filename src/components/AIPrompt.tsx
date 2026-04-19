@@ -21,6 +21,7 @@ import { searchProducts } from '@/services/database-search'
 import { useDebounce } from '@/hooks/use-debounce'
 import { formatPrice } from '@/utils/priceFormatter'
 import { useSearchState } from '@/hooks/useSearchState'
+import { useAiSearch } from '@/hooks/use-ai-search'
 
 export function AIPrompt({
   initialQuery = '',
@@ -56,6 +57,8 @@ export function AIPrompt({
 
   const searchStore = useSearchState()
   const initialized = useRef(false)
+
+  const { search: aiSearch } = useAiSearch()
 
   const clearResponse = () => {
     setResponseMessage(null)
@@ -218,40 +221,18 @@ export function AIPrompt({
         localStorage.setItem('ai-session-id', sessionId)
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      }
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-
-      const payload: Record<string, any> = {
-        query: queryToUse.trim(),
-      }
-
-      if (activeProductId) {
-        payload.productId = activeProductId
-      }
-
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || 'https://okpxxlpvqotwijisksui.supabase.co'}/functions/v1/ai-search`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        },
+      const data = await aiSearch(
+        activeProductId
+          ? `${queryToUse.trim()} [Contexto: Produto ${activeProductId}]`
+          : queryToUse.trim(),
+        sessionId,
       )
 
-      const data = await res.json()
+      if (!data) {
+        throw new Error('Ocorreu um erro ao processar sua pesquisa. Por favor, tente novamente.')
+      }
 
-      if (!res.ok || data.status === 'error') {
+      if (data.status === 'error') {
         throw new Error(
           data.error_message ||
             data.error ||
@@ -277,7 +258,7 @@ export function AIPrompt({
         data.referenced_internal_products || [],
         'ai',
         [],
-        data.should_show_whatsapp_button,
+        data.should_show_whatsapp_button || data.confidence_level === 'low',
       )
 
       if (!isRestore) {
@@ -381,23 +362,31 @@ export function AIPrompt({
       {activeSearchType === 'ai' &&
         (isLoading || result?.status === 'success' || error) &&
         !restoreError && (
-          <AISearchResults
-            isLoading={isLoading}
-            result={
-              result?.status === 'success'
-                ? {
-                    message: responseMessage || result.message,
-                    confidence_level: result.confidence_level,
-                    referenced_internal_products:
-                      result.referenced_internal_products || referencedProducts,
-                    should_show_whatsapp_button: result.should_show_whatsapp_button,
-                    whatsapp_reason: result.whatsapp_reason,
-                  }
-                : null
-            }
-            error={error}
-            className="animate-fade-in-up w-full mt-4"
-          />
+          <div className="w-full animate-fade-in-up mt-4 flex flex-col gap-3">
+            {result?.has_nab_intelligence && !isLoading && (
+              <div className="self-start inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-600 bg-red-100 border border-red-200 rounded-full shadow-sm animate-pulse">
+                <Sparkles className="w-3.5 h-3.5" />🔥 COBERTURA AO VIVO - NAB 2026
+              </div>
+            )}
+            <AISearchResults
+              isLoading={isLoading}
+              result={
+                result?.status === 'success'
+                  ? {
+                      message: responseMessage || result.message,
+                      confidence_level: result.confidence_level,
+                      referenced_internal_products:
+                        result.referenced_internal_products || referencedProducts,
+                      should_show_whatsapp_button:
+                        result.should_show_whatsapp_button || result.confidence_level === 'low',
+                      whatsapp_reason: result.whatsapp_reason,
+                    }
+                  : null
+              }
+              error={error}
+              className="w-full"
+            />
+          </div>
         )}
 
       {restoreError && !isLoading && (
