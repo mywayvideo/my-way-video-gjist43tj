@@ -26,6 +26,7 @@ export function useUnifiedSearch() {
       const sqlString = settings?.search_algorithm_sql || ''
       const executedSql = sqlString.replace(/\$1/g, cleanQuery)
       console.log('SQL BEING EXECUTED:', executedSql)
+      console.log('SEARCH_PARAMS:', settings?.ignore_stock_count, cleanQuery)
 
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
         search_term: cleanQuery,
@@ -69,6 +70,21 @@ export function useUnifiedSearch() {
             if (fuzzyProducts && fuzzyProducts.length > 0) {
               products = fuzzyProducts
             }
+          }
+        }
+      }
+
+      // Explicit NAB Market Search Fallback
+      if (nab.length === 0) {
+        const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+        if (terms.length > 0) {
+          let nabQ = supabase.from('nab_market').select('id, title, content')
+          terms.forEach((t) => {
+            nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
+          })
+          const { data: fuzzyNab } = await nabQ.limit(5)
+          if (fuzzyNab && fuzzyNab.length > 0) {
+            nab = fuzzyNab
           }
         }
       }

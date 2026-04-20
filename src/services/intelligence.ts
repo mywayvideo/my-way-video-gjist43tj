@@ -80,12 +80,13 @@ REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final. Se o 
 REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo (não localizei). É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count (se os produtos foram fornecidos no contexto, apresente-os).
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual. Sempre que citar um produto, use o nome exato retornado pelo banco para garantir a exibição do card.
 REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual são os RESULTADOS DO ESTOQUE fornecidos.
+REGRA 7: Você está proibido de mencionar quantidades numéricas de estoque (ex: 'temos 2 unidades'). Use apenas 'Disponível' ou 'Disponível para encomenda' conforme as regras de logística.
 IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {
-    strictRules += `\nREGRA 6: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Priorize os dados da NAB (nab_json) sobre o estoque.`
+    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Priorize os dados da NAB (nab_json) sobre o estoque. Se 'nab_json' contém informações, é PROIBIDO dizer "informações não divulgadas". Trate o conteúdo do banco de dados como a verdade absoluta oficial.`
   } else {
-    strictRules += `\nREGRA 6: A intenção detectada é PRODUTO. Priorize os resultados de RESULTADOS DO ESTOQUE.`
+    strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados de RESULTADOS DO ESTOQUE.`
   }
 
   const nabJson = [...contextIntel, ...contextNab]
