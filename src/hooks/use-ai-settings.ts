@@ -40,10 +40,8 @@ export function useAISettings() {
       setGlobalSettings({
         ai_settings_id: generalData?.id,
         ai_agent_settings_id: agentData?.id,
-        cache_expiration_days:
-          generalData?.cache_expiration_days ?? agentData?.cache_expiration_days ?? 30,
-        price_threshold_usd:
-          generalData?.price_threshold_usd ?? agentData?.price_threshold_usd ?? 5000,
+        cache_expiration_days: generalData?.cache_expiration_days ?? 30,
+        price_threshold_usd: generalData?.price_threshold_usd ?? 5000,
         whatsapp_trigger_low_confidence: agentData?.whatsapp_trigger_low_confidence ?? true,
         whatsapp_trigger_purchase_keywords: agentData?.whatsapp_trigger_purchase_keywords ?? true,
         whatsapp_trigger_project_keywords: agentData?.whatsapp_trigger_project_keywords ?? true,

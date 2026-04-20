@@ -20,11 +20,7 @@ import { Label } from '@/components/ui/label'
 
 export default function AdminAISystemPrompt() {
   const { currentUser: user, loading: authLoading } = useAuthContext()
-  const {
-    systemPromptTemplate,
-    loading: settingsLoading,
-    saveSystemPromptTemplate,
-  } = useAISettings()
+  const { agentSystemPrompt, loading: settingsLoading, saveAgentSystemPrompt } = useAISettings()
   const [initialPrompt, setInitialPrompt] = useState('')
   const [prompt, setPrompt] = useState('')
   const [saving, setSaving] = useState(false)
@@ -33,16 +29,16 @@ export default function AdminAISystemPrompt() {
     if (!settingsLoading && !prompt && !initialPrompt) {
       const defaultPrompt =
         'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é converter consultas em vendas. REGRAS: 1. SOBERANIA DE DADOS: Se houver produtos no stock, eles ESTÃO DISPONÍVEIS. 2. FORMATO: Use Markdown e negrito para nomes/preços. 3. MIAMI: Mencione envio de Miami e garantia Brasil/LATAM.'
-      const currentPrompt = systemPromptTemplate || defaultPrompt
+      const currentPrompt = agentSystemPrompt || defaultPrompt
       setInitialPrompt(currentPrompt)
       setPrompt(currentPrompt)
     }
-  }, [systemPromptTemplate, settingsLoading, prompt, initialPrompt])
+  }, [agentSystemPrompt, settingsLoading, prompt, initialPrompt])
 
   const handleSave = async () => {
-    if (!saveSystemPromptTemplate) return
+    if (!saveAgentSystemPrompt) return
     setSaving(true)
-    const success = await saveSystemPromptTemplate(prompt)
+    const success = await saveAgentSystemPrompt(prompt)
     if (success) {
       setInitialPrompt(prompt)
     }

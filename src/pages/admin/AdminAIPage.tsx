@@ -25,36 +25,32 @@ export default function AdminAIPage() {
 
   const fetchCompanyInfo = async () => {
     const { data: cData } = await supabase.from('company_info').select('*')
-    const { data: aiSettings } = await supabase
-      .from('ai_settings')
-      .select('id, logistics_rules_prompt')
-      .limit(1)
-      .maybeSingle()
 
     if (cData) {
       setFooterInfo(
         cData.find((c: any) => c.type === 'footer_about') || { type: 'footer_about', content: '' },
       )
+      setCompanyInfo(
+        cData.find((c: any) => c.type === 'ai_knowledge') || { type: 'ai_knowledge', content: '' },
+      )
+    } else {
+      setCompanyInfo({ type: 'ai_knowledge', content: '' })
     }
-
-    setCompanyInfo({
-      id: aiSettings?.id || null,
-      type: 'ai_knowledge',
-      content: aiSettings?.logistics_rules_prompt || '',
-    })
   }
 
   const handleSaveCompanyInfo = async () => {
     setSavingInfo(true)
 
-    // Save logistics rules prompt to ai_settings
+    // Save context info to company_info
     if (companyInfo.id) {
       await supabase
-        .from('ai_settings')
-        .update({ logistics_rules_prompt: companyInfo.content })
+        .from('company_info')
+        .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
         .eq('id', companyInfo.id)
-    } else {
-      await supabase.from('ai_settings').insert([{ logistics_rules_prompt: companyInfo.content }])
+    } else if (companyInfo.content) {
+      await supabase
+        .from('company_info')
+        .insert([{ type: 'ai_knowledge', content: companyInfo.content }])
     }
 
     // Save footer info to company_info
@@ -70,7 +66,7 @@ export default function AdminAIPage() {
     }
 
     setSavingInfo(false)
-    toast({ title: 'Salvo', description: 'Contexto institucional atualizado com sucesso.' })
+    toast({ title: 'Salvo', description: 'Informações atualizadas com sucesso.' })
     fetchCompanyInfo()
   }
 
