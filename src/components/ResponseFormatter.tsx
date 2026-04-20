@@ -1,19 +1,22 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
+import { ProductCard } from '@/components/ProductCard'
+import { Product } from '@/types'
 
 interface ResponseFormatterProps {
   content: string
+  products?: Product[]
   className?: string
 }
 
-export function ResponseFormatter({ content, className }: ResponseFormatterProps) {
+export function ResponseFormatter({ content, products, className }: ResponseFormatterProps) {
   if (!content) return null
 
   return (
     <div
       className={cn(
-        'flex flex-col w-full text-foreground/90 leading-[1.625] text-sm md:text-base',
+        'flex flex-col w-full text-foreground/90 leading-[1.625] text-sm md:text-base prose prose-invert max-w-none',
         className,
       )}
     >
@@ -70,6 +73,19 @@ export function ResponseFormatter({ content, className }: ResponseFormatterProps
       >
         {content}
       </ReactMarkdown>
+
+      {products && products.length > 0 && (
+        <div className="mt-8 animate-fade-in-up delay-150 not-prose">
+          <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary mb-6">
+            Equipamentos Localizados
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {products.map((p: any) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
