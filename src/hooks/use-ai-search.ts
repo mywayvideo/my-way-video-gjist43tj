@@ -101,6 +101,12 @@ export function useUnifiedSearch() {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
+    const priceThreshold = settings?.price_threshold_usd || 5000
+    finalProducts = finalProducts.map((p: any) => ({
+      ...p,
+      is_expensive: p.price_usd > priceThreshold,
+    }))
+
     return {
       stock: finalProducts,
       products: finalProducts,
@@ -187,6 +193,7 @@ export function useUnifiedSearch() {
         intel: currentUnifiedData.intel,
         nabData: currentUnifiedData.nabData,
         web: currentUnifiedData.web,
+        settings: currentUnifiedData.settings,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
       }

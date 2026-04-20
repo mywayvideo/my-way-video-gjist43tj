@@ -16,7 +16,7 @@ import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
 import { resolveImageUrl } from '@/hooks/use-image-fallback'
 
-const renderMarkdown = (text: string) => {
+const renderMarkdown = (text: string, theme: string = 'light') => {
   if (!text) return null
   const parts = text.split(/(```[\s\S]*?```)/g)
   return parts.map((part, i) => {
@@ -25,7 +25,12 @@ const renderMarkdown = (text: string) => {
       return (
         <div
           key={i}
-          className="my-3 p-4 bg-black/5 rounded-xl overflow-x-auto font-mono text-[13px] text-foreground/90 whitespace-pre-wrap border border-black/10 shadow-inner"
+          className={cn(
+            'my-3 p-4 rounded-xl overflow-x-auto font-mono text-[13px] whitespace-pre-wrap border shadow-inner',
+            theme === 'professional-dark'
+              ? 'bg-slate-900/50 text-slate-200 border-slate-700'
+              : 'bg-black/5 text-foreground/90 border-black/10',
+          )}
         >
           {code}
         </div>
@@ -103,7 +108,7 @@ const renderMarkdown = (text: string) => {
 }
 
 export function ChatInterface() {
-  const { search, isLoading } = useAiSearch()
+  const { search, isLoading, results } = useAiSearch()
   const [query, setQuery] = useState('')
   const [messages, setMessages] = useState<
     Array<{
@@ -116,6 +121,12 @@ export function ChatInterface() {
   >([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Extrair config
+  const displayConfig = results?.settings?.result_component_config || {}
+  const theme = displayConfig.theme || 'light'
+  const colsDesktop = displayConfig.columns_desktop || 3
+  const forceRenderCards = displayConfig.force_render_cards !== false
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -153,8 +164,20 @@ export function ChatInterface() {
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto flex flex-col h-[800px] shadow-lg border-primary/10">
-      <CardHeader className="border-b bg-card px-6 py-4 flex flex-row items-center justify-between space-y-0">
+    <Card
+      className={cn(
+        'w-full max-w-4xl mx-auto flex flex-col h-[800px] shadow-lg border-primary/10 transition-colors',
+        theme === 'professional-dark'
+          ? 'bg-slate-900 text-slate-100 border-slate-800'
+          : 'bg-card text-card-foreground',
+      )}
+    >
+      <CardHeader
+        className={cn(
+          'border-b px-6 py-4 flex flex-row items-center justify-between space-y-0',
+          theme === 'professional-dark' ? 'bg-slate-900 border-slate-800' : 'bg-card',
+        )}
+      >
         <div className="flex items-center space-x-3">
           <div className="bg-primary/10 p-2 rounded-full">
             <Bot className="w-6 h-6 text-primary" />
@@ -178,13 +201,35 @@ export function ChatInterface() {
         <ScrollArea className="h-full px-6 py-4" ref={scrollRef}>
           <div className="space-y-6 pb-4">
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center space-y-4 text-muted-foreground mt-20">
-                <div className="bg-primary/5 p-4 rounded-full">
-                  <MessageSquare className="w-8 h-8 text-primary/50" />
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-4 mt-20">
+                <div
+                  className={cn(
+                    'p-4 rounded-full',
+                    theme === 'professional-dark' ? 'bg-slate-800' : 'bg-primary/5',
+                  )}
+                >
+                  <MessageSquare
+                    className={cn(
+                      'w-8 h-8',
+                      theme === 'professional-dark' ? 'text-slate-400' : 'text-primary/50',
+                    )}
+                  />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">Como posso ajudar hoje?</p>
-                  <p className="text-sm">
+                  <p
+                    className={cn(
+                      'font-medium',
+                      theme === 'professional-dark' ? 'text-slate-200' : 'text-foreground',
+                    )}
+                  >
+                    Como posso ajudar hoje?
+                  </p>
+                  <p
+                    className={cn(
+                      'text-sm',
+                      theme === 'professional-dark' ? 'text-slate-400' : 'text-muted-foreground',
+                    )}
+                  >
                     Pesquise por produtos, especificações ou monte seu projeto.
                   </p>
                 </div>
@@ -200,64 +245,109 @@ export function ChatInterface() {
                       'max-w-[85%] rounded-2xl px-5 py-3.5 text-sm shadow-sm',
                       msg.role === 'user'
                         ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                        : 'bg-muted/50 text-foreground rounded-tl-sm border border-border/50',
+                        : theme === 'professional-dark'
+                          ? 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700'
+                          : 'bg-muted/50 text-foreground rounded-tl-sm border border-border/50',
                     )}
                   >
                     <div className="leading-relaxed space-y-2 break-words">
-                      {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
+                      {msg.role === 'assistant' ? renderMarkdown(msg.content, theme) : msg.content}
                     </div>
                   </div>
 
-                  {msg.role === 'assistant' && msg.products && msg.products.length > 0 && (
-                    <div className="mt-4 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {msg.products.slice(0, 3).map((product: any) => (
-                        <Card
-                          key={product.id}
-                          className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-shadow group cursor-pointer flex flex-col"
-                        >
-                          <div className="aspect-square bg-white p-4 flex items-center justify-center relative overflow-hidden group-hover:bg-gray-50 transition-colors">
-                            {product.image_url ? (
-                              <img
-                                src={resolveImageUrl(product.image_url) || ''}
-                                alt={product.name}
-                                className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-primary font-bold text-xs">
-                                  {product.name.substring(0, 2).toUpperCase()}
+                  {msg.role === 'assistant' &&
+                    msg.products &&
+                    msg.products.length > 0 &&
+                    forceRenderCards && (
+                      <div
+                        className={cn(
+                          'mt-4 w-full grid gap-4',
+                          colsDesktop === 4
+                            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                            : colsDesktop === 2
+                              ? 'grid-cols-1 md:grid-cols-2'
+                              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+                        )}
+                      >
+                        {msg.products.slice(0, colsDesktop).map((product: any) => (
+                          <Card
+                            key={product.id}
+                            className={cn(
+                              'overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col',
+                              theme === 'professional-dark'
+                                ? 'bg-slate-800 border-slate-700'
+                                : 'bg-card border-border/50',
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'aspect-square p-4 flex items-center justify-center relative overflow-hidden transition-colors',
+                                theme === 'professional-dark'
+                                  ? 'bg-slate-900 group-hover:bg-slate-800'
+                                  : 'bg-white group-hover:bg-gray-50',
+                              )}
+                            >
+                              {product.image_url ? (
+                                <img
+                                  src={resolveImageUrl(product.image_url) || ''}
+                                  alt={product.name}
+                                  className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="text-primary font-bold text-xs">
+                                    {product.name.substring(0, 2).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              {(product.stock || 0) > 0 && (
+                                <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600 shadow-sm border-0 font-semibold px-2 py-0.5 text-[10px] uppercase tracking-wider">
+                                  Em Estoque
+                                </Badge>
+                              )}
+                            </div>
+                            <CardContent className="p-4 flex-1 flex flex-col">
+                              <h4
+                                className={cn(
+                                  'font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors flex-1',
+                                  theme === 'professional-dark'
+                                    ? 'text-slate-200'
+                                    : 'text-foreground',
+                                )}
+                                title={product.name}
+                              >
+                                {product.name}
+                              </h4>
+                              <div
+                                className={cn(
+                                  'flex items-center justify-between mt-auto pt-2 border-t',
+                                  theme === 'professional-dark'
+                                    ? 'border-slate-700'
+                                    : 'border-border/50',
+                                )}
+                              >
+                                <span className="font-bold text-lg text-primary">
+                                  $
+                                  {(product.price_usd || 0).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </span>
+                                <span
+                                  className={cn(
+                                    'text-xs font-medium px-2 py-1 rounded-md',
+                                    theme === 'professional-dark'
+                                      ? 'bg-slate-700 text-slate-300'
+                                      : 'bg-muted text-muted-foreground',
+                                  )}
+                                >
+                                  USD
                                 </span>
                               </div>
-                            )}
-                            {(product.stock || 0) > 0 && (
-                              <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600 shadow-sm border-0 font-semibold px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                Em Estoque
-                              </Badge>
-                            )}
-                          </div>
-                          <CardContent className="p-4 flex-1 flex flex-col">
-                            <h4
-                              className="font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors flex-1"
-                              title={product.name}
-                            >
-                              {product.name}
-                            </h4>
-                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-border/50">
-                              <span className="font-bold text-lg text-primary">
-                                $
-                                {(product.price_usd || 0).toLocaleString('en-US', {
-                                  minimumFractionDigits: 2,
-                                })}
-                              </span>
-                              <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                                USD
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
 
                   {msg.role === 'assistant' && msg.showWhatsapp && msg.confidence === 'low' && (
                     <div className="mt-4 max-w-[85%]">
@@ -276,7 +366,14 @@ export function ChatInterface() {
 
             {isLoading && (
               <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-5 py-4 text-sm border border-border/50 flex items-center space-x-3 shadow-sm">
+                <div
+                  className={cn(
+                    'rounded-2xl rounded-tl-sm px-5 py-4 text-sm border flex items-center space-x-3 shadow-sm',
+                    theme === 'professional-dark'
+                      ? 'bg-slate-800 border-slate-700'
+                      : 'bg-muted/50 border-border/50',
+                  )}
+                >
                   <div className="flex space-x-1.5">
                     <div
                       className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
@@ -291,8 +388,13 @@ export function ChatInterface() {
                       style={{ animationDelay: '300ms' }}
                     />
                   </div>
-                  <span className="text-muted-foreground font-medium">
-                    Analisando base de dados e NAB 2026...
+                  <span
+                    className={cn(
+                      'font-medium',
+                      theme === 'professional-dark' ? 'text-slate-400' : 'text-muted-foreground',
+                    )}
+                  >
+                    Analisando base de dados e conhecimentos...
                   </span>
                 </div>
               </div>
@@ -302,14 +404,24 @@ export function ChatInterface() {
         </ScrollArea>
       </CardContent>
 
-      <CardFooter className="p-4 border-t bg-card/50">
+      <CardFooter
+        className={cn(
+          'p-4 border-t',
+          theme === 'professional-dark' ? 'bg-slate-900 border-slate-800' : 'bg-card/50',
+        )}
+      >
         <form onSubmit={handleSubmit} className="flex w-full space-x-2">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Pesquise por câmeras, lentes, iluminação..."
             disabled={isLoading}
-            className="flex-1 bg-background border-muted-foreground/20 focus-visible:ring-primary/30 h-12 px-4 rounded-xl shadow-sm"
+            className={cn(
+              'flex-1 focus-visible:ring-primary/30 h-12 px-4 rounded-xl shadow-sm',
+              theme === 'professional-dark'
+                ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-400'
+                : 'bg-background border-muted-foreground/20',
+            )}
           />
           <Button
             type="submit"

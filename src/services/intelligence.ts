@@ -33,10 +33,18 @@ export async function getActiveAgent() {
     .select('*')
     .eq('is_active', true)
     .order('priority_order', { ascending: true })
-    .limit(1)
-    .maybeSingle()
 
-  return data
+  return data && data.length > 0 ? data[0] : null
+}
+
+export async function getActiveAgents() {
+  const { data } = await supabase
+    .from('ai_providers')
+    .select('*')
+    .eq('is_active', true)
+    .order('priority_order', { ascending: true })
+
+  return data || []
 }
 
 export async function generateResponse(query: string, unifiedData: any = {}, agentId?: string) {
@@ -69,7 +77,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   let strictRules = `REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
-REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo.
+REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo. É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count (se os produtos foram fornecidos no contexto, apresente-os).
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual.
 IDIOMA: 100% Português (PT-BR).`
 
@@ -84,28 +92,55 @@ IDIOMA: 100% Português (PT-BR).`
 
   const currentContext = contextProducts
 
-  let data: any = null
-  try {
-    const res = await supabase.functions.invoke('process-query', {
-      body: {
-        query: query,
-        products: contextProducts,
-        intelligence: nabJson,
-        context: currentContext,
-        agentId: agentId,
-        isNABQuery: hasNab || isEventOrNews,
-        assembledPrompt: assembledPrompt,
-        price_threshold_usd: settings.price_threshold_usd,
-        whatsapp_triggers: settings.whatsapp_trigger_keywords,
-        temperature: 0.1,
-      },
-    })
+  const agents = await getActiveAgents()
+  const agentsToTry = agentId ? agents.filter((a) => a.id === agentId) : agents
 
-    if (res.error) throw res.error
-    data = res.data
-  } catch (err) {
-    console.error('Error invoking process-query:', err)
-    throw new Error('Falha ao invocar a engine de inteligência (process-query).')
+  if (agentsToTry.length === 0) {
+    throw new Error('Nenhum provedor de IA ativo encontrado.')
+  }
+
+  let data: any = null
+  let lastError: any = null
+
+  // Contexto Institucional
+  const { data: cData } = await supabase.from('company_info').select('content, type')
+  const contexto_institucional = (cData || [])
+    .map((c: any) => `[${c.type}]: ${c.content}`)
+    .join('\n')
+  const finalPromptWithContext = `${assembledPrompt}\n\nContexto Institucional:\n${contexto_institucional}`
+
+  // Triggers
+  const whatsappTriggers = settings.whatsapp_trigger_keywords || []
+  const confidenceThreshold = settings.confidence_threshold_for_whatsapp || 'low'
+
+  for (const agent of agentsToTry) {
+    try {
+      const res = await supabase.functions.invoke('process-query', {
+        body: {
+          query: query,
+          products: contextProducts,
+          intelligence: nabJson,
+          context: currentContext,
+          agentId: agent.id,
+          isNABQuery: hasNab || isEventOrNews,
+          assembledPrompt: finalPromptWithContext,
+          price_threshold_usd: settings.price_threshold_usd,
+          whatsapp_triggers: whatsappTriggers,
+          temperature: 0.1,
+        },
+      })
+
+      if (res.error) throw res.error
+      data = res.data
+      break // Se sucesso, sai do loop
+    } catch (err) {
+      console.error(`Error invoking process-query with agent ${agent.provider_name}:`, err)
+      lastError = err
+    }
+  }
+
+  if (!data) {
+    throw new Error('Falha ao invocar a engine de inteligência em todos os provedores ativos.')
   }
 
   let result = data.message || data
@@ -123,14 +158,31 @@ IDIOMA: 100% Português (PT-BR).`
     }
   }
 
+  const content = result.content || result.message || (typeof result === 'string' ? result : '')
+  let confidence = result.confidence_level || 'high'
+  let showWhatsapp = result.should_show_whatsapp_button || false
+
+  // Trigger Sync (Section C):
+  const qLower = query.toLowerCase()
+  const triggerMatch = whatsappTriggers.some((kw: string) => qLower.includes(kw.toLowerCase()))
+  if (triggerMatch || confidence === confidenceThreshold || confidence === 'low') {
+    showWhatsapp = true
+  }
+
+  // Se algum produto no contexto for caro
+  const hasExpensive = contextProducts.some((p: any) => p.is_expensive)
+  if (hasExpensive) {
+    showWhatsapp = true
+  }
+
   return {
-    content: result.content || result.message || (typeof result === 'string' ? result : ''),
+    content,
     products:
       Array.isArray(result.products) && result.products.length > 0
         ? result.products
         : contextProducts,
-    should_show_whatsapp_button: result.should_show_whatsapp_button || false,
-    confidence_level: result.confidence_level || 'high',
+    should_show_whatsapp_button: showWhatsapp,
+    confidence_level: confidence,
   }
 }
 
