@@ -67,12 +67,12 @@ export function ChatInterface() {
           <div>
             <div className="flex items-center space-x-2">
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
-              <span
-                className="font-bold text-xs uppercase tracking-wider text-primary border border-primary/20 px-2 py-1 rounded-md"
-                style={{ fontVariantCaps: 'small-caps' }}
+              <Badge
+                variant="outline"
+                className="font-bold text-xs uppercase tracking-wider text-primary border-primary/20"
               >
                 IA My Way Business
-              </span>
+              </Badge>
             </div>
             <CardDescription>Tire suas dúvidas sobre equipamentos audiovisuais</CardDescription>
           </div>
@@ -220,25 +220,26 @@ export function ChatInterface() {
             type="submit"
             disabled={!query.trim() || isLoading}
             size="icon"
-            style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+            style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6) !important' }}
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
               'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
+              isLoading && 'animate-pulse',
             )}
           >
             {isLoading ? (
               <Loader2
-                className="w-5 h-5 animate-spin text-white !text-white"
-                color="white"
-                style={{ color: 'white' }}
+                className="w-5 h-5 animate-spin"
+                color="#ffffff"
+                style={{ color: '#ffffff' }}
               />
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                 <Search
-                  className="w-5 h-5 text-white !text-white relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"
-                  color="white"
-                  style={{ color: 'white' }}
+                  className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"
+                  color="#ffffff"
+                  style={{ color: '#ffffff' }}
                 />
               </>
             )}

@@ -106,6 +106,7 @@ export function useUnifiedSearch() {
       }
 
       console.log('Search Results:', combinedResults)
+      console.log('DATABASE_RESULTS:', combinedResults)
 
       setResults(combinedResults)
       return combinedResults

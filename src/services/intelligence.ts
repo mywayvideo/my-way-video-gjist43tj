@@ -65,7 +65,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   if (contextProducts.length === 0 && !hasNab) {
     return {
       content:
-        'Não encontrei este item específico no meu catálogo de Miami, mas posso verificar com nossos fornecedores.',
+        'Não localizei este item no catálogo de Miami, mas posso verificar com nossos fornecedores agora.',
       products: [],
       should_show_whatsapp_button: true,
       confidence_level: 'low',
@@ -73,7 +73,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   }
 
   const strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
-REGRA 2: Especificações técnicas DEVEM estar em blocos de código (triple backticks).
+REGRA 2: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
 REGRA 4: Se o produto foi citado, o card DEVE ser exibido abaixo.
 IDIOMA: 100% Português (PT-BR).
