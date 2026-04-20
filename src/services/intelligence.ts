@@ -95,17 +95,16 @@ export const getActiveAgent = async () => {
 
 export const generateResponse = async (query: string, unifiedContext: any, agentId?: string) => {
   try {
-    const systemPrompt = `Você é o Especialista My Way Business. Sua resposta deve ser baseada EXCLUSIVAMENTE nos dados fornecidos.
-- Se houver produtos no contexto, confirme estoque imediato em Miami e cite os preços em USD.
-- Se houver dados de inteligência/NAB, use-os como fonte primária de verdade.
-- É TERMINANTEMENTE PROIBIDO dizer 'não encontrei' se houver dados no contexto.
-- Se o usuário perguntou por um modelo (ex: FX30) e ele está no contexto, você DEVE confirmar sua existência.
+    const systemPrompt = `Você é o Especialista My Way Business. Sua resposta deve ser baseada EXCLUSIVAMENTE nos dados fornecidos no contexto.
+- PRIORIDADE 1 (PRODUTOS): Se houver produtos no contexto, confirme estoque imediato em Miami e cite os preços em USD. É PROIBIDO dizer que o estoque é zero se o banco retornou dados.
+- PRIORIDADE 2 (CACHE/NAB): Use os dados de 'market_intelligence' apenas se o usuário perguntar sobre a NAB ou novidades de mercado.
+- REGRA DE OURO: Nunca force o prefixo 'NAB 2026' se a pergunta for sobre um produto específico do catálogo.
+- Se o usuário perguntou por um modelo (ex: Pyxis) e ele está no contexto, você DEVE confirmar sua existência e exibir suas características.
 - Responda APENAS em Português (PT-BR).
-- Parágrafos: máximo de 2 frases.
-- Use blocos de código (\`\`\`) para formatar especificações técnicas.
+- Mantenha parágrafos com no máximo 2 frases. Use blocos de código (\`\`\`) para formatar especificações técnicas.
 - Sempre mencione a garantia do fabricante no Brasil/LATAM.`
 
-    const enhancedQuery = `${systemPrompt}\n\nDADOS DO BANCO: ${JSON.stringify(unifiedContext)}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemPrompt}\n\nCONTEXTO UNIFICADO (DADOS DO BANCO): ${JSON.stringify(unifiedContext)}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
