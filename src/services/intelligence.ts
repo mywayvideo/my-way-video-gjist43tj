@@ -155,7 +155,7 @@ export const generateExpertResponse = async (query: string, unifiedData: any, ag
     }
 
     const systemPrompt = `Você é o Especialista My Way. 
-Sua resposta JSON deve conter o texto em 'content' e a lista de objetos de produtos em 'products'.
+Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
 Ignore COMPLETAMENTE qualquer campo de 'stock', 'quantity' ou 'estoque' vindo do banco de dados.
 Se o produto existe na lista 'stock' enviada no contexto, ele ESTÁ DISPONÍVEL.
 É terminantemente PROIBIDO dizer que o produto não está disponível ou que o estoque está vazio.
@@ -168,7 +168,7 @@ ${isPurchaseIntent ? 'GATILHO DE COMPRA ATIVO: Seja extremamente assertivo sobre
 Responda SEMPRE em Português (PT-BR).
 Mantenha os parágrafos com no máximo 2 frases.
 Use Markdown padrão. Use **negrito** para nomes de produtos e preços. Use blocos de código com \`\`\` para especificações. Nunca use caracteres especiais fora do padrão Markdown.
-Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil.`
+Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil no campo 'content'.`
 
     const enhancedQuery = `${systemPrompt}\n\nDADOS DO SISTEMA (VERDADE ABSOLUTA):\n${JSON.stringify(
       {
@@ -202,6 +202,7 @@ Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil.`
     }
 
     return {
+      content: finalMessage,
       message: finalMessage,
       confidence_level,
       products: data?.products || unifiedData.stock || [],

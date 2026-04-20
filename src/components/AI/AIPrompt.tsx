@@ -3,6 +3,7 @@ import { Loader2, Search, Sparkles, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getActiveAgent } from '@/services/intelligence'
 import { Link } from 'react-router-dom'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface AIPromptProps {
   onSearch?: (query: string) => Promise<any> | void
@@ -250,15 +251,52 @@ export function AIPrompt({
       </form>
 
       {(isLoading || isExternalLoading) && (
-        <div className="w-full max-w-3xl mt-6 flex items-center gap-3 text-white/70 animate-pulse bg-black/40 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
-          <Bot className="w-5 h-5 text-primary animate-bounce" />
-          <span className="font-medium tracking-wide">
-            Buscando no catálogo, inteligência e web...
-          </span>
+        <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
+          <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[150px]" />
+                <Skeleton className="h-3 w-[100px]" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-[90%]" />
+              <Skeleton className="h-4 w-[95%]" />
+              <Skeleton className="h-4 w-[80%]" />
+            </div>
+          </div>
+
+          <div className="w-full mt-6">
+            <div className="flex items-center gap-4 mb-6">
+              <Skeleton className="h-6 w-[250px]" />
+              <div className="h-[1px] flex-1 bg-white/10" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-black/60 border border-white/10 rounded-xl p-4 h-full flex flex-col gap-3"
+                >
+                  <Skeleton className="w-full aspect-square rounded-lg" />
+                  <div className="space-y-2 mt-2">
+                    <Skeleton className="h-3 w-[60%]" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-[80%]" />
+                  </div>
+                  <div className="mt-auto pt-3 border-t border-white/10 flex justify-between">
+                    <Skeleton className="h-3 w-[80px]" />
+                    <Skeleton className="h-4 w-[100px]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {localResult?.message && !isLoading && !isExternalLoading && (
+      {(localResult?.content || localResult?.message) && !isLoading && !isExternalLoading && (
         <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
           <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
@@ -270,16 +308,16 @@ export function AIPrompt({
                 <p className="text-xs text-white/50">Especialista em Audiovisual</p>
               </div>
             </div>
-            <ReactMarkdown className="prose prose-invert max-w-none">
-              {localResult.message}
+            <ReactMarkdown className="prose prose-invert max-w-none text-foreground">
+              {localResult.content || localResult.message}
             </ReactMarkdown>
           </div>
 
           {displayProducts.length > 0 && (
             <div className="w-full mt-6 animate-fade-in-up delay-150">
               <div className="flex items-center gap-4 mb-6">
-                <h3 className="text-xl font-bold text-white pl-3 border-l-4 border-primary">
-                  Equipamentos Relacionados
+                <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary">
+                  Equipamentos Localizados
                 </h3>
                 <div className="h-[1px] flex-1 bg-white/10" />
               </div>
