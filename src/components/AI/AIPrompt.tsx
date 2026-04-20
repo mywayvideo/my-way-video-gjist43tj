@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Loader2, Search, Sparkles, Flame, Bot } from 'lucide-react'
+import { Loader2, Search, Sparkles, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { getActiveAgent } from '@/services/intelligence'
 import { Link } from 'react-router-dom'
 
@@ -49,13 +48,8 @@ export function AIPrompt({
 
       try {
         if (onSearch) {
-          const result = await onSearch(searchQuery.trim())
+          const result = await onSearch(searchQuery)
           if (result) {
-            const hasProducts = result.products?.length > 0
-            if (hasProducts) {
-              result.confidence_level = 'high'
-              result.should_show_whatsapp_button = false
-            }
             setLocalResult(result)
             if (onResult) onResult(result)
           }
@@ -125,15 +119,6 @@ export function AIPrompt({
 
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
-      {localResult?.has_nab_intelligence && localResult?.is_nab_query && (
-        <Badge
-          variant="destructive"
-          className="mb-4 bg-red-600 animate-pulse text-white px-4 py-1 text-sm font-bold tracking-wider border-none"
-        >
-          <Flame className="w-4 h-4 mr-2 inline-block" />
-          COBERTURA AO VIVO - NAB 2026
-        </Badge>
-      )}
       <form onSubmit={handleFormSubmit} className="w-full max-w-3xl relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-white/5 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-500"></div>
         <div className="relative flex flex-col sm:flex-row items-center bg-black/60 border border-white/20 rounded-[2rem] shadow-[0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-2 sm:p-3 overflow-hidden focus-within:border-white/50 focus-within:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-300">
@@ -201,13 +186,13 @@ export function AIPrompt({
             </div>
           </div>
 
-          {localResult?.products && localResult.products.length > 0 && (
+          {localResult?.stock && localResult.stock.length > 0 && (
             <div className="w-full animate-fade-in-up delay-150">
               <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
                 Produtos Relacionados
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {localResult.products.map((product: any) => (
+                {localResult.stock.map((product: any) => (
                   <Link
                     key={product.id}
                     to={`/product/${product.id}`}
@@ -250,7 +235,7 @@ export function AIPrompt({
             </div>
           )}
 
-          {localResult?.should_show_whatsapp_button && (
+          {(!localResult?.stock || localResult.stock.length === 0) && (
             <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
               <a
                 href="https://wa.me/13055551234"

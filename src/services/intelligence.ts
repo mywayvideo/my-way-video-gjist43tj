@@ -93,75 +93,74 @@ export const getActiveAgent = async () => {
   }
 }
 
-export const generateResponse = async (query: string, unifiedContext: any, agentId?: string) => {
+export const generateExpertResponse = async (query: string, unifiedData: any, agentId?: string) => {
   try {
-    const systemPrompt = `Você é o Especialista My Way Business. Sua resposta deve ser baseada EXCLUSIVAMENTE nos dados fornecidos no contexto.
-- REGRA 1 (ESTOQUE): Se o produto está em 'products', confirme estoque imediato em Miami e cite o preço em USD. É PROIBIDO dizer que não encontrou se o dado está no contexto.
-- REGRA 2 (NAB/CACHE): Use os dados de 'nab_market' ou 'market_intelligence' para complementar com detalhes técnicos ou novidades.
-- REGRA 3 (IDENTIDADE): Nunca force o contexto da NAB se a pergunta for apenas sobre um modelo de câmera do catálogo.
-- Se o modelo (ex: FX30) for encontrado, você DEVE detalhar suas especificações.
-- Responda APENAS em Português (PT-BR).
-- Mantenha parágrafos com no máximo 2 frases. Use blocos de código (\`\`\`) para formatar especificações técnicas.
-- Sempre mencione a garantia do fabricante no Brasil/LATAM.`
+    const systemPrompt = `Você é o Especialista My Way. 
+Sua resposta DEVE começar confirmando os itens da lista 'stock'. 
+Se 'stock' tem dados, é PROIBIDO dizer que não encontrou. 
+Use 'intel' apenas para detalhes técnicos adicionais. 
+NUNCA mencione a NAB a menos que o usuário pergunte explicitamente.
+Responda SEMPRE em Português (PT-BR).
+Mantenha os parágrafos com no máximo 2 frases.
+Use blocos de código (\`\`\`) para formatar especificações técnicas.
+Você DEVE incluir sempre a frase ao final: "Disponível para envio imediato de Miami com garantia no Brasil."`
 
-    const enhancedQuery = `${systemPrompt}\n\nCONTEXTO UNIFICADO (DADOS DO BANCO): ${JSON.stringify(unifiedContext)}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemPrompt}\n\nDADOS DO SISTEMA (VERDADE ABSOLUTA):\n${JSON.stringify(unifiedData)}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
         query: enhancedQuery,
-        products: unifiedContext.products || [],
-        intelligence: [...(unifiedContext.intelligence || []), ...(unifiedContext.web || [])],
+        products: unifiedData.stock || [],
+        intelligence: [...(unifiedData.intel || []), ...(unifiedData.web || [])],
         agentId,
-        isNABQuery: unifiedContext.intelligence?.length > 0 || unifiedContext.web?.length > 0,
+        isNABQuery: query.toLowerCase().includes('nab'),
       },
     })
 
     if (error) throw error
-    if (data?.message) return data.message
+    
+    if (data?.message) {
+      let finalMessage = data.message;
+      if (!finalMessage.includes("Disponível para envio imediato de Miami com garantia no Brasil.")) {
+        finalMessage += "\n\nDisponível para envio imediato de Miami com garantia no Brasil.";
+      }
+      return finalMessage;
+    }
 
-    return buildFallbackMessage(query, unifiedContext)
+    return buildFallbackMessage(query, unifiedData)
   } catch (e) {
     console.error('Edge function call failed:', e)
-    return buildFallbackMessage(query, unifiedContext)
+    return buildFallbackMessage(query, unifiedData)
   }
 }
 
-function buildFallbackMessage(query: string, unifiedContext: any) {
+function buildFallbackMessage(query: string, unifiedData: any) {
   let response = 'Especialista My Way:\n\n'
-  const products = unifiedContext.products || []
-  const intelligence = unifiedContext.intelligence || []
-  const web = unifiedContext.web || []
+  const stock = unifiedData.stock || []
+  const intel = unifiedData.intel || []
 
-  if (products.length > 0) {
-    response +=
-      'Encontrei as seguintes opções no nosso catálogo. Confirmo estoque imediato em Miami, garantia do fabricante no Brasil/LATAM e preços em USD:\n\n'
-    products.forEach((p: any) => {
+  if (stock.length > 0) {
+    response += 'Encontrei as seguintes opções no nosso catálogo.\n\n'
+    stock.forEach((p: any) => {
       response += `**${p.name}**\n`
       const tech = p.technical_info || p.description || 'Especificações sob consulta.'
       response += `\`\`\`\n${tech.substring(0, 150)}...\n\`\`\`\nPreço: USD ${p.price_usd || 'Consulte'}\n\n`
     })
+  } else {
+    response += 'Não possuo essa informação exata no momento em nosso catálogo.\n\n'
   }
 
-  if (intelligence.length > 0) {
-    response += 'Detalhes Técnicos / Informações:\n\n'
-    intelligence.forEach((n: any) => {
+  if (intel.length > 0) {
+    response += 'Detalhes Técnicos / Informações Adicionais:\n\n'
+    intel.forEach((n: any) => {
       response += `**${n.title}**\n${n.ai_summary || n.raw_content?.substring(0, 150)}...\n\n`
     })
   }
 
-  if (web.length > 0) {
-    response += 'Informação de Mercado (Web):\n\n'
-    web.forEach((w: any) => {
-      response += `**${w.title}**\n${w.raw_content?.substring(0, 200)}...\n\n`
-    })
-  }
-
-  if (products.length === 0 && intelligence.length === 0 && web.length === 0) {
-    response +=
-      'Não possuo essa informação exata no momento em nossa base de dados. Recomendo falar com um de nossos especialistas.'
-  }
+  response += '\nDisponível para envio imediato de Miami com garantia no Brasil.'
 
   return response
 }
 
-export const generateAgentResponse = generateResponse
+export const generateResponse = generateExpertResponse
+export const generateAgentResponse = generateExpertResponse
