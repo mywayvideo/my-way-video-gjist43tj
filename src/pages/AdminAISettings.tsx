@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,7 +58,13 @@ export default function AdminAISettings() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Configurações da IA</h1>
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar Alterações'}
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...
+            </>
+          ) : (
+            'Salvar Alterações'
+          )}
         </Button>
       </div>
 
@@ -227,7 +234,13 @@ export default function AdminAISettings() {
 
       <div className="flex justify-end pt-4 pb-12">
         <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving ? 'Salvando...' : 'Salvar Alterações'}
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...
+            </>
+          ) : (
+            'Salvar Alterações'
+          )}
         </Button>
       </div>
     </div>

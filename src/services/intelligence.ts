@@ -15,10 +15,16 @@ export async function getAISettings() {
     }
   }
 
-  const { data: settings } = await supabase.from('ai_settings').select('*').limit(1).maybeSingle()
+  const { data: settings } = await supabase
+    .from('ai_settings')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
   const { data: agentSettings } = await supabase
     .from('ai_agent_settings')
     .select('*')
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
 

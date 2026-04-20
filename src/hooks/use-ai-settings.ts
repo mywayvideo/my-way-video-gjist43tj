@@ -84,7 +84,30 @@ export function useAISettings() {
         }
       }
 
-      const generalPayload: any = {
+      let aiSettingsId = newSettings.ai_settings_id
+      if (!aiSettingsId) {
+        const { data: existingAi } = await supabase
+          .from('ai_settings')
+          .select('id')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        aiSettingsId = existingAi?.id || '00000000-0000-0000-0000-000000000001'
+      }
+
+      let agentSettingsId = newSettings.ai_agent_settings_id
+      if (!agentSettingsId) {
+        const { data: existingAgent } = await supabase
+          .from('ai_agent_settings')
+          .select('id')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        agentSettingsId = existingAgent?.id || '00000000-0000-0000-0000-000000000002'
+      }
+
+      const generalPayload = {
+        id: aiSettingsId,
         cache_expiration_days: newSettings.cache_expiration_days,
         price_threshold_usd: newSettings.price_threshold_usd,
         search_algorithm_sql: newSettings.search_algorithm_sql,
@@ -93,18 +116,8 @@ export function useAISettings() {
         result_component_config: parsedConfig,
       }
 
-      if (newSettings.ai_settings_id) {
-        generalPayload.id = newSettings.ai_settings_id
-      } else {
-        const { data: existingAi } = await supabase
-          .from('ai_settings')
-          .select('id')
-          .limit(1)
-          .maybeSingle()
-        if (existingAi) generalPayload.id = existingAi.id
-      }
-
-      const agentPayload: any = {
+      const agentPayload = {
+        id: agentSettingsId,
         whatsapp_trigger_low_confidence: newSettings.whatsapp_trigger_low_confidence,
         whatsapp_trigger_purchase_keywords: newSettings.whatsapp_trigger_purchase_keywords,
         whatsapp_trigger_project_keywords: newSettings.whatsapp_trigger_project_keywords,
@@ -112,26 +125,19 @@ export function useAISettings() {
         system_prompt: newSettings.system_prompt_template,
       }
 
-      if (newSettings.ai_agent_settings_id) {
-        agentPayload.id = newSettings.ai_agent_settings_id
-      } else {
-        const { data: existingAgent } = await supabase
-          .from('ai_agent_settings')
-          .select('id')
-          .limit(1)
-          .maybeSingle()
-        if (existingAgent) agentPayload.id = existingAgent.id
-      }
-
-      const { error: aiError } = await supabase.from('ai_settings').upsert(generalPayload)
+      const { error: aiError } = await supabase
+        .from('ai_settings')
+        .upsert(generalPayload, { onConflict: 'id' })
       if (aiError) throw aiError
 
-      const { error: agentError } = await supabase.from('ai_agent_settings').upsert(agentPayload)
+      const { error: agentError } = await supabase
+        .from('ai_agent_settings')
+        .upsert(agentPayload, { onConflict: 'id' })
       if (agentError) throw agentError
 
       toast({
         title: 'Sucesso',
-        description: 'Configurações de IA salvas com sucesso!',
+        description: 'Configurações salvas com sucesso no banco de dados!',
       })
 
       await fetchSettings()

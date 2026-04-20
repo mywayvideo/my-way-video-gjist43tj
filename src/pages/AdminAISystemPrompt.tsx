@@ -142,7 +142,7 @@ export default function AdminAISystemPrompt() {
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
-              Salvar Instruções
+              {saving ? 'Salvando...' : 'Salvar Instruções'}
             </Button>
           </div>
         </CardContent>
