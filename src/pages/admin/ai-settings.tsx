@@ -202,17 +202,17 @@ export default function AdminAISettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Section C - Gatilhos do WhatsApp</CardTitle>
+            <CardTitle>Triggers</CardTitle>
             <CardDescription>
               Configurações para exibir o botão de contato com especialista.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Low Confidence Trigger</Label>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between border rounded-xl p-5">
+              <div className="space-y-1">
+                <Label className="text-base font-medium">Low Confidence</Label>
                 <div className="text-sm text-muted-foreground">
-                  Ativa botão se a IA tiver dúvida
+                  Mostrar botao quando agente nao consegue responder.
                 </div>
               </div>
               <Switch
@@ -222,12 +222,13 @@ export default function AdminAISettingsPage() {
                 }
               />
             </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Purchase Keywords Trigger</Label>
-                <div className="text-sm text-muted-foreground">
-                  Ativa botão se detectar intenção de compra
+
+            <div className="flex items-center justify-between border rounded-xl p-5">
+              <div className="space-y-1">
+                <Label className="text-base font-medium">Purchase Keywords</Label>
+                <div className="text-sm text-muted-foreground max-w-[400px]">
+                  Mostrar botao quando usuario menciona compra. (Ex: comprar, orcamento, quanto
+                  custa)
                 </div>
               </div>
               <Switch
@@ -237,12 +238,13 @@ export default function AdminAISettingsPage() {
                 }
               />
             </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Project Keywords Trigger</Label>
-                <div className="text-sm text-muted-foreground">
-                  Ativa botão para solicitações de projeto
+
+            <div className="flex items-center justify-between border rounded-xl p-5">
+              <div className="space-y-1">
+                <Label className="text-base font-medium">Project Keywords</Label>
+                <div className="text-sm text-muted-foreground max-w-[400px]">
+                  Mostrar botao quando usuario menciona projeto. (Ex: integracao, customizacao,
+                  setup)
                 </div>
               </div>
               <Switch
@@ -252,12 +254,12 @@ export default function AdminAISettingsPage() {
                 }
               />
             </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Expensive Product Trigger</Label>
-                <div className="text-sm text-muted-foreground">
-                  Ativa botão para produtos acima do limite
+
+            <div className="flex items-center justify-between border rounded-xl p-5">
+              <div className="space-y-1">
+                <Label className="text-base font-medium">Expensive Product</Label>
+                <div className="text-sm text-muted-foreground max-w-[400px]">
+                  Mostrar botao quando produto custa mais que o limite configurado.
                 </div>
               </div>
               <Switch
