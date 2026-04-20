@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
+import { resolveImageUrl } from '@/hooks/use-image-fallback'
 
 export function ChatInterface() {
   const { search, isLoading } = useAiSearch()
@@ -123,7 +124,7 @@ export function ChatInterface() {
                           <div className="aspect-square bg-white p-4 flex items-center justify-center relative overflow-hidden group-hover:bg-gray-50 transition-colors">
                             {product.image_url ? (
                               <img
-                                src={product.image_url}
+                                src={resolveImageUrl(product.image_url) || ''}
                                 alt={product.name}
                                 className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                               />
@@ -220,10 +221,10 @@ export function ChatInterface() {
             type="submit"
             disabled={!query.trim() || isLoading}
             size="icon"
-            style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6) !important' }}
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
               'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
+              '!bg-[linear-gradient(to_right,#3b82f6,#8b5cf6)]',
               isLoading && 'animate-pulse',
             )}
           >

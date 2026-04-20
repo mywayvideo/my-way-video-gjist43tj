@@ -16,6 +16,10 @@ export function useUnifiedSearch() {
     let nab: any[] = []
 
     try {
+      const sqlString = settings?.search_algorithm_sql || ''
+      const executedSql = sqlString.replace(/\$1/g, query)
+      console.log('SQL BEING EXECUTED:', executedSql)
+
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
         search_term: query,
       })
@@ -131,6 +135,7 @@ export function useUnifiedSearch() {
       }
 
       console.log('Search Results:', fallbackResults)
+      console.log('DATABASE_RESULTS:', fallbackResults)
 
       setResults(fallbackResults)
       toast({

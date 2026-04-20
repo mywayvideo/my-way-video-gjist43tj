@@ -9,17 +9,8 @@ export async function getAISettings() {
     .eq('id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle()
 
-  let resolvedSpecificSettings = specificSettings
-
   if (error || !specificSettings) {
-    resolvedSpecificSettings = {
-      system_prompt_template:
-        'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é ajudar clientes a encontrar o equipamento perfeito e converter consultas em vendas.',
-      logistics_rules_prompt:
-        'Se price_usd > 0: Envio de Miami com garantia integral no Brasil e América Latina. Origem: Doral, FL.',
-      price_threshold_usd: 5000,
-      cache_expiration_days: 30,
-    }
+    throw new Error('Falha ao carregar ai_settings do banco de dados.')
   }
 
   const { data: agentSettings } = await supabase
@@ -31,7 +22,7 @@ export async function getAISettings() {
     .limit(1)
     .maybeSingle()
 
-  return { ...agentSettings, ...resolvedSpecificSettings }
+  return { ...agentSettings, ...specificSettings }
 }
 
 export async function getActiveAgent() {
