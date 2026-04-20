@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Loader2, Search, Sparkles, Flame, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -27,49 +27,68 @@ export function AIPrompt({
   const [localResult, setLocalResult] = useState<any>(null)
   const [agentName, setAgentName] = useState('Agente My Way')
 
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
     getActiveAgent().then((agent) => {
       if (agent) setAgentName(agent.provider_name)
     })
+
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
   }, [])
 
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    if (!query.trim() || isLoading || isExternalLoading) return
+  const executeSearch = useCallback(
+    async (searchQuery: string) => {
+      if (!searchQuery.trim() || isLoading || isExternalLoading) return
 
-    setIsLoading(true)
-    if (onLoadingChange) onLoadingChange(true)
-    setLocalResult(null)
+      setIsLoading(true)
+      if (onLoadingChange) onLoadingChange(true)
+      setLocalResult(null)
 
-    try {
-      if (onSearch) {
-        const result = await onSearch(query.trim())
-        if (result) {
-          const hasProducts = result.products?.length > 0
-          if (hasProducts) {
-            result.confidence_level = 'high'
-            result.should_show_whatsapp_button = false
+      try {
+        if (onSearch) {
+          const result = await onSearch(searchQuery.trim())
+          if (result) {
+            const hasProducts = result.products?.length > 0
+            if (hasProducts) {
+              result.confidence_level = 'high'
+              result.should_show_whatsapp_button = false
+            }
+            setLocalResult(result)
+            if (onResult) onResult(result)
           }
-          setLocalResult(result)
-          if (onResult) onResult(result)
         }
+      } catch (err: any) {
+        console.error('AIPrompt Error:', err)
+        if (onError) {
+          onError(err.message || 'Ocorreu um erro na busca. Tente novamente.')
+        }
+      } finally {
+        setIsLoading(false)
+        if (onLoadingChange) onLoadingChange(false)
       }
-    } catch (err: any) {
-      console.error('AIPrompt Error:', err)
-      if (onError) {
-        onError(err.message || 'Ocorreu um erro na busca.')
-      }
-    } finally {
-      setIsLoading(false)
-      if (onLoadingChange) onLoadingChange(false)
-    }
-  }
+    },
+    [isLoading, isExternalLoading, onSearch, onLoadingChange, onResult, onError],
+  )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSearch()
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = setTimeout(() => {
+        executeSearch(query)
+      }, 300)
     }
+  }
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => {
+      executeSearch(query)
+    }, 300)
   }
 
   const formatMessage = (text: string) => {
@@ -115,7 +134,7 @@ export function AIPrompt({
           COBERTURA AO VIVO - NAB 2026
         </Badge>
       )}
-      <form onSubmit={handleSearch} className="w-full max-w-3xl relative group">
+      <form onSubmit={handleFormSubmit} className="w-full max-w-3xl relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-white/5 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-500"></div>
         <div className="relative flex flex-col sm:flex-row items-center bg-black/60 border border-white/20 rounded-[2rem] shadow-[0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-2 sm:p-3 overflow-hidden focus-within:border-white/50 focus-within:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-300">
           <div className="hidden sm:flex items-center justify-center pl-4 pr-2 text-white/50">
@@ -217,7 +236,7 @@ export function AIPrompt({
                         </h4>
                       </div>
                       <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
-                        <div className="text-white/50 text-xs">Price USA</div>
+                        <div className="text-white/50 text-xs">Preço USA</div>
                         <div className="font-bold text-white">
                           {product.price_usd
                             ? `USD ${product.price_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`

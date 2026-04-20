@@ -96,10 +96,10 @@ export const getActiveAgent = async () => {
 export const generateResponse = async (query: string, unifiedContext: any, agentId?: string) => {
   try {
     const systemPrompt = `Você é o Especialista My Way Business. Sua resposta deve ser baseada EXCLUSIVAMENTE nos dados fornecidos no contexto.
-- PRIORIDADE 1 (PRODUTOS): Se houver produtos no contexto, confirme estoque imediato em Miami e cite os preços em USD. É PROIBIDO dizer que o estoque é zero se o banco retornou dados.
-- PRIORIDADE 2 (CACHE/NAB): Use os dados de 'market_intelligence' apenas se o usuário perguntar sobre a NAB ou novidades de mercado.
-- REGRA DE OURO: Nunca force o prefixo 'NAB 2026' se a pergunta for sobre um produto específico do catálogo.
-- Se o usuário perguntou por um modelo (ex: Pyxis) e ele está no contexto, você DEVE confirmar sua existência e exibir suas características.
+- REGRA 1 (ESTOQUE): Se o produto está em 'products', confirme estoque imediato em Miami e cite o preço em USD. É PROIBIDO dizer que não encontrou se o dado está no contexto.
+- REGRA 2 (NAB/CACHE): Use os dados de 'nab_market' ou 'market_intelligence' para complementar com detalhes técnicos ou novidades.
+- REGRA 3 (IDENTIDADE): Nunca force o contexto da NAB se a pergunta for apenas sobre um modelo de câmera do catálogo.
+- Se o modelo (ex: FX30) for encontrado, você DEVE detalhar suas especificações.
 - Responda APENAS em Português (PT-BR).
 - Mantenha parágrafos com no máximo 2 frases. Use blocos de código (\`\`\`) para formatar especificações técnicas.
 - Sempre mencione a garantia do fabricante no Brasil/LATAM.`
@@ -110,9 +110,9 @@ export const generateResponse = async (query: string, unifiedContext: any, agent
       body: {
         query: enhancedQuery,
         products: unifiedContext.products || [],
-        intelligence: [...(unifiedContext.news || []), ...(unifiedContext.web || [])],
+        intelligence: [...(unifiedContext.intelligence || []), ...(unifiedContext.web || [])],
         agentId,
-        isNABQuery: unifiedContext.news?.length > 0 || unifiedContext.web?.length > 0,
+        isNABQuery: unifiedContext.intelligence?.length > 0 || unifiedContext.web?.length > 0,
       },
     })
 
@@ -129,7 +129,7 @@ export const generateResponse = async (query: string, unifiedContext: any, agent
 function buildFallbackMessage(query: string, unifiedContext: any) {
   let response = 'Especialista My Way:\n\n'
   const products = unifiedContext.products || []
-  const news = unifiedContext.news || []
+  const intelligence = unifiedContext.intelligence || []
   const web = unifiedContext.web || []
 
   if (products.length > 0) {
@@ -142,9 +142,9 @@ function buildFallbackMessage(query: string, unifiedContext: any) {
     })
   }
 
-  if (news.length > 0) {
+  if (intelligence.length > 0) {
     response += 'Detalhes Técnicos / Informações:\n\n'
-    news.forEach((n: any) => {
+    intelligence.forEach((n: any) => {
       response += `**${n.title}**\n${n.ai_summary || n.raw_content?.substring(0, 150)}...\n\n`
     })
   }
@@ -156,7 +156,7 @@ function buildFallbackMessage(query: string, unifiedContext: any) {
     })
   }
 
-  if (products.length === 0 && news.length === 0 && web.length === 0) {
+  if (products.length === 0 && intelligence.length === 0 && web.length === 0) {
     response +=
       'Não possuo essa informação exata no momento em nossa base de dados. Recomendo falar com um de nossos especialistas.'
   }

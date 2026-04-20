@@ -17,10 +17,17 @@ export function useUnifiedSearch() {
     try {
       const activeAgent = await getActiveAgent()
       const fallbackTerm = query.trim()
-      const safeTerm = fallbackTerm.replace(/[%_\\]/g, '\\$&')
 
-      // STEP 1: Local Stock (Case-insensitive with wildcards)
-      const productsOr = `name.ilike.%${safeTerm}%,sku.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`
+      const words = fallbackTerm.split(/\s+/).filter((w) => w.length > 1)
+      const safeWords = words.map((w) => w.replace(/[%_\\]/g, '\\$&'))
+
+      // STEP 1: Local Stock (products)
+      const productsOr =
+        safeWords.length > 0
+          ? safeWords
+              .map((w) => `name.ilike.%${w}%,sku.ilike.%${w}%,description.ilike.%${w}%`)
+              .join(',')
+          : `name.ilike.%${fallbackTerm.replace(/[%_\\]/g, '\\$&')}%,sku.ilike.%${fallbackTerm.replace(/[%_\\]/g, '\\$&')}%,description.ilike.%${fallbackTerm.replace(/[%_\\]/g, '\\$&')}%`
 
       const { data: productsData, error: productsError } = await supabase
         .from('products')
@@ -30,9 +37,13 @@ export function useUnifiedSearch() {
 
       if (productsError) throw productsError
 
-      // STEP 2: AI Cache / NAB
-      const newsOr = `title.ilike.%${safeTerm}%,raw_content.ilike.%${safeTerm}%`
-      const { data: newsData, error: newsError } = await supabase
+      // STEP 2 & 3: AI Cache / NAB
+      const newsOr =
+        safeWords.length > 0
+          ? safeWords.map((w) => `title.ilike.%${w}%,raw_content.ilike.%${w}%`).join(',')
+          : `title.ilike.%${fallbackTerm.replace(/[%_\\]/g, '\\$&')}%,raw_content.ilike.%${fallbackTerm.replace(/[%_\\]/g, '\\$&')}%`
+
+      const { data: intelligenceData, error: newsError } = await supabase
         .from('market_intelligence')
         .select('*')
         .or(newsOr)
@@ -42,8 +53,11 @@ export function useUnifiedSearch() {
 
       let webData: any = null
 
-      // STEP 3: Web Fallback
-      if ((!productsData || productsData.length === 0) && (!newsData || newsData.length === 0)) {
+      // STEP 4: Web Fallback
+      if (
+        (!productsData || productsData.length === 0) &&
+        (!intelligenceData || intelligenceData.length === 0)
+      ) {
         try {
           const { data: aiSearchData, error: aiSearchError } = await supabase.functions.invoke(
             'ai-search',
@@ -72,14 +86,14 @@ export function useUnifiedSearch() {
       // OUTPUT: Consolidate
       const unifiedContext = {
         products: productsData || [],
-        news: newsData || [],
+        intelligence: intelligenceData || [],
         web: webData ? [webData] : [],
       }
 
       const hasProducts = unifiedContext.products.length > 0
-      const hasNews = unifiedContext.news.length > 0
+      const hasIntelligence = unifiedContext.intelligence.length > 0
       const hasWeb = unifiedContext.web.length > 0
-      const hasAnyResult = hasProducts || hasNews || hasWeb
+      const hasAnyResult = hasProducts || hasIntelligence || hasWeb
 
       let message = ''
       if (!activeAgent) {
@@ -92,17 +106,15 @@ export function useUnifiedSearch() {
         message = await generateResponse(query, unifiedContext, activeAgent.id)
       }
 
-      const isNabQuery = hasNews || hasWeb || fallbackTerm.toLowerCase().includes('nab')
-
       const combinedResults = {
         message,
         products: unifiedContext.products,
-        news: [...unifiedContext.news, ...unifiedContext.web],
+        news: [...unifiedContext.intelligence, ...unifiedContext.web],
         should_show_whatsapp_button: !hasProducts,
         confidence_level: hasProducts ? 'high' : hasAnyResult ? 'high' : 'low',
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
-        has_nab_intelligence: hasNews || hasWeb,
-        is_nab_query: isNabQuery,
+        has_nab_intelligence: hasIntelligence || hasWeb,
+        is_nab_query: fallbackTerm.toLowerCase().includes('nab'),
       }
 
       setResults(combinedResults)
