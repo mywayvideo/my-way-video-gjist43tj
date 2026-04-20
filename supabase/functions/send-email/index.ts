@@ -18,45 +18,43 @@ Deno.serve(async (req: Request) => {
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
     if (!resendApiKey) {
       console.error(`[${timestamp}] [${functionName}] Error: RESEND_API_KEY not configured`)
-      return new Response(JSON.stringify({ error: 'Erro: Chave de API Resend nao configurada.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ error: 'Erro: Chave de API Resend nao configurada.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     const body = await req.json().catch(() => ({}))
-    const {
-      to,
-      subject,
-      htmlContent,
-      fromEmail = 'noreply@mywayvideo.com',
-      fromName = 'My Way Video',
+    const { 
+      to, 
+      subject, 
+      htmlContent, 
+      fromEmail = 'noreply@mywayvideo.com', 
+      fromName = 'My Way Video' 
     } = body
 
     if (!to || !subject || !htmlContent) {
       console.warn(`[${timestamp}] [${functionName}] Validation error: Missing required fields`)
       return new Response(
         JSON.stringify({ error: 'Erro: Campos obrigatorios ausentes (to, subject, htmlContent).' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(to)) {
-      console.warn(
-        `[${timestamp}] [${functionName}] Validation error: Invalid email format (${to})`,
+      console.warn(`[${timestamp}] [${functionName}] Validation error: Invalid email format (${to})`)
+      return new Response(
+        JSON.stringify({ error: 'Erro: Email invalido.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
-      return new Response(JSON.stringify({ error: 'Erro: Email invalido.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
     }
 
     const payload = {
       from: `${fromName} <${fromEmail}>`,
       to: [to],
       subject: subject,
-      html: htmlContent,
+      html: htmlContent
     }
 
     let attempt = 0
@@ -74,11 +72,11 @@ Deno.serve(async (req: Request) => {
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload),
-          signal: controller.signal,
+          signal: controller.signal
         })
 
         clearTimeout(timeoutId)
@@ -89,12 +87,10 @@ Deno.serve(async (req: Request) => {
         } else {
           const errorText = await response.text().catch(() => 'No error text')
           lastError = new Error(`Resend API Error ${response.status}: ${errorText}`)
-
+          
           if (response.status === 503 && attempt < maxAttempts) {
-            console.log(
-              `[${timestamp}] [${functionName}] Received 503, retrying in ${backoffDelays[attempt]}ms...`,
-            )
-            await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt]))
+            console.log(`[${timestamp}] [${functionName}] Received 503, retrying in ${backoffDelays[attempt]}ms...`)
+            await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt]))
             attempt++
           } else {
             // Do not retry on 400, 401, 404, or if max attempts reached
@@ -106,12 +102,10 @@ Deno.serve(async (req: Request) => {
         if (err.name === 'AbortError') {
           lastError = new Error('Request timeout exceeded (30 seconds)')
         }
-
+        
         if (attempt < maxAttempts) {
-          console.log(
-            `[${timestamp}] [${functionName}] Fetch error, retrying in ${backoffDelays[attempt]}ms...`,
-          )
-          await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt]))
+          console.log(`[${timestamp}] [${functionName}] Fetch error, retrying in ${backoffDelays[attempt]}ms...`)
+          await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt]))
           attempt++
         } else {
           break
@@ -120,29 +114,27 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!success) {
-      console.error(
-        `[${timestamp}] [${functionName}] Error sending email:`,
-        lastError?.message || lastError,
+      console.error(`[${timestamp}] [${functionName}] Error sending email:`, lastError?.message || lastError)
+      return new Response(
+        JSON.stringify({ error: 'Erro ao enviar email. Tente novamente.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
-      return new Response(JSON.stringify({ error: 'Erro ao enviar email. Tente novamente.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         emailId: apiResponseData?.id || 'unknown',
-        status: 'sent',
+        status: 'sent'
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
+
   } catch (error: any) {
     console.error(`[${timestamp}] [${functionName}] Unhandled error:`, error.message || error)
-    return new Response(JSON.stringify({ error: 'Erro ao enviar email. Tente novamente.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({ error: 'Erro ao enviar email. Tente novamente.' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 })
