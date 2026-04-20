@@ -176,8 +176,7 @@ export function useUnifiedSearch() {
         should_show_whatsapp_button: shouldShowWhatsapp,
       }
 
-      console.log('Search Results:', combinedResults)
-      console.log('DATABASE_RESULTS:', combinedResults)
+      console.log('DATABASE_SEARCH_RESULTS:', combinedResults)
 
       setResults(combinedResults)
       return combinedResults
@@ -201,8 +200,7 @@ export function useUnifiedSearch() {
         should_show_whatsapp_button: true,
       }
 
-      console.log('Search Results:', fallbackResults)
-      console.log('DATABASE_RESULTS:', fallbackResults)
+      console.log('DATABASE_SEARCH_RESULTS:', fallbackResults)
 
       setResults(fallbackResults)
       toast({

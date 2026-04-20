@@ -10,7 +10,9 @@ export async function getAISettings() {
     .maybeSingle()
 
   if (error || !specificSettings) {
-    throw new Error('Falha ao carregar ai_settings do banco de dados.')
+    throw new Error(
+      'Falha ao carregar ai_settings do banco de dados. Verifique a conexão ou os dados da tabela.',
+    )
   }
 
   const { data: agentSettings } = await supabase
@@ -65,7 +67,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   if (contextProducts.length === 0 && !hasNab) {
     return {
       content:
-        'Não localizei este item no catálogo de Miami, mas posso verificar com nossos fornecedores agora.',
+        'Não encontrei este item específico no meu catálogo de Miami, mas posso verificar com nossos fornecedores.',
       products: [],
       should_show_whatsapp_button: true,
       confidence_level: 'low',
@@ -87,12 +89,7 @@ DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível p
 
   const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nDADOS REAIS DO CATÁLOGO: ${JSON.stringify(contextProducts)}`
 
-  const currentContext =
-    unifiedData.stringifiedContext ||
-    JSON.stringify({
-      products: contextProducts,
-      intelligence: [...contextIntel, ...contextNab],
-    })
+  const currentContext = contextProducts
 
   let data: any = null
   try {

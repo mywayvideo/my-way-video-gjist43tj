@@ -32,7 +32,10 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const timeout = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
+    return () => clearTimeout(timeout)
   }, [messages.length, isLoading])
 
   const handleSubmit = async (e: React.FormEvent) => {
