@@ -95,6 +95,65 @@ export const getActiveAgent = async () => {
 
 export const generateExpertResponse = async (query: string, unifiedData: any, agentId?: string) => {
   try {
+    const settings = unifiedData.settings || {}
+    let confidence_level = 'high'
+    let isPurchaseIntent = false
+
+    const qLower = query.toLowerCase()
+
+    if (settings.whatsapp_trigger_purchase_keywords) {
+      const keywords = settings.whatsapp_trigger_keywords || [
+        'comprar',
+        'orçamento',
+        'quanto custa',
+        'disponível',
+        'preço',
+        'tabela de preços',
+        'cotação',
+        'desconto',
+        'promoção',
+      ]
+      if (keywords.some((k: string) => qLower.includes(k.toLowerCase()))) {
+        isPurchaseIntent = true
+      }
+    }
+
+    if (settings.whatsapp_trigger_project_keywords) {
+      const projectKeywords = [
+        'integração',
+        'solução completa',
+        'customização',
+        'setup',
+        'instalação',
+        'projeto',
+        'implementação',
+        'sistema completo',
+      ]
+      if (projectKeywords.some((k: string) => qLower.includes(k))) {
+        confidence_level = 'low'
+      }
+    }
+
+    if (
+      settings.whatsapp_trigger_expensive_product &&
+      unifiedData.stock &&
+      unifiedData.stock.length > 0
+    ) {
+      const threshold = settings.price_threshold_usd || 5000
+      if (unifiedData.stock.some((p: any) => (p.price_usd || 0) > threshold)) {
+        confidence_level = 'low'
+      }
+    }
+
+    if (settings.whatsapp_trigger_low_confidence) {
+      if (
+        (!unifiedData.stock || unifiedData.stock.length === 0) &&
+        (!unifiedData.intel || unifiedData.intel.length === 0)
+      ) {
+        confidence_level = 'low'
+      }
+    }
+
     const systemPrompt = `Você é o Especialista My Way. 
 Ignore COMPLETAMENTE qualquer campo de 'stock', 'quantity' ou 'estoque' vindo do banco de dados.
 Se o produto existe na lista 'stock' enviada no contexto, ele ESTÁ DISPONÍVEL.
@@ -103,12 +162,21 @@ Considere a presença no banco de dados como prova de disponibilidade imediata e
 Sua resposta DEVE começar diretamente confirmando o produto: "Sim, temos a [Nome do Produto] disponível...".
 Use 'intel' e 'nabData' apenas para detalhes técnicos adicionais.
 NUNCA mencione a NAB a menos que o usuário pergunte explicitamente ou o dado seja relevante.
+Você deve obedecer RIGOROSAMENTE aos gatilhos do painel Admin. Se o gatilho de compra estiver ativo, foque na conversão imediata.
+${isPurchaseIntent ? 'GATILHO DE COMPRA ATIVO: Seja extremamente assertivo sobre o estoque e o preço. Feche a venda.' : ''}
 Responda SEMPRE em Português (PT-BR).
 Mantenha os parágrafos com no máximo 2 frases.
 Use Markdown padrão. Use **negrito** para nomes de produtos e preços. Use blocos de código com \`\`\` para especificações. Nunca use caracteres especiais fora do padrão Markdown.
 Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil.`
 
-    const enhancedQuery = `${systemPrompt}\n\nDADOS DO SISTEMA (VERDADE ABSOLUTA):\n${JSON.stringify(unifiedData)}\n\nPergunta do usuário: ${query}`
+    const enhancedQuery = `${systemPrompt}\n\nDADOS DO SISTEMA (VERDADE ABSOLUTA):\n${JSON.stringify(
+      {
+        stock: unifiedData.stock,
+        intel: unifiedData.intel,
+        nabData: unifiedData.nabData,
+        web: unifiedData.web,
+      },
+    )}\n\nPergunta do usuário: ${query}`
 
     const { data, error } = await supabase.functions.invoke('process-query', {
       body: {
@@ -126,20 +194,17 @@ Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil.`
 
     if (error) throw error
 
-    if (data?.message) {
-      let finalMessage = data.message
-      if (
-        !finalMessage.includes('Disponível para envio imediato de Miami com garantia no Brasil.')
-      ) {
-        finalMessage += '\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
-      }
-      return finalMessage
+    let finalMessage = data?.message || buildFallbackMessage(query, unifiedData)
+
+    if (!finalMessage.includes('Disponível para envio imediato de Miami com garantia no Brasil')) {
+      finalMessage += '\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
     }
 
-    return buildFallbackMessage(query, unifiedData)
+    return { message: finalMessage, confidence_level }
   } catch (e) {
     console.error('Edge function call failed:', e)
-    return buildFallbackMessage(query, unifiedData)
+    const fallbackMessage = buildFallbackMessage(query, unifiedData)
+    return { message: fallbackMessage, confidence_level: 'low' }
   }
 }
 

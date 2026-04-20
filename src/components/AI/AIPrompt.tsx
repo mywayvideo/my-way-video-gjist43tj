@@ -18,7 +18,7 @@ function ProductCard({ product }: { product: any }) {
   return (
     <Link
       to={`/product/${product.id}`}
-      className="bg-black/60 border border-white/10 rounded-xl p-4 hover:border-white/30 hover:bg-white/5 transition-all flex flex-col gap-3 group shadow-lg"
+      className="bg-black/60 border border-white/10 rounded-xl p-4 hover:border-white/30 hover:bg-white/5 transition-all flex flex-col gap-3 group shadow-lg h-full"
     >
       <div className="aspect-square rounded-lg bg-black/40 overflow-hidden relative border border-white/5">
         {product.image_url ? (
@@ -46,7 +46,7 @@ function ProductCard({ product }: { product: any }) {
           <div className="text-white/50 text-xs">Preço USA</div>
           <div className="font-bold text-white">
             {price
-              ? `USD ${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+              ? `USD ${Number(price).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
               : 'Consulte'}
           </div>
         </div>
@@ -128,7 +128,7 @@ export function AIPrompt({
   }
 
   const renderBold = (text: string) => {
-    const boldParts = text.split('**')
+    const boldParts = text.split(/\*\*(.*?)\*\*/g)
     return boldParts.map((bp, i) =>
       i % 2 === 1 ? (
         <strong key={i} className="text-white font-bold">
@@ -157,15 +157,25 @@ export function AIPrompt({
 
       const paragraphs = part.split('\n\n')
       return paragraphs.map((paragraph, pIndex) => {
-        if (paragraph.trim().startsWith('- ') || paragraph.trim().startsWith('* ')) {
-          const items = paragraph
+        if (
+          paragraph
+            .trim()
             .split('\n')
-            .filter((i) => i.trim().startsWith('- ') || i.trim().startsWith('* '))
+            .some((line) => line.trim().startsWith('- ') || line.trim().startsWith('* '))
+        ) {
+          const items = paragraph.split('\n')
           return (
             <ul key={`${index}-${pIndex}`} className="list-disc pl-6 mb-4 space-y-2 text-white/80">
               {items.map((item, iIndex) => {
-                const textContent = item.replace(/^[-*]\s+/, '')
-                return <li key={iIndex}>{renderBold(textContent)}</li>
+                if (item.trim().startsWith('- ') || item.trim().startsWith('* ')) {
+                  const textContent = item.replace(/^[-*]\s+/, '')
+                  return <li key={iIndex}>{renderBold(textContent)}</li>
+                }
+                return (
+                  <div key={iIndex} className="mb-1">
+                    {renderBold(item)}
+                  </div>
+                )
               })}
             </ul>
           )
@@ -256,10 +266,13 @@ export function AIPrompt({
 
           {resultProducts.length > 0 && (
             <div className="w-full mt-6 animate-fade-in-up delay-150">
-              <h3 className="text-xl font-bold text-white mb-6 pl-3 border-l-4 border-primary">
-                Equipamentos Localizados
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex items-center gap-4 mb-6">
+                <h3 className="text-xl font-bold text-white pl-3 border-l-4 border-primary">
+                  Equipamentos Localizados
+                </h3>
+                <div className="h-[1px] flex-1 bg-white/10" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                 {resultProducts.map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -267,7 +280,7 @@ export function AIPrompt({
             </div>
           )}
 
-          {resultProducts.length === 0 && (
+          {(resultProducts.length === 0 || localResult?.confidence_level === 'low') && (
             <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
               <a
                 href="https://wa.me/13055551234"

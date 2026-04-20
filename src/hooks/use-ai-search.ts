@@ -13,6 +13,14 @@ export function useUnifiedSearch() {
   const { toast } = useToast()
 
   const fetchUnifiedData = async (query: string) => {
+    // Busca as configurações globais de IA
+    const { data: settings } = await supabase
+      .from('ai_agent_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
+    const cacheExpirationDays = settings?.cache_expiration_days || 30
+
     // 1. CONST products
     const { data: products, error: productsError } = await supabase
       .from('products')
@@ -23,11 +31,15 @@ export function useUnifiedSearch() {
       console.error(productsError)
     }
 
-    // 2. CONST cache
+    // 2. CONST cache (com expiração baseada no painel admin)
+    const expirationDate = new Date()
+    expirationDate.setDate(expirationDate.getDate() - cacheExpirationDays)
+
     const { data: cache, error: cacheError } = await supabase
       .from('market_intelligence')
       .select('*')
       .ilike('raw_content', `%${query}%`)
+      .gte('created_at', expirationDate.toISOString())
 
     if (cacheError) {
       console.error(cacheError)
@@ -85,6 +97,7 @@ export function useUnifiedSearch() {
       intel: cache || [],
       nabData: nab || [],
       web: webResults ? [webResults] : [],
+      settings: settings || {},
     }
   }
 
@@ -98,19 +111,25 @@ export function useUnifiedSearch() {
       const activeAgent = await getActiveAgent()
       const unifiedData = await fetchUnifiedData(query)
 
-      let message = ''
+      let finalMessage = ''
+      let finalConfidence = 'high'
+
       if (!activeAgent) {
-        message = 'Nenhum agente de IA configurado. Exibindo resultados da base unificada.'
+        finalMessage =
+          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
         toast({
           title: 'Aviso',
           description: 'Nenhum agente configurado. Exibindo busca básica.',
         })
       } else {
-        message = await generateExpertResponse(query, unifiedData, activeAgent.id)
+        const aiResponse = await generateExpertResponse(query, unifiedData, activeAgent.id)
+        finalMessage = aiResponse.message
+        finalConfidence = aiResponse.confidence_level
       }
 
       const combinedResults = {
-        message,
+        message: finalMessage,
+        confidence_level: finalConfidence,
         stock: unifiedData.stock,
         products: unifiedData.products,
         intel: unifiedData.intel,
