@@ -105,7 +105,8 @@ Use 'intel' e 'nabData' apenas para detalhes técnicos adicionais.
 NUNCA mencione a NAB a menos que o usuário pergunte explicitamente ou o dado seja relevante.
 Responda SEMPRE em Português (PT-BR).
 Mantenha os parágrafos com no máximo 2 frases.
-Use blocos de código (\`\`\`) para formatar especificações técnicas.`
+Use Markdown padrão. Use **negrito** para nomes de produtos e preços. Use blocos de código com \`\`\` para especificações. Nunca use caracteres especiais fora do padrão Markdown.
+Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil.`
 
     const enhancedQuery = `${systemPrompt}\n\nDADOS DO SISTEMA (VERDADE ABSOLUTA):\n${JSON.stringify(unifiedData)}\n\nPergunta do usuário: ${query}`
 

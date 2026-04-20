@@ -14,6 +14,7 @@ interface AIPromptProps {
 }
 
 function ProductCard({ product }: { product: any }) {
+  const price = product.price_usa || product.price_usd
   return (
     <Link
       to={`/product/${product.id}`}
@@ -35,7 +36,7 @@ function ProductCard({ product }: { product: any }) {
       <div className="flex flex-col flex-1 justify-between">
         <div>
           <p className="text-primary text-xs font-bold uppercase tracking-wider mb-1">
-            {product.manufacturers?.name || 'My Way Video'}
+            {product.manufacturers?.name || product.manufacturer?.name || 'My Way Video'}
           </p>
           <h4 className="text-white font-semibold line-clamp-2 text-sm group-hover:text-primary transition-colors">
             {product.name}
@@ -44,8 +45,8 @@ function ProductCard({ product }: { product: any }) {
         <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
           <div className="text-white/50 text-xs">Preço USA</div>
           <div className="font-bold text-white">
-            {product.price_usd
-              ? `USD ${product.price_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+            {price
+              ? `USD ${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
               : 'Consulte'}
           </div>
         </div>
@@ -126,6 +127,19 @@ export function AIPrompt({
     }, 300)
   }
 
+  const renderBold = (text: string) => {
+    const boldParts = text.split('**')
+    return boldParts.map((bp, i) =>
+      i % 2 === 1 ? (
+        <strong key={i} className="text-white font-bold">
+          {bp}
+        </strong>
+      ) : (
+        bp
+      ),
+    )
+  }
+
   const formatMessage = (text: string) => {
     if (!text) return null
     const parts = text.split('```')
@@ -140,23 +154,36 @@ export function AIPrompt({
           </pre>
         )
       }
-      const boldParts = part.split('**')
-      const formatted = boldParts.map((bp, i) =>
-        i % 2 === 1 ? (
-          <strong key={i} className="text-white font-semibold">
-            {bp}
-          </strong>
-        ) : (
-          bp
-        ),
-      )
-      return (
-        <p key={index} className="mb-4 whitespace-pre-wrap leading-relaxed">
-          {formatted}
-        </p>
-      )
+
+      const paragraphs = part.split('\n\n')
+      return paragraphs.map((paragraph, pIndex) => {
+        if (paragraph.trim().startsWith('- ') || paragraph.trim().startsWith('* ')) {
+          const items = paragraph
+            .split('\n')
+            .filter((i) => i.trim().startsWith('- ') || i.trim().startsWith('* '))
+          return (
+            <ul key={`${index}-${pIndex}`} className="list-disc pl-6 mb-4 space-y-2 text-white/80">
+              {items.map((item, iIndex) => {
+                const textContent = item.replace(/^[-*]\s+/, '')
+                return <li key={iIndex}>{renderBold(textContent)}</li>
+              })}
+            </ul>
+          )
+        }
+
+        return (
+          <p
+            key={`${index}-${pIndex}`}
+            className="mb-4 whitespace-pre-wrap leading-relaxed text-white/80"
+          >
+            {renderBold(paragraph)}
+          </p>
+        )
+      })
     })
   }
+
+  const resultProducts = localResult?.products || localResult?.stock || []
 
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
@@ -222,38 +249,36 @@ export function AIPrompt({
                 <p className="text-xs text-white/50">Especialista em Audiovisual</p>
               </div>
             </div>
-            <div className="text-white/80 prose-invert max-w-none">
+            <div className="prose prose-invert max-w-none text-white/80">
               {formatMessage(localResult.message)}
             </div>
           </div>
 
-          {((localResult?.products && localResult.products.length > 0) ||
-            (localResult?.stock && localResult.stock.length > 0)) && (
-            <div className="w-full animate-fade-in-up delay-150">
-              <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
-                Equipamentos Disponíveis
+          {resultProducts.length > 0 && (
+            <div className="w-full mt-6 animate-fade-in-up delay-150">
+              <h3 className="text-xl font-bold text-white mb-6 pl-3 border-l-4 border-primary">
+                Equipamentos Localizados
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {(localResult.products || localResult.stock).map((product: any) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {resultProducts.map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </div>
           )}
 
-          {(!localResult?.stock || localResult.stock.length === 0) &&
-            (!localResult?.products || localResult.products.length === 0) && (
-              <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
-                <a
-                  href="https://wa.me/13055551234"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
-                >
-                  Falar com Especialista
-                </a>
-              </div>
-            )}
+          {resultProducts.length === 0 && (
+            <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
+              <a
+                href="https://wa.me/13055551234"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
+              >
+                Falar com Especialista
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>
