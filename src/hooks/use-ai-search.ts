@@ -90,10 +90,18 @@ export function useUnifiedSearch() {
             source: 'web',
           }
 
+          if (
+            aiSearchData.referenced_internal_products &&
+            aiSearchData.referenced_internal_products.length > 0
+          ) {
+            products = [...(products || []), ...aiSearchData.referenced_internal_products]
+          }
+
           // 4. Save to Cache
           await saveToCache({
             title: webResults.title,
             raw_content: webResults.raw_content,
+            source_url: `https://mywayvideo.com/search?q=${encodeURIComponent(query)}`,
           })
           isNewlyCached = true
         }

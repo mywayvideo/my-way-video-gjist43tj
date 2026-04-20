@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { AIPrompt } from '@/components/AI/AIPrompt'
+import { AIPrompt, ReactMarkdown } from '@/components/AI/AIPrompt'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
@@ -79,25 +79,28 @@ export default function Index() {
 
           {results && !Array.isArray(results) && (
             <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up">
-              <div className="prose prose-invert max-w-none">
-                <p className="text-lg leading-relaxed whitespace-pre-wrap">{results.message}</p>
-              </div>
-              {results.referenced_internal_products &&
-                results.referenced_internal_products.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-xl font-semibold mb-4">Produtos Recomendados:</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {results.referenced_internal_products.map((p: any) => (
-                        <ProductCard key={p.id} product={p} />
-                      ))}
-                    </div>
+              <ReactMarkdown className="prose prose-invert max-w-none text-foreground text-lg leading-relaxed">
+                {results.content || results.message || ''}
+              </ReactMarkdown>
+
+              {results.products && results.products.length > 0 && (
+                <div className="mt-8 animate-fade-in-up delay-150">
+                  <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary mb-6">
+                    Equipamentos Localizados
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {results.products.map((p: any) => (
+                      <ProductCard key={p.id} product={p} />
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
               {results.should_show_whatsapp_button && (
-                <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4">
+                <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4 animate-fade-in-up delay-200">
                   <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
                   <Button
-                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold"
+                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg shadow-green-900/20"
                     onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
                   >
                     Falar com Especialista

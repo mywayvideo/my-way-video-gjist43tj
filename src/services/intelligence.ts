@@ -55,6 +55,10 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     ? settings.system_prompt_template
     : 'Você é um especialista em audiovisual.'
 
+  const logisticsRules = settings?.logistics_rules_prompt
+    ? `Regras de Logística e Origem de Envio:\n${settings.logistics_rules_prompt}`
+    : 'Considere os preços (price_usd vs price_brl) para determinar origem de envio (Miami vs Brasil).'
+
   const triggersContext = `
 Contexto de Gatilhos e Regras:
 - Limite de Preço para Gatilho: USD ${settings?.price_threshold_usd || 5000}
@@ -64,7 +68,11 @@ Contexto de Gatilhos e Regras:
 `
 
   const isNewlyCached = unifiedData.isNewlyCached
-  const contextIntelligence = unifiedData.intel || unifiedData.nabData || []
+  const contextIntelligence = [
+    ...(unifiedData.intel || []),
+    ...(unifiedData.nabData || []),
+    ...(unifiedData.web || []),
+  ]
   const hasIntel = contextIntelligence.length > 0
 
   let specificCitation = ''
@@ -78,7 +86,13 @@ Contexto de Gatilhos e Regras:
 
   const systemInstruction = `${baseInstruction}
 
+${logisticsRules}
+
 ${triggersContext}
+
+Contexto de Mercado (NAB 2026 e Tendências Web):
+Se a pergunta envolver lançamentos, tendências ou a feira NAB, PRIORIZE e DÊ DESTAQUE às seguintes informações (não confie apenas em seu conhecimento prévio):
+${JSON.stringify(contextIntelligence)}
 
 Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
 
@@ -86,7 +100,7 @@ REGRAS OBRIGATÓRIAS:
 - A resposta DEVE ser em Português (PT-BR).
 - Os parágrafos devem ter no máximo 2 sentenças.
 ${specificCitation}
-- Sempre inclua no final: "Disponível para envio imediato de Miami com garantia no Brasil."`
+- SEMPRE inclua no final: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."`
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
 

@@ -56,7 +56,7 @@ function ProductCard({ product }: { product: any }) {
   )
 }
 
-function ReactMarkdown({ children, className }: { children: string; className?: string }) {
+export function ReactMarkdown({ children, className }: { children: string; className?: string }) {
   if (!children) return null
 
   const renderBold = (text: string) => {
