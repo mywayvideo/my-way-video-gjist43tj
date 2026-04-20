@@ -163,7 +163,6 @@ IDIOMA: 100% Português (PT-BR).`
   let showWhatsapp = result.should_show_whatsapp_button || false
 
   // Trigger Sync (Section C):
-  const qLower = query.toLowerCase()
   const triggerMatch = whatsappTriggers.some((kw: string) => qLower.includes(kw.toLowerCase()))
   if (triggerMatch || confidence === confidenceThreshold || confidence === 'low') {
     showWhatsapp = true
