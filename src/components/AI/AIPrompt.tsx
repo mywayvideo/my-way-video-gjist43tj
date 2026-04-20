@@ -13,6 +13,47 @@ interface AIPromptProps {
   className?: string
 }
 
+function ProductCard({ product }: { product: any }) {
+  return (
+    <Link
+      to={`/product/${product.id}`}
+      className="bg-black/60 border border-white/10 rounded-xl p-4 hover:border-white/30 hover:bg-white/5 transition-all flex flex-col gap-3 group shadow-lg"
+    >
+      <div className="aspect-square rounded-lg bg-black/40 overflow-hidden relative border border-white/5">
+        {product.image_url ? (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">
+            Sem Imagem
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col flex-1 justify-between">
+        <div>
+          <p className="text-primary text-xs font-bold uppercase tracking-wider mb-1">
+            {product.manufacturers?.name || 'My Way Video'}
+          </p>
+          <h4 className="text-white font-semibold line-clamp-2 text-sm group-hover:text-primary transition-colors">
+            {product.name}
+          </h4>
+        </div>
+        <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
+          <div className="text-white/50 text-xs">Preço USA</div>
+          <div className="font-bold text-white">
+            {product.price_usd
+              ? `USD ${product.price_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+              : 'Consulte'}
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export function AIPrompt({
   onSearch,
   onResult,
@@ -193,43 +234,7 @@ export function AIPrompt({
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {localResult.stock.map((product: any) => (
-                  <Link
-                    key={product.id}
-                    to={`/product/${product.id}`}
-                    className="bg-black/60 border border-white/10 rounded-xl p-4 hover:border-white/30 hover:bg-white/5 transition-all flex flex-col gap-3 group shadow-lg"
-                  >
-                    <div className="aspect-square rounded-lg bg-black/40 overflow-hidden relative border border-white/5">
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">
-                          Sem Imagem
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col flex-1 justify-between">
-                      <div>
-                        <p className="text-primary text-xs font-bold uppercase tracking-wider mb-1">
-                          {product.manufacturers?.name || 'My Way Video'}
-                        </p>
-                        <h4 className="text-white font-semibold line-clamp-2 text-sm group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h4>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
-                        <div className="text-white/50 text-xs">Preço USA</div>
-                        <div className="font-bold text-white">
-                          {product.price_usd
-                            ? `USD ${product.price_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-                            : 'Consulte'}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </div>

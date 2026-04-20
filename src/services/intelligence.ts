@@ -98,12 +98,11 @@ export const generateExpertResponse = async (query: string, unifiedData: any, ag
     const systemPrompt = `Você é o Especialista My Way. 
 Sua resposta DEVE começar confirmando os itens da lista 'stock'. 
 Se 'stock' tem dados, é PROIBIDO dizer que não encontrou. 
-Use 'intel' apenas para detalhes técnicos adicionais. 
-NUNCA mencione a NAB a menos que o usuário pergunte explicitamente.
+Use 'intel' e 'nabData' apenas para detalhes técnicos adicionais. 
+NUNCA mencione a NAB a menos que o usuário pergunte explicitamente ou o dado seja relevante.
 Responda SEMPRE em Português (PT-BR).
 Mantenha os parágrafos com no máximo 2 frases.
-Use blocos de código (\`\`\`) para formatar especificações técnicas.
-Você DEVE incluir sempre a frase ao final: "Disponível para envio imediato de Miami com garantia no Brasil."`
+Use blocos de código (\`\`\`) para formatar especificações técnicas.`
 
     const enhancedQuery = `${systemPrompt}\n\nDADOS DO SISTEMA (VERDADE ABSOLUTA):\n${JSON.stringify(unifiedData)}\n\nPergunta do usuário: ${query}`
 
@@ -111,20 +110,26 @@ Você DEVE incluir sempre a frase ao final: "Disponível para envio imediato de 
       body: {
         query: enhancedQuery,
         products: unifiedData.stock || [],
-        intelligence: [...(unifiedData.intel || []), ...(unifiedData.web || [])],
+        intelligence: [
+          ...(unifiedData.intel || []),
+          ...(unifiedData.nabData || []),
+          ...(unifiedData.web || []),
+        ],
         agentId,
         isNABQuery: query.toLowerCase().includes('nab'),
       },
     })
 
     if (error) throw error
-    
+
     if (data?.message) {
-      let finalMessage = data.message;
-      if (!finalMessage.includes("Disponível para envio imediato de Miami com garantia no Brasil.")) {
-        finalMessage += "\n\nDisponível para envio imediato de Miami com garantia no Brasil.";
+      let finalMessage = data.message
+      if (
+        !finalMessage.includes('Disponível para envio imediato de Miami com garantia no Brasil.')
+      ) {
+        finalMessage += '\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
       }
-      return finalMessage;
+      return finalMessage
     }
 
     return buildFallbackMessage(query, unifiedData)
@@ -138,6 +143,7 @@ function buildFallbackMessage(query: string, unifiedData: any) {
   let response = 'Especialista My Way:\n\n'
   const stock = unifiedData.stock || []
   const intel = unifiedData.intel || []
+  const nabData = unifiedData.nabData || []
 
   if (stock.length > 0) {
     response += 'Encontrei as seguintes opções no nosso catálogo.\n\n'
@@ -150,10 +156,10 @@ function buildFallbackMessage(query: string, unifiedData: any) {
     response += 'Não possuo essa informação exata no momento em nosso catálogo.\n\n'
   }
 
-  if (intel.length > 0) {
+  if (intel.length > 0 || nabData.length > 0) {
     response += 'Detalhes Técnicos / Informações Adicionais:\n\n'
-    intel.forEach((n: any) => {
-      response += `**${n.title}**\n${n.ai_summary || n.raw_content?.substring(0, 150)}...\n\n`
+    ;[...intel, ...nabData].forEach((n: any) => {
+      response += `**${n.title || 'Informação'}**\n${n.ai_summary || n.raw_content || n.content?.substring(0, 150)}...\n\n`
     })
   }
 

@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import { getActiveAgent, generateExpertResponse, ingestManualKnowledge } from '@/services/intelligence'
+import {
+  getActiveAgent,
+  generateExpertResponse,
+  ingestManualKnowledge,
+} from '@/services/intelligence'
 
 export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -16,7 +20,6 @@ export function useUnifiedSearch() {
       .from('products')
       .select('*, manufacturers(name)')
       .or('name.ilike.%' + rawQuery + '%,sku.ilike.%' + rawQuery + '%')
-      .limit(20)
 
     if (productsError) throw productsError
 
@@ -25,14 +28,28 @@ export function useUnifiedSearch() {
       .from('market_intelligence')
       .select('*')
       .ilike('raw_content', '%' + rawQuery + '%')
-      .limit(10)
 
     if (cacheError) throw cacheError
 
+    // 3. CONST nab
+    const { data: nab, error: nabError } = await supabase
+      // @ts-expect-error
+      .from('nab_market')
+      .select('*')
+      .or('title.ilike.%' + rawQuery + '%,content.ilike.%' + rawQuery + '%')
+
+    if (nabError && nabError.code !== '42P01') {
+      console.error(nabError)
+    }
+
     let webResults: any = null
 
-    // 3. IF (products.length === 0 && cache.length === 0)
-    if ((!products || products.length === 0) && (!cache || cache.length === 0)) {
+    // 4. IF (products.length === 0 && cache.length === 0 && nab.length === 0)
+    if (
+      (!products || products.length === 0) &&
+      (!cache || cache.length === 0) &&
+      (!nab || nab.length === 0)
+    ) {
       try {
         const { data: aiSearchData, error: aiSearchError } = await supabase.functions.invoke(
           'ai-search',
@@ -61,6 +78,7 @@ export function useUnifiedSearch() {
     return {
       stock: products || [],
       intel: cache || [],
+      nabData: nab || [],
       web: webResults ? [webResults] : [],
     }
   }
@@ -90,6 +108,7 @@ export function useUnifiedSearch() {
         message,
         stock: unifiedData.stock,
         intel: unifiedData.intel,
+        nabData: unifiedData.nabData,
         web: unifiedData.web,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
       }
