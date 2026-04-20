@@ -15,7 +15,15 @@ export async function getAISettings() {
     }
   }
 
-  const { data: settings } = await supabase
+  const { data: specificSettings } = await supabase
+    .from('ai_settings')
+    .select(
+      'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config',
+    )
+    .eq('id', '00000000-0000-0000-0000-000000000001')
+    .maybeSingle()
+
+  const { data: fallbackSettings } = await supabase
     .from('ai_settings')
     .select(
       'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config',
@@ -23,6 +31,8 @@ export async function getAISettings() {
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
+
+  const settings = specificSettings || fallbackSettings || {}
 
   const { data: agentSettings } = await supabase
     .from('ai_agent_settings')
@@ -65,6 +75,8 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const systemPromptTemplate = settings.system_prompt_template || ''
   const logisticsRulesPrompt = settings.logistics_rules_prompt || ''
 
+  const systemPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}`
+
   const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
   const nabData = unifiedData.nabData || []
   const hasNab = nabData.length > 0
@@ -76,7 +88,10 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     intelligence: [...contextIntelligence, ...nabData],
   })
 
-  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${currentContext}`
+  const ruleBrazilLatam =
+    'REGRAS OBRIGATÓRIAS: Responda APENAS em Português (PT-BR). Máximo 2 frases por parágrafo. SEMPRE inclua o aviso de que todos os produtos possuem garantia integral no Brasil e América Latina.'
+
+  const assembledPrompt = `${systemPrompt}\n\n${currentContext}\n\n${ruleBrazilLatam}`
 
   let data: any = null
   try {
@@ -88,6 +103,8 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
         agentId: agentId,
         isNABQuery: hasNab,
         assembledPrompt: assembledPrompt,
+        price_threshold_usd: settings.price_threshold_usd,
+        whatsapp_triggers: settings.whatsapp_trigger_keywords,
       },
     })
 
