@@ -77,19 +77,24 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   let strictRules = `REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final. Se o produto estiver no contexto com 0 estoque (como a Pyxis 6K), apresente-o como "Disponível para encomenda".
-REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo (não localizei). É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count (se os produtos foram fornecidos no contexto, apresente-os).
+REGRA 4: Se o produto existir na KNOWLEDGE_BASE, é PROIBIDO dizer que ele não foi encontrado, que está fora de estoque (se ignore_stock_count for true) ou que não está no catálogo. É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count.
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual. Sempre que citar um produto, use o nome exato retornado pelo banco para garantir a exibição do card.
-REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual são os RESULTADOS DO ESTOQUE fornecidos.
+REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual é a KNOWLEDGE_BASE fornecida.
 REGRA 7: Você está proibido de mencionar quantidades numéricas de estoque (ex: 'temos 2 unidades'). Use apenas 'Disponível' ou 'Disponível para encomenda' conforme as regras de logística.
 IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {
-    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Priorize os dados da NAB (nab_json) sobre o estoque. Se 'nab_json' contém informações, é PROIBIDO dizer "informações não divulgadas". Trate o conteúdo do banco de dados como a verdade absoluta oficial.`
+    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Se o array 'nab_data' na KNOWLEDGE_BASE contiver informações, você deve usá-las como sua única fonte de verdade para notícias, ignorando seu conhecimento prévio. É PROIBIDO dizer "informações não divulgadas".`
   } else {
-    strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados de RESULTADOS DO ESTOQUE.`
+    strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
   }
 
   const nabJson = [...contextIntel, ...contextNab]
+
+  const knowledge_base = JSON.stringify({
+    stock: contextProducts,
+    nab_data: nabJson,
+  })
 
   let historyText = ''
   if (unifiedData.history && unifiedData.history.length > 0) {
@@ -97,7 +102,7 @@ IDIOMA: 100% Português (PT-BR).`
     historyText = `\n\nHISTÓRICO RECENTE (Últimas 5 mensagens):\n${recentHistory.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`).join('\n')}`
   }
 
-  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nRESULTADOS DO ESTOQUE (FONTE PRIMÁRIA): ${JSON.stringify(contextProducts)} | NOTÍCIAS DA NAB: ${JSON.stringify(nabJson)}${historyText}`
+  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nKNOWLEDGE_BASE: ${knowledge_base}${historyText}`
 
   const currentContext = contextProducts
 

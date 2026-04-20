@@ -16,7 +16,10 @@ Deno.serve(async (req: Request) => {
     const { token } = body
 
     if (!token) {
-      return new Response(JSON.stringify({ error: 'Token nao fornecido.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Token nao fornecido.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const { data: paymentToken, error: fetchError } = await supabaseAdmin
@@ -26,15 +29,24 @@ Deno.serve(async (req: Request) => {
       .maybeSingle()
 
     if (fetchError || !paymentToken) {
-      return new Response(JSON.stringify({ error: 'Token invalido.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Token invalido.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     if (new Date(paymentToken.valid_until) < new Date()) {
-      return new Response(JSON.stringify({ error: 'Token expirado.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Token expirado.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     if (paymentToken.is_used) {
-      return new Response(JSON.stringify({ error: 'Token ja foi utilizado.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Token ja foi utilizado.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const { data: order, error: orderError } = await supabaseAdmin
@@ -44,17 +56,25 @@ Deno.serve(async (req: Request) => {
       .single()
 
     if (orderError || !order) {
-      return new Response(JSON.stringify({ error: 'Pedido nao encontrado.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Pedido nao encontrado.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    return new Response(JSON.stringify({ 
-      order_id: paymentToken.order_id,
-      user_id: paymentToken.user_id,
-      order: order
-    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-
+    return new Response(
+      JSON.stringify({
+        order_id: paymentToken.order_id,
+        user_id: paymentToken.user_id,
+        order: order,
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
   } catch (error: any) {
     console.error('Error in validate-payment-token:', error)
-    return new Response(JSON.stringify({ error: 'Erro interno ao validar token.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'Erro interno ao validar token.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

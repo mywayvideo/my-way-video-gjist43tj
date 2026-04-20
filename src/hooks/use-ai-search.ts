@@ -44,12 +44,18 @@ export function useUnifiedSearch() {
       // Fuzzy Search Fallback for products
       if (products.length === 0) {
         // Fallback for full query match first
-        const { data: fullFuzzy } = await supabase
+        let fullFuzzyQuery = supabase
           .from('products')
           .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
           .eq('is_discontinued', false)
           .or(`name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%`)
           .limit(10)
+
+        if (!settings?.ignore_stock_count) {
+          fullFuzzyQuery = fullFuzzyQuery.gt('stock', 0)
+        }
+
+        const { data: fullFuzzy } = await fullFuzzyQuery
 
         if (fullFuzzy && fullFuzzy.length > 0) {
           products = fullFuzzy
@@ -60,6 +66,10 @@ export function useUnifiedSearch() {
               .from('products')
               .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
               .eq('is_discontinued', false)
+
+            if (!settings?.ignore_stock_count) {
+              q = q.gt('stock', 0)
+            }
 
             // Use Fuzzy Search (ILIKE) with wildcards '%term%' for both product names and models.
             terms.forEach((t) => {
@@ -136,7 +146,7 @@ export function useUnifiedSearch() {
       is_expensive: p.price_usd > priceThreshold,
     }))
 
-    return {
+    const finalResultData = {
       stock: finalProducts,
       products: finalProducts,
       intel: cache,
@@ -145,6 +155,10 @@ export function useUnifiedSearch() {
       settings: settings || {},
       isNewlyCached: false,
     }
+
+    console.log('RAW_DB_RESULTS:', finalResultData)
+
+    return finalResultData
   }
 
   const search = async (rawQuery: string, history: any[] = []) => {

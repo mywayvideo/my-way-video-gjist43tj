@@ -187,7 +187,7 @@ export function ChatInterface() {
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
               <Badge
                 variant="outline"
-                className="font-bold text-xs tracking-wider text-primary border-primary/20 bg-primary/5"
+                className="font-bold text-xs tracking-wider text-primary border-primary/20 bg-primary/5 relative z-50"
               >
                 IA My Way Business
               </Badge>
