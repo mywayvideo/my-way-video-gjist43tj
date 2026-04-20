@@ -22,6 +22,7 @@ export default function AdminAISettingsPage() {
     logistics_rules_prompt: '',
     search_algorithm_sql: '',
     system_prompt_template: '',
+    result_component_config: '{\n  \n}',
     agent_id: '',
     whatsapp_trigger_low_confidence: true,
     whatsapp_trigger_purchase_keywords: true,
@@ -54,6 +55,9 @@ export default function AdminAISettingsPage() {
         logistics_rules_prompt: data?.logistics_rules_prompt || '',
         search_algorithm_sql: data?.search_algorithm_sql || '',
         system_prompt_template: data?.system_prompt_template || '',
+        result_component_config: data?.result_component_config
+          ? JSON.stringify(data.result_component_config, null, 2)
+          : '{\n  \n}',
         agent_id: agentData?.id || '',
         whatsapp_trigger_low_confidence: agentData?.whatsapp_trigger_low_confidence ?? true,
         whatsapp_trigger_purchase_keywords: agentData?.whatsapp_trigger_purchase_keywords ?? true,
@@ -75,6 +79,15 @@ export default function AdminAISettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      let parsedConfig = {}
+      if (settings.result_component_config.trim()) {
+        try {
+          parsedConfig = JSON.parse(settings.result_component_config)
+        } catch (e) {
+          throw new Error('Configuração de Exibição (JSON) inválida.')
+        }
+      }
+
       const aiSettingsData = {
         cache_expiration_days: settings.cache_expiration_days,
         price_threshold_usd: settings.price_threshold_usd,
@@ -82,6 +95,7 @@ export default function AdminAISettingsPage() {
         logistics_rules_prompt: settings.logistics_rules_prompt,
         search_algorithm_sql: settings.search_algorithm_sql,
         system_prompt_template: settings.system_prompt_template,
+        result_component_config: parsedConfig,
         updated_at: new Date().toISOString(),
       }
 
@@ -117,7 +131,7 @@ export default function AdminAISettingsPage() {
 
       toast({
         title: 'Sucesso',
-        description: 'Configurações de inteligência salvas com sucesso!',
+        description: 'Painel de controle totalmente atualizado!',
       })
     } catch (error: any) {
       toast({
@@ -202,7 +216,7 @@ export default function AdminAISettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Triggers</CardTitle>
+            <CardTitle>Section C - Gatilhos do WhatsApp</CardTitle>
             <CardDescription>
               Configurações para exibir o botão de contato com especialista.
             </CardDescription>
@@ -315,7 +329,27 @@ export default function AdminAISettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Section F - Regras de Estoque e Logística</CardTitle>
+            <CardTitle>Section F - Configuração de Exibição (JSON)</CardTitle>
+            <CardDescription>
+              Defina como os cards de produtos devem ser renderizados (grid, colunas, etc).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="result_component_config">Configuração de Exibição (JSON)</Label>
+              <Textarea
+                id="result_component_config"
+                className="min-h-[150px] font-mono text-sm"
+                value={settings.result_component_config}
+                onChange={(e) => handleChange('result_component_config', e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Section G - Regras de Estoque e Logística</CardTitle>
             <CardDescription>
               Defina se a IA deve ignorar o estoque zero e como decidir entre Miami/Brasil.
             </CardDescription>
@@ -325,7 +359,7 @@ export default function AdminAISettingsPage() {
               <div className="space-y-0.5">
                 <Label>Ignorar Quantidade em Estoque</Label>
                 <div className="text-sm text-muted-foreground">
-                  Permitir recomendações de produtos sem estoque ativo.
+                  Permitir recomendações de produtos mesmo com estoque zero no banco.
                 </div>
               </div>
               <Switch
