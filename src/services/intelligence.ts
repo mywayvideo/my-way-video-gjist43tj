@@ -63,6 +63,19 @@ Contexto de Gatilhos e Regras:
 - Acionar em Palavras de Projeto: ${settings?.whatsapp_trigger_project_keywords ? 'Sim' : 'Não'}
 `
 
+  const isNewlyCached = unifiedData.isNewlyCached
+  const contextIntelligence = unifiedData.intel || unifiedData.nabData || []
+  const hasIntel = contextIntelligence.length > 0
+
+  let specificCitation = ''
+  if (isNewlyCached) {
+    specificCitation =
+      '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Acabamos de atualizar nossa base com estas novidades."'
+  } else if (hasIntel) {
+    specificCitation =
+      '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Informação obtida através da nossa Inteligência de Mercado My Way."'
+  }
+
   const systemInstruction = `${baseInstruction}
 
 ${triggersContext}
@@ -72,10 +85,10 @@ Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto for
 REGRAS OBRIGATÓRIAS:
 - A resposta DEVE ser em Português (PT-BR).
 - Os parágrafos devem ter no máximo 2 sentenças.
+${specificCitation}
 - Sempre inclua no final: "Disponível para envio imediato de Miami com garantia no Brasil."`
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
-  const contextIntelligence = unifiedData.intel || unifiedData.nabData || []
 
   const { data, error } = await supabase.functions.invoke('process-query', {
     body: {

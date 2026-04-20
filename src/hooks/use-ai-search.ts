@@ -1,12 +1,8 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import {
-  getActiveAgent,
-  generateExpertResponse,
-  ingestManualKnowledge,
-  getAISettings,
-} from '@/services/intelligence'
+import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
+import { saveToCache } from '@/services/cache-service'
 
 export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -18,8 +14,9 @@ export function useUnifiedSearch() {
     const cacheExpirationDays = settings?.cache_expiration_days || 30
 
     let products: any[] | null = null
+    let isNewlyCached = false
 
-    // Dynamic SQL Execution Check
+    // 1. Dynamic SQL Execution Check (1st Priority)
     if (settings?.search_algorithm_sql) {
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc('execute_search_algorithm', {
@@ -35,7 +32,7 @@ export function useUnifiedSearch() {
     }
 
     if (!products) {
-      // 1. CONST products
+      // 2. Standard Search (2nd Priority)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*, manufacturers(name)')
@@ -47,7 +44,7 @@ export function useUnifiedSearch() {
       products = productsData
     }
 
-    // 2. CONST cache
+    // Cache
     const expirationDate = new Date()
     expirationDate.setDate(expirationDate.getDate() - cacheExpirationDays)
 
@@ -61,7 +58,7 @@ export function useUnifiedSearch() {
       console.error(cacheError)
     }
 
-    // 3. CONST nab
+    // NAB
     const { data: nab, error: nabError } = await supabase
       // @ts-expect-error - table might not be generated in types yet
       .from('nab_market')
@@ -74,7 +71,7 @@ export function useUnifiedSearch() {
 
     let webResults: any = null
 
-    // 4. IF (products.length === 0 && cache.length === 0 && nab.length === 0)
+    // 3. Web Search Fallback (3rd Priority)
     if (
       (!products || products.length === 0) &&
       (!cache || cache.length === 0) &&
@@ -93,19 +90,24 @@ export function useUnifiedSearch() {
             source: 'web',
           }
 
-          // DATA SYNC
-          await ingestManualKnowledge({
+          // 4. Save to Cache
+          await saveToCache({
             title: webResults.title,
             raw_content: webResults.raw_content,
-            status: 'published',
           })
+          isNewlyCached = true
         }
       } catch (e) {
         console.error('Web search fallback failed', e)
       }
     }
 
-    const finalProducts = products && products.length > 0 ? products : []
+    let finalProducts = products && products.length > 0 ? products : []
+
+    // 5. Respect stock visibility settings
+    if (settings && settings.ignore_stock_count === false) {
+      finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
+    }
 
     return {
       stock: finalProducts,
@@ -114,6 +116,7 @@ export function useUnifiedSearch() {
       nabData: nab || [],
       web: webResults ? [webResults] : [],
       settings: settings || {},
+      isNewlyCached,
     }
   }
 
