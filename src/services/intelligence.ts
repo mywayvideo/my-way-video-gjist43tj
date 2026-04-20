@@ -134,6 +134,8 @@ export const generateExpertResponse = async (query: string, unifiedData: any, ag
       }
     }
 
+    let shouldShowWhatsapp = false
+
     if (
       settings.whatsapp_trigger_expensive_product &&
       unifiedData.stock &&
@@ -142,6 +144,7 @@ export const generateExpertResponse = async (query: string, unifiedData: any, ag
       const threshold = settings.price_threshold_usd || 5000
       if (unifiedData.stock.some((p: any) => (p.price_usd || 0) > threshold)) {
         confidence_level = 'low'
+        shouldShowWhatsapp = true
       }
     }
 
@@ -151,11 +154,12 @@ export const generateExpertResponse = async (query: string, unifiedData: any, ag
         (!unifiedData.intel || unifiedData.intel.length === 0)
       ) {
         confidence_level = 'low'
+        shouldShowWhatsapp = true
       }
     }
 
     const systemPrompt = `Você é o Especialista My Way. 
-Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
+Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados.
 Ignore COMPLETAMENTE qualquer campo de 'stock', 'quantity' ou 'estoque' vindo do banco de dados.
 Se o produto existe na lista 'stock' enviada no contexto, ele ESTÁ DISPONÍVEL.
 É terminantemente PROIBIDO dizer que o produto não está disponível ou que o estoque está vazio.
@@ -195,7 +199,27 @@ Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil n
 
     if (error) throw error
 
-    let finalMessage = data?.message || data?.content || buildFallbackMessage(query, unifiedData)
+    let parsedResponse: any = {}
+    let rawMessage = data?.message || data?.content || ''
+
+    try {
+      const startBracket = rawMessage.indexOf('{')
+      const endBracket = rawMessage.lastIndexOf('}')
+      if (startBracket !== -1 && endBracket !== -1) {
+        parsedResponse = JSON.parse(rawMessage.substring(startBracket, endBracket + 1))
+      } else {
+        parsedResponse = JSON.parse(rawMessage)
+      }
+    } catch (e) {
+      parsedResponse = { content: rawMessage }
+    }
+
+    let finalMessage =
+      parsedResponse.content ||
+      parsedResponse.message ||
+      rawMessage ||
+      buildFallbackMessage(query, unifiedData)
+    let finalProducts = parsedResponse.products || data?.products || unifiedData.stock || []
 
     if (!finalMessage.includes('Disponível para envio imediato de Miami com garantia no Brasil')) {
       finalMessage += '\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
@@ -205,7 +229,8 @@ Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil n
       content: finalMessage,
       message: finalMessage,
       confidence_level,
-      products: data?.products || unifiedData.stock || [],
+      products: finalProducts,
+      should_show_whatsapp_button: shouldShowWhatsapp || confidence_level === 'low',
     }
   } catch (e) {
     console.error('Edge function call failed:', e)
@@ -214,6 +239,7 @@ Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil n
       message: fallbackMessage,
       confidence_level: 'low',
       products: unifiedData.stock || [],
+      should_show_whatsapp_button: true,
     }
   }
 }
