@@ -51,21 +51,11 @@ export async function getActiveAgent() {
 export async function generateResponse(query: string, unifiedData: any = {}, agentId?: string) {
   const settings = await getAISettings()
 
-  const baseInstruction = settings?.system_prompt_template
-    ? settings.system_prompt_template
-    : 'Você é um especialista em audiovisual.'
-
-  const logisticsRules = settings?.logistics_rules_prompt
-    ? `Regras de Logística e Origem de Envio:\n${settings.logistics_rules_prompt}`
-    : 'Considere os preços (price_usd vs price_brl) para determinar origem de envio (Miami vs Brasil).'
-
-  const triggersContext = `
-Contexto de Gatilhos e Regras:
-- Limite de Preço para Gatilho: USD ${settings?.price_threshold_usd || 5000}
-- Acionar em Baixa Confiança: ${settings?.whatsapp_trigger_low_confidence ? 'Sim' : 'Não'}
-- Acionar em Palavras de Compra: ${settings?.whatsapp_trigger_purchase_keywords ? 'Sim' : 'Não'}
-- Acionar em Palavras de Projeto: ${settings?.whatsapp_trigger_project_keywords ? 'Sim' : 'Não'}
-`
+  const systemPromptTemplate =
+    settings?.system_prompt_template || 'Você é um especialista em audiovisual.'
+  const logisticsRulesPrompt =
+    settings?.logistics_rules_prompt ||
+    'Considere os preços (price_usd vs price_brl) para determinar origem de envio (Miami vs Brasil).'
 
   const isNewlyCached = unifiedData.isNewlyCached
   const contextIntelligence = [
@@ -84,11 +74,16 @@ Contexto de Gatilhos e Regras:
       '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Informação obtida através da nossa Inteligência de Mercado My Way."'
   }
 
-  const systemInstruction = `${baseInstruction}
+  const systemInstruction = `${systemPromptTemplate}
 
-${logisticsRules}
+Regras de Logística e Origem de Envio (APLIQUE ESTAS REGRAS COM BASE NOS PREÇOS FORNECIDOS):
+${logisticsRulesPrompt}
 
-${triggersContext}
+Contexto de Gatilhos e Regras:
+- Limite de Preço para Gatilho: USD ${settings?.price_threshold_usd || 5000}
+- Acionar em Baixa Confiança: ${settings?.whatsapp_trigger_low_confidence ? 'Sim' : 'Não'}
+- Acionar em Palavras de Compra: ${settings?.whatsapp_trigger_purchase_keywords ? 'Sim' : 'Não'}
+- Acionar em Palavras de Projeto: ${settings?.whatsapp_trigger_project_keywords ? 'Sim' : 'Não'}
 
 Contexto de Mercado (NAB 2026 e Tendências Web):
 Se a pergunta envolver lançamentos, tendências ou a feira NAB, PRIORIZE e DÊ DESTAQUE às seguintes informações (não confie apenas em seu conhecimento prévio):
@@ -100,7 +95,7 @@ REGRAS OBRIGATÓRIAS:
 - A resposta DEVE ser em Português (PT-BR).
 - Os parágrafos devem ter no máximo 2 sentenças.
 ${specificCitation}
-- SEMPRE inclua no final: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."`
+- SEMPRE inclua no final o aviso: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."`
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
 
@@ -131,7 +126,7 @@ ${specificCitation}
       content:
         result.content ||
         result.message ||
-        'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil.',
+        'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil e América Latina.',
       products: Array.isArray(result.products) ? result.products : contextProducts,
       should_show_whatsapp_button: result.should_show_whatsapp_button || false,
       confidence_level: result.confidence_level || 'high',
@@ -141,7 +136,7 @@ ${specificCitation}
       content:
         typeof data.message === 'string'
           ? data.message
-          : 'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil.',
+          : 'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil e América Latina.',
       products: contextProducts,
       should_show_whatsapp_button: false,
       confidence_level: 'high',

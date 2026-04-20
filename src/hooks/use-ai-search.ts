@@ -113,7 +113,8 @@ export function useUnifiedSearch() {
     let finalProducts = products && products.length > 0 ? products : []
 
     // 5. Respect stock visibility settings
-    if (settings && settings.ignore_stock_count === false) {
+    // If ignore_stock_count is true, we return products even if stock is 0
+    if (!settings?.ignore_stock_count) {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
@@ -140,10 +141,12 @@ export function useUnifiedSearch() {
 
       let finalMessage = ''
       let finalConfidence = 'high'
+      let finalProducts = unifiedData.products
+      let shouldShowWhatsapp = false
 
       if (!activeAgent) {
         finalMessage =
-          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
+          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.'
         toast({
           title: 'Aviso',
           description: 'Nenhum agente configurado. Exibindo busca básica.',
@@ -152,6 +155,10 @@ export function useUnifiedSearch() {
         const aiResponse = await generateExpertResponse(query, unifiedData, activeAgent.id)
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
+        if (aiResponse.products && aiResponse.products.length > 0) {
+          finalProducts = aiResponse.products
+        }
+        shouldShowWhatsapp = aiResponse.should_show_whatsapp_button || false
       }
 
       const combinedResults = {
@@ -159,12 +166,12 @@ export function useUnifiedSearch() {
         content: finalMessage,
         confidence_level: finalConfidence,
         stock: unifiedData.stock,
-        products: unifiedData.products,
+        products: finalProducts,
         intel: unifiedData.intel,
         nabData: unifiedData.nabData,
         web: unifiedData.web,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
-        should_show_whatsapp_button: false,
+        should_show_whatsapp_button: shouldShowWhatsapp,
       }
 
       setResults(combinedResults)
