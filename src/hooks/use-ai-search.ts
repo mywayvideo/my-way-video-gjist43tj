@@ -40,6 +40,26 @@ export function useUnifiedSearch() {
         nab = responseObj.nab_data || []
       }
 
+      // Fuzzy Search Fallback for products
+      if (products.length === 0) {
+        const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+        if (terms.length > 0) {
+          let q = supabase
+            .from('products')
+            .select('id, technical_info, description, price_usd, name, image_url, stock')
+            .eq('is_discontinued', false)
+
+          terms.forEach((t) => {
+            q = q.ilike('name', `%${t}%`)
+          })
+
+          const { data: fuzzyProducts } = await q.limit(10)
+          if (fuzzyProducts && fuzzyProducts.length > 0) {
+            products = fuzzyProducts
+          }
+        }
+      }
+
       // Augment products with full_specs if not present
       if (products.length > 0 && !products[0].full_specs && !products[0].technical_info) {
         const productIds = products.map((p: any) => p.id)
@@ -76,6 +96,7 @@ export function useUnifiedSearch() {
     let finalProducts = products.length > 0 ? products : []
 
     // Respect stock visibility settings
+    console.log('IGNORE_STOCK_SETTING:', settings?.ignore_stock_count)
     if (!settings?.ignore_stock_count) {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }

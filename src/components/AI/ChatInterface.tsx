@@ -25,7 +25,7 @@ const renderMarkdown = (text: string) => {
       return (
         <div
           key={i}
-          className="my-2 p-3 bg-black/5 rounded-md overflow-x-auto font-mono text-[13px] text-foreground/80 whitespace-pre-wrap border border-black/10"
+          className="my-3 p-4 bg-black/5 rounded-xl overflow-x-auto font-mono text-[13px] text-foreground/90 whitespace-pre-wrap border border-black/10 shadow-inner"
         >
           {code}
         </div>
@@ -59,7 +59,7 @@ const renderMarkdown = (text: string) => {
             }
 
             const tokens = content.split(/(\*\*.*?\*\*)/g)
-            const renderedLine = tokens.map((token, tIdx) => {
+            const renderedLine: React.ReactNode[] = tokens.map((token, tIdx) => {
               if (token.startsWith('**') && token.endsWith('**')) {
                 return (
                   <strong key={tIdx} className="font-semibold text-foreground">
@@ -81,8 +81,18 @@ const renderMarkdown = (text: string) => {
 
             const isListItem = line.trim().startsWith('- ') || /^\d+\.\s/.test(line.trim())
             return (
-              <div key={k} className={isListItem ? 'ml-4 mb-1 relative' : ''}>
-                {renderedLine}
+              <div
+                key={k}
+                className={isListItem ? 'ml-4 mb-1 flex items-start' : 'mb-1 leading-relaxed'}
+              >
+                {isListItem && line.trim().startsWith('- ') && (
+                  <span className="mr-2 mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                )}
+                <span className="flex-1">
+                  {isListItem && line.trim().startsWith('- ')
+                    ? renderedLine.slice(1)
+                    : renderedLine}
+                </span>
               </div>
             )
           })}
@@ -306,13 +316,15 @@ export function ChatInterface() {
             disabled={!query.trim() || isLoading}
             size="icon"
             className={cn(
-              'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group !bg-gradient-to-r !from-[#3b82f6] !to-[#8b5cf6] !bg-[linear-gradient(to_right,#3b82f6,#8b5cf6)]',
+              'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
+              'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6]',
               'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
               isLoading && 'animate-pulse',
             )}
+            style={{ backgroundImage: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-white" />
+              <Loader2 className="w-5 h-5 animate-spin text-white" color="white" />
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />

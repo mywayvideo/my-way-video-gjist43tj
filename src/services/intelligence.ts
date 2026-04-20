@@ -66,10 +66,10 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const contextNab = unifiedData.nabData || []
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  let strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
-REGRA 2: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
+  let strictRules = `REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
+REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
-REGRA 4: Se a busca retornar produtos diferentes da mensagem anterior, reconheça a mudança de assunto.
+REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo.
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual.
 IDIOMA: 100% Português (PT-BR).`
 
