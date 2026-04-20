@@ -58,20 +58,15 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     'Considere os preços (price_usd vs price_brl) para determinar origem de envio (Miami vs Brasil).'
 
   const isNewlyCached = unifiedData.isNewlyCached
-  const contextIntelligence = [
-    ...(unifiedData.intel || []),
-    ...(unifiedData.nabData || []),
-    ...(unifiedData.web || []),
-  ]
-  const hasIntel = contextIntelligence.length > 0
+  const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
+  const nabData = unifiedData.nabData || []
+  const hasIntel = contextIntelligence.length > 0 || nabData.length > 0
+  const hasNab = nabData.length > 0
 
   let specificCitation = ''
   if (isNewlyCached) {
     specificCitation =
       '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Acabamos de atualizar nossa base com estas novidades."'
-  } else if (hasIntel) {
-    specificCitation =
-      '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Informação obtida através da nossa Inteligência de Mercado My Way."'
   }
 
   const systemInstruction = `${systemPromptTemplate}
@@ -85,15 +80,19 @@ Contexto de Gatilhos e Regras:
 - Acionar em Palavras de Compra: ${settings?.whatsapp_trigger_purchase_keywords ? 'Sim' : 'Não'}
 - Acionar em Palavras de Projeto: ${settings?.whatsapp_trigger_project_keywords ? 'Sim' : 'Não'}
 
-Contexto de Mercado (NAB 2026 e Tendências Web):
-Se a pergunta envolver lançamentos, tendências ou a feira NAB, PRIORIZE e DÊ DESTAQUE às seguintes informações (não confie apenas em seu conhecimento prévio):
+Contexto de Mercado e Tendências Web:
 ${JSON.stringify(contextIntelligence)}
+
+Contexto Exclusivo NAB 2026:
+${JSON.stringify(nabData)}
 
 Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
 
 REGRAS OBRIGATÓRIAS:
 - A resposta DEVE ser em Português (PT-BR).
 - Os parágrafos devem ter no máximo 2 sentenças.
+${hasIntel ? '- É ESTRITAMENTE PROIBIDO dizer que "não há informações" pois dados foram fornecidos no contexto.' : ''}
+${hasNab ? '- Você DEVE PRIORIZAR os dados da NAB 2026 fornecidos no contexto.' : ''}
 ${specificCitation}
 - SEMPRE inclua no final o aviso: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."`
 
@@ -103,8 +102,9 @@ ${specificCitation}
     body: {
       query: `${systemInstruction}\n\nConsulta do Usuário: ${query}`,
       products: contextProducts,
-      intelligence: contextIntelligence,
+      intelligence: [...contextIntelligence, ...nabData],
       agentId: agentId,
+      isNABQuery: hasNab,
     },
   })
 

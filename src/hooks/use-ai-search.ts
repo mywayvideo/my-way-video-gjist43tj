@@ -11,67 +11,31 @@ export function useUnifiedSearch() {
 
   const fetchUnifiedData = async (query: string) => {
     const settings = await getAISettings()
-    const cacheExpirationDays = settings?.cache_expiration_days || 30
 
     let products: any[] | null = null
+    let cache: any[] | null = null
+    let nab: any[] | null = null
     let isNewlyCached = false
 
-    // 1. Dynamic SQL Execution Check (1st Priority)
-    if (settings?.search_algorithm_sql) {
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('execute_search_algorithm', {
-          sql_query: settings.search_algorithm_sql,
-          search_term: query,
-        })
-        if (!rpcError && rpcData) {
-          products = rpcData
-        }
-      } catch (e) {
-        console.error('Custom SQL execution failed, falling back to standard search', e)
+    try {
+      const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
+        search_term: query,
+      })
+
+      if (searchError) {
+        console.error('Error calling unified_search:', searchError)
+      } else if (searchData) {
+        products = (searchData as any).stock || []
+        cache = (searchData as any).intel || []
+        nab = (searchData as any).nab_data || []
       }
-    }
-
-    if (!products) {
-      // 2. Standard Search (2nd Priority)
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*, manufacturers(name)')
-        .or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
-
-      if (productsError) {
-        console.error(productsError)
-      }
-      products = productsData
-    }
-
-    // Cache
-    const expirationDate = new Date()
-    expirationDate.setDate(expirationDate.getDate() - cacheExpirationDays)
-
-    const { data: cache, error: cacheError } = await supabase
-      .from('market_intelligence')
-      .select('*')
-      .ilike('raw_content', `%${query}%`)
-      .gte('created_at', expirationDate.toISOString())
-
-    if (cacheError) {
-      console.error(cacheError)
-    }
-
-    // NAB
-    const { data: nab, error: nabError } = await supabase
-      // @ts-expect-error - table might not be generated in types yet
-      .from('nab_market')
-      .select('*')
-      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
-
-    if (nabError && nabError.code !== '42P01') {
-      console.error(nabError)
+    } catch (e) {
+      console.error('RPC unified_search failed', e)
     }
 
     let webResults: any = null
 
-    // 3. Web Search Fallback (3rd Priority)
+    // Web Search Fallback
     if (
       (!products || products.length === 0) &&
       (!cache || cache.length === 0) &&
