@@ -67,16 +67,12 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
       intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
     })
 
-  let ruleBrazilLatam = `REGRAS OBRIGATÓRIAS E CRÍTICAS:
+  const ruleBrazilLatam = `REGRAS OBRIGATÓRIAS E CRÍTICAS:
 - Idioma: 100% Português (PT-BR).
 - Parágrafos: Máximo de 2 frases por parágrafo.
 - Especificações: SEMPRE apresentar especificações técnicas em blocos de código (\`\`\`).
 - Produtos: Se o contexto retornar itens, apresente-os OBRIGATORIAMENTE em formato Markdown técnico.
 - Garantia: SEMPRE incluir o aviso de garantia oficial no Brasil/LATAM com envio de Miami ao final.`
-
-  if (contextProducts.length === 0 && !hasNab) {
-    ruleBrazilLatam += `\n- REGRA DE ESTOQUE VAZIO: Não encontrei este item específico no meu catálogo de Miami, mas posso verificar com nossos fornecedores.`
-  }
 
   const assembledPrompt = `${systemPrompt}\n\nContexto dos Dados (JSON):\n${currentContext}\n\n${ruleBrazilLatam}`
 

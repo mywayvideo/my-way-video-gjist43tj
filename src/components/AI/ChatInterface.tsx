@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Bot, MessageSquare, Phone } from 'lucide-react'
+import { Search, Loader2, Bot, MessageSquare, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -220,7 +220,7 @@ export function ChatInterface() {
             style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
-              'text-white hover:shadow-lg hover:scale-105 border-0',
+              'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
             )}
           >
             {isLoading ? (
@@ -232,7 +232,7 @@ export function ChatInterface() {
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <Send
+                <Search
                   className="w-5 h-5 text-white !text-white relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"
                   color="white"
                   style={{ color: 'white' }}
