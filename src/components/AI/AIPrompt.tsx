@@ -227,31 +227,33 @@ export function AIPrompt({
             </div>
           </div>
 
-          {localResult?.stock && localResult.stock.length > 0 && (
+          {((localResult?.products && localResult.products.length > 0) ||
+            (localResult?.stock && localResult.stock.length > 0)) && (
             <div className="w-full animate-fade-in-up delay-150">
               <h3 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-primary">
-                Produtos Relacionados
+                Equipamentos Disponíveis
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {localResult.stock.map((product: any) => (
+                {(localResult.products || localResult.stock).map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </div>
           )}
 
-          {(!localResult?.stock || localResult.stock.length === 0) && (
-            <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
-              <a
-                href="https://wa.me/13055551234"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
-              >
-                Falar com Especialista
-              </a>
-            </div>
-          )}
+          {(!localResult?.stock || localResult.stock.length === 0) &&
+            (!localResult?.products || localResult.products.length === 0) && (
+              <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
+                <a
+                  href="https://wa.me/13055551234"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
+                >
+                  Falar com Especialista
+                </a>
+              </div>
+            )}
         </div>
       )}
     </div>

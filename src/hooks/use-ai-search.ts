@@ -13,30 +13,32 @@ export function useUnifiedSearch() {
   const { toast } = useToast()
 
   const fetchUnifiedData = async (query: string) => {
-    const rawQuery = query
-
     // 1. CONST products
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('*, manufacturers(name)')
-      .or('name.ilike.%' + rawQuery + '%,sku.ilike.%' + rawQuery + '%')
+      .or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
 
-    if (productsError) throw productsError
+    if (productsError) {
+      console.error(productsError)
+    }
 
     // 2. CONST cache
     const { data: cache, error: cacheError } = await supabase
       .from('market_intelligence')
       .select('*')
-      .ilike('raw_content', '%' + rawQuery + '%')
+      .ilike('raw_content', `%${query}%`)
 
-    if (cacheError) throw cacheError
+    if (cacheError) {
+      console.error(cacheError)
+    }
 
     // 3. CONST nab
     const { data: nab, error: nabError } = await supabase
-      // @ts-expect-error
+      // @ts-expect-error - table might not be generated in types yet
       .from('nab_market')
       .select('*')
-      .or('title.ilike.%' + rawQuery + '%,content.ilike.%' + rawQuery + '%')
+      .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
 
     if (nabError && nabError.code !== '42P01') {
       console.error(nabError)
@@ -53,12 +55,12 @@ export function useUnifiedSearch() {
       try {
         const { data: aiSearchData, error: aiSearchError } = await supabase.functions.invoke(
           'ai-search',
-          { body: { query: rawQuery } },
+          { body: { query: query } },
         )
 
         if (!aiSearchError && aiSearchData && aiSearchData.message) {
           webResults = {
-            title: `Pesquisa Web: ${rawQuery}`,
+            title: `Pesquisa Web: ${query}`,
             raw_content: aiSearchData.message,
             source: 'web',
           }
@@ -75,8 +77,11 @@ export function useUnifiedSearch() {
       }
     }
 
+    const finalProducts = products && products.length > 0 ? products : []
+
     return {
-      stock: products || [],
+      stock: finalProducts,
+      products: finalProducts,
       intel: cache || [],
       nabData: nab || [],
       web: webResults ? [webResults] : [],
@@ -107,6 +112,7 @@ export function useUnifiedSearch() {
       const combinedResults = {
         message,
         stock: unifiedData.stock,
+        products: unifiedData.products,
         intel: unifiedData.intel,
         nabData: unifiedData.nabData,
         web: unifiedData.web,

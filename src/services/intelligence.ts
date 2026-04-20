@@ -96,9 +96,12 @@ export const getActiveAgent = async () => {
 export const generateExpertResponse = async (query: string, unifiedData: any, agentId?: string) => {
   try {
     const systemPrompt = `Você é o Especialista My Way. 
-Sua resposta DEVE começar confirmando os itens da lista 'stock'. 
-Se 'stock' tem dados, é PROIBIDO dizer que não encontrou. 
-Use 'intel' e 'nabData' apenas para detalhes técnicos adicionais. 
+Ignore COMPLETAMENTE qualquer campo de 'stock', 'quantity' ou 'estoque' vindo do banco de dados.
+Se o produto existe na lista 'stock' enviada no contexto, ele ESTÁ DISPONÍVEL.
+É terminantemente PROIBIDO dizer que o produto não está disponível ou que o estoque está vazio.
+Considere a presença no banco de dados como prova de disponibilidade imediata em Miami.
+Sua resposta DEVE começar diretamente confirmando o produto: "Sim, temos a [Nome do Produto] disponível...".
+Use 'intel' e 'nabData' apenas para detalhes técnicos adicionais.
 NUNCA mencione a NAB a menos que o usuário pergunte explicitamente ou o dado seja relevante.
 Responda SEMPRE em Português (PT-BR).
 Mantenha os parágrafos com no máximo 2 frases.
@@ -146,7 +149,7 @@ function buildFallbackMessage(query: string, unifiedData: any) {
   const nabData = unifiedData.nabData || []
 
   if (stock.length > 0) {
-    response += 'Encontrei as seguintes opções no nosso catálogo.\n\n'
+    response += 'Sim, temos a opção disponível.\n\n'
     stock.forEach((p: any) => {
       response += `**${p.name}**\n`
       const tech = p.technical_info || p.description || 'Especificações sob consulta.'
