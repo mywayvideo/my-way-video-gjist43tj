@@ -9,10 +9,19 @@ export async function getAISettings() {
     .eq('id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle()
 
+  let finalSpecificSettings = specificSettings
+
   if (error || !specificSettings) {
-    throw new Error(
-      'Falha ao obter as configurações de IA (ai_settings ID: 00000000-0000-0000-0000-000000000001).',
-    )
+    finalSpecificSettings = {
+      cache_expiration_days: 30,
+      price_threshold_usd: 5000,
+      search_algorithm_sql: '',
+      system_prompt_template:
+        'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é ajudar clientes a encontrar o equipamento ideal. REGRAS: 1. Priorize os produtos do catálogo. 2. Forneça especificações técnicas detalhadas em blocos de código.',
+      logistics_rules_prompt:
+        'Todos os produtos possuem garantia oficial no Brasil e América Latina, com envio direto de Miami.',
+      result_component_config: {},
+    }
   }
 
   const { data: agentSettings } = await supabase
@@ -24,7 +33,7 @@ export async function getAISettings() {
     .limit(1)
     .maybeSingle()
 
-  return { ...agentSettings, ...specificSettings }
+  return { ...agentSettings, ...finalSpecificSettings }
 }
 
 export async function getActiveAgent() {

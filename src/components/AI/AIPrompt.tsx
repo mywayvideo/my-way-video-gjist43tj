@@ -263,20 +263,31 @@ export function AIPrompt({
           <button
             type="submit"
             disabled={isLoading || isExternalLoading || !query.trim() || isSettingsLoading}
+            style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
             className={cn(
               'mt-2 sm:mt-0 sm:ml-2 w-full sm:w-auto px-8 py-4 rounded-full flex items-center justify-center gap-2 font-semibold transition-all duration-300 text-center',
-              'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-lg hover:scale-105 border-0',
+              'text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-lg hover:scale-105 border-0',
               isLoading || isExternalLoading || !query.trim() || isSettingsLoading
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer',
             )}
           >
             {isLoading || isExternalLoading || isSettingsLoading ? (
-              <Loader2 size={20} className="animate-spin text-white" />
+              <Loader2
+                size={20}
+                color="white"
+                className="animate-spin text-white !text-white"
+                style={{ color: 'white' }}
+              />
             ) : (
-              <Search size={20} className="text-white" />
+              <Search
+                size={20}
+                color="white"
+                className="text-white !text-white"
+                style={{ color: 'white' }}
+              />
             )}
-            <span className="sm:hidden ml-2 text-white">
+            <span className="sm:hidden ml-2 text-white !text-white" style={{ color: 'white' }}>
               {isLoading || isExternalLoading || isSettingsLoading ? 'Buscando...' : 'Buscar'}
             </span>
           </button>

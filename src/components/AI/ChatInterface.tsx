@@ -217,17 +217,26 @@ export function ChatInterface() {
             type="submit"
             disabled={!query.trim() || isLoading}
             size="icon"
+            style={{ background: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
-              'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] hover:shadow-lg hover:scale-105 border-0',
+              'text-white hover:shadow-lg hover:scale-105 border-0',
             )}
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-white" />
+              <Loader2
+                className="w-5 h-5 animate-spin text-white !text-white"
+                color="white"
+                style={{ color: 'white' }}
+              />
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <Send className="w-5 h-5 text-white relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
+                <Send
+                  className="w-5 h-5 text-white !text-white relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"
+                  color="white"
+                  style={{ color: 'white' }}
+                />
               </>
             )}
           </Button>
