@@ -69,46 +69,46 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
       '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Acabamos de atualizar nossa base com estas novidades."'
   }
 
-  const systemInstruction = `${systemPromptTemplate}
-
-Regras de Logística e Origem de Envio (APLIQUE ESTAS REGRAS COM BASE NOS PREÇOS FORNECIDOS):
-${logisticsRulesPrompt}
-
-Contexto de Gatilhos e Regras:
-- Limite de Preço para Gatilho: USD ${settings?.price_threshold_usd || 5000}
-- Acionar em Baixa Confiança: ${settings?.whatsapp_trigger_low_confidence ? 'Sim' : 'Não'}
-- Acionar em Palavras de Compra: ${settings?.whatsapp_trigger_purchase_keywords ? 'Sim' : 'Não'}
-- Acionar em Palavras de Projeto: ${settings?.whatsapp_trigger_project_keywords ? 'Sim' : 'Não'}
-
-Contexto de Mercado e Tendências Web:
-${JSON.stringify(contextIntelligence)}
-
-Contexto Exclusivo NAB 2026:
-${JSON.stringify(nabData)}
-
+  const instructions = `
 Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
-
-REGRAS OBRIGATÓRIAS:
-- A resposta DEVE ser em Português (PT-BR).
-- Os parágrafos devem ter no máximo 2 sentenças.
-${hasIntel ? '- É ESTRITAMENTE PROIBIDO dizer que "não há informações" pois dados foram fornecidos no contexto.' : ''}
-${hasNab ? '- Você DEVE PRIORIZAR os dados da NAB 2026 fornecidos no contexto.' : ''}
 ${specificCitation}
-- SEMPRE inclua no final o aviso: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."`
+`
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
 
-  const { data, error } = await supabase.functions.invoke('process-query', {
-    body: {
-      query: `${systemInstruction}\n\nConsulta do Usuário: ${query}`,
-      products: contextProducts,
-      intelligence: [...contextIntelligence, ...nabData],
-      agentId: agentId,
-      isNABQuery: hasNab,
-    },
-  })
+  let data: any = null
+  try {
+    const res = await supabase.functions.invoke('process-query', {
+      body: {
+        query: `${instructions}\n\nConsulta do Usuário: ${query}`,
+        products: contextProducts,
+        intelligence: [...contextIntelligence, ...nabData],
+        agentId: agentId,
+        isNABQuery: hasNab,
+      },
+    })
 
-  if (error) throw error
+    if (res.error) throw res.error
+    data = res.data
+  } catch (err) {
+    console.error('Error invoking process-query, falling back to ai-search:', err)
+    try {
+      const fallbackRes = await supabase.functions.invoke('ai-search', {
+        body: { query: query },
+      })
+      if (fallbackRes.error) throw fallbackRes.error
+      data = fallbackRes.data
+    } catch (fallbackErr) {
+      console.error('Fallback ai-search also failed:', fallbackErr)
+      return {
+        content:
+          'Neste momento nossos sistemas de inteligência estão indisponíveis. Aqui estão os resultados diretamente do nosso catálogo.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+        products: contextProducts,
+        should_show_whatsapp_button: true,
+        confidence_level: 'low',
+      }
+    }
+  }
 
   try {
     let result = data.message || data
@@ -134,7 +134,7 @@ ${specificCitation}
   } catch (err) {
     return {
       content:
-        typeof data.message === 'string'
+        typeof data?.message === 'string'
           ? data.message
           : 'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil e América Latina.',
       products: contextProducts,

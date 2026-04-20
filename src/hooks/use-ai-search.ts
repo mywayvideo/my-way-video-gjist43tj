@@ -142,13 +142,28 @@ export function useUnifiedSearch() {
       return combinedResults
     } catch (err: any) {
       console.error('[useUnifiedSearch] Database query error:', err)
-      setResults(null)
+
+      const fallbackResults = {
+        message: 'Ocorreu um erro ao consultar nossa base de dados. Por favor, tente novamente.',
+        content:
+          'Ocorreu um erro ao consultar nossa base de dados. Por favor, tente novamente.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+        confidence_level: 'low',
+        stock: [],
+        products: [],
+        intel: [],
+        nabData: [],
+        web: [],
+        agent_name: 'Busca Básica',
+        should_show_whatsapp_button: true,
+      }
+
+      setResults(fallbackResults)
       toast({
         title: 'Erro de Busca',
         description: 'Ocorreu um erro ao consultar nossa base de dados.',
         variant: 'destructive',
       })
-      return null
+      return fallbackResults
     } finally {
       setIsLoading(false)
     }
