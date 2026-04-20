@@ -77,21 +77,24 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 
   const systemPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}`
 
-  const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
-  const nabData = unifiedData.nabData || []
-  const hasNab = nabData.length > 0
-
   const contextProducts = unifiedData.products || unifiedData.stock || []
+  const hasNab = (unifiedData.nabData || []).length > 0
 
-  const currentContext = JSON.stringify({
-    products: contextProducts,
-    intelligence: [...contextIntelligence, ...nabData],
-  })
+  const currentContext =
+    unifiedData.stringifiedContext ||
+    JSON.stringify({
+      products: contextProducts,
+      intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
+    })
 
-  const ruleBrazilLatam =
-    'REGRAS OBRIGATÓRIAS: Responda APENAS em Português (PT-BR). Máximo 2 frases por parágrafo. SEMPRE inclua o aviso de que todos os produtos possuem garantia integral no Brasil e América Latina.'
+  const ruleBrazilLatam = `REGRAS OBRIGATÓRIAS:
+- Idioma: 100% Português (PT-BR).
+- Parágrafos: Máximo de 2 frases.
+- Especificações: SEMPRE em blocos de código (\`\`\`).
+- Produtos: Apresente-os obrigatoriamente usando formatação Markdown.
+- Garantia: SEMPRE incluir o aviso de garantia oficial Brasil/LATAM ao final.`
 
-  const assembledPrompt = `${systemPrompt}\n\n${currentContext}\n\n${ruleBrazilLatam}`
+  const assembledPrompt = `${systemPrompt}\n\nContexto dos Dados (JSON):\n${currentContext}\n\n${ruleBrazilLatam}`
 
   let data: any = null
   try {

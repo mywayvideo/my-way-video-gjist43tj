@@ -67,13 +67,22 @@ export function useUnifiedSearch() {
 
       if (!activeAgent) {
         finalMessage =
-          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.'
+          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nTodos os produtos possuem garantia oficial no Brasil e América Latina, com envio direto de Miami.'
         toast({
           title: 'Aviso',
           description: 'Nenhum agente configurado. Exibindo busca básica.',
         })
       } else {
-        const aiResponse = await generateExpertResponse(query, unifiedData, activeAgent.id)
+        const contextString = JSON.stringify({
+          stock: unifiedData.stock,
+          intel: unifiedData.intel,
+          nab_data: unifiedData.nabData,
+        })
+        const aiResponse = await generateExpertResponse(
+          query,
+          { ...unifiedData, stringifiedContext: contextString },
+          activeAgent.id,
+        )
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
         if (aiResponse.products && aiResponse.products.length > 0) {
@@ -101,9 +110,10 @@ export function useUnifiedSearch() {
       console.error('[useUnifiedSearch] error:', err)
 
       const fallbackResults = {
-        message: 'Ocorreu um erro ao consultar nossa base de dados. Por favor, tente novamente.',
+        message:
+          'Desculpe, ocorreu um erro ao consultar nossos sistemas. Por favor, tente novamente.',
         content:
-          'Ocorreu um erro ao consultar nossa base de dados. Por favor, tente novamente.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+          'Desculpe, ocorreu um erro ao consultar nossos sistemas. Por favor, tente novamente.\n\nTodos os produtos possuem garantia oficial no Brasil e América Latina, com envio direto de Miami.',
         confidence_level: 'low',
         stock: [],
         products: [],

@@ -66,16 +66,15 @@ export function ChatInterface() {
             <Bot className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-xl">Assistente Especializado</CardTitle>
+            <div className="flex items-center space-x-2">
+              <CardTitle className="text-xl">Assistente Especializado</CardTitle>
+              <span className="font-bold text-xs uppercase tracking-wider text-primary">
+                IA My Way Business
+              </span>
+            </div>
             <CardDescription>Tire suas dúvidas sobre equipamentos audiovisuais</CardDescription>
           </div>
         </div>
-        <Badge
-          variant="secondary"
-          className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium border-primary/20"
-        >
-          ✨ IA My Way Business
-        </Badge>
       </CardHeader>
 
       <CardContent className="flex-1 p-0 overflow-hidden">
@@ -220,17 +219,15 @@ export function ChatInterface() {
             size="icon"
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
-              !isLoading
-                ? 'bg-gradient-to-br from-primary to-primary/60 hover:shadow-lg hover:scale-105'
-                : 'bg-muted',
+              'bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg hover:scale-105 border-0',
             )}
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <Loader2 className="w-5 h-5 animate-spin text-white" />
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <Send className="w-5 h-5 text-primary-foreground relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
+                <Send className="w-5 h-5 text-white relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
               </>
             )}
           </Button>
