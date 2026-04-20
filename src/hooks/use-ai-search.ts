@@ -46,7 +46,7 @@ export function useUnifiedSearch() {
         // Fallback for full query match first
         let fullFuzzyQuery = supabase
           .from('products')
-          .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
+          .select('*')
           .eq('is_discontinued', false)
           .or(`name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%`)
           .limit(10)
@@ -62,10 +62,7 @@ export function useUnifiedSearch() {
         } else {
           const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
           if (terms.length > 0) {
-            let q = supabase
-              .from('products')
-              .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
-              .eq('is_discontinued', false)
+            let q = supabase.from('products').select('*').eq('is_discontinued', false)
 
             if (!settings?.ignore_stock_count) {
               q = q.gt('stock', 0)
@@ -88,7 +85,7 @@ export function useUnifiedSearch() {
       if (nab.length === 0) {
         const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
         if (terms.length > 0) {
-          let nabQ = supabase.from('nab_market').select('id, title, content')
+          let nabQ = supabase.from('nab_market').select('*')
           terms.forEach((t) => {
             nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
           })
@@ -104,7 +101,7 @@ export function useUnifiedSearch() {
         const productIds = products.map((p: any) => p.id)
         const { data: fullProducts } = await supabase
           .from('products')
-          .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
+          .select('*')
           .in('id', productIds)
         if (fullProducts) {
           products = products.map((p: any) => {
@@ -117,10 +114,7 @@ export function useUnifiedSearch() {
       // Augment nab_data with content if not present
       if (nab.length > 0 && !nab[0].content) {
         const nabIds = nab.map((n: any) => n.id)
-        const { data: fullNab } = await supabase
-          .from('nab_market')
-          .select('id, title, content')
-          .in('id', nabIds)
+        const { data: fullNab } = await supabase.from('nab_market').select('*').in('id', nabIds)
         if (fullNab) {
           nab = nab.map((n: any) => {
             const fullN = fullNab.find((fn) => fn.id === n.id)
@@ -214,7 +208,7 @@ export function useUnifiedSearch() {
           intel: currentUnifiedData.intel,
           nab_data: currentUnifiedData.nabData,
         })
-        console.log('Search Context Sent to AI:', contextString)
+        console.log('KNOWLEDGE_BASE_SENT_TO_AI:', contextString)
         const aiResponse = await generateExpertResponse(
           cleanQuery,
           { ...currentUnifiedData, stringifiedContext: contextString, history },
