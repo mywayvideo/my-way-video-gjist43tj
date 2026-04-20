@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Loader2, Search, Sparkles, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getActiveAgent } from '@/services/intelligence'
+import { getActiveAgent, getAISettings } from '@/services/intelligence'
 import { Link } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -144,12 +144,19 @@ export function AIPrompt({
   const [isLoading, setIsLoading] = useState(false)
   const [localResult, setLocalResult] = useState<any>(null)
   const [agentName, setAgentName] = useState('Agente My Way')
+  const [settings, setSettings] = useState<any>(null)
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true)
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     getActiveAgent().then((agent) => {
       if (agent) setAgentName(agent.provider_name)
+    })
+
+    getAISettings().then((s) => {
+      setSettings(s)
+      setIsSettingsLoading(false)
     })
 
     return () => {
@@ -207,6 +214,24 @@ export function AIPrompt({
   const displayProducts =
     localResult?.products || localResult?.referenced_internal_products || localResult?.stock || []
 
+  let showWhatsapp = localResult?.should_show_whatsapp_button || false
+
+  if (settings && localResult) {
+    if (settings.whatsapp_trigger_expensive_product) {
+      const threshold = settings.price_threshold_usd || 5000
+      const hasExpensive = displayProducts.some(
+        (p: any) => (p.price_usa || p.price_usd || 0) > threshold,
+      )
+      if (hasExpensive) {
+        showWhatsapp = true
+      }
+    }
+
+    if (settings.whatsapp_trigger_low_confidence && localResult.confidence_level === 'low') {
+      showWhatsapp = true
+    }
+  }
+
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
       <form onSubmit={handleFormSubmit} className="w-full max-w-3xl relative group">
@@ -215,42 +240,50 @@ export function AIPrompt({
           <div className="hidden sm:flex items-center justify-center pl-4 pr-2 text-white/50">
             <Sparkles
               size={24}
-              className={isLoading || isExternalLoading ? 'animate-pulse text-white' : ''}
+              className={
+                isLoading || isExternalLoading || isSettingsLoading
+                  ? 'animate-pulse text-white'
+                  : ''
+              }
             />
           </div>
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="O que você está procurando para sua produção?"
+            placeholder={
+              isSettingsLoading
+                ? 'Carregando inteligência...'
+                : 'O que você está procurando para sua produção?'
+            }
             className="w-full bg-transparent text-white placeholder:text-white/50 px-4 py-3 sm:py-4 resize-none outline-none min-h-[60px] sm:min-h-[64px] max-h-[150px] text-lg"
-            disabled={isLoading || isExternalLoading}
+            disabled={isLoading || isExternalLoading || isSettingsLoading}
             rows={1}
           />
           <button
             type="submit"
-            disabled={isLoading || isExternalLoading || !query.trim()}
+            disabled={isLoading || isExternalLoading || !query.trim() || isSettingsLoading}
             className={cn(
               'mt-2 sm:mt-0 sm:ml-2 w-full sm:w-auto px-8 py-4 rounded-full flex items-center justify-center gap-2 font-semibold transition-all duration-300 text-center',
               'bg-black border border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:bg-white/10 hover:border-white/40',
-              isLoading || isExternalLoading || !query.trim()
+              isLoading || isExternalLoading || !query.trim() || isSettingsLoading
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer',
             )}
           >
-            {isLoading || isExternalLoading ? (
+            {isLoading || isExternalLoading || isSettingsLoading ? (
               <Loader2 size={20} className="animate-spin" />
             ) : (
               <Search size={20} />
             )}
             <span className="sm:hidden ml-2">
-              {isLoading || isExternalLoading ? 'Buscando...' : 'Buscar'}
+              {isLoading || isExternalLoading || isSettingsLoading ? 'Buscando...' : 'Buscar'}
             </span>
           </button>
         </div>
       </form>
 
-      {(isLoading || isExternalLoading) && (
+      {(isLoading || isExternalLoading || isSettingsLoading) && query && (
         <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
           <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
@@ -296,53 +329,58 @@ export function AIPrompt({
         </div>
       )}
 
-      {(localResult?.content || localResult?.message) && !isLoading && !isExternalLoading && (
-        <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
-          <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-primary" />
+      {(localResult?.content || localResult?.message) &&
+        !isLoading &&
+        !isExternalLoading &&
+        !isSettingsLoading && (
+          <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
+            <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">
+                    {localResult?.agent_name || agentName}
+                  </h3>
+                  <p className="text-xs text-white/50">Especialista em Audiovisual</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-white">{localResult?.agent_name || agentName}</h3>
-                <p className="text-xs text-white/50">Especialista em Audiovisual</p>
-              </div>
+              <ReactMarkdown className="prose prose-invert max-w-none text-foreground">
+                {localResult.content || localResult.message}
+              </ReactMarkdown>
             </div>
-            <ReactMarkdown className="prose prose-invert max-w-none text-foreground">
-              {localResult.content || localResult.message}
-            </ReactMarkdown>
+
+            {displayProducts.length > 0 && (
+              <div className="w-full mt-6 animate-fade-in-up delay-150">
+                <div className="flex items-center gap-4 mb-6">
+                  <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary">
+                    Equipamentos Localizados
+                  </h3>
+                  <div className="h-[1px] flex-1 bg-white/10" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                  {displayProducts.map((product: any) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {showWhatsapp && (
+              <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
+                <a
+                  href="https://wa.me/13055551234"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
+                >
+                  Falar com Especialista
+                </a>
+              </div>
+            )}
           </div>
-
-          {displayProducts.length > 0 && (
-            <div className="w-full mt-6 animate-fade-in-up delay-150">
-              <div className="flex items-center gap-4 mb-6">
-                <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary">
-                  Equipamentos Localizados
-                </h3>
-                <div className="h-[1px] flex-1 bg-white/10" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {displayProducts.map((product: any) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {localResult?.should_show_whatsapp_button && (
-            <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
-              <a
-                href="https://wa.me/13055551234"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-green-900/20 transition-all flex items-center gap-2"
-              >
-                Falar com Especialista
-              </a>
-            </div>
-          )}
-        </div>
-      )}
+        )}
     </div>
   )
 }

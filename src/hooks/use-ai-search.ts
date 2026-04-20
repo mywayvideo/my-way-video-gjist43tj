@@ -5,6 +5,7 @@ import {
   getActiveAgent,
   generateExpertResponse,
   ingestManualKnowledge,
+  getAISettings,
 } from '@/services/intelligence'
 
 export function useUnifiedSearch() {
@@ -13,25 +14,40 @@ export function useUnifiedSearch() {
   const { toast } = useToast()
 
   const fetchUnifiedData = async (query: string) => {
-    // Busca as configurações globais de IA
-    const { data: settings } = await supabase
-      .from('ai_agent_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle()
+    const settings = await getAISettings()
     const cacheExpirationDays = settings?.cache_expiration_days || 30
 
-    // 1. CONST products
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*, manufacturers(name)')
-      .or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
+    let products: any[] | null = null
 
-    if (productsError) {
-      console.error(productsError)
+    // Dynamic SQL Execution Check
+    if (settings?.search_algorithm_sql) {
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('execute_search_algorithm', {
+          sql_query: settings.search_algorithm_sql,
+          search_term: query,
+        })
+        if (!rpcError && rpcData) {
+          products = rpcData
+        }
+      } catch (e) {
+        console.error('Custom SQL execution failed, falling back to standard search', e)
+      }
     }
 
-    // 2. CONST cache (com expiração baseada no painel admin)
+    if (!products) {
+      // 1. CONST products
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*, manufacturers(name)')
+        .or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
+
+      if (productsError) {
+        console.error(productsError)
+      }
+      products = productsData
+    }
+
+    // 2. CONST cache
     const expirationDate = new Date()
     expirationDate.setDate(expirationDate.getDate() - cacheExpirationDays)
 
@@ -123,12 +139,13 @@ export function useUnifiedSearch() {
         })
       } else {
         const aiResponse = await generateExpertResponse(query, unifiedData, activeAgent.id)
-        finalMessage = aiResponse.message
-        finalConfidence = aiResponse.confidence_level
+        finalMessage = aiResponse.content
+        finalConfidence = aiResponse.confidence_level || 'high'
       }
 
       const combinedResults = {
         message: finalMessage,
+        content: finalMessage,
         confidence_level: finalConfidence,
         stock: unifiedData.stock,
         products: unifiedData.products,
@@ -136,6 +153,7 @@ export function useUnifiedSearch() {
         nabData: unifiedData.nabData,
         web: unifiedData.web,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
+        should_show_whatsapp_button: false,
       }
 
       setResults(combinedResults)
