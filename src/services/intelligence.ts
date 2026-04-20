@@ -50,8 +50,17 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     )
   }
 
+  const qLower = query.toLowerCase()
+  const isEventOrNews =
+    qLower.includes('nab') ||
+    qLower.includes('lançamento') ||
+    qLower.includes('novidade') ||
+    qLower.includes('tendência')
+
   const contextProducts = unifiedData.products || unifiedData.stock || []
-  const hasNab = (unifiedData.nabData || []).length > 0
+  const contextIntel = unifiedData.intel || []
+  const contextNab = unifiedData.nabData || []
+  const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
   if (contextProducts.length === 0 && !hasNab) {
     return {
@@ -63,12 +72,18 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     }
   }
 
-  const strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
+  let strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
 REGRA 2: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
 REGRA 4: Se o produto foi citado, o card DEVE ser exibido abaixo.
 IDIOMA: 100% Português (PT-BR).
 DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível para envio imediato de Miami.`
+
+  if (isEventOrNews) {
+    strictRules += `\nREGRA 5: A intenção detectada é EVENTO/NOTÍCIAS. Resuma as novidades e tendências (nab_data / intel) PRIMEIRO, e DEPOIS liste os produtos relacionados do catálogo (stock).`
+  } else {
+    strictRules += `\nREGRA 5: A intenção detectada é PRODUTO. Priorize os resultados do catálogo (stock) e foque nas especificações e disponibilidade.`
+  }
 
   const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nDADOS REAIS DO CATÁLOGO: ${JSON.stringify(contextProducts)}`
 
@@ -76,7 +91,7 @@ DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível p
     unifiedData.stringifiedContext ||
     JSON.stringify({
       products: contextProducts,
-      intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
+      intelligence: [...contextIntel, ...contextNab],
     })
 
   let data: any = null
@@ -85,10 +100,10 @@ DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível p
       body: {
         query: query,
         products: contextProducts,
-        intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
+        intelligence: [...contextIntel, ...contextNab],
         context: currentContext,
         agentId: agentId,
-        isNABQuery: hasNab,
+        isNABQuery: hasNab || isEventOrNews,
         assembledPrompt: assembledPrompt,
         price_threshold_usd: settings.price_threshold_usd,
         whatsapp_triggers: settings.whatsapp_trigger_keywords,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
@@ -8,7 +8,14 @@ export function useUnifiedSearch() {
   const [results, setResults] = useState<any>(null)
   const { toast } = useToast()
 
+  const accumulatedContext = useRef<{ products: any[]; intel: any[]; nabData: any[] }>({
+    products: [],
+    intel: [],
+    nabData: [],
+  })
+
   const fetchUnifiedData = async (query: string) => {
+    const cleanQuery = query.trim()
     const settings = await getAISettings()
 
     let products: any[] = []
@@ -17,11 +24,11 @@ export function useUnifiedSearch() {
 
     try {
       const sqlString = settings?.search_algorithm_sql || ''
-      const executedSql = sqlString.replace(/\$1/g, query)
+      const executedSql = sqlString.replace(/\$1/g, cleanQuery)
       console.log('SQL BEING EXECUTED:', executedSql)
 
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
-        search_term: query,
+        search_term: cleanQuery,
       })
 
       if (searchError) {
@@ -31,6 +38,36 @@ export function useUnifiedSearch() {
         products = responseObj.stock || []
         cache = responseObj.intel || []
         nab = responseObj.nab_data || []
+      }
+
+      // Augment products with full_specs if not present
+      if (products.length > 0 && !products[0].full_specs && !products[0].technical_info) {
+        const productIds = products.map((p: any) => p.id)
+        const { data: fullProducts } = await supabase
+          .from('products')
+          .select('id, technical_info, description, price_usd, name, image_url, stock')
+          .in('id', productIds)
+        if (fullProducts) {
+          products = products.map((p: any) => {
+            const fullP = fullProducts.find((fp) => fp.id === p.id)
+            return fullP ? { ...p, ...fullP, full_specs: fullP.technical_info } : p
+          })
+        }
+      }
+
+      // Augment nab_data with content if not present
+      if (nab.length > 0 && !nab[0].content) {
+        const nabIds = nab.map((n: any) => n.id)
+        const { data: fullNab } = await supabase
+          .from('nab_market')
+          .select('id, title, content')
+          .in('id', nabIds)
+        if (fullNab) {
+          nab = nab.map((n: any) => {
+            const fullN = fullNab.find((fn) => fn.id === n.id)
+            return fullN ? { ...n, ...fullN } : n
+          })
+        }
       }
     } catch (e) {
       console.error('RPC unified_search failed', e)
@@ -54,19 +91,49 @@ export function useUnifiedSearch() {
     }
   }
 
-  const search = async (query: string) => {
-    if (!query) return
+  const search = async (rawQuery: string) => {
+    const cleanQuery = rawQuery.trim()
+    if (!cleanQuery) return
 
     setIsLoading(true)
     setResults(null)
 
     try {
       const activeAgent = await getActiveAgent()
-      const unifiedData = await fetchUnifiedData(query)
+      const unifiedData = await fetchUnifiedData(cleanQuery)
+
+      // Accumulate context
+      const newProducts = unifiedData.stock || []
+      const newIntel = unifiedData.intel || []
+      const newNab = unifiedData.nabData || []
+
+      const mergedProducts = [...accumulatedContext.current.products, ...newProducts].filter(
+        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+      )
+      const mergedIntel = [...accumulatedContext.current.intel, ...newIntel].filter(
+        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+      )
+      const mergedNab = [...accumulatedContext.current.nabData, ...newNab].filter(
+        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+      )
+
+      accumulatedContext.current = {
+        products: mergedProducts,
+        intel: mergedIntel,
+        nabData: mergedNab,
+      }
+
+      const accumulatedUnifiedData = {
+        ...unifiedData,
+        stock: mergedProducts,
+        products: mergedProducts,
+        intel: mergedIntel,
+        nabData: mergedNab,
+      }
 
       let finalMessage = ''
       let finalConfidence = 'high'
-      let finalProducts = unifiedData.products
+      let finalProducts = accumulatedUnifiedData.products
       let shouldShowWhatsapp = false
 
       if (!activeAgent) {
@@ -78,14 +145,14 @@ export function useUnifiedSearch() {
         })
       } else {
         const contextString = JSON.stringify({
-          stock: unifiedData.stock,
-          intel: unifiedData.intel,
-          nab_data: unifiedData.nabData,
+          stock: accumulatedUnifiedData.stock,
+          intel: accumulatedUnifiedData.intel,
+          nab_data: accumulatedUnifiedData.nabData,
         })
         console.log('Search Context Sent to AI:', contextString)
         const aiResponse = await generateExpertResponse(
-          query,
-          { ...unifiedData, stringifiedContext: contextString },
+          cleanQuery,
+          { ...accumulatedUnifiedData, stringifiedContext: contextString },
           activeAgent.id,
         )
         finalMessage = aiResponse.content
@@ -100,11 +167,11 @@ export function useUnifiedSearch() {
         message: finalMessage,
         content: finalMessage,
         confidence_level: finalConfidence,
-        stock: unifiedData.stock,
+        stock: accumulatedUnifiedData.stock,
         products: finalProducts,
-        intel: unifiedData.intel,
-        nabData: unifiedData.nabData,
-        web: unifiedData.web,
+        intel: accumulatedUnifiedData.intel,
+        nabData: accumulatedUnifiedData.nabData,
+        web: accumulatedUnifiedData.web,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
       }

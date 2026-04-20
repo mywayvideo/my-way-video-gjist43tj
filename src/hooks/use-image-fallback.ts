@@ -1,21 +1,37 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 
-export function resolveImageUrl(url?: string | null, bucket: string = 'products') {
+export function resolveImageUrl(url: string | null | undefined): string | null {
   if (!url) return null
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url
   }
-  const { data } = supabase.storage.from(bucket).getPublicUrl(url)
-  return data.publicUrl
+
+  if (url.startsWith('/')) {
+    return url
+  }
+
+  // Assume it's a supabase storage path
+  const { data } = supabase.storage.from('products').getPublicUrl(url)
+  return data?.publicUrl || null
 }
 
-export function useImageFallback(initialUrl?: string | null, bucket: string = 'products') {
-  const [imgSrc, setImgSrc] = useState<string | null>(null)
+export function useImageFallback(initialUrl: string | null | undefined, fallbackUrl: string = '') {
+  const [url, setUrl] = useState<string>(resolveImageUrl(initialUrl) || fallbackUrl)
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
-    setImgSrc(resolveImageUrl(initialUrl, bucket))
-  }, [initialUrl, bucket])
+    setUrl(resolveImageUrl(initialUrl) || fallbackUrl)
+    setHasError(false)
+  }, [initialUrl, fallbackUrl])
 
-  return imgSrc
+  const handleError = () => {
+    if (!hasError) {
+      setUrl(fallbackUrl)
+      setHasError(true)
+    }
+  }
+
+  return { url, handleError, hasError }
 }

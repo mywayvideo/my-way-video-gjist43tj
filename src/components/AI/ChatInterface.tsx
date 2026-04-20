@@ -70,7 +70,7 @@ export function ChatInterface() {
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
               <Badge
                 variant="outline"
-                className="font-bold text-xs uppercase tracking-wider text-primary border-primary/20"
+                className="font-bold text-xs tracking-wider text-primary border-primary/20"
               >
                 IA My Way Business
               </Badge>
@@ -229,19 +229,11 @@ export function ChatInterface() {
             )}
           >
             {isLoading ? (
-              <Loader2
-                className="w-5 h-5 animate-spin"
-                color="#ffffff"
-                style={{ color: '#ffffff' }}
-              />
+              <Loader2 className="w-5 h-5 animate-spin text-white" />
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <Search
-                  className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"
-                  color="#ffffff"
-                  style={{ color: '#ffffff' }}
-                />
+                <Search className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform text-white" />
               </>
             )}
           </Button>
