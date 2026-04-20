@@ -8,85 +8,28 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { useAISettings, AISettings } from '@/hooks/use-ai-settings'
 
 export default function AdminAISettings() {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
+  const { settings, loading, fetchSettings } = useAISettings()
   const [saving, setSaving] = useState(false)
-
-  const [settings, setSettings] = useState({
-    cache_expiration_days: 30,
-    price_threshold_usd: 5000,
-    whatsapp_trigger_low_confidence: true,
-    whatsapp_trigger_purchase_keywords: true,
-    whatsapp_trigger_project_keywords: true,
-    whatsapp_trigger_expensive_product: true,
-    search_algorithm_sql: '',
-    system_prompt_template: '',
-    result_component_config: '{}',
-  })
-
-  const [agentId, setAgentId] = useState<string | null>(null)
-  const [settingsId, setSettingsId] = useState<string | null>(null)
+  const [localSettings, setLocalSettings] = useState<AISettings | null>(null)
 
   useEffect(() => {
-    fetchSettings()
-  }, [])
-
-  const fetchSettings = async () => {
-    try {
-      setLoading(true)
-
-      const { data: agentData, error: agentError } = await supabase
-        .from('ai_agent_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
-
-      const { data: generalData, error: generalError } = await supabase
-        .from('ai_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
-
-      if (agentData) setAgentId(agentData.id)
-      if (generalData) setSettingsId(generalData.id)
-
-      setSettings({
-        cache_expiration_days:
-          agentData?.cache_expiration_days ?? generalData?.cache_expiration_days ?? 30,
-        price_threshold_usd:
-          agentData?.price_threshold_usd ?? generalData?.price_threshold_usd ?? 5000,
-        whatsapp_trigger_low_confidence: agentData?.whatsapp_trigger_low_confidence ?? true,
-        whatsapp_trigger_purchase_keywords: agentData?.whatsapp_trigger_purchase_keywords ?? true,
-        whatsapp_trigger_project_keywords: agentData?.whatsapp_trigger_project_keywords ?? true,
-        whatsapp_trigger_expensive_product: agentData?.whatsapp_trigger_expensive_product ?? true,
-        search_algorithm_sql: generalData?.search_algorithm_sql || '',
-        system_prompt_template:
-          generalData?.system_prompt_template || agentData?.system_prompt || '',
-        result_component_config: generalData?.result_component_config
-          ? JSON.stringify(generalData.result_component_config, null, 2)
-          : '{}',
-      })
-    } catch (error) {
-      console.error('Error fetching settings:', error)
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar as configurações.',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
+    if (settings) {
+      setLocalSettings(settings)
     }
-  }
+  }, [settings])
 
   const handleSave = async () => {
+    if (!localSettings) return
     try {
       setSaving(true)
 
       let parsedConfig = {}
       try {
-        parsedConfig = JSON.parse(settings.result_component_config)
+        parsedConfig = JSON.parse(localSettings.result_component_config)
       } catch (e) {
         toast({
           title: 'Erro de JSON',
@@ -98,38 +41,49 @@ export default function AdminAISettings() {
       }
 
       const agentPayload = {
-        cache_expiration_days: settings.cache_expiration_days,
-        price_threshold_usd: settings.price_threshold_usd,
-        whatsapp_trigger_low_confidence: settings.whatsapp_trigger_low_confidence,
-        whatsapp_trigger_purchase_keywords: settings.whatsapp_trigger_purchase_keywords,
-        whatsapp_trigger_project_keywords: settings.whatsapp_trigger_project_keywords,
-        whatsapp_trigger_expensive_product: settings.whatsapp_trigger_expensive_product,
-        system_prompt: settings.system_prompt_template,
+        cache_expiration_days: localSettings.cache_expiration_days,
+        price_threshold_usd: localSettings.price_threshold_usd,
+        whatsapp_trigger_low_confidence: localSettings.whatsapp_trigger_low_confidence,
+        whatsapp_trigger_purchase_keywords: localSettings.whatsapp_trigger_purchase_keywords,
+        whatsapp_trigger_project_keywords: localSettings.whatsapp_trigger_project_keywords,
+        whatsapp_trigger_expensive_product: localSettings.whatsapp_trigger_expensive_product,
       }
 
-      if (agentId) {
-        await supabase.from('ai_agent_settings').update(agentPayload).eq('id', agentId)
+      const generalPayload = {
+        cache_expiration_days: localSettings.cache_expiration_days,
+        price_threshold_usd: localSettings.price_threshold_usd,
+        search_algorithm_sql: localSettings.search_algorithm_sql,
+        result_component_config: parsedConfig,
+      }
+
+      // Fetch IDs
+      const { data: agentData } = await supabase
+        .from('ai_agent_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
+      if (agentData) {
+        await supabase.from('ai_agent_settings').update(agentPayload).eq('id', agentData.id)
       } else {
         await supabase.from('ai_agent_settings').insert([agentPayload])
       }
 
-      const generalPayload = {
-        cache_expiration_days: settings.cache_expiration_days,
-        price_threshold_usd: settings.price_threshold_usd,
-        search_algorithm_sql: settings.search_algorithm_sql,
-        system_prompt_template: settings.system_prompt_template,
-        result_component_config: parsedConfig,
-      }
-
-      if (settingsId) {
-        await supabase.from('ai_settings').update(generalPayload).eq('id', settingsId)
+      const { data: generalData } = await supabase
+        .from('ai_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
+      if (generalData) {
+        await supabase.from('ai_settings').update(generalPayload).eq('id', generalData.id)
       } else {
         await supabase.from('ai_settings').insert([generalPayload])
       }
 
+      await fetchSettings()
+
       toast({
         title: 'Sucesso',
-        description: 'Configurações de lógica e gatilhos salvas com sucesso!',
+        description: 'Configurações globais de IA salvas com sucesso!',
       })
     } catch (error) {
       console.error('Error saving settings:', error)
@@ -143,7 +97,7 @@ export default function AdminAISettings() {
     }
   }
 
-  if (loading) {
+  if (loading || !localSettings) {
     return <div className="p-8 text-center text-muted-foreground">Carregando configurações...</div>
   }
 
@@ -167,9 +121,12 @@ export default function AdminAISettings() {
             <Input
               id="cache_days"
               type="number"
-              value={settings.cache_expiration_days}
+              value={localSettings.cache_expiration_days}
               onChange={(e) =>
-                setSettings({ ...settings, cache_expiration_days: parseInt(e.target.value) || 0 })
+                setLocalSettings({
+                  ...localSettings,
+                  cache_expiration_days: parseInt(e.target.value) || 0,
+                })
               }
             />
           </div>
@@ -187,9 +144,12 @@ export default function AdminAISettings() {
             <Input
               id="price_threshold"
               type="number"
-              value={settings.price_threshold_usd}
+              value={localSettings.price_threshold_usd}
               onChange={(e) =>
-                setSettings({ ...settings, price_threshold_usd: parseFloat(e.target.value) || 0 })
+                setLocalSettings({
+                  ...localSettings,
+                  price_threshold_usd: parseFloat(e.target.value) || 0,
+                })
               }
             />
           </div>
@@ -212,9 +172,9 @@ export default function AdminAISettings() {
               </p>
             </div>
             <Switch
-              checked={settings.whatsapp_trigger_low_confidence}
+              checked={localSettings.whatsapp_trigger_low_confidence}
               onCheckedChange={(checked) =>
-                setSettings({ ...settings, whatsapp_trigger_low_confidence: checked })
+                setLocalSettings({ ...localSettings, whatsapp_trigger_low_confidence: checked })
               }
             />
           </div>
@@ -227,9 +187,9 @@ export default function AdminAISettings() {
               </p>
             </div>
             <Switch
-              checked={settings.whatsapp_trigger_purchase_keywords}
+              checked={localSettings.whatsapp_trigger_purchase_keywords}
               onCheckedChange={(checked) =>
-                setSettings({ ...settings, whatsapp_trigger_purchase_keywords: checked })
+                setLocalSettings({ ...localSettings, whatsapp_trigger_purchase_keywords: checked })
               }
             />
           </div>
@@ -242,9 +202,9 @@ export default function AdminAISettings() {
               </p>
             </div>
             <Switch
-              checked={settings.whatsapp_trigger_project_keywords}
+              checked={localSettings.whatsapp_trigger_project_keywords}
               onCheckedChange={(checked) =>
-                setSettings({ ...settings, whatsapp_trigger_project_keywords: checked })
+                setLocalSettings({ ...localSettings, whatsapp_trigger_project_keywords: checked })
               }
             />
           </div>
@@ -257,9 +217,9 @@ export default function AdminAISettings() {
               </p>
             </div>
             <Switch
-              checked={settings.whatsapp_trigger_expensive_product}
+              checked={localSettings.whatsapp_trigger_expensive_product}
               onCheckedChange={(checked) =>
-                setSettings({ ...settings, whatsapp_trigger_expensive_product: checked })
+                setLocalSettings({ ...localSettings, whatsapp_trigger_expensive_product: checked })
               }
             />
           </div>
@@ -281,30 +241,10 @@ export default function AdminAISettings() {
               id="search_sql"
               className="font-mono text-sm min-h-[150px]"
               placeholder="SELECT * FROM products..."
-              value={settings.search_algorithm_sql}
-              onChange={(e) => setSettings({ ...settings, search_algorithm_sql: e.target.value })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Seção E - Template do Prompt do Especialista</CardTitle>
-          <CardDescription>
-            Defina a identidade, tom de voz e regras de soberania de dados da IA.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="system_prompt">Template do Prompt do Especialista</Label>
-            <Textarea
-              id="system_prompt"
-              className="min-h-[300px]"
-              rows={15}
-              placeholder="Você é um Consultor Sênior..."
-              value={settings.system_prompt_template}
-              onChange={(e) => setSettings({ ...settings, system_prompt_template: e.target.value })}
+              value={localSettings.search_algorithm_sql}
+              onChange={(e) =>
+                setLocalSettings({ ...localSettings, search_algorithm_sql: e.target.value })
+              }
             />
           </div>
         </CardContent>
@@ -323,9 +263,9 @@ export default function AdminAISettings() {
             <Textarea
               id="result_config"
               className="font-mono text-sm min-h-[100px]"
-              value={settings.result_component_config}
+              value={localSettings.result_component_config}
               onChange={(e) =>
-                setSettings({ ...settings, result_component_config: e.target.value })
+                setLocalSettings({ ...localSettings, result_component_config: e.target.value })
               }
             />
           </div>

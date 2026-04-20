@@ -92,87 +92,10 @@ const providerSchema = z
 
 type ProviderFormValues = z.infer<typeof providerSchema>
 
-const InlineSetting = ({ label, value, type, dbField, onSave }: any) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [val, setVal] = useState<any>(value)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    setVal(value)
-  }, [value])
-
-  const handleSave = async () => {
-    setLoading(true)
-    await onSave(dbField, val)
-    setLoading(false)
-    setIsEditing(false)
-  }
-
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0 hover:bg-muted/10 px-2 rounded-md transition-colors">
-      <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      {isEditing ? (
-        <div className="flex items-center gap-2">
-          {type === 'boolean' ? (
-            <Switch checked={val} onCheckedChange={setVal} />
-          ) : (
-            <Input
-              type="number"
-              value={val}
-              onChange={(e) => setVal(Number(e.target.value))}
-              className="w-24 h-8 text-right font-mono"
-            />
-          )}
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleSave}
-            disabled={loading}
-            className="h-8 w-8 text-green-500 hover:bg-green-500/10"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => {
-              setVal(value)
-              setIsEditing(false)
-            }}
-            disabled={loading}
-            className="h-8 w-8 text-red-500 hover:bg-red-500/10"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3">
-          <span
-            className={cn(
-              'text-sm font-mono',
-              type === 'boolean' && (val ? 'text-green-500' : 'text-muted-foreground'),
-            )}
-          >
-            {type === 'boolean' ? (val ? 'Ativado' : 'Desativado') : val}
-          </span>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setIsEditing(true)}
-            className="h-8 w-8 opacity-50 hover:opacity-100"
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function AdminAIProviders() {
   const { currentUser: user, loading: authLoading } = useAuthContext()
   const [providers, setProviders] = useState<any[]>([])
-  const [settings, setSettings] = useState<any>(null)
+
   const [loading, setLoading] = useState(true)
   const [testLoading, setTestLoading] = useState(false)
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
@@ -210,12 +133,6 @@ export default function AdminAIProviders() {
       .order('priority', { ascending: true })
     if (provData) setProviders(provData)
 
-    const { data: setData } = await supabase
-      .from('ai_agent_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle()
-    if (setData) setSettings(setData)
     setLoading(false)
   }
 
@@ -266,19 +183,6 @@ export default function AdminAIProviders() {
     else {
       setProviders((p) => p.map((x) => (x.id === id ? { ...x, is_active: !current } : x)))
       toast({ title: current ? 'Provedor desativado' : 'Provedor ativado' })
-    }
-  }
-
-  const handleSaveSettings = async (field: string, value: any) => {
-    if (!settings?.id) return
-    const { error } = await supabase
-      .from('ai_agent_settings')
-      .update({ [field]: value })
-      .eq('id', settings.id)
-    if (error) toast({ title: 'Erro ao salvar configuração', variant: 'destructive' })
-    else {
-      setSettings((prev: any) => ({ ...prev, [field]: value }))
-      toast({ title: 'Configuração salva com sucesso!' })
     }
   }
 
@@ -587,68 +491,6 @@ export default function AdminAIProviders() {
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader className="bg-muted/10 border-b border-border/50 pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-primary" /> Configurações Globais da IA
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {loading || !settings ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <InlineSetting
-                    label="Threshold Produto Caro (USD)"
-                    value={settings.price_threshold_usd}
-                    type="number"
-                    dbField="price_threshold_usd"
-                    onSave={handleSaveSettings}
-                  />
-                  <InlineSetting
-                    label="Dias de Expiração do Cache"
-                    value={settings.cache_expiration_days}
-                    type="number"
-                    dbField="cache_expiration_days"
-                    onSave={handleSaveSettings}
-                  />
-                  <InlineSetting
-                    label="Gatilho WhatsApp: Baixa Confiança"
-                    value={settings.whatsapp_trigger_low_confidence}
-                    type="boolean"
-                    dbField="whatsapp_trigger_low_confidence"
-                    onSave={handleSaveSettings}
-                  />
-                  <InlineSetting
-                    label="Gatilho WhatsApp: Palavras de Compra"
-                    value={settings.whatsapp_trigger_purchase_keywords}
-                    type="boolean"
-                    dbField="whatsapp_trigger_purchase_keywords"
-                    onSave={handleSaveSettings}
-                  />
-                  <InlineSetting
-                    label="Gatilho WhatsApp: Palavras de Projeto"
-                    value={settings.whatsapp_trigger_project_keywords}
-                    type="boolean"
-                    dbField="whatsapp_trigger_project_keywords"
-                    onSave={handleSaveSettings}
-                  />
-                  <InlineSetting
-                    label="Gatilho WhatsApp: Produto Acima do Threshold"
-                    value={settings.whatsapp_trigger_expensive_product}
-                    type="boolean"
-                    dbField="whatsapp_trigger_expensive_product"
-                    onSave={handleSaveSettings}
-                  />
                 </div>
               )}
             </CardContent>

@@ -25,29 +25,50 @@ export default function AdminAIPage() {
 
   const fetchCompanyInfo = async () => {
     const { data: cData } = await supabase.from('company_info').select('*')
+    const { data: aiSettings } = await supabase
+      .from('ai_settings')
+      .select('id, system_prompt_template')
+      .limit(1)
+      .maybeSingle()
+
     if (cData) {
-      setCompanyInfo(
-        cData.find((c: any) => c.type === 'ai_knowledge') || { type: 'ai_knowledge', content: '' },
-      )
       setFooterInfo(
         cData.find((c: any) => c.type === 'footer_about') || { type: 'footer_about', content: '' },
       )
     }
+
+    setCompanyInfo({
+      id: aiSettings?.id || null,
+      type: 'ai_knowledge',
+      content: aiSettings?.system_prompt_template || '',
+    })
   }
 
   const handleSaveCompanyInfo = async () => {
     setSavingInfo(true)
-    const saveObj = async (obj: any) => {
-      if (obj.id)
-        await supabase
-          .from('company_info')
-          .update({ content: obj.content, updated_at: new Date().toISOString() })
-          .eq('id', obj.id)
-      else if (obj.content)
-        await supabase.from('company_info').insert([{ type: obj.type, content: obj.content }])
+
+    // Save system prompt template to ai_settings
+    if (companyInfo.id) {
+      await supabase
+        .from('ai_settings')
+        .update({ system_prompt_template: companyInfo.content })
+        .eq('id', companyInfo.id)
+    } else {
+      await supabase.from('ai_settings').insert([{ system_prompt_template: companyInfo.content }])
     }
-    await saveObj(companyInfo)
-    await saveObj(footerInfo)
+
+    // Save footer info to company_info
+    if (footerInfo.id) {
+      await supabase
+        .from('company_info')
+        .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
+        .eq('id', footerInfo.id)
+    } else if (footerInfo.content) {
+      await supabase
+        .from('company_info')
+        .insert([{ type: footerInfo.type, content: footerInfo.content }])
+    }
+
     setSavingInfo(false)
     toast({ title: 'Salvo', description: 'Contexto institucional atualizado com sucesso.' })
     fetchCompanyInfo()
@@ -105,12 +126,13 @@ export default function AdminAIPage() {
           <CardHeader>
             <CardTitle>Treinamento da IA & Institucional</CardTitle>
             <CardDescription>
-              Defina o contexto base que o agente de IA utilizará e as informações do rodapé.
+              Defina o contexto base (System Prompt Template) que o agente de IA utilizará e as
+              informações do rodapé.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label className="text-base text-foreground">Contexto Base (Agente de IA)</Label>
+              <Label className="text-base text-foreground">System Prompt Template</Label>
               <Textarea
                 className="min-h-[150px] bg-background/50 font-mono text-sm focus-visible:ring-primary/50"
                 value={companyInfo?.content || ''}

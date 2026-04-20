@@ -32,8 +32,8 @@ export default function AdminAISystemPrompt() {
     try {
       setLoading(true)
       const { data, error } = await supabase
-        .from('ai_agent_settings')
-        .select('id, system_prompt')
+        .from('ai_settings')
+        .select('id, system_prompt_template')
         .limit(1)
         .maybeSingle()
 
@@ -41,8 +41,8 @@ export default function AdminAISystemPrompt() {
 
       if (data) {
         setSettingsId(data.id)
-        setInitialPrompt(data.system_prompt || '')
-        setPrompt(data.system_prompt || '')
+        setInitialPrompt(data.system_prompt_template || '')
+        setPrompt(data.system_prompt_template || '')
       }
     } catch (error) {
       console.error(error)
@@ -72,8 +72,8 @@ export default function AdminAISystemPrompt() {
     setSaving(true)
     try {
       const { error } = await supabase
-        .from('ai_agent_settings')
-        .update({ system_prompt: prompt, updated_at: new Date().toISOString() })
+        .from('ai_settings')
+        .update({ system_prompt_template: prompt, updated_at: new Date().toISOString() })
         .eq('id', settingsId)
 
       if (error) throw error

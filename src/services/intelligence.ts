@@ -68,8 +68,10 @@ REGRAS OBRIGATÓRIAS:
 - Mantenha os parágrafos curtos (máximo de 2 frases por parágrafo).
 - SEMPRE inclua o aviso: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."
 - Regras de Logística: ${logisticsRulesPrompt}
-${hasIntel ? '- É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Baseie-se nos dados fornecidos na inteligência de mercado ou NAB 2026.' : ''}
-${hasNab ? '- PRIORIZE os dados da NAB 2026 na sua resposta e inicie com: "Confirmamos diretamente da NAB 2026: "' : ''}
+${hasIntel || hasNab ? '- É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Baseie-se nos dados fornecidos na inteligência de mercado ou NAB 2026.' : ''}
+
+Contexto Institucional:
+${systemPromptTemplate}
 
 Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
 `

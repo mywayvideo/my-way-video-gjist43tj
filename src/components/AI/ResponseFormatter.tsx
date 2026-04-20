@@ -1,5 +1,10 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { MessageCircle } from 'lucide-react'
+import { useAISettings } from '@/hooks/use-ai-settings'
+import { supabase } from '@/lib/supabase/client'
 // @ts-expect-error - Assuming react-markdown is installed or provided externally for professional rendering
 import ReactMarkdown from 'react-markdown'
 
@@ -14,9 +19,76 @@ interface Product {
 interface ResponseFormatterProps {
   content: string
   products?: Product[]
+  confidenceLevel?: string
 }
 
-export function ResponseFormatter({ content, products = [] }: ResponseFormatterProps) {
+export function ResponseFormatter({
+  content,
+  products = [],
+  confidenceLevel = 'high',
+}: ResponseFormatterProps) {
+  const { settings } = useAISettings()
+  const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
+
+  useEffect(() => {
+    const fetchCompanyProfile = async () => {
+      // Fetch whatsapp_number from app_settings
+      const { data } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'whatsapp_number')
+        .maybeSingle()
+      if (data?.setting_value) {
+        setWhatsappNumber(data.setting_value)
+      } else {
+        // Fallback to check company_info if it exists
+        const { data: cData } = await supabase
+          .from('company_info')
+          .select('content')
+          .eq('type', 'whatsapp_number')
+          .maybeSingle()
+        if (cData?.content) setWhatsappNumber(cData.content)
+      }
+    }
+    fetchCompanyProfile()
+  }, [])
+
+  let showWhatsapp = false
+
+  if (settings) {
+    if (settings.whatsapp_trigger_low_confidence && confidenceLevel === 'low') {
+      showWhatsapp = true
+    }
+
+    const contentLower = (content || '').toLowerCase()
+
+    if (!showWhatsapp && settings.whatsapp_trigger_purchase_keywords) {
+      const purchaseKeywords = [
+        'comprar',
+        'orçamento',
+        'quanto custa',
+        'preço',
+        'disponível',
+        'cotação',
+        'desconto',
+      ]
+      if (purchaseKeywords.some((kw) => contentLower.includes(kw))) {
+        showWhatsapp = true
+      }
+    }
+
+    if (!showWhatsapp && settings.whatsapp_trigger_project_keywords) {
+      const projectKeywords = ['projeto', 'integração', 'estúdio', 'instalação', 'solução completa']
+      if (projectKeywords.some((kw) => contentLower.includes(kw))) {
+        showWhatsapp = true
+      }
+    }
+  }
+
+  const cleanNumber = whatsappNumber.replace(/\D/g, '')
+  const defaultNumber = cleanNumber || '1234567890'
+  const whatsappLink = `https://wa.me/${defaultNumber}?text=${encodeURIComponent('Olá! Gostaria de falar com um especialista sobre equipamentos audiovisuais.')}`
+
   return (
     <div className="flex flex-col space-y-8 w-full animate-fade-in">
       <div className="prose prose-invert max-w-none text-foreground text-base leading-relaxed bg-transparent">
@@ -65,6 +137,17 @@ export function ResponseFormatter({ content, products = [] }: ResponseFormatterP
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {showWhatsapp && (
+        <div className="mt-8 flex justify-center">
+          <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white gap-2" asChild>
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="w-5 h-5" />
+              Falar com Especialista
+            </a>
+          </Button>
         </div>
       )}
     </div>
