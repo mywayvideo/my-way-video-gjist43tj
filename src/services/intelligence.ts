@@ -10,7 +10,9 @@ export async function getAISettings() {
       if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
         return parsed.data
       }
-    } catch (e) {}
+    } catch (e) {
+      // Ignore cache parse error and fetch fresh settings
+    }
   }
 
   const { data: settings } = await supabase.from('ai_settings').select('*').limit(1).maybeSingle()
