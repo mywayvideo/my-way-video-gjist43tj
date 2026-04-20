@@ -69,15 +69,14 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   let strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
 REGRA 2: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
-REGRA 4: Se a busca retornar produtos diferentes da mensagem anterior, reconheça a mudança de assunto (ex: "Entendido, sobre o [Novo Produto]...").
-REGRA 5: Priorize os NOVOS produtos encontrados na busca atual em relação a qualquer contexto anterior.
-IDIOMA: 100% Português (PT-BR).
-DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível para envio imediato de Miami.`
+REGRA 4: Se a busca retornar produtos diferentes da mensagem anterior, reconheça a mudança de assunto.
+REGRA 5: Priorize os NOVOS produtos encontrados na busca atual.
+IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {
-    strictRules += `\nREGRA 6: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Reporte as notícias PRIMEIRO. Se a busca retornar notícias da NAB mas não houver produtos no estoque, NÃO diga "não encontrei no catálogo". Apenas reporte a notícia.`
+    strictRules += `\nREGRA 6: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Priorize os dados da NAB (nab_json) sobre o estoque.`
   } else {
-    strictRules += `\nREGRA 6: A intenção detectada é PRODUTO. Priorize os resultados de RESULTADOS DO ESTOQUE e foque nas especificações e disponibilidade.`
+    strictRules += `\nREGRA 6: A intenção detectada é PRODUTO. Priorize os resultados de RESULTADOS DO ESTOQUE.`
   }
 
   const nabJson = [...contextIntel, ...contextNab]

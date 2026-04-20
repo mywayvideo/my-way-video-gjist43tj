@@ -7,8 +7,7 @@ export function resolveImageUrl(url: string | null | undefined): string | null {
   const trimmedUrl = url.trim()
 
   if (
-    trimmedUrl.toLowerCase().startsWith('http://') ||
-    trimmedUrl.toLowerCase().startsWith('https://') ||
+    trimmedUrl.toLowerCase().startsWith('http') ||
     trimmedUrl.toLowerCase().startsWith('data:') ||
     trimmedUrl.toLowerCase().includes('bhphotovideo.com') ||
     trimmedUrl.toLowerCase().includes('static.bhphoto.com')

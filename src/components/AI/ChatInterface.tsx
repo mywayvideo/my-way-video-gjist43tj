@@ -305,9 +305,8 @@ export function ChatInterface() {
             type="submit"
             disabled={!query.trim() || isLoading}
             size="icon"
-            style={{ backgroundImage: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
             className={cn(
-              'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
+              'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group !bg-gradient-to-r !from-[#3b82f6] !to-[#8b5cf6] !bg-[linear-gradient(to_right,#3b82f6,#8b5cf6)]',
               'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
               isLoading && 'animate-pulse',
             )}
