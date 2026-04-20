@@ -77,8 +77,9 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   let strictRules = `REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final. Se o produto estiver no contexto com 0 estoque (como a Pyxis 6K), apresente-o como "Disponível para encomenda".
-REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo. É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count (se os produtos foram fornecidos no contexto, apresente-os).
+REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo (não localizei). É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count (se os produtos foram fornecidos no contexto, apresente-os).
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual. Sempre que citar um produto, use o nome exato retornado pelo banco para garantir a exibição do card.
+REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual são os RESULTADOS DO ESTOQUE fornecidos.
 IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {

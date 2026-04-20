@@ -42,31 +42,32 @@ export function useUnifiedSearch() {
 
       // Fuzzy Search Fallback for products
       if (products.length === 0) {
-        const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
-        if (terms.length > 0) {
-          let q = supabase
-            .from('products')
-            .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
-            .eq('is_discontinued', false)
+        // Fallback for full query match first
+        const { data: fullFuzzy } = await supabase
+          .from('products')
+          .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
+          .eq('is_discontinued', false)
+          .or(`name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%`)
+          .limit(10)
 
-          // Use Fuzzy Search (ILIKE) with wildcards '%term%' for both product names and models.
-          terms.forEach((t) => {
-            q = q.or(`name.ilike.%${t}%,sku.ilike.%${t}%`)
-          })
-
-          const { data: fuzzyProducts } = await q.limit(10)
-          if (fuzzyProducts && fuzzyProducts.length > 0) {
-            products = fuzzyProducts
-          } else {
-            // Fallback for full query match
-            const { data: fullFuzzy } = await supabase
+        if (fullFuzzy && fullFuzzy.length > 0) {
+          products = fullFuzzy
+        } else {
+          const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+          if (terms.length > 0) {
+            let q = supabase
               .from('products')
               .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
               .eq('is_discontinued', false)
-              .or(`name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%`)
-              .limit(10)
-            if (fullFuzzy && fullFuzzy.length > 0) {
-              products = fullFuzzy
+
+            // Use Fuzzy Search (ILIKE) with wildcards '%term%' for both product names and models.
+            terms.forEach((t) => {
+              q = q.or(`name.ilike.%${t}%,sku.ilike.%${t}%`)
+            })
+
+            const { data: fuzzyProducts } = await q.limit(10)
+            if (fuzzyProducts && fuzzyProducts.length > 0) {
+              products = fuzzyProducts
             }
           }
         }
@@ -137,7 +138,7 @@ export function useUnifiedSearch() {
     console.log('CURRENT_TURN_SEARCH:', cleanQuery)
     console.log('NEW SEARCH FOR:', cleanQuery)
     setIsLoading(true)
-    setResults(null)
+    setResults(null) // Explicitly clear the previous results state to avoid data overlap
     accumulatedContext.current = { products: [], intel: [], nabData: [] }
 
     try {

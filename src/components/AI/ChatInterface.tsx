@@ -269,7 +269,7 @@ export function ChatInterface() {
                               : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
                         )}
                       >
-                        {msg.products.slice(0, colsDesktop).map((product: any) => (
+                        {msg.products.map((product: any) => (
                           <Card
                             key={product.id}
                             className={cn(
