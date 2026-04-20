@@ -317,8 +317,8 @@ export function AIPrompt({
             <div className="w-full mt-6 animate-fade-in-up delay-150">
               <div className="flex items-center gap-4 mb-6">
                 <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary">
-                  Equipamentos Relacionados
-                </h3>{' '}
+                  Equipamentos Localizados
+                </h3>
                 <div className="h-[1px] flex-1 bg-white/10" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
