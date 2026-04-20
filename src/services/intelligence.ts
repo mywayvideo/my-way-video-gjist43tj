@@ -67,8 +67,12 @@ Contexto de Gatilhos e Regras:
 
 ${triggersContext}
 
-Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco. O texto deve ter no máximo 2 sentenças e sempre incluir a garantia e o envio de Miami. 
-Disponível para envio imediato de Miami com garantia no Brasil.`
+Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
+
+REGRAS OBRIGATÓRIAS:
+- A resposta DEVE ser em Português (PT-BR).
+- Os parágrafos devem ter no máximo 2 sentenças.
+- Sempre inclua no final: "Disponível para envio imediato de Miami com garantia no Brasil."`
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
   const contextIntelligence = unifiedData.intel || unifiedData.nabData || []
