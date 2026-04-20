@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase/client'
-import { toast } from '@/hooks/use-toast'
 import { Bot, Save, X, Loader2 } from 'lucide-react'
-import { ToastAction } from '@/components/ui/toast'
+import { useAISettings } from '@/hooks/use-ai-settings'
 
 import {
   Breadcrumb,
@@ -22,74 +20,32 @@ import { Label } from '@/components/ui/label'
 
 export default function AdminAISystemPrompt() {
   const { currentUser: user, loading: authLoading } = useAuthContext()
-  const [settingsId, setSettingsId] = useState<string | null>(null)
+  const { settings, loading: settingsLoading, saveSettings } = useAISettings()
   const [initialPrompt, setInitialPrompt] = useState('')
   const [prompt, setPrompt] = useState('')
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  const fetchPrompt = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('ai_settings')
-        .select('id, system_prompt_template')
-        .limit(1)
-        .maybeSingle()
-
-      if (error) throw error
-
-      if (data) {
-        setSettingsId(data.id)
-        setInitialPrompt(data.system_prompt_template || '')
-        setPrompt(data.system_prompt_template || '')
-      }
-    } catch (error) {
-      console.error(error)
-      toast({
-        title: 'Erro de conexão',
-        description: 'Não foi possível carregar as instruções.',
-        variant: 'destructive',
-        action: (
-          <ToastAction altText="Tentar novamente" onClick={fetchPrompt}>
-            Tentar novamente
-          </ToastAction>
-        ),
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    if (user) {
-      fetchPrompt()
+    if (settings && !prompt && !initialPrompt) {
+      const defaultPrompt =
+        'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é converter consultas em vendas. REGRAS: 1. SOBERANIA DE DADOS: Se houver produtos no stock, eles ESTÃO DISPONÍVEIS. 2. FORMATO: Use Markdown e negrito para nomes/preços. 3. MIAMI: Mencione envio de Miami e garantia Brasil/LATAM.'
+      const currentPrompt = settings.system_prompt_template || defaultPrompt
+      setInitialPrompt(currentPrompt)
+      setPrompt(currentPrompt)
     }
-  }, [user])
+  }, [settings, prompt, initialPrompt])
 
   const handleSave = async () => {
-    if (!settingsId) return
+    if (!settings) return
     setSaving(true)
-    try {
-      const { error } = await supabase
-        .from('ai_settings')
-        .update({ system_prompt_template: prompt, updated_at: new Date().toISOString() })
-        .eq('id', settingsId)
-
-      if (error) throw error
-
+    const success = await saveSettings({
+      ...settings,
+      system_prompt_template: prompt,
+    })
+    if (success) {
       setInitialPrompt(prompt)
-      toast({ title: 'Sucesso', description: 'Instruções salvas com sucesso!' })
-    } catch (error) {
-      console.error(error)
-      toast({
-        title: 'Erro ao salvar',
-        description: 'Não foi possível salvar as alterações.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
     }
+    setSaving(false)
   }
 
   const handleDiscard = () => {
@@ -106,6 +62,7 @@ export default function AdminAISystemPrompt() {
 
   if (!user) return <Navigate to="/login" replace />
 
+  const loading = settingsLoading && !settings
   const charCount = prompt.length
   const isInvalid = charCount < 50 || charCount > 30000
   const isDirty = prompt !== initialPrompt

@@ -49,7 +49,7 @@ export async function getActiveAgent() {
 
 export async function generateResponse(query: string, unifiedData: any = {}, agentId?: string) {
   // Read settings directly to synchronize authority
-  await getAISettings()
+  const settings = await getAISettings()
 
   const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
   const nabData = unifiedData.nabData || []
@@ -75,7 +75,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     console.error('Error invoking process-query:', err)
     return {
       content:
-        'Neste momento nossos sistemas de inteligência estão indisponíveis. Aqui estão os resultados diretamente do nosso catálogo.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+        'Neste momento nossos sistemas de inteligência estão indisponíveis. Por favor, tente novamente mais tarde.',
       products: contextProducts,
       should_show_whatsapp_button: true,
       confidence_level: 'low',
@@ -95,10 +95,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     }
 
     return {
-      content:
-        result.content ||
-        result.message ||
-        'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+      content: result.content || result.message || 'Consulta processada com sucesso.',
       products:
         Array.isArray(result.products) && result.products.length > 0
           ? result.products
@@ -109,9 +106,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   } catch (err) {
     return {
       content:
-        typeof data?.message === 'string'
-          ? data.message
-          : 'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+        typeof data?.message === 'string' ? data.message : 'Consulta processada com sucesso.',
       products: contextProducts,
       should_show_whatsapp_button: false,
       confidence_level: 'high',

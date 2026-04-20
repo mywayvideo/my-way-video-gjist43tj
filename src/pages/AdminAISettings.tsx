@@ -19,22 +19,22 @@ export default function AdminAISettings() {
 
       if (!restoredSettings.search_algorithm_sql) {
         restoredSettings.search_algorithm_sql =
-          "SELECT * FROM products WHERE (name ILIKE '%' || $1 || '%' OR model ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%') AND status = 'active' LIMIT 12"
+          "WITH search AS (SELECT $1::text as term) SELECT json_build_object('stock', (SELECT COALESCE(json_agg(p), '[]'::json) FROM (SELECT * FROM products WHERE (name ILIKE '%' || (SELECT term FROM search) || '%' OR model ILIKE '%' || (SELECT term FROM search) || '%') AND status = 'active' LIMIT 12) p), 'intel', (SELECT COALESCE(json_agg(c), '[]'::json) FROM (SELECT * FROM market_intelligence WHERE (raw_content ILIKE '%' || (SELECT term FROM search) || '%') AND status = 'published' LIMIT 5) c), 'nab_data', (SELECT COALESCE(json_agg(n), '[]'::json) FROM (SELECT * FROM nab_market WHERE (title ILIKE '%' || (SELECT term FROM search) || '%' OR content ILIKE '%' || (SELECT term FROM search) || '%') LIMIT 5) n));"
       }
       if (!restoredSettings.system_prompt_template) {
         restoredSettings.system_prompt_template =
-          'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Use os dados de estoque como prioridade. Sempre mencione o envio de Miami e a garantia no Brasil/LATAM.'
+          'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é converter consultas em vendas. REGRAS: 1. SOBERANIA DE DADOS: Se houver produtos no stock, eles ESTÃO DISPONÍVEIS. 2. FORMATO: Use Markdown e negrito para nomes/preços. 3. MIAMI: Mencione envio de Miami e garantia Brasil/LATAM.'
       }
       if (
         !restoredSettings.result_component_config ||
         restoredSettings.result_component_config === '{}'
       ) {
         restoredSettings.result_component_config =
-          '{ "displayMode": "grid", "columns": { "mobile": 1, "desktop": 3 } }'
+          '{ "displayMode": "grid", "columns": { "mobile": 1, "desktop": 3 }, "showPrice": true }'
       }
       if (!restoredSettings.logistics_rules_prompt) {
         restoredSettings.logistics_rules_prompt =
-          'Se price_usd > 0: Miami e Brasil. Garantia integral Brasil e América Latina.'
+          'Se price_usd > 0: Envio de Miami com garantia integral no Brasil e América Latina. Origem: Doral, FL.'
       }
 
       setLocalSettings(restoredSettings)

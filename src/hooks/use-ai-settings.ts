@@ -95,6 +95,13 @@ export function useAISettings() {
 
       if (newSettings.ai_settings_id) {
         generalPayload.id = newSettings.ai_settings_id
+      } else {
+        const { data: existingAi } = await supabase
+          .from('ai_settings')
+          .select('id')
+          .limit(1)
+          .maybeSingle()
+        if (existingAi) generalPayload.id = existingAi.id
       }
 
       const agentPayload: any = {
@@ -107,6 +114,13 @@ export function useAISettings() {
 
       if (newSettings.ai_agent_settings_id) {
         agentPayload.id = newSettings.ai_agent_settings_id
+      } else {
+        const { data: existingAgent } = await supabase
+          .from('ai_agent_settings')
+          .select('id')
+          .limit(1)
+          .maybeSingle()
+        if (existingAgent) agentPayload.id = existingAgent.id
       }
 
       const { error: aiError } = await supabase.from('ai_settings').upsert(generalPayload)
@@ -126,7 +140,7 @@ export function useAISettings() {
       console.error('Error saving settings:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao salvar. Verifique a conexão.',
+        description: 'Erro ao salvar. Verifique o banco de dados.',
         variant: 'destructive',
       })
       return false
