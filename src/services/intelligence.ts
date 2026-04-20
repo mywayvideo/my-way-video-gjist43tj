@@ -1,21 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 
 export async function getAISettings() {
-  const cacheKey = 'myway_ai_settings_cache'
-  const cachedStr = sessionStorage.getItem(cacheKey)
-
-  if (cachedStr) {
-    try {
-      const parsed = JSON.parse(cachedStr)
-      if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-        return parsed.data
-      }
-    } catch (e) {
-      // Ignore cache parse error and fetch fresh settings
-    }
-  }
-
-  const { data: specificSettings } = await supabase
+  const { data: specificSettings, error } = await supabase
     .from('ai_settings')
     .select(
       'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config',
@@ -23,16 +9,11 @@ export async function getAISettings() {
     .eq('id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle()
 
-  const { data: fallbackSettings } = await supabase
-    .from('ai_settings')
-    .select(
-      'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config',
+  if (error || !specificSettings) {
+    throw new Error(
+      'Falha ao obter as configurações de IA (ai_settings ID: 00000000-0000-0000-0000-000000000001).',
     )
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  const settings = specificSettings || fallbackSettings || {}
+  }
 
   const { data: agentSettings } = await supabase
     .from('ai_agent_settings')
@@ -43,17 +24,7 @@ export async function getAISettings() {
     .limit(1)
     .maybeSingle()
 
-  const finalSettings = { ...agentSettings, ...settings }
-
-  sessionStorage.setItem(
-    cacheKey,
-    JSON.stringify({
-      timestamp: Date.now(),
-      data: finalSettings,
-    }),
-  )
-
-  return finalSettings
+  return { ...agentSettings, ...specificSettings }
 }
 
 export async function getActiveAgent() {
@@ -87,13 +58,16 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
       intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
     })
 
-  const ruleBrazilLatam = `REGRAS OBRIGATÓRIAS E CRÍTICAS:
+  let ruleBrazilLatam = `REGRAS OBRIGATÓRIAS E CRÍTICAS:
 - Idioma: 100% Português (PT-BR).
 - Parágrafos: Máximo de 2 frases por parágrafo.
 - Especificações: SEMPRE apresentar especificações técnicas em blocos de código (\`\`\`).
 - Produtos: Se o contexto retornar itens, apresente-os OBRIGATORIAMENTE em formato Markdown técnico.
-- Proibição: É EXPRESSAMENTE PROIBIDO usar respostas de fallback como "estoque em atualização" se houver produtos.
 - Garantia: SEMPRE incluir o aviso de garantia oficial no Brasil/LATAM com envio de Miami ao final.`
+
+  if (contextProducts.length === 0 && !hasNab) {
+    ruleBrazilLatam += `\n- REGRA DE ESTOQUE VAZIO: Não encontrei este item específico no meu catálogo de Miami, mas posso verificar com nossos fornecedores.`
+  }
 
   const assembledPrompt = `${systemPrompt}\n\nContexto dos Dados (JSON):\n${currentContext}\n\n${ruleBrazilLatam}`
 
@@ -104,6 +78,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
         query: query,
         products: contextProducts,
         intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
+        context: currentContext,
         agentId: agentId,
         isNABQuery: hasNab,
         assembledPrompt: assembledPrompt,
@@ -116,18 +91,12 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     data = res.data
   } catch (err) {
     console.error('Error invoking process-query:', err)
-    return {
-      content:
-        'Neste momento nossos sistemas de inteligência estão indisponíveis. Por favor, tente novamente mais tarde.',
-      products: contextProducts,
-      should_show_whatsapp_button: true,
-      confidence_level: 'low',
-    }
+    throw new Error('Falha ao invocar a engine de inteligência (process-query).')
   }
 
-  try {
-    let result = data.message || data
-    if (typeof result === 'string') {
+  let result = data.message || data
+  if (typeof result === 'string') {
+    try {
       const start = result.indexOf('{')
       const end = result.lastIndexOf('}')
       if (start !== -1 && end !== -1) {
@@ -135,25 +104,19 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
       } else {
         result = JSON.parse(result)
       }
+    } catch (e) {
+      // Keep as string if not JSON
     }
+  }
 
-    return {
-      content: result.content || result.message || 'Consulta processada com sucesso.',
-      products:
-        Array.isArray(result.products) && result.products.length > 0
-          ? result.products
-          : contextProducts,
-      should_show_whatsapp_button: result.should_show_whatsapp_button || false,
-      confidence_level: result.confidence_level || 'high',
-    }
-  } catch (err) {
-    return {
-      content:
-        typeof data?.message === 'string' ? data.message : 'Consulta processada com sucesso.',
-      products: contextProducts,
-      should_show_whatsapp_button: false,
-      confidence_level: 'high',
-    }
+  return {
+    content: result.content || result.message || (typeof result === 'string' ? result : ''),
+    products:
+      Array.isArray(result.products) && result.products.length > 0
+        ? result.products
+        : contextProducts,
+    should_show_whatsapp_button: result.should_show_whatsapp_button || false,
+    confidence_level: result.confidence_level || 'high',
   }
 }
 

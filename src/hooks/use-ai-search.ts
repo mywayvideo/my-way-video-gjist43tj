@@ -104,6 +104,8 @@ export function useUnifiedSearch() {
         should_show_whatsapp_button: shouldShowWhatsapp,
       }
 
+      console.log('Search Results:', combinedResults)
+
       setResults(combinedResults)
       return combinedResults
     } catch (err: any) {
@@ -111,9 +113,11 @@ export function useUnifiedSearch() {
 
       const fallbackResults = {
         message:
+          err?.message ||
           'Desculpe, ocorreu um erro ao consultar nossos sistemas. Por favor, tente novamente.',
         content:
-          'Desculpe, ocorreu um erro ao consultar nossos sistemas. Por favor, tente novamente.\n\nTodos os produtos possuem garantia oficial no Brasil e América Latina, com envio direto de Miami.',
+          err?.message ||
+          'Desculpe, ocorreu um erro ao consultar nossos sistemas. Por favor, tente novamente.',
         confidence_level: 'low',
         stock: [],
         products: [],
@@ -124,10 +128,12 @@ export function useUnifiedSearch() {
         should_show_whatsapp_button: true,
       }
 
+      console.log('Search Results:', fallbackResults)
+
       setResults(fallbackResults)
       toast({
         title: 'Erro de Busca',
-        description: 'Ocorreu um erro ao consultar nossa base de dados.',
+        description: err?.message || 'Ocorreu um erro ao consultar nossa base de dados.',
         variant: 'destructive',
       })
       return fallbackResults

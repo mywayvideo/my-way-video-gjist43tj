@@ -28,11 +28,10 @@ export function ChatInterface() {
     }>
   >([])
   const scrollRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,7 +67,7 @@ export function ChatInterface() {
           <div>
             <div className="flex items-center space-x-2">
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
-              <span className="font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] text-transparent bg-clip-text">
+              <span className="font-bold text-xs uppercase tracking-wider text-primary border border-primary/20 px-2 py-1 rounded-md">
                 IA My Way Business
               </span>
             </div>
@@ -200,6 +199,7 @@ export function ChatInterface() {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
       </CardContent>
