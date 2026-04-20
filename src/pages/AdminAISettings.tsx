@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
-import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,90 +9,43 @@ import { Separator } from '@/components/ui/separator'
 import { useAISettings, AISettings } from '@/hooks/use-ai-settings'
 
 export default function AdminAISettings() {
-  const { toast } = useToast()
-  const { settings, loading, fetchSettings } = useAISettings()
+  const { settings, loading, saveSettings } = useAISettings()
   const [saving, setSaving] = useState(false)
   const [localSettings, setLocalSettings] = useState<AISettings | null>(null)
 
   useEffect(() => {
     if (settings) {
-      setLocalSettings(settings)
+      const restoredSettings = { ...settings }
+
+      if (!restoredSettings.search_algorithm_sql) {
+        restoredSettings.search_algorithm_sql =
+          "SELECT * FROM products WHERE (name ILIKE '%' || $1 || '%' OR model ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%') AND status = 'active' LIMIT 12"
+      }
+      if (!restoredSettings.system_prompt_template) {
+        restoredSettings.system_prompt_template =
+          'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Use os dados de estoque como prioridade. Sempre mencione o envio de Miami e a garantia no Brasil/LATAM.'
+      }
+      if (
+        !restoredSettings.result_component_config ||
+        restoredSettings.result_component_config === '{}'
+      ) {
+        restoredSettings.result_component_config =
+          '{ "displayMode": "grid", "columns": { "mobile": 1, "desktop": 3 } }'
+      }
+      if (!restoredSettings.logistics_rules_prompt) {
+        restoredSettings.logistics_rules_prompt =
+          'Se price_usd > 0: Miami e Brasil. Garantia integral Brasil e América Latina.'
+      }
+
+      setLocalSettings(restoredSettings)
     }
   }, [settings])
 
   const handleSave = async () => {
     if (!localSettings) return
-    try {
-      setSaving(true)
-
-      let parsedConfig = {}
-      try {
-        parsedConfig = JSON.parse(localSettings.result_component_config)
-      } catch (e) {
-        toast({
-          title: 'Erro de JSON',
-          description: 'A configuração do componente de resultado (JSON) é inválida.',
-          variant: 'destructive',
-        })
-        setSaving(false)
-        return
-      }
-
-      const agentPayload = {
-        cache_expiration_days: localSettings.cache_expiration_days,
-        price_threshold_usd: localSettings.price_threshold_usd,
-        whatsapp_trigger_low_confidence: localSettings.whatsapp_trigger_low_confidence,
-        whatsapp_trigger_purchase_keywords: localSettings.whatsapp_trigger_purchase_keywords,
-        whatsapp_trigger_project_keywords: localSettings.whatsapp_trigger_project_keywords,
-        whatsapp_trigger_expensive_product: localSettings.whatsapp_trigger_expensive_product,
-      }
-
-      const generalPayload = {
-        cache_expiration_days: localSettings.cache_expiration_days,
-        price_threshold_usd: localSettings.price_threshold_usd,
-        search_algorithm_sql: localSettings.search_algorithm_sql,
-        result_component_config: parsedConfig,
-      }
-
-      // Fetch IDs
-      const { data: agentData } = await supabase
-        .from('ai_agent_settings')
-        .select('id')
-        .limit(1)
-        .maybeSingle()
-      if (agentData) {
-        await supabase.from('ai_agent_settings').update(agentPayload).eq('id', agentData.id)
-      } else {
-        await supabase.from('ai_agent_settings').insert([agentPayload])
-      }
-
-      const { data: generalData } = await supabase
-        .from('ai_settings')
-        .select('id')
-        .limit(1)
-        .maybeSingle()
-      if (generalData) {
-        await supabase.from('ai_settings').update(generalPayload).eq('id', generalData.id)
-      } else {
-        await supabase.from('ai_settings').insert([generalPayload])
-      }
-
-      await fetchSettings()
-
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações globais de IA salvas com sucesso!',
-      })
-    } catch (error) {
-      console.error('Error saving settings:', error)
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível salvar as configurações.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
+    setSaving(true)
+    await saveSettings(localSettings)
+    setSaving(false)
   }
 
   if (loading || !localSettings) {
@@ -167,9 +118,6 @@ export default function AdminAISettings() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Baixa Confiança (Low Confidence)</Label>
-              <p className="text-sm text-muted-foreground">
-                Exibir quando a IA não tiver certeza da resposta.
-              </p>
             </div>
             <Switch
               checked={localSettings.whatsapp_trigger_low_confidence}
@@ -181,10 +129,7 @@ export default function AdminAISettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Palavras-chave de Compra (Purchase Keywords)</Label>
-              <p className="text-sm text-muted-foreground">
-                Exibir quando o usuário usar palavras como "comprar", "preço".
-              </p>
+              <Label>Palavras-chave de Compra</Label>
             </div>
             <Switch
               checked={localSettings.whatsapp_trigger_purchase_keywords}
@@ -196,10 +141,7 @@ export default function AdminAISettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Palavras-chave de Projeto (Project Keywords)</Label>
-              <p className="text-sm text-muted-foreground">
-                Exibir quando mencionado "projeto", "integração", "estúdio".
-              </p>
+              <Label>Palavras-chave de Projeto</Label>
             </div>
             <Switch
               checked={localSettings.whatsapp_trigger_project_keywords}
@@ -211,10 +153,7 @@ export default function AdminAISettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Produto Caro (Expensive Product)</Label>
-              <p className="text-sm text-muted-foreground">
-                Exibir quando recomendar produtos acima do limite de preço (Seção B).
-              </p>
+              <Label>Produto Caro (Acima do limite)</Label>
             </div>
             <Switch
               checked={localSettings.whatsapp_trigger_expensive_product}
@@ -229,46 +168,60 @@ export default function AdminAISettings() {
       <Card>
         <CardHeader>
           <CardTitle>Seção D - Lógica de Busca (SQL)</CardTitle>
-          <CardDescription>
-            Insira a lógica SQL para consulta nas tabelas products, market_intelligence e
-            nab_market.
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="search_sql">Algoritmo de Busca SQL</Label>
-            <Textarea
-              id="search_sql"
-              className="font-mono text-sm min-h-[150px]"
-              placeholder="SELECT * FROM products..."
-              value={localSettings.search_algorithm_sql}
-              onChange={(e) =>
-                setLocalSettings({ ...localSettings, search_algorithm_sql: e.target.value })
-              }
-            />
-          </div>
+          <Textarea
+            className="font-mono text-sm min-h-[150px]"
+            value={localSettings.search_algorithm_sql}
+            onChange={(e) =>
+              setLocalSettings({ ...localSettings, search_algorithm_sql: e.target.value })
+            }
+          />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Seção F - Configuração de Componentes (Opcional)</CardTitle>
-          <CardDescription>
-            JSON de configuração adicional para a interface de resultados.
-          </CardDescription>
+          <CardTitle>Seção E - Prompt do Sistema</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="result_config">Configuração de Resultados (JSON)</Label>
-            <Textarea
-              id="result_config"
-              className="font-mono text-sm min-h-[100px]"
-              value={localSettings.result_component_config}
-              onChange={(e) =>
-                setLocalSettings({ ...localSettings, result_component_config: e.target.value })
-              }
-            />
-          </div>
+          <Textarea
+            className="text-sm min-h-[100px]"
+            value={localSettings.system_prompt_template}
+            onChange={(e) =>
+              setLocalSettings({ ...localSettings, system_prompt_template: e.target.value })
+            }
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Seção F - Configuração Visual (JSON)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            className="font-mono text-sm min-h-[100px]"
+            value={localSettings.result_component_config}
+            onChange={(e) =>
+              setLocalSettings({ ...localSettings, result_component_config: e.target.value })
+            }
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Seção G - Regras de Logística</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            className="text-sm min-h-[100px]"
+            value={localSettings.logistics_rules_prompt}
+            onChange={(e) =>
+              setLocalSettings({ ...localSettings, logistics_rules_prompt: e.target.value })
+            }
+          />
         </CardContent>
       </Card>
 

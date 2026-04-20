@@ -16,7 +16,6 @@ export async function getAISettings() {
   }
 
   const { data: settings } = await supabase.from('ai_settings').select('*').limit(1).maybeSingle()
-
   const { data: agentSettings } = await supabase
     .from('ai_agent_settings')
     .select('*')
@@ -49,32 +48,12 @@ export async function getActiveAgent() {
 }
 
 export async function generateResponse(query: string, unifiedData: any = {}, agentId?: string) {
-  const settings = await getAISettings()
-
-  const systemPromptTemplate =
-    settings?.system_prompt_template || 'Você é um especialista em audiovisual.'
-  const logisticsRulesPrompt =
-    settings?.logistics_rules_prompt ||
-    'Considere os preços (price_usd vs price_brl) para determinar origem de envio (Miami vs Brasil).'
+  // Read settings directly to synchronize authority
+  await getAISettings()
 
   const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
   const nabData = unifiedData.nabData || []
-  const hasIntel = contextIntelligence.length > 0 || nabData.length > 0
   const hasNab = nabData.length > 0
-
-  const instructions = `
-REGRAS OBRIGATÓRIAS:
-- Responda APENAS em Português (PT-BR).
-- Mantenha os parágrafos curtos (máximo de 2 frases por parágrafo).
-- SEMPRE inclua o aviso: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."
-- Regras de Logística: ${logisticsRulesPrompt}
-${hasIntel || hasNab ? '- É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Baseie-se nos dados fornecidos na inteligência de mercado ou NAB 2026.' : ''}
-
-Contexto Institucional:
-${systemPromptTemplate}
-
-Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
-`
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
 
@@ -82,7 +61,7 @@ Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto for
   try {
     const res = await supabase.functions.invoke('process-query', {
       body: {
-        query: `${instructions}\n\nConsulta do Usuário: ${query}`,
+        query: query,
         products: contextProducts,
         intelligence: [...contextIntelligence, ...nabData],
         agentId: agentId,
