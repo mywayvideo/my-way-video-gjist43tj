@@ -57,11 +57,21 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   // Read settings directly to synchronize authority
   const settings = await getAISettings()
 
+  const systemPromptTemplate = settings.system_prompt_template || ''
+  const logisticsRulesPrompt = settings.logistics_rules_prompt || ''
+
   const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
   const nabData = unifiedData.nabData || []
   const hasNab = nabData.length > 0
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
+
+  const currentContext = JSON.stringify({
+    products: contextProducts,
+    intelligence: [...contextIntelligence, ...nabData],
+  })
+
+  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${currentContext}`
 
   let data: any = null
   try {
@@ -72,6 +82,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
         intelligence: [...contextIntelligence, ...nabData],
         agentId: agentId,
         isNABQuery: hasNab,
+        assembledPrompt: assembledPrompt,
       },
     })
 
