@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import { Loader2, Save } from 'lucide-react'
@@ -21,7 +22,11 @@ export default function AdminAISettingsPage() {
     logistics_rules_prompt: '',
     search_algorithm_sql: '',
     system_prompt_template: '',
-    result_component_config: '',
+    agent_id: '',
+    whatsapp_trigger_low_confidence: true,
+    whatsapp_trigger_purchase_keywords: true,
+    whatsapp_trigger_project_keywords: true,
+    whatsapp_trigger_expensive_product: true,
   })
 
   useEffect(() => {
@@ -30,24 +35,33 @@ export default function AdminAISettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const { data, error } = await supabase.from('ai_settings').select('*').limit(1).maybeSingle()
-      if (error) throw error
-      if (data) {
-        setSettings({
-          id: data.id,
-          cache_expiration_days: data.cache_expiration_days ?? 30,
-          price_threshold_usd: data.price_threshold_usd ?? 5000,
-          ignore_stock_count: data.ignore_stock_count ?? true,
-          logistics_rules_prompt: data.logistics_rules_prompt || '',
-          search_algorithm_sql: data.search_algorithm_sql || '',
-          system_prompt_template: data.system_prompt_template || '',
-          result_component_config: data.result_component_config
-            ? JSON.stringify(data.result_component_config, null, 2)
-            : '',
-        })
-      }
+      const [aiSettingsRes, aiAgentSettingsRes] = await Promise.all([
+        supabase.from('ai_settings').select('*').limit(1).maybeSingle(),
+        supabase.from('ai_agent_settings').select('*').limit(1).maybeSingle(),
+      ])
+
+      if (aiSettingsRes.error) throw aiSettingsRes.error
+      if (aiAgentSettingsRes.error) throw aiAgentSettingsRes.error
+
+      const data = aiSettingsRes.data
+      const agentData = aiAgentSettingsRes.data
+
+      setSettings({
+        id: data?.id || '',
+        cache_expiration_days: data?.cache_expiration_days ?? 30,
+        price_threshold_usd: data?.price_threshold_usd ?? 5000,
+        ignore_stock_count: data?.ignore_stock_count ?? true,
+        logistics_rules_prompt: data?.logistics_rules_prompt || '',
+        search_algorithm_sql: data?.search_algorithm_sql || '',
+        system_prompt_template: data?.system_prompt_template || '',
+        agent_id: agentData?.id || '',
+        whatsapp_trigger_low_confidence: agentData?.whatsapp_trigger_low_confidence ?? true,
+        whatsapp_trigger_purchase_keywords: agentData?.whatsapp_trigger_purchase_keywords ?? true,
+        whatsapp_trigger_project_keywords: agentData?.whatsapp_trigger_project_keywords ?? true,
+        whatsapp_trigger_expensive_product: agentData?.whatsapp_trigger_expensive_product ?? true,
+      })
     } catch (error) {
-      console.error('Error fetching ai_settings:', error)
+      console.error('Error fetching settings:', error)
       toast({
         title: 'Erro',
         description: 'Erro ao carregar configurações do Admin.',
@@ -61,34 +75,43 @@ export default function AdminAISettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      let parsedJson = {}
-      if (settings.result_component_config.trim()) {
-        try {
-          parsedJson = JSON.parse(settings.result_component_config)
-        } catch (e) {
-          throw new Error('JSON inválido na Configuração de Exibição.')
-        }
-      }
-
-      const updateData = {
+      const aiSettingsData = {
         cache_expiration_days: settings.cache_expiration_days,
         price_threshold_usd: settings.price_threshold_usd,
         ignore_stock_count: settings.ignore_stock_count,
         logistics_rules_prompt: settings.logistics_rules_prompt,
         search_algorithm_sql: settings.search_algorithm_sql,
         system_prompt_template: settings.system_prompt_template,
-        result_component_config: parsedJson,
+        updated_at: new Date().toISOString(),
+      }
+
+      const agentSettingsData = {
+        whatsapp_trigger_low_confidence: settings.whatsapp_trigger_low_confidence,
+        whatsapp_trigger_purchase_keywords: settings.whatsapp_trigger_purchase_keywords,
+        whatsapp_trigger_project_keywords: settings.whatsapp_trigger_project_keywords,
+        whatsapp_trigger_expensive_product: settings.whatsapp_trigger_expensive_product,
         updated_at: new Date().toISOString(),
       }
 
       if (settings.id) {
         const { error } = await supabase
           .from('ai_settings')
-          .update(updateData)
+          .update(aiSettingsData)
           .eq('id', settings.id)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('ai_settings').insert(updateData)
+        const { error } = await supabase.from('ai_settings').insert(aiSettingsData)
+        if (error) throw error
+      }
+
+      if (settings.agent_id) {
+        const { error } = await supabase
+          .from('ai_agent_settings')
+          .update(agentSettingsData)
+          .eq('id', settings.agent_id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('ai_agent_settings').insert(agentSettingsData)
         if (error) throw error
       }
 
@@ -179,31 +202,69 @@ export default function AdminAISettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Section C - Gatilhos e Regras</CardTitle>
+            <CardTitle>Section C - Gatilhos do WhatsApp</CardTitle>
             <CardDescription>
-              Configurações de gatilhos logísticos e verificação de estoque.
+              Configurações para exibir o botão de contato com especialista.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Ignorar contagem de estoque</Label>
+                <Label>Low Confidence Trigger</Label>
                 <div className="text-sm text-muted-foreground">
-                  Permitir recomendações de produtos sem estoque ativo.
+                  Ativa botão se a IA tiver dúvida
                 </div>
               </div>
               <Switch
-                checked={settings.ignore_stock_count}
-                onCheckedChange={(checked) => handleChange('ignore_stock_count', checked)}
+                checked={settings.whatsapp_trigger_low_confidence}
+                onCheckedChange={(checked) =>
+                  handleChange('whatsapp_trigger_low_confidence', checked)
+                }
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="logistics_prompt">Regras Logísticas (Prompt)</Label>
-              <Textarea
-                id="logistics_prompt"
-                className="min-h-[80px]"
-                value={settings.logistics_rules_prompt}
-                onChange={(e) => handleChange('logistics_rules_prompt', e.target.value)}
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Purchase Keywords Trigger</Label>
+                <div className="text-sm text-muted-foreground">
+                  Ativa botão se detectar intenção de compra
+                </div>
+              </div>
+              <Switch
+                checked={settings.whatsapp_trigger_purchase_keywords}
+                onCheckedChange={(checked) =>
+                  handleChange('whatsapp_trigger_purchase_keywords', checked)
+                }
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Project Keywords Trigger</Label>
+                <div className="text-sm text-muted-foreground">
+                  Ativa botão para solicitações de projeto
+                </div>
+              </div>
+              <Switch
+                checked={settings.whatsapp_trigger_project_keywords}
+                onCheckedChange={(checked) =>
+                  handleChange('whatsapp_trigger_project_keywords', checked)
+                }
+              />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Expensive Product Trigger</Label>
+                <div className="text-sm text-muted-foreground">
+                  Ativa botão para produtos acima do limite
+                </div>
+              </div>
+              <Switch
+                checked={settings.whatsapp_trigger_expensive_product}
+                onCheckedChange={(checked) =>
+                  handleChange('whatsapp_trigger_expensive_product', checked)
+                }
               />
             </div>
           </CardContent>
@@ -221,7 +282,7 @@ export default function AdminAISettingsPage() {
               <Label htmlFor="search_sql">Algoritmo de Busca SQL</Label>
               <Textarea
                 id="search_sql"
-                className="min-h-[150px] font-mono text-sm"
+                className="min-h-[200px] font-mono text-sm"
                 value={settings.search_algorithm_sql}
                 onChange={(e) => handleChange('search_algorithm_sql', e.target.value)}
               />
@@ -241,7 +302,8 @@ export default function AdminAISettingsPage() {
               <Label htmlFor="system_prompt">Template do Prompt do Especialista</Label>
               <Textarea
                 id="system_prompt"
-                className="min-h-[300px] font-mono text-sm"
+                className="min-h-[350px] font-mono text-sm"
+                rows={15}
                 value={settings.system_prompt_template}
                 onChange={(e) => handleChange('system_prompt_template', e.target.value)}
               />
@@ -251,20 +313,32 @@ export default function AdminAISettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Section F - Result Component Config</CardTitle>
+            <CardTitle>Section F - Regras de Estoque e Logística</CardTitle>
             <CardDescription>
-              Defina como os cards de produtos devem ser renderizados (Formato JSON).
+              Defina se a IA deve ignorar o estoque zero e como decidir entre Miami/Brasil.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Ignorar Quantidade em Estoque</Label>
+                <div className="text-sm text-muted-foreground">
+                  Permitir recomendações de produtos sem estoque ativo.
+                </div>
+              </div>
+              <Switch
+                checked={settings.ignore_stock_count}
+                onCheckedChange={(checked) => handleChange('ignore_stock_count', checked)}
+              />
+            </div>
+            <Separator />
             <div className="space-y-2">
-              <Label htmlFor="result_config">Configuração de Exibição (JSON)</Label>
+              <Label htmlFor="logistics_prompt">Regras de Entrega e Origem</Label>
               <Textarea
-                id="result_config"
-                className="min-h-[150px] font-mono text-sm"
-                placeholder="{}"
-                value={settings.result_component_config}
-                onChange={(e) => handleChange('result_component_config', e.target.value)}
+                id="logistics_prompt"
+                className="min-h-[100px]"
+                value={settings.logistics_rules_prompt}
+                onChange={(e) => handleChange('logistics_rules_prompt', e.target.value)}
               />
             </div>
           </CardContent>
