@@ -57,6 +57,17 @@ export function useUnifiedSearch() {
           const { data: fuzzyProducts } = await q.limit(10)
           if (fuzzyProducts && fuzzyProducts.length > 0) {
             products = fuzzyProducts
+          } else {
+            // Fallback for full query match
+            const { data: fullFuzzy } = await supabase
+              .from('products')
+              .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
+              .eq('is_discontinued', false)
+              .or(`name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%`)
+              .limit(10)
+            if (fullFuzzy && fullFuzzy.length > 0) {
+              products = fullFuzzy
+            }
           }
         }
       }
@@ -119,10 +130,11 @@ export function useUnifiedSearch() {
     }
   }
 
-  const search = async (rawQuery: string) => {
+  const search = async (rawQuery: string, history: any[] = []) => {
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
 
+    console.log('CURRENT_TURN_SEARCH:', cleanQuery)
     console.log('NEW SEARCH FOR:', cleanQuery)
     setIsLoading(true)
     setResults(null)
@@ -174,7 +186,7 @@ export function useUnifiedSearch() {
         console.log('Search Context Sent to AI:', contextString)
         const aiResponse = await generateExpertResponse(
           cleanQuery,
-          { ...currentUnifiedData, stringifiedContext: contextString },
+          { ...currentUnifiedData, stringifiedContext: contextString, history },
           activeAgent.id,
         )
         finalMessage = aiResponse.content

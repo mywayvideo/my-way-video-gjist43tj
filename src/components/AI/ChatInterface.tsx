@@ -148,7 +148,7 @@ export function ChatInterface() {
     setQuery('')
     setMessages((prev) => [...prev, { role: 'user', content: userQuery }])
 
-    const res = await search(userQuery)
+    const res = await search(userQuery, messages)
     if (res) {
       setMessages((prev) => [
         ...prev,

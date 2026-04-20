@@ -78,7 +78,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final. Se o produto estiver no contexto com 0 estoque (como a Pyxis 6K), apresente-o como "Disponível para encomenda".
 REGRA 4: Se o produto existir nos RESULTADOS DO ESTOQUE, é PROIBIDO dizer que ele não foi encontrado ou não está no catálogo. É ESTRITAMENTE PROIBIDO ignorar a configuração de ignore_stock_count (se os produtos foram fornecidos no contexto, apresente-os).
-REGRA 5: Priorize os NOVOS produtos encontrados na busca atual.
+REGRA 5: Priorize os NOVOS produtos encontrados na busca atual. Sempre que citar um produto, use o nome exato retornado pelo banco para garantir a exibição do card.
 IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {
@@ -88,7 +88,14 @@ IDIOMA: 100% Português (PT-BR).`
   }
 
   const nabJson = [...contextIntel, ...contextNab]
-  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nRESULTADOS DO ESTOQUE: ${JSON.stringify(contextProducts)} | NOTÍCIAS DA NAB: ${JSON.stringify(nabJson)}`
+
+  let historyText = ''
+  if (unifiedData.history && unifiedData.history.length > 0) {
+    const recentHistory = unifiedData.history.slice(-5)
+    historyText = `\n\nHISTÓRICO RECENTE (Últimas 5 mensagens):\n${recentHistory.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`).join('\n')}`
+  }
+
+  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nRESULTADOS DO ESTOQUE (FONTE PRIMÁRIA): ${JSON.stringify(contextProducts)} | NOTÍCIAS DA NAB: ${JSON.stringify(nabJson)}${historyText}`
 
   const currentContext = contextProducts
 
@@ -176,10 +183,7 @@ IDIOMA: 100% Português (PT-BR).`
 
   return {
     content,
-    products:
-      Array.isArray(result.products) && result.products.length > 0
-        ? result.products
-        : contextProducts,
+    products: contextProducts, // ALWAYS return ALL products returned in the 'unified_search' of the current turn for card rendering
     should_show_whatsapp_button: showWhatsapp,
     confidence_level: confidence,
   }
