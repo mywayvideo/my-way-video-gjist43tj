@@ -155,6 +155,7 @@ export const generateExpertResponse = async (query: string, unifiedData: any, ag
     }
 
     const systemPrompt = `Você é o Especialista My Way. 
+Sua resposta JSON deve conter o texto em 'content' e a lista de objetos de produtos em 'products'.
 Ignore COMPLETAMENTE qualquer campo de 'stock', 'quantity' ou 'estoque' vindo do banco de dados.
 Se o produto existe na lista 'stock' enviada no contexto, ele ESTÁ DISPONÍVEL.
 É terminantemente PROIBIDO dizer que o produto não está disponível ou que o estoque está vazio.
@@ -194,17 +195,25 @@ Sempre inclua: Disponível para envio imediato de Miami com garantia no Brasil.`
 
     if (error) throw error
 
-    let finalMessage = data?.message || buildFallbackMessage(query, unifiedData)
+    let finalMessage = data?.message || data?.content || buildFallbackMessage(query, unifiedData)
 
     if (!finalMessage.includes('Disponível para envio imediato de Miami com garantia no Brasil')) {
       finalMessage += '\n\nDisponível para envio imediato de Miami com garantia no Brasil.'
     }
 
-    return { message: finalMessage, confidence_level }
+    return {
+      message: finalMessage,
+      confidence_level,
+      products: data?.products || unifiedData.stock || [],
+    }
   } catch (e) {
     console.error('Edge function call failed:', e)
     const fallbackMessage = buildFallbackMessage(query, unifiedData)
-    return { message: fallbackMessage, confidence_level: 'low' }
+    return {
+      message: fallbackMessage,
+      confidence_level: 'low',
+      products: unifiedData.stock || [],
+    }
   }
 }
 

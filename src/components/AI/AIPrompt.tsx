@@ -55,6 +55,82 @@ function ProductCard({ product }: { product: any }) {
   )
 }
 
+function ReactMarkdown({ children, className }: { children: string; className?: string }) {
+  if (!children) return null
+
+  const renderBold = (text: string) => {
+    const boldParts = text.split(/\*\*(.*?)\*\*/g)
+    return boldParts.map((bp, i) =>
+      i % 2 === 1 ? (
+        <strong key={i} className="text-white font-bold">
+          {bp}
+        </strong>
+      ) : (
+        bp
+      ),
+    )
+  }
+
+  const parts = children.split('```')
+  return (
+    <div className={className}>
+      {parts.map((part, index) => {
+        if (index % 2 === 1) {
+          return (
+            <pre
+              key={index}
+              className="bg-black/60 border border-white/10 p-4 rounded-lg my-4 overflow-x-auto text-sm font-mono text-white/80"
+            >
+              {part.trim()}
+            </pre>
+          )
+        }
+
+        const paragraphs = part.split('\n\n')
+        return paragraphs.map((paragraph, pIndex) => {
+          if (!paragraph.trim()) return null
+          if (
+            paragraph
+              .trim()
+              .split('\n')
+              .some((line) => line.trim().startsWith('- ') || line.trim().startsWith('* '))
+          ) {
+            const items = paragraph.split('\n')
+            return (
+              <ul
+                key={`${index}-${pIndex}`}
+                className="list-disc pl-6 mb-4 space-y-2 text-white/80"
+              >
+                {items.map((item, iIndex) => {
+                  if (item.trim().startsWith('- ') || item.trim().startsWith('* ')) {
+                    const textContent = item.replace(/^[-*]\s+/, '')
+                    return <li key={iIndex}>{renderBold(textContent)}</li>
+                  }
+                  if (!item.trim()) return null
+                  return (
+                    <div key={iIndex} className="mb-1">
+                      {renderBold(item)}
+                    </div>
+                  )
+                })}
+              </ul>
+            )
+          }
+
+          return (
+            <p
+              key={`${index}-${pIndex}`}
+              className="mb-4 whitespace-pre-wrap leading-relaxed text-white/80"
+            >
+              {renderBold(paragraph)}
+            </p>
+          )
+        })
+      })}
+    </div>
+  )
+}
+
 export function AIPrompt({
   onSearch,
   onResult,
@@ -127,73 +203,8 @@ export function AIPrompt({
     }, 300)
   }
 
-  const renderBold = (text: string) => {
-    const boldParts = text.split(/\*\*(.*?)\*\*/g)
-    return boldParts.map((bp, i) =>
-      i % 2 === 1 ? (
-        <strong key={i} className="text-white font-bold">
-          {bp}
-        </strong>
-      ) : (
-        bp
-      ),
-    )
-  }
-
-  const formatMessage = (text: string) => {
-    if (!text) return null
-    const parts = text.split('```')
-    return parts.map((part, index) => {
-      if (index % 2 === 1) {
-        return (
-          <pre
-            key={index}
-            className="bg-black/60 border border-white/10 p-4 rounded-lg my-4 overflow-x-auto text-sm font-mono text-white/80"
-          >
-            {part.trim()}
-          </pre>
-        )
-      }
-
-      const paragraphs = part.split('\n\n')
-      return paragraphs.map((paragraph, pIndex) => {
-        if (
-          paragraph
-            .trim()
-            .split('\n')
-            .some((line) => line.trim().startsWith('- ') || line.trim().startsWith('* '))
-        ) {
-          const items = paragraph.split('\n')
-          return (
-            <ul key={`${index}-${pIndex}`} className="list-disc pl-6 mb-4 space-y-2 text-white/80">
-              {items.map((item, iIndex) => {
-                if (item.trim().startsWith('- ') || item.trim().startsWith('* ')) {
-                  const textContent = item.replace(/^[-*]\s+/, '')
-                  return <li key={iIndex}>{renderBold(textContent)}</li>
-                }
-                return (
-                  <div key={iIndex} className="mb-1">
-                    {renderBold(item)}
-                  </div>
-                )
-              })}
-            </ul>
-          )
-        }
-
-        return (
-          <p
-            key={`${index}-${pIndex}`}
-            className="mb-4 whitespace-pre-wrap leading-relaxed text-white/80"
-          >
-            {renderBold(paragraph)}
-          </p>
-        )
-      })
-    })
-  }
-
-  const resultProducts = localResult?.products || localResult?.stock || []
+  const displayProducts =
+    localResult?.products || localResult?.referenced_internal_products || localResult?.stock || []
 
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
@@ -259,28 +270,28 @@ export function AIPrompt({
                 <p className="text-xs text-white/50">Especialista em Audiovisual</p>
               </div>
             </div>
-            <div className="prose prose-invert max-w-none text-white/80">
-              {formatMessage(localResult.message)}
-            </div>
+            <ReactMarkdown className="prose prose-invert max-w-none">
+              {localResult.message}
+            </ReactMarkdown>
           </div>
 
-          {resultProducts.length > 0 && (
+          {displayProducts.length > 0 && (
             <div className="w-full mt-6 animate-fade-in-up delay-150">
               <div className="flex items-center gap-4 mb-6">
                 <h3 className="text-xl font-bold text-white pl-3 border-l-4 border-primary">
-                  Equipamentos Localizados
+                  Equipamentos Relacionados
                 </h3>
                 <div className="h-[1px] flex-1 bg-white/10" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {resultProducts.map((product: any) => (
+                {displayProducts.map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </div>
           )}
 
-          {(resultProducts.length === 0 || localResult?.confidence_level === 'low') && (
+          {localResult?.should_show_whatsapp_button && (
             <div className="w-full flex justify-center mt-4 animate-fade-in-up delay-200">
               <a
                 href="https://wa.me/13055551234"
