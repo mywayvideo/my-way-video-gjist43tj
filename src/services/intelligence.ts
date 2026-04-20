@@ -102,7 +102,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
       body: {
         query: query,
         products: contextProducts,
-        intelligence: [...contextIntelligence, ...nabData],
+        intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
         agentId: agentId,
         isNABQuery: hasNab,
         assembledPrompt: assembledPrompt,
