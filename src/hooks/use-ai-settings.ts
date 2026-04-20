@@ -18,6 +18,7 @@ export interface AIGlobalSettings {
 export function useAISettings() {
   const [globalSettings, setGlobalSettings] = useState<AIGlobalSettings | null>(null)
   const [systemPromptTemplate, setSystemPromptTemplate] = useState<string>('')
+  const [agentSystemPrompt, setAgentSystemPrompt] = useState<string>('')
   const [logisticsRulesPrompt, setLogisticsRulesPrompt] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
@@ -53,7 +54,8 @@ export function useAISettings() {
           : '',
       })
 
-      setSystemPromptTemplate(generalData?.system_prompt_template || agentData?.system_prompt || '')
+      setSystemPromptTemplate(generalData?.system_prompt_template || '')
+      setAgentSystemPrompt(agentData?.system_prompt || '')
       setLogisticsRulesPrompt(generalData?.logistics_rules_prompt || '')
     } catch (e) {
       console.error(e)
@@ -130,10 +132,9 @@ export function useAISettings() {
     }
   }
 
-  const saveSystemPrompt = async (prompt: string) => {
+  const saveSystemPromptTemplate = async (prompt: string) => {
     try {
       const aiSettingsId = await getOrCreateAiSettingsId(globalSettings?.ai_settings_id)
-      const agentSettingsId = await getOrCreateAgentSettingsId(globalSettings?.ai_agent_settings_id)
 
       await supabase.from('ai_settings').upsert(
         {
@@ -143,6 +144,19 @@ export function useAISettings() {
         { onConflict: 'id' },
       )
 
+      toast.success('System Prompt salvo com sucesso!')
+      await fetchSettings()
+      return true
+    } catch (error) {
+      toast.error('Erro ao salvar System Prompt.')
+      return false
+    }
+  }
+
+  const saveAgentSystemPrompt = async (prompt: string) => {
+    try {
+      const agentSettingsId = await getOrCreateAgentSettingsId(globalSettings?.ai_agent_settings_id)
+
       await supabase.from('ai_agent_settings').upsert(
         {
           id: agentSettingsId,
@@ -151,11 +165,11 @@ export function useAISettings() {
         { onConflict: 'id' },
       )
 
-      toast.success('Instruções salvas com sucesso!')
+      toast.success('AI Expert Prompt salvo com sucesso!')
       await fetchSettings()
       return true
     } catch (error) {
-      toast.error('Erro ao salvar instruções da IA.')
+      toast.error('Erro ao salvar AI Expert Prompt.')
       return false
     }
   }
@@ -188,11 +202,13 @@ export function useAISettings() {
   return {
     globalSettings,
     systemPromptTemplate,
+    agentSystemPrompt,
     logisticsRulesPrompt,
     loading,
     fetchSettings,
     saveGlobalSettings,
-    saveSystemPrompt,
+    saveSystemPromptTemplate,
+    saveAgentSystemPrompt,
     saveLogisticsRules,
   }
 }

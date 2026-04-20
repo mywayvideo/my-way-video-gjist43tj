@@ -27,7 +27,7 @@ export default function AdminAIPage() {
     const { data: cData } = await supabase.from('company_info').select('*')
     const { data: aiSettings } = await supabase
       .from('ai_settings')
-      .select('id, system_prompt_template')
+      .select('id, logistics_rules_prompt')
       .limit(1)
       .maybeSingle()
 
@@ -40,21 +40,21 @@ export default function AdminAIPage() {
     setCompanyInfo({
       id: aiSettings?.id || null,
       type: 'ai_knowledge',
-      content: aiSettings?.system_prompt_template || '',
+      content: aiSettings?.logistics_rules_prompt || '',
     })
   }
 
   const handleSaveCompanyInfo = async () => {
     setSavingInfo(true)
 
-    // Save system prompt template to ai_settings
+    // Save logistics rules prompt to ai_settings
     if (companyInfo.id) {
       await supabase
         .from('ai_settings')
-        .update({ system_prompt_template: companyInfo.content })
+        .update({ logistics_rules_prompt: companyInfo.content })
         .eq('id', companyInfo.id)
     } else {
-      await supabase.from('ai_settings').insert([{ system_prompt_template: companyInfo.content }])
+      await supabase.from('ai_settings').insert([{ logistics_rules_prompt: companyInfo.content }])
     }
 
     // Save footer info to company_info
@@ -126,13 +126,15 @@ export default function AdminAIPage() {
           <CardHeader>
             <CardTitle>Treinamento da IA & Institucional</CardTitle>
             <CardDescription>
-              Defina o contexto base (System Prompt Template) que o agente de IA utilizará e as
+              Defina o contexto institucional e regras logísticas que o agente de IA utilizará e as
               informações do rodapé.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label className="text-base text-foreground">System Prompt Template</Label>
+              <Label className="text-base text-foreground">
+                Contexto Institucional (Regras Logísticas)
+              </Label>
               <Textarea
                 className="min-h-[150px] bg-background/50 font-mono text-sm focus-visible:ring-primary/50"
                 value={companyInfo?.content || ''}

@@ -13,11 +13,11 @@ import { useAISettings, AIGlobalSettings } from '@/hooks/use-ai-settings'
 export default function AdminAISettings() {
   const {
     globalSettings,
-    systemPromptTemplate,
+    agentSystemPrompt,
     logisticsRulesPrompt,
     loading,
     saveGlobalSettings,
-    saveSystemPrompt,
+    saveAgentSystemPrompt,
     saveLogisticsRules,
   } = useAISettings()
 
@@ -45,13 +45,13 @@ export default function AdminAISettings() {
   }, [globalSettings])
 
   useEffect(() => {
-    if (systemPromptTemplate !== undefined && !localPrompt) {
+    if (agentSystemPrompt !== undefined && !localPrompt) {
       setLocalPrompt(
-        systemPromptTemplate ||
+        agentSystemPrompt ||
           'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é converter consultas em vendas. REGRAS: 1. SOBERANIA DE DADOS: Se houver produtos no stock, eles ESTÃO DISPONÍVEIS. 2. FORMATO: Use Markdown e negrito para nomes/preços. 3. MIAMI: Mencione envio de Miami e garantia Brasil/LATAM.',
       )
     }
-  }, [systemPromptTemplate])
+  }, [agentSystemPrompt])
 
   useEffect(() => {
     if (logisticsRulesPrompt !== undefined && !localLogistics) {
@@ -71,7 +71,7 @@ export default function AdminAISettings() {
 
   const handleSavePrompt = async () => {
     setSavingPrompt(true)
-    await saveSystemPrompt(localPrompt)
+    await saveAgentSystemPrompt(localPrompt)
     setSavingPrompt(false)
   }
 
@@ -92,7 +92,7 @@ export default function AdminAISettings() {
       <Tabs defaultValue="global" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="global">Configurações Globais</TabsTrigger>
-          <TabsTrigger value="prompt">Instruções da IA</TabsTrigger>
+          <TabsTrigger value="prompt">AI Expert Prompt</TabsTrigger>
           <TabsTrigger value="logistics">Contexto Institucional</TabsTrigger>
         </TabsList>
 
@@ -224,9 +224,10 @@ export default function AdminAISettings() {
         <TabsContent value="prompt" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Instruções da IA (System Prompt)</CardTitle>
+              <CardTitle>AI Expert Prompt</CardTitle>
               <CardDescription>
-                Defina o comportamento e o tom de voz do agente de IA.
+                Defina o comportamento e o tom de voz do agente de IA (salvo exclusivamente na
+                tabela ai_agent_settings).
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -245,7 +246,7 @@ export default function AdminAISettings() {
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...
                 </>
               ) : (
-                'Salvar Instruções da IA'
+                'Salvar AI Expert Prompt'
               )}
             </Button>
           </div>

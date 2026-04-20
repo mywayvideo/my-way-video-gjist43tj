@@ -20,7 +20,11 @@ import { Label } from '@/components/ui/label'
 
 export default function AdminAISystemPrompt() {
   const { currentUser: user, loading: authLoading } = useAuthContext()
-  const { systemPromptTemplate, loading: settingsLoading, saveSystemPrompt } = useAISettings()
+  const {
+    systemPromptTemplate,
+    loading: settingsLoading,
+    saveSystemPromptTemplate,
+  } = useAISettings()
   const [initialPrompt, setInitialPrompt] = useState('')
   const [prompt, setPrompt] = useState('')
   const [saving, setSaving] = useState(false)
@@ -36,9 +40,9 @@ export default function AdminAISystemPrompt() {
   }, [systemPromptTemplate, settingsLoading, prompt, initialPrompt])
 
   const handleSave = async () => {
-    if (!saveSystemPrompt) return
+    if (!saveSystemPromptTemplate) return
     setSaving(true)
-    const success = await saveSystemPrompt(prompt)
+    const success = await saveSystemPromptTemplate(prompt)
     if (success) {
       setInitialPrompt(prompt)
     }
