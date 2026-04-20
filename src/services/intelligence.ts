@@ -4,7 +4,7 @@ export async function getAISettings() {
   const { data: specificSettings, error } = await supabase
     .from('ai_settings')
     .select(
-      'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config',
+      'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config, ignore_stock_count',
     )
     .eq('id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle()

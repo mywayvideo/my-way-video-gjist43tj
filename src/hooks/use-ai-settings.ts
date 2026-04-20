@@ -10,6 +10,7 @@ export interface AIGlobalSettings {
   result_component_config: string
   system_prompt_template: string
   logistics_rules_prompt: string
+  ignore_stock_count: boolean
 }
 
 export function useAISettings() {
@@ -49,6 +50,7 @@ export function useAISettings() {
             : '',
           system_prompt_template: data.system_prompt_template || '',
           logistics_rules_prompt: data.logistics_rules_prompt || '',
+          ignore_stock_count: data.ignore_stock_count ?? false,
         })
       } else {
         setSettings({
@@ -58,6 +60,7 @@ export function useAISettings() {
           result_component_config: '{}',
           system_prompt_template: '',
           logistics_rules_prompt: '',
+          ignore_stock_count: false,
         })
       }
 
@@ -103,6 +106,7 @@ export function useAISettings() {
           result_component_config: parsedConfig,
           system_prompt_template: newSettings.system_prompt_template,
           logistics_rules_prompt: newSettings.logistics_rules_prompt,
+          ignore_stock_count: newSettings.ignore_stock_count,
         },
         { onConflict: 'id' },
       )
