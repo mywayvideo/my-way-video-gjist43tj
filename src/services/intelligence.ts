@@ -57,21 +57,21 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     settings?.logistics_rules_prompt ||
     'Considere os preços (price_usd vs price_brl) para determinar origem de envio (Miami vs Brasil).'
 
-  const isNewlyCached = unifiedData.isNewlyCached
   const contextIntelligence = [...(unifiedData.intel || []), ...(unifiedData.web || [])]
   const nabData = unifiedData.nabData || []
   const hasIntel = contextIntelligence.length > 0 || nabData.length > 0
   const hasNab = nabData.length > 0
 
-  let specificCitation = ''
-  if (isNewlyCached) {
-    specificCitation =
-      '- Você DEVE incluir obrigatoriamente esta frase exata na sua resposta: "Acabamos de atualizar nossa base com estas novidades."'
-  }
-
   const instructions = `
+REGRAS OBRIGATÓRIAS:
+- Responda APENAS em Português (PT-BR).
+- Mantenha os parágrafos curtos (máximo de 2 frases por parágrafo).
+- SEMPRE inclua o aviso: "Disponível para envio imediato de Miami com garantia no Brasil e América Latina."
+- Regras de Logística: ${logisticsRulesPrompt}
+${hasIntel ? '- É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Baseie-se nos dados fornecidos na inteligência de mercado ou NAB 2026.' : ''}
+${hasNab ? '- PRIORIZE os dados da NAB 2026 na sua resposta e inicie com: "Confirmamos diretamente da NAB 2026: "' : ''}
+
 Sua resposta deve ser um JSON válido. O campo 'content' deve conter o texto formatado em Markdown. O campo 'products' deve conter a lista de objetos de produtos encontrados no banco.
-${specificCitation}
 `
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
@@ -91,22 +91,13 @@ ${specificCitation}
     if (res.error) throw res.error
     data = res.data
   } catch (err) {
-    console.error('Error invoking process-query, falling back to ai-search:', err)
-    try {
-      const fallbackRes = await supabase.functions.invoke('ai-search', {
-        body: { query: query },
-      })
-      if (fallbackRes.error) throw fallbackRes.error
-      data = fallbackRes.data
-    } catch (fallbackErr) {
-      console.error('Fallback ai-search also failed:', fallbackErr)
-      return {
-        content:
-          'Neste momento nossos sistemas de inteligência estão indisponíveis. Aqui estão os resultados diretamente do nosso catálogo.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.',
-        products: contextProducts,
-        should_show_whatsapp_button: true,
-        confidence_level: 'low',
-      }
+    console.error('Error invoking process-query:', err)
+    return {
+      content:
+        'Neste momento nossos sistemas de inteligência estão indisponíveis. Aqui estão os resultados diretamente do nosso catálogo.\n\nDisponível para envio imediato de Miami com garantia no Brasil e América Latina.',
+      products: contextProducts,
+      should_show_whatsapp_button: true,
+      confidence_level: 'low',
     }
   }
 
@@ -127,7 +118,10 @@ ${specificCitation}
         result.content ||
         result.message ||
         'Aqui estão os equipamentos localizados. Disponível para envio imediato de Miami com garantia no Brasil e América Latina.',
-      products: Array.isArray(result.products) ? result.products : contextProducts,
+      products:
+        Array.isArray(result.products) && result.products.length > 0
+          ? result.products
+          : contextProducts,
       should_show_whatsapp_button: result.should_show_whatsapp_button || false,
       confidence_level: result.confidence_level || 'high',
     }

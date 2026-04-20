@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
-import { saveToCache } from '@/services/cache-service'
 
 export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -12,10 +11,9 @@ export function useUnifiedSearch() {
   const fetchUnifiedData = async (query: string) => {
     const settings = await getAISettings()
 
-    let products: any[] | null = null
-    let cache: any[] | null = null
-    let nab: any[] | null = null
-    let isNewlyCached = false
+    let products: any[] = []
+    let cache: any[] = []
+    let nab: any[] = []
 
     try {
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
@@ -25,59 +23,18 @@ export function useUnifiedSearch() {
       if (searchError) {
         console.error('Error calling unified_search:', searchError)
       } else if (searchData) {
-        products = (searchData as any).stock || []
-        cache = (searchData as any).intel || []
-        nab = (searchData as any).nab_data || []
+        const responseObj = searchData as any
+        products = responseObj.stock || []
+        cache = responseObj.intel || []
+        nab = responseObj.nab_data || []
       }
     } catch (e) {
       console.error('RPC unified_search failed', e)
     }
 
-    let webResults: any = null
+    let finalProducts = products.length > 0 ? products : []
 
-    // Web Search Fallback
-    if (
-      (!products || products.length === 0) &&
-      (!cache || cache.length === 0) &&
-      (!nab || nab.length === 0)
-    ) {
-      try {
-        const { data: aiSearchData, error: aiSearchError } = await supabase.functions.invoke(
-          'ai-search',
-          { body: { query: query } },
-        )
-
-        if (!aiSearchError && aiSearchData && aiSearchData.message) {
-          webResults = {
-            title: `Pesquisa Web: ${query}`,
-            raw_content: aiSearchData.message,
-            source: 'web',
-          }
-
-          if (
-            aiSearchData.referenced_internal_products &&
-            aiSearchData.referenced_internal_products.length > 0
-          ) {
-            products = [...(products || []), ...aiSearchData.referenced_internal_products]
-          }
-
-          // 4. Save to Cache
-          await saveToCache({
-            title: webResults.title,
-            raw_content: webResults.raw_content,
-            source_url: `https://mywayvideo.com/search?q=${encodeURIComponent(query)}`,
-          })
-          isNewlyCached = true
-        }
-      } catch (e) {
-        console.error('Web search fallback failed', e)
-      }
-    }
-
-    let finalProducts = products && products.length > 0 ? products : []
-
-    // 5. Respect stock visibility settings
-    // If ignore_stock_count is true, we return products even if stock is 0
+    // Respect stock visibility settings
     if (!settings?.ignore_stock_count) {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
@@ -85,11 +42,11 @@ export function useUnifiedSearch() {
     return {
       stock: finalProducts,
       products: finalProducts,
-      intel: cache || [],
-      nabData: nab || [],
-      web: webResults ? [webResults] : [],
+      intel: cache,
+      nabData: nab,
+      web: [],
       settings: settings || {},
-      isNewlyCached,
+      isNewlyCached: false,
     }
   }
 
@@ -141,7 +98,7 @@ export function useUnifiedSearch() {
       setResults(combinedResults)
       return combinedResults
     } catch (err: any) {
-      console.error('[useUnifiedSearch] Database query error:', err)
+      console.error('[useUnifiedSearch] error:', err)
 
       const fallbackResults = {
         message: 'Ocorreu um erro ao consultar nossa base de dados. Por favor, tente novamente.',
