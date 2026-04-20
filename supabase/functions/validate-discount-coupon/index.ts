@@ -16,10 +16,7 @@ Deno.serve(async (req: Request) => {
     const { coupon_code, order_id, subtotal } = body
 
     if (!coupon_code || typeof subtotal !== 'number') {
-      return new Response(JSON.stringify({ error: 'Dados invalidos.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Dados invalidos.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const { data: coupon, error: fetchError } = await supabaseAdmin
@@ -29,46 +26,29 @@ Deno.serve(async (req: Request) => {
       .maybeSingle()
 
     if (fetchError || !coupon) {
-      return new Response(JSON.stringify({ error: 'Cupom nao encontrado.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Cupom nao encontrado.' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (new Date(coupon.valid_until) < new Date()) {
-      return new Response(JSON.stringify({ error: 'Cupom expirado.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Cupom expirado.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (coupon.is_used) {
-      return new Response(JSON.stringify({ error: 'Cupom ja foi utilizado.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Cupom ja foi utilizado.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (coupon.discount_amount > subtotal) {
-      return new Response(JSON.stringify({ error: 'Desconto maior que subtotal.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Desconto maior que subtotal.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    return new Response(
-      JSON.stringify({
-        code: coupon.code,
-        discount_amount: coupon.discount_amount,
-        valid_until: coupon.valid_until,
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return new Response(JSON.stringify({ 
+      code: coupon.code, 
+      discount_amount: coupon.discount_amount, 
+      valid_until: coupon.valid_until 
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
   } catch (error: any) {
     console.error('Error in validate-discount-coupon:', error)
-    return new Response(JSON.stringify({ error: 'Erro interno ao validar cupom.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Erro interno ao validar cupom.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
