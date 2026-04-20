@@ -177,6 +177,7 @@ export function useUnifiedSearch() {
       }
 
       console.log('DATABASE_SEARCH_RESULTS:', combinedResults)
+      console.log('DATA_FOUND:', combinedResults.stock?.length || 0)
 
       setResults(combinedResults)
       return combinedResults

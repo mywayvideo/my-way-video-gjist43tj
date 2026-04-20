@@ -85,31 +85,36 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const localCart = localStorage.getItem('mw-video-cart-v2')
         let items: CartItem[] = localCart ? JSON.parse(localCart) : []
 
-        const cartId = await getCartId()
+        const currentPath = window.location.pathname
+        const shouldFetchFromDb = currentPath.includes('/cart') || currentPath.includes('/checkout')
 
-        if (cartId) {
-          const { data: dbItems } = await supabase
-            .from('cart_items')
-            .select(
-              'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight, manufacturer_id, category_id, price_cost)',
-            )
-            .eq('cart_id', cartId)
+        if (shouldFetchFromDb) {
+          const cartId = await getCartId()
 
-          if (dbItems) {
-            items = dbItems.map((item) => ({
-              id: item.product_id,
-              name: (item.products as any)?.name || '',
-              price: (item.products as any)?.price_usd || 0,
-              quantity: item.quantity,
-              image_url: (item.products as any)?.image_url,
-              price_usa: (item.products as any)?.price_usd,
-              price_nationalized_sales: (item.products as any)?.price_nationalized_sales,
-              price_nationalized_currency: (item.products as any)?.price_nationalized_currency,
-              weight: (item.products as any)?.weight,
-              manufacturer_id: (item.products as any)?.manufacturer_id,
-              category_id: (item.products as any)?.category_id,
-              price_cost: (item.products as any)?.price_cost,
-            }))
+          if (cartId) {
+            const { data: dbItems } = await supabase
+              .from('cart_items')
+              .select(
+                'id, product_id, quantity, products(name, price_usd, price_brl, image_url, price_nationalized_sales, price_nationalized_currency, weight, manufacturer_id, category_id, price_cost)',
+              )
+              .eq('cart_id', cartId)
+
+            if (dbItems) {
+              items = dbItems.map((item) => ({
+                id: item.product_id,
+                name: (item.products as any)?.name || '',
+                price: (item.products as any)?.price_usd || 0,
+                quantity: item.quantity,
+                image_url: (item.products as any)?.image_url,
+                price_usa: (item.products as any)?.price_usd,
+                price_nationalized_sales: (item.products as any)?.price_nationalized_sales,
+                price_nationalized_currency: (item.products as any)?.price_nationalized_currency,
+                weight: (item.products as any)?.weight,
+                manufacturer_id: (item.products as any)?.manufacturer_id,
+                category_id: (item.products as any)?.category_id,
+                price_cost: (item.products as any)?.price_cost,
+              }))
+            }
           }
         }
         setCartItems(items)
