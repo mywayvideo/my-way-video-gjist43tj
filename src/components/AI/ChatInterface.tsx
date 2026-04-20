@@ -67,7 +67,10 @@ export function ChatInterface() {
           <div>
             <div className="flex items-center space-x-2">
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
-              <span className="font-bold text-xs uppercase tracking-wider text-primary border border-primary/20 px-2 py-1 rounded-md">
+              <span
+                className="font-bold text-xs uppercase tracking-wider text-primary border border-primary/20 px-2 py-1 rounded-md"
+                style={{ fontVariantCaps: 'small-caps' }}
+              >
                 IA My Way Business
               </span>
             </div>

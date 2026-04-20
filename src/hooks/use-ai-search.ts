@@ -78,7 +78,7 @@ export function useUnifiedSearch() {
           intel: unifiedData.intel,
           nab_data: unifiedData.nabData,
         })
-        console.log('Search Context:', contextString)
+        console.log('Search Context Sent to AI:', contextString)
         const aiResponse = await generateExpertResponse(
           query,
           { ...unifiedData, stringifiedContext: contextString },

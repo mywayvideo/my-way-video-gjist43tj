@@ -9,8 +9,17 @@ export async function getAISettings() {
     .eq('id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle()
 
+  let resolvedSpecificSettings = specificSettings
+
   if (error || !specificSettings) {
-    throw new Error('Falha ao obter configurações de IA da tabela ai_settings.')
+    resolvedSpecificSettings = {
+      system_prompt_template:
+        'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é ajudar clientes a encontrar o equipamento perfeito e converter consultas em vendas.',
+      logistics_rules_prompt:
+        'Se price_usd > 0: Envio de Miami com garantia integral no Brasil e América Latina. Origem: Doral, FL.',
+      price_threshold_usd: 5000,
+      cache_expiration_days: 30,
+    }
   }
 
   const { data: agentSettings } = await supabase
@@ -22,7 +31,7 @@ export async function getAISettings() {
     .limit(1)
     .maybeSingle()
 
-  return { ...agentSettings, ...specificSettings }
+  return { ...agentSettings, ...resolvedSpecificSettings }
 }
 
 export async function getActiveAgent() {
@@ -44,7 +53,11 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const systemPromptTemplate = settings.system_prompt_template || ''
   const logisticsRulesPrompt = settings.logistics_rules_prompt || ''
 
-  const systemPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}`
+  if (!systemPromptTemplate || systemPromptTemplate.trim() === '') {
+    throw new Error(
+      'Configuração de sistema (system_prompt_template) vazia ou não encontrada. Operação abortada.',
+    )
+  }
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
   const hasNab = (unifiedData.nabData || []).length > 0
@@ -59,21 +72,21 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     }
   }
 
+  const strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
+REGRA 2: Especificações técnicas DEVEM estar em blocos de código (triple backticks).
+REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
+REGRA 4: Se o produto foi citado, o card DEVE ser exibido abaixo.
+IDIOMA: 100% Português (PT-BR).
+DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível para envio imediato de Miami.`
+
+  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nDADOS REAIS DO CATÁLOGO: ${JSON.stringify(contextProducts)}`
+
   const currentContext =
     unifiedData.stringifiedContext ||
     JSON.stringify({
       products: contextProducts,
       intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
     })
-
-  const ruleBrazilLatam = `REGRAS OBRIGATÓRIAS E CRÍTICAS:
-- Idioma: 100% Português (PT-BR).
-- Parágrafos: Máximo de 2 frases por parágrafo.
-- Especificações: SEMPRE apresentar especificações técnicas em blocos de código (\`\`\`).
-- Produtos: Se o contexto retornar itens, apresente-os OBRIGATORIAMENTE em formato Markdown técnico.
-- Garantia: SEMPRE incluir o aviso de garantia oficial no Brasil/LATAM com envio de Miami ao final.`
-
-  const assembledPrompt = `${systemPrompt}\n\nContexto dos Dados (JSON):\n${currentContext}\n\n${ruleBrazilLatam}`
 
   let data: any = null
   try {
@@ -88,6 +101,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
         assembledPrompt: assembledPrompt,
         price_threshold_usd: settings.price_threshold_usd,
         whatsapp_triggers: settings.whatsapp_trigger_keywords,
+        temperature: 0.2,
       },
     })
 
