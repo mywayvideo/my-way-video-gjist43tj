@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase/client'
 export function resolveImageUrl(url: string | null | undefined): string | null {
   if (!url) return null
 
-  if (url.startsWith('http') || url.includes('bhphotovideo.com')) {
+  if (url.includes('bhphotovideo.com') || url.startsWith('http') || url.startsWith('https')) {
     return url
   }
 

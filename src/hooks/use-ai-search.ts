@@ -46,11 +46,12 @@ export function useUnifiedSearch() {
         if (terms.length > 0) {
           let q = supabase
             .from('products')
-            .select('id, technical_info, description, price_usd, name, image_url, stock')
+            .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
             .eq('is_discontinued', false)
 
+          // Use Fuzzy Search (ILIKE) with wildcards '%term%' for both product names and models.
           terms.forEach((t) => {
-            q = q.ilike('name', `%${t}%`)
+            q = q.or(`name.ilike.%${t}%,sku.ilike.%${t}%`)
           })
 
           const { data: fuzzyProducts } = await q.limit(10)
@@ -65,7 +66,7 @@ export function useUnifiedSearch() {
         const productIds = products.map((p: any) => p.id)
         const { data: fullProducts } = await supabase
           .from('products')
-          .select('id, technical_info, description, price_usd, name, image_url, stock')
+          .select('id, technical_info, description, price_usd, name, sku, image_url, stock')
           .in('id', productIds)
         if (fullProducts) {
           products = products.map((p: any) => {
