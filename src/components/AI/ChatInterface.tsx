@@ -68,7 +68,7 @@ export function ChatInterface() {
           <div>
             <div className="flex items-center space-x-2">
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
-              <span className="font-bold text-xs uppercase tracking-wider text-primary">
+              <span className="font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] text-transparent bg-clip-text">
                 IA My Way Business
               </span>
             </div>
@@ -219,7 +219,7 @@ export function ChatInterface() {
             size="icon"
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
-              'bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg hover:scale-105 border-0',
+              'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] hover:shadow-lg hover:scale-105 border-0',
             )}
           >
             {isLoading ? (

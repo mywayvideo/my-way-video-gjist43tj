@@ -87,12 +87,13 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
       intelligence: [...(unifiedData.intel || []), ...(unifiedData.nabData || [])],
     })
 
-  const ruleBrazilLatam = `REGRAS OBRIGATÓRIAS:
+  const ruleBrazilLatam = `REGRAS OBRIGATÓRIAS E CRÍTICAS:
 - Idioma: 100% Português (PT-BR).
-- Parágrafos: Máximo de 2 frases.
-- Especificações: SEMPRE em blocos de código (\`\`\`).
-- Produtos: Apresente-os obrigatoriamente usando formatação Markdown.
-- Garantia: SEMPRE incluir o aviso de garantia oficial Brasil/LATAM ao final.`
+- Parágrafos: Máximo de 2 frases por parágrafo.
+- Especificações: SEMPRE apresentar especificações técnicas em blocos de código (\`\`\`).
+- Produtos: Se o contexto retornar itens, apresente-os OBRIGATORIAMENTE em formato Markdown técnico.
+- Proibição: É EXPRESSAMENTE PROIBIDO usar respostas de fallback como "estoque em atualização" se houver produtos.
+- Garantia: SEMPRE incluir o aviso de garantia oficial no Brasil/LATAM com envio de Miami ao final.`
 
   const assembledPrompt = `${systemPrompt}\n\nContexto dos Dados (JSON):\n${currentContext}\n\n${ruleBrazilLatam}`
 

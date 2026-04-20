@@ -265,18 +265,18 @@ export function AIPrompt({
             disabled={isLoading || isExternalLoading || !query.trim() || isSettingsLoading}
             className={cn(
               'mt-2 sm:mt-0 sm:ml-2 w-full sm:w-auto px-8 py-4 rounded-full flex items-center justify-center gap-2 font-semibold transition-all duration-300 text-center',
-              'bg-black border border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:bg-white/10 hover:border-white/40',
+              'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-lg hover:scale-105 border-0',
               isLoading || isExternalLoading || !query.trim() || isSettingsLoading
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer',
             )}
           >
             {isLoading || isExternalLoading || isSettingsLoading ? (
-              <Loader2 size={20} className="animate-spin" />
+              <Loader2 size={20} className="animate-spin text-white" />
             ) : (
-              <Search size={20} />
+              <Search size={20} className="text-white" />
             )}
-            <span className="sm:hidden ml-2">
+            <span className="sm:hidden ml-2 text-white">
               {isLoading || isExternalLoading || isSettingsLoading ? 'Buscando...' : 'Buscar'}
             </span>
           </button>
