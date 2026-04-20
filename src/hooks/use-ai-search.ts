@@ -95,6 +95,7 @@ export function useUnifiedSearch() {
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
 
+    console.log('NEW SEARCH TERM:', cleanQuery)
     setIsLoading(true)
     setResults(null)
 
@@ -107,33 +108,25 @@ export function useUnifiedSearch() {
       const newIntel = unifiedData.intel || []
       const newNab = unifiedData.nabData || []
 
-      const mergedProducts = [...accumulatedContext.current.products, ...newProducts].filter(
-        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-      )
-      const mergedIntel = [...accumulatedContext.current.intel, ...newIntel].filter(
-        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-      )
-      const mergedNab = [...accumulatedContext.current.nabData, ...newNab].filter(
-        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-      )
+      console.log('NEW RESULTS:', newProducts.length)
 
       accumulatedContext.current = {
-        products: mergedProducts,
-        intel: mergedIntel,
-        nabData: mergedNab,
+        products: newProducts,
+        intel: newIntel,
+        nabData: newNab,
       }
 
-      const accumulatedUnifiedData = {
+      const currentUnifiedData = {
         ...unifiedData,
-        stock: mergedProducts,
-        products: mergedProducts,
-        intel: mergedIntel,
-        nabData: mergedNab,
+        stock: newProducts,
+        products: newProducts,
+        intel: newIntel,
+        nabData: newNab,
       }
 
       let finalMessage = ''
       let finalConfidence = 'high'
-      let finalProducts = accumulatedUnifiedData.products
+      let finalProducts = currentUnifiedData.products
       let shouldShowWhatsapp = false
 
       if (!activeAgent) {
@@ -145,14 +138,14 @@ export function useUnifiedSearch() {
         })
       } else {
         const contextString = JSON.stringify({
-          stock: accumulatedUnifiedData.stock,
-          intel: accumulatedUnifiedData.intel,
-          nab_data: accumulatedUnifiedData.nabData,
+          stock: currentUnifiedData.stock,
+          intel: currentUnifiedData.intel,
+          nab_data: currentUnifiedData.nabData,
         })
         console.log('Search Context Sent to AI:', contextString)
         const aiResponse = await generateExpertResponse(
           cleanQuery,
-          { ...accumulatedUnifiedData, stringifiedContext: contextString },
+          { ...currentUnifiedData, stringifiedContext: contextString },
           activeAgent.id,
         )
         finalMessage = aiResponse.content
@@ -160,18 +153,18 @@ export function useUnifiedSearch() {
         if (aiResponse.products && aiResponse.products.length > 0) {
           finalProducts = aiResponse.products
         }
-        shouldShowWhatsapp = aiResponse.should_show_whatsapp_button || false
+        shouldShowWhatsapp = newProducts.length === 0
       }
 
       const combinedResults = {
         message: finalMessage,
         content: finalMessage,
         confidence_level: finalConfidence,
-        stock: accumulatedUnifiedData.stock,
+        stock: currentUnifiedData.stock,
         products: finalProducts,
-        intel: accumulatedUnifiedData.intel,
-        nabData: accumulatedUnifiedData.nabData,
-        web: accumulatedUnifiedData.web,
+        intel: currentUnifiedData.intel,
+        nabData: currentUnifiedData.nabData,
+        web: currentUnifiedData.web,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
       }

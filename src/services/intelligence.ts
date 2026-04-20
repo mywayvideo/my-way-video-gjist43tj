@@ -77,14 +77,15 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   let strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
 REGRA 2: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
-REGRA 4: Se o produto foi citado, o card DEVE ser exibido abaixo.
+REGRA 4: Se a busca retornar produtos diferentes da mensagem anterior, reconheça a mudança de assunto (ex: "Entendido, sobre o [Novo Produto]...").
+REGRA 5: Priorize os NOVOS produtos encontrados na busca atual em relação a qualquer contexto anterior.
 IDIOMA: 100% Português (PT-BR).
 DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível para envio imediato de Miami.`
 
   if (isEventOrNews) {
-    strictRules += `\nREGRA 5: A intenção detectada é EVENTO/NOTÍCIAS. Resuma as novidades e tendências (nab_data / intel) PRIMEIRO, e DEPOIS liste os produtos relacionados do catálogo (stock).`
+    strictRules += `\nREGRA 6: A intenção detectada é EVENTO/NOTÍCIAS. Resuma as novidades e tendências (nab_data / intel) PRIMEIRO, e DEPOIS liste os produtos relacionados do catálogo (stock).`
   } else {
-    strictRules += `\nREGRA 5: A intenção detectada é PRODUTO. Priorize os resultados do catálogo (stock) e foque nas especificações e disponibilidade.`
+    strictRules += `\nREGRA 6: A intenção detectada é PRODUTO. Priorize os resultados do catálogo (stock) e foque nas especificações e disponibilidade.`
   }
 
   const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nDADOS REAIS DO CATÁLOGO: ${JSON.stringify(contextProducts)}`
