@@ -66,16 +66,6 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const contextNab = unifiedData.nabData || []
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  if (contextProducts.length === 0 && !hasNab) {
-    return {
-      content:
-        'Não encontrei este item específico no meu catálogo de Miami, mas posso verificar com nossos fornecedores.',
-      products: [],
-      should_show_whatsapp_button: true,
-      confidence_level: 'low',
-    }
-  }
-
   let strictRules = `REGRA 1: Máximo de 2 frases por parágrafo.
 REGRA 2: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.

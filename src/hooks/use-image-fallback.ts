@@ -4,14 +4,16 @@ import { supabase } from '@/lib/supabase/client'
 export function resolveImageUrl(url: string | null | undefined): string | null {
   if (!url) return null
 
+  const trimmedUrl = url.trim()
+
   if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('data:') ||
-    url.includes('bhphotovideo.com') ||
-    url.includes('static.bhphoto.com')
+    trimmedUrl.toLowerCase().startsWith('http://') ||
+    trimmedUrl.toLowerCase().startsWith('https://') ||
+    trimmedUrl.toLowerCase().startsWith('data:') ||
+    trimmedUrl.toLowerCase().includes('bhphotovideo.com') ||
+    trimmedUrl.toLowerCase().includes('static.bhphoto.com')
   ) {
-    return url
+    return trimmedUrl
   }
 
   if (url.startsWith('/')) {

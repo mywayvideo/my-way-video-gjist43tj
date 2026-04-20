@@ -16,6 +16,82 @@ import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
 import { resolveImageUrl } from '@/hooks/use-image-fallback'
 
+const renderMarkdown = (text: string) => {
+  if (!text) return null
+  const parts = text.split(/(```[\s\S]*?```)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('```') && part.endsWith('```')) {
+      const code = part.slice(3, -3).replace(/^[a-z]+\n/, '')
+      return (
+        <div
+          key={i}
+          className="my-2 p-3 bg-black/5 rounded-md overflow-x-auto font-mono text-[13px] text-foreground/80 whitespace-pre-wrap border border-black/10"
+        >
+          {code}
+        </div>
+      )
+    }
+
+    const paragraphs = part.split('\n\n')
+    return paragraphs.map((p, j) => {
+      if (!p.trim()) return null
+
+      const lines = p.split('\n')
+      return (
+        <div key={`${i}-${j}`} className={j > 0 ? 'mt-3' : ''}>
+          {lines.map((line, k) => {
+            let content = line
+            let isHeading = false
+            let headingLevel = 0
+
+            if (content.startsWith('### ')) {
+              content = content.replace('### ', '')
+              isHeading = true
+              headingLevel = 3
+            } else if (content.startsWith('## ')) {
+              content = content.replace('## ', '')
+              isHeading = true
+              headingLevel = 2
+            } else if (content.startsWith('# ')) {
+              content = content.replace('# ', '')
+              isHeading = true
+              headingLevel = 1
+            }
+
+            const tokens = content.split(/(\*\*.*?\*\*)/g)
+            const renderedLine = tokens.map((token, tIdx) => {
+              if (token.startsWith('**') && token.endsWith('**')) {
+                return (
+                  <strong key={tIdx} className="font-semibold text-foreground">
+                    {token.slice(2, -2)}
+                  </strong>
+                )
+              }
+              return <span key={tIdx}>{token}</span>
+            })
+
+            if (isHeading) {
+              const Element = `h${headingLevel}` as any
+              return (
+                <Element key={k} className="font-bold text-foreground mt-4 mb-2">
+                  {renderedLine}
+                </Element>
+              )
+            }
+
+            const isListItem = line.trim().startsWith('- ') || /^\d+\.\s/.test(line.trim())
+            return (
+              <div key={k} className={isListItem ? 'ml-4 mb-1 relative' : ''}>
+                {renderedLine}
+              </div>
+            )
+          })}
+        </div>
+      )
+    })
+  })
+}
+
 export function ChatInterface() {
   const { search, isLoading } = useAiSearch()
   const [query, setQuery] = useState('')
@@ -117,8 +193,8 @@ export function ChatInterface() {
                         : 'bg-muted/50 text-foreground rounded-tl-sm border border-border/50',
                     )}
                   >
-                    <div className="whitespace-pre-wrap leading-relaxed space-y-2">
-                      {msg.content}
+                    <div className="leading-relaxed space-y-2 break-words">
+                      {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
                     </div>
                   </div>
 
@@ -229,10 +305,10 @@ export function ChatInterface() {
             type="submit"
             disabled={!query.trim() || isLoading}
             size="icon"
+            style={{ backgroundImage: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
             className={cn(
               'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
               'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
-              '!bg-[linear-gradient(to_right,#3b82f6,#8b5cf6)]',
               isLoading && 'animate-pulse',
             )}
           >
@@ -241,7 +317,11 @@ export function ChatInterface() {
             ) : (
               <>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <Search className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform text-white" />
+                <Search
+                  className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform text-white"
+                  color="white"
+                  strokeWidth={2.5}
+                />
               </>
             )}
           </Button>
