@@ -95,9 +95,10 @@ export function useUnifiedSearch() {
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
 
-    console.log('NEW SEARCH TERM:', cleanQuery)
+    console.log('NEW SEARCH FOR:', cleanQuery)
     setIsLoading(true)
     setResults(null)
+    accumulatedContext.current = { products: [], intel: [], nabData: [] }
 
     try {
       const activeAgent = await getActiveAgent()

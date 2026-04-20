@@ -56,7 +56,9 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const isEventOrNews =
     qLower.includes('nab') ||
     qLower.includes('lançamento') ||
+    qLower.includes('lançamentos') ||
     qLower.includes('novidade') ||
+    qLower.includes('novidades') ||
     qLower.includes('tendência')
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
@@ -82,13 +84,14 @@ REGRA 5: Priorize os NOVOS produtos encontrados na busca atual em relação a qu
 IDIOMA: 100% Português (PT-BR).
 DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível para envio imediato de Miami.`
 
-  if (isEventOrNews) {
-    strictRules += `\nREGRA 6: A intenção detectada é EVENTO/NOTÍCIAS. Resuma as novidades e tendências (nab_data / intel) PRIMEIRO, e DEPOIS liste os produtos relacionados do catálogo (stock).`
+  if (isEventOrNews || hasNab) {
+    strictRules += `\nREGRA 6: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Reporte as notícias PRIMEIRO. Se a busca retornar notícias da NAB mas não houver produtos no estoque, NÃO diga "não encontrei no catálogo". Apenas reporte a notícia.`
   } else {
-    strictRules += `\nREGRA 6: A intenção detectada é PRODUTO. Priorize os resultados do catálogo (stock) e foque nas especificações e disponibilidade.`
+    strictRules += `\nREGRA 6: A intenção detectada é PRODUTO. Priorize os resultados de RESULTADOS DO ESTOQUE e foque nas especificações e disponibilidade.`
   }
 
-  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nDADOS REAIS DO CATÁLOGO: ${JSON.stringify(contextProducts)}`
+  const nabJson = [...contextIntel, ...contextNab]
+  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nRESULTADOS DO ESTOQUE: ${JSON.stringify(contextProducts)} | NOTÍCIAS DA NAB: ${JSON.stringify(nabJson)}`
 
   const currentContext = contextProducts
 
@@ -98,14 +101,14 @@ DISPONIBILIDADE: Se o produto está no catálogo, assuma que está disponível p
       body: {
         query: query,
         products: contextProducts,
-        intelligence: [...contextIntel, ...contextNab],
+        intelligence: nabJson,
         context: currentContext,
         agentId: agentId,
         isNABQuery: hasNab || isEventOrNews,
         assembledPrompt: assembledPrompt,
         price_threshold_usd: settings.price_threshold_usd,
         whatsapp_triggers: settings.whatsapp_trigger_keywords,
-        temperature: 0.2,
+        temperature: 0.1,
       },
     })
 
