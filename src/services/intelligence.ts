@@ -73,3 +73,49 @@ Disponível para envio imediato de Miami com garantia no Brasil.`
     }
   }
 }
+
+export const generateExpertResponse = generateResponse
+
+export async function getIntelligences() {
+  const { data, error } = await supabase
+    .from('market_intelligence')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function ingestManualKnowledge(payload: any) {
+  const { data, error } = await supabase
+    .from('market_intelligence')
+    .insert([payload])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateIntelligenceStatus(id: string, status: any) {
+  let updateData: any = {}
+  if (typeof status === 'object') {
+    updateData = status
+  } else if (typeof status === 'boolean') {
+    updateData = { is_active: status }
+  } else {
+    updateData = { status: status }
+  }
+
+  const { error } = await supabase.from('market_intelligence').update(updateData).eq('id', id)
+
+  if (error) throw error
+  return true
+}
+
+export async function deleteIntelligence(id: string) {
+  const { error } = await supabase.from('market_intelligence').delete().eq('id', id)
+
+  if (error) throw error
+  return true
+}
