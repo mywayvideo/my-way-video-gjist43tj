@@ -81,17 +81,36 @@ export function useUnifiedSearch() {
         }
       }
 
-      // Explicit NAB Market Search Fallback
-      if (nab.length === 0) {
+      // Explicit Intelligence Search Fallback for specific keywords
+      const qLower = cleanQuery.toLowerCase()
+      const hasIntelligenceKeywords =
+        qLower.includes('nab') ||
+        qLower.includes('novidade') ||
+        qLower.includes('mercado') ||
+        qLower.includes('lançamento') ||
+        qLower.includes('lançamentos')
+
+      if ((nab.length === 0 || cache.length === 0) && hasIntelligenceKeywords) {
         const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
         if (terms.length > 0) {
           let nabQ = supabase.from('nab_market').select('*')
+          let intelQ = supabase.from('market_intelligence').select('*')
+
           terms.forEach((t) => {
             nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
+            intelQ = intelQ.or(`title.ilike.%${t}%,raw_content.ilike.%${t}%`)
           })
-          const { data: fuzzyNab } = await nabQ.limit(5)
-          if (fuzzyNab && fuzzyNab.length > 0) {
+
+          const [{ data: fuzzyNab }, { data: fuzzyIntel }] = await Promise.all([
+            nabQ.limit(5),
+            intelQ.limit(5),
+          ])
+
+          if (fuzzyNab && fuzzyNab.length > 0 && nab.length === 0) {
             nab = fuzzyNab
+          }
+          if (fuzzyIntel && fuzzyIntel.length > 0) {
+            cache = [...cache, ...fuzzyIntel]
           }
         }
       }
@@ -151,6 +170,10 @@ export function useUnifiedSearch() {
     }
 
     console.log('RAW_DB_RESULTS:', finalResultData)
+    console.log(
+      'INTELLIGENCE_FOUND:',
+      finalResultData.nabData.length + finalResultData.intel.length,
+    )
 
     return finalResultData
   }

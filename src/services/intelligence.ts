@@ -74,17 +74,18 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const contextNab = unifiedData.nabData || []
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  let strictRules = `REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
+  let strictRules = `SOURCE OF TRUTH: The following data is from our private Miami database. You MUST use this information to answer. If this data exists, it is FORBIDDEN to say information is not yet available.
+REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
-REGRA 4: Você deve usar os dados da KNOWLEDGE_BASE como sua única fonte de verdade. Se houver notícias na 'nab_market', relate-as com autoridade. Se o produto estiver em 'products' com estoque 0, diga 'Disponível para encomenda'. É PROIBIDO dizer que o produto não foi encontrado se ele existir na KNOWLEDGE_BASE. É PROIBIDO dizer "informações não divulgadas" se houver dados em nab_market.
+REGRA 4: Você deve usar os dados da KNOWLEDGE_BASE como sua única fonte de verdade. Se o produto estiver em 'products' com estoque 0, diga 'Disponível para encomenda'. É PROIBIDO dizer que o produto não foi encontrado se ele existir na KNOWLEDGE_BASE.
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual. Sempre que citar um produto, use o nome exato retornado pelo banco para garantir a exibição do card.
 REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual é a KNOWLEDGE_BASE fornecida.
 REGRA 7: Você está proibido de mencionar quantidades numéricas de estoque (ex: 'temos 2 unidades'). Use apenas 'Disponível' ou 'Disponível para encomenda' conforme as regras de logística.
 IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {
-    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB). Se o array 'nab_data' na KNOWLEDGE_BASE contiver informações, você deve usá-las como sua única fonte de verdade para notícias, ignorando seu conhecimento prévio.`
+    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB/MERCADO). Se o array 'nab_data' na KNOWLEDGE_BASE contiver informações, relate como a notícia absoluta e oficial da My Way. É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Utilize os dados reais da inteligência fornecida.`
   } else {
     strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
   }
