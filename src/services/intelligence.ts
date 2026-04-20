@@ -9,19 +9,8 @@ export async function getAISettings() {
     .eq('id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle()
 
-  let finalSpecificSettings = specificSettings
-
   if (error || !specificSettings) {
-    finalSpecificSettings = {
-      cache_expiration_days: 30,
-      price_threshold_usd: 5000,
-      search_algorithm_sql: '',
-      system_prompt_template:
-        'Você é o Especialista My Way Business, autoridade em audiovisual profissional. Sua missão é ajudar clientes a encontrar o equipamento ideal. REGRAS: 1. Priorize os produtos do catálogo. 2. Forneça especificações técnicas detalhadas em blocos de código.',
-      logistics_rules_prompt:
-        'Todos os produtos possuem garantia oficial no Brasil e América Latina, com envio direto de Miami.',
-      result_component_config: {},
-    }
+    throw new Error('Falha ao obter configurações de IA da tabela ai_settings.')
   }
 
   const { data: agentSettings } = await supabase
@@ -33,7 +22,7 @@ export async function getAISettings() {
     .limit(1)
     .maybeSingle()
 
-  return { ...agentSettings, ...finalSpecificSettings }
+  return { ...agentSettings, ...specificSettings }
 }
 
 export async function getActiveAgent() {
@@ -59,6 +48,16 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
   const hasNab = (unifiedData.nabData || []).length > 0
+
+  if (contextProducts.length === 0 && !hasNab) {
+    return {
+      content:
+        'Não encontrei este item específico no meu catálogo de Miami, mas posso verificar com nossos fornecedores.',
+      products: [],
+      should_show_whatsapp_button: true,
+      confidence_level: 'low',
+    }
+  }
 
   const currentContext =
     unifiedData.stringifiedContext ||

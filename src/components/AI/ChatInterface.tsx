@@ -32,7 +32,7 @@ export function ChatInterface() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+  }, [messages.length, isLoading])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
