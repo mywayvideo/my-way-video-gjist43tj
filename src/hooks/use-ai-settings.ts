@@ -3,58 +3,52 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 export interface AIGlobalSettings {
-  ai_settings_id?: string
-  ai_agent_settings_id?: string
+  id?: string
   cache_expiration_days: number
   price_threshold_usd: number
-  whatsapp_trigger_low_confidence: boolean
-  whatsapp_trigger_purchase_keywords: boolean
-  whatsapp_trigger_project_keywords: boolean
-  whatsapp_trigger_expensive_product: boolean
   search_algorithm_sql: string
   result_component_config: string
+  system_prompt_template: string
+  logistics_rules_prompt: string
 }
 
 export function useAISettings() {
-  const [globalSettings, setGlobalSettings] = useState<AIGlobalSettings | null>(null)
-  const [systemPromptTemplate, setSystemPromptTemplate] = useState<string>('')
-  const [agentSystemPrompt, setAgentSystemPrompt] = useState<string>('')
-  const [logisticsRulesPrompt, setLogisticsRulesPrompt] = useState<string>('')
+  const [settings, setSettings] = useState<AIGlobalSettings | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchSettings = async () => {
     try {
       setLoading(true)
-      const { data: agentData } = await supabase
-        .from('ai_agent_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
 
-      const { data: generalData } = await supabase
+      const { data } = await supabase
         .from('ai_settings')
         .select('*')
+        .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle()
 
-      setGlobalSettings({
-        ai_settings_id: generalData?.id,
-        ai_agent_settings_id: agentData?.id,
-        cache_expiration_days: generalData?.cache_expiration_days ?? 30,
-        price_threshold_usd: generalData?.price_threshold_usd ?? 5000,
-        whatsapp_trigger_low_confidence: agentData?.whatsapp_trigger_low_confidence ?? true,
-        whatsapp_trigger_purchase_keywords: agentData?.whatsapp_trigger_purchase_keywords ?? true,
-        whatsapp_trigger_project_keywords: agentData?.whatsapp_trigger_project_keywords ?? true,
-        whatsapp_trigger_expensive_product: agentData?.whatsapp_trigger_expensive_product ?? true,
-        search_algorithm_sql: generalData?.search_algorithm_sql || '',
-        result_component_config: generalData?.result_component_config
-          ? JSON.stringify(generalData.result_component_config)
-          : '',
-      })
-
-      setSystemPromptTemplate(generalData?.system_prompt_template || '')
-      setAgentSystemPrompt(agentData?.system_prompt || '')
-      setLogisticsRulesPrompt(generalData?.logistics_rules_prompt || '')
+      if (data) {
+        setSettings({
+          id: data.id,
+          cache_expiration_days: data.cache_expiration_days ?? 30,
+          price_threshold_usd: data.price_threshold_usd ?? 5000,
+          search_algorithm_sql: data.search_algorithm_sql || '',
+          result_component_config: data.result_component_config
+            ? JSON.stringify(data.result_component_config)
+            : '',
+          system_prompt_template: data.system_prompt_template || '',
+          logistics_rules_prompt: data.logistics_rules_prompt || '',
+        })
+      } else {
+        setSettings({
+          cache_expiration_days: 30,
+          price_threshold_usd: 5000,
+          search_algorithm_sql: '',
+          result_component_config: '{}',
+          system_prompt_template: '',
+          logistics_rules_prompt: '',
+        })
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -62,133 +56,47 @@ export function useAISettings() {
     }
   }
 
-  const getOrCreateAiSettingsId = async (currentId?: string) => {
-    if (currentId) return currentId
-    const { data } = await supabase
-      .from('ai_settings')
-      .select('id')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    return data?.id || '00000000-0000-0000-0000-000000000001'
-  }
-
-  const getOrCreateAgentSettingsId = async (currentId?: string) => {
-    if (currentId) return currentId
-    const { data } = await supabase
-      .from('ai_agent_settings')
-      .select('id')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    return data?.id || '00000000-0000-0000-0000-000000000002'
-  }
-
-  const saveGlobalSettings = async (settings: AIGlobalSettings) => {
+  const saveSettings = async (newSettings: AIGlobalSettings) => {
     try {
       let parsedConfig = {}
-      if (settings.result_component_config) {
+      if (newSettings.result_component_config) {
         try {
-          parsedConfig = JSON.parse(settings.result_component_config)
+          parsedConfig = JSON.parse(newSettings.result_component_config)
         } catch (e) {
           toast.error('Erro de JSON. A configuração visual é inválida.')
           return false
         }
       }
 
-      const aiSettingsId = await getOrCreateAiSettingsId(settings.ai_settings_id)
-      const agentSettingsId = await getOrCreateAgentSettingsId(settings.ai_agent_settings_id)
+      let aiSettingsId = newSettings.id
+      if (!aiSettingsId) {
+        const { data } = await supabase
+          .from('ai_settings')
+          .select('id')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        aiSettingsId = data?.id || '00000000-0000-0000-0000-000000000001'
+      }
 
       await supabase.from('ai_settings').upsert(
         {
           id: aiSettingsId,
-          cache_expiration_days: settings.cache_expiration_days,
-          price_threshold_usd: settings.price_threshold_usd,
-          search_algorithm_sql: settings.search_algorithm_sql,
+          cache_expiration_days: newSettings.cache_expiration_days,
+          price_threshold_usd: newSettings.price_threshold_usd,
+          search_algorithm_sql: newSettings.search_algorithm_sql,
           result_component_config: parsedConfig,
+          system_prompt_template: newSettings.system_prompt_template,
+          logistics_rules_prompt: newSettings.logistics_rules_prompt,
         },
         { onConflict: 'id' },
       )
 
-      await supabase.from('ai_agent_settings').upsert(
-        {
-          id: agentSettingsId,
-          whatsapp_trigger_low_confidence: settings.whatsapp_trigger_low_confidence,
-          whatsapp_trigger_purchase_keywords: settings.whatsapp_trigger_purchase_keywords,
-          whatsapp_trigger_project_keywords: settings.whatsapp_trigger_project_keywords,
-          whatsapp_trigger_expensive_product: settings.whatsapp_trigger_expensive_product,
-        },
-        { onConflict: 'id' },
-      )
-
-      toast.success('Configurações globais salvas com sucesso!')
+      toast.success('Configurações da IA salvas com sucesso!')
       await fetchSettings()
       return true
     } catch (error) {
-      toast.error('Erro ao salvar configurações globais.')
-      return false
-    }
-  }
-
-  const saveSystemPromptTemplate = async (prompt: string) => {
-    try {
-      const aiSettingsId = await getOrCreateAiSettingsId(globalSettings?.ai_settings_id)
-
-      await supabase.from('ai_settings').upsert(
-        {
-          id: aiSettingsId,
-          system_prompt_template: prompt,
-        },
-        { onConflict: 'id' },
-      )
-
-      toast.success('System Prompt salvo com sucesso!')
-      await fetchSettings()
-      return true
-    } catch (error) {
-      toast.error('Erro ao salvar System Prompt.')
-      return false
-    }
-  }
-
-  const saveAgentSystemPrompt = async (prompt: string) => {
-    try {
-      const agentSettingsId = await getOrCreateAgentSettingsId(globalSettings?.ai_agent_settings_id)
-
-      await supabase.from('ai_agent_settings').upsert(
-        {
-          id: agentSettingsId,
-          system_prompt: prompt,
-        },
-        { onConflict: 'id' },
-      )
-
-      toast.success('AI Expert Prompt salvo com sucesso!')
-      await fetchSettings()
-      return true
-    } catch (error) {
-      toast.error('Erro ao salvar AI Expert Prompt.')
-      return false
-    }
-  }
-
-  const saveLogisticsRules = async (rules: string) => {
-    try {
-      const aiSettingsId = await getOrCreateAiSettingsId(globalSettings?.ai_settings_id)
-
-      await supabase.from('ai_settings').upsert(
-        {
-          id: aiSettingsId,
-          logistics_rules_prompt: rules,
-        },
-        { onConflict: 'id' },
-      )
-
-      toast.success('Contexto institucional salvo com sucesso!')
-      await fetchSettings()
-      return true
-    } catch (error) {
-      toast.error('Erro ao salvar contexto institucional.')
+      toast.error('Erro ao salvar configurações da IA.')
       return false
     }
   }
@@ -198,15 +106,9 @@ export function useAISettings() {
   }, [])
 
   return {
-    globalSettings,
-    systemPromptTemplate,
-    agentSystemPrompt,
-    logisticsRulesPrompt,
+    settings,
     loading,
     fetchSettings,
-    saveGlobalSettings,
-    saveSystemPromptTemplate,
-    saveAgentSystemPrompt,
-    saveLogisticsRules,
+    saveSettings,
   }
 }

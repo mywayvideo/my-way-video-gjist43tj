@@ -17,13 +17,18 @@ export async function getAISettings() {
 
   const { data: settings } = await supabase
     .from('ai_settings')
-    .select('*')
+    .select(
+      'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config',
+    )
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
+
   const { data: agentSettings } = await supabase
     .from('ai_agent_settings')
-    .select('*')
+    .select(
+      'whatsapp_trigger_low_confidence, whatsapp_trigger_purchase_keywords, whatsapp_trigger_project_keywords, whatsapp_trigger_expensive_product, confidence_threshold_for_whatsapp, max_web_search_attempts, whatsapp_trigger_keywords, system_prompt',
+    )
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
