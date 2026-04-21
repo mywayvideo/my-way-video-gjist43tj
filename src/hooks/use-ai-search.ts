@@ -79,8 +79,8 @@ export function useUnifiedSearch() {
         'para',
         'de',
       ]
-      const isCinemaQuery = ['cinema', 'filmagem', 'produção', 'producao'].some((kw) =>
-        cleanQuery.toLowerCase().includes(kw),
+      const isCinemaQuery = ['cinema', 'filmagem', 'produção', 'producao', 'câmera', 'camera'].some(
+        (kw) => cleanQuery.toLowerCase().includes(kw),
       )
       const terms = cleanQuery
         .split(/\s+/)
@@ -99,7 +99,7 @@ export function useUnifiedSearch() {
       }
 
       if (isCinemaQuery) {
-        let cinemaOrStr = `category.ilike.%Cinema%,description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
+        let cinemaOrStr = `category.ilike.%Cinema%,category.ilike.%Camera%,description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
         if (terms.length > 0) {
           const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
           genericQ = genericQ.or(`${combinedOrStr},${cinemaOrStr}`)
@@ -251,6 +251,29 @@ export function useUnifiedSearch() {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
+    const isCameraQuery =
+      cleanQuery.toLowerCase().includes('câmera') ||
+      cleanQuery.toLowerCase().includes('camera') ||
+      cleanQuery.toLowerCase().includes('cinema')
+
+    if (isCameraQuery) {
+      finalProducts = finalProducts.sort((a: any, b: any) => {
+        const aCat = (a.category || '').toLowerCase()
+        const bCat = (b.category || '').toLowerCase()
+        const aIsCamera =
+          aCat.includes('camera') || aCat.includes('câmera') || aCat.includes('cinema')
+        const bIsCamera =
+          bCat.includes('camera') || bCat.includes('câmera') || bCat.includes('cinema')
+
+        if (aIsCamera && !bIsCamera) return -1
+        if (!aIsCamera && bIsCamera) return 1
+
+        const aPrice = a.price_usd || 0
+        const bPrice = b.price_usd || 0
+        return bPrice - aPrice
+      })
+    }
+
     const priceThreshold = settings?.price_threshold_usd || 5000
     finalProducts = finalProducts.map((p: any) => ({
       ...p,
@@ -265,6 +288,15 @@ export function useUnifiedSearch() {
       web: [],
       settings: settings || {},
       isNewlyCached: false,
+    }
+
+    if (isCameraQuery) {
+      console.log(
+        'PRIORITY_CAMERAS_LOADED:',
+        finalResultData.stock
+          .filter((p: any) => (p.category || '').toLowerCase().includes('camera'))
+          .map((p: any) => p.name),
+      )
     }
 
     console.log('RAW_DB_RESULTS:', finalResultData)
