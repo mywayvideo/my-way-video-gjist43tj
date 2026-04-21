@@ -41,26 +41,38 @@ export function useUnifiedSearch() {
         nab = responseObj.nab_data || []
       }
 
-      // Generic Semantic Search Logic across all categories
+      // Manufacturer matching to simulate JOIN in OR
+      const { data: allMfgs } = await supabase.from('manufacturers').select('id, name')
+
+      // Generic Semantic Search Logic across all categories and manufacturers
       let genericQ = supabase.from('products').select('*').eq('is_discontinued', false)
       if (!settings?.ignore_stock_count) {
         genericQ = genericQ.gt('stock', 0)
       }
 
       const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+      const buildOrQuery = (term: string) => {
+        const matchedMfgs =
+          allMfgs
+            ?.filter((m) => m.name.toLowerCase().includes(term.toLowerCase()))
+            .map((m) => m.id) || []
+        let orStr = `name.ilike.%${term}%,sku.ilike.%${term}%,category.ilike.%${term}%,description.ilike.%${term}%`
+        if (matchedMfgs.length > 0) {
+          orStr += `,manufacturer_id.in.(${matchedMfgs.join(',')})`
+        }
+        return orStr
+      }
+
       if (terms.length > 0) {
         terms.forEach((t) => {
-          genericQ = genericQ.or(
-            `name.ilike.%${t}%,sku.ilike.%${t}%,category.ilike.%${t}%,description.ilike.%${t}%`,
-          )
+          genericQ = genericQ.or(buildOrQuery(t))
         })
       } else {
-        genericQ = genericQ.or(
-          `name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%,category.ilike.%${cleanQuery}%,description.ilike.%${cleanQuery}%`,
-        )
+        genericQ = genericQ.or(buildOrQuery(cleanQuery))
       }
 
       const { data: genericProducts } = await genericQ.limit(20)
+
       if (genericProducts && genericProducts.length > 0) {
         products = [...products, ...genericProducts].filter(
           (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
@@ -193,6 +205,23 @@ export function useUnifiedSearch() {
         nabData: newNab,
       }
 
+      // Emit intermediate results so UI can render cards immediately
+      const intermediateResults = {
+        message: 'Analisando resultados...',
+        content: 'Analisando resultados...',
+        confidence_level: 'high',
+        stock: currentUnifiedData.stock,
+        products: currentUnifiedData.products,
+        intel: currentUnifiedData.intel,
+        nabData: currentUnifiedData.nabData,
+        web: currentUnifiedData.web,
+        settings: currentUnifiedData.settings,
+        agent_name: 'Especialista My Way',
+        should_show_whatsapp_button: false,
+        is_intermediate: true,
+      }
+      setResults(intermediateResults)
+
       let finalMessage = ''
       let finalConfidence = 'high'
       let finalProducts = currentUnifiedData.products
@@ -200,7 +229,7 @@ export function useUnifiedSearch() {
 
       if (!activeAgent) {
         finalMessage =
-          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nTodos os produtos possuem garantia oficial no Brasil e América Latina, com envio direto de Miami.'
+          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nTodos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.'
         toast({
           title: 'Aviso',
           description: 'Nenhum agente configurado. Exibindo busca básica.',
@@ -219,9 +248,9 @@ export function useUnifiedSearch() {
         )
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
-        if (aiResponse.products && aiResponse.products.length > 0) {
-          finalProducts = aiResponse.products
-        }
+
+        // Always use all matching database stock products to ensure full visibility
+        finalProducts = currentUnifiedData.stock
         shouldShowWhatsapp = newProducts.length === 0
       }
 
@@ -237,6 +266,7 @@ export function useUnifiedSearch() {
         settings: currentUnifiedData.settings,
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
+        is_intermediate: false,
       }
 
       console.log('SEARCH_RESULTS:', combinedResults)
@@ -262,6 +292,7 @@ export function useUnifiedSearch() {
         web: [],
         agent_name: 'Busca Básica',
         should_show_whatsapp_button: true,
+        is_intermediate: false,
       }
 
       console.log('SEARCH_RESULTS:', fallbackResults)

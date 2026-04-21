@@ -149,7 +149,7 @@ export function ChatInterface() {
     setMessages((prev) => [...prev, { role: 'user', content: userQuery }])
 
     const res = await search(userQuery, messages)
-    if (res) {
+    if (res && !res.is_intermediate) {
       // Automate card rendering using stock results instead of just AI selected products
       const productsToRender = res.stock && res.stock.length > 0 ? res.stock : res.products
 
@@ -190,7 +190,7 @@ export function ChatInterface() {
               <CardTitle className="text-xl">Assistente Especializado</CardTitle>
               <Badge
                 variant="outline"
-                className="font-bold text-xs tracking-wider text-primary border-primary/20 bg-primary/5 relative z-[50]"
+                className="font-bold text-xs tracking-wider text-primary border-primary/20 bg-primary/5 relative z-50"
               >
                 IA My Way Business
               </Badge>
@@ -258,96 +258,99 @@ export function ChatInterface() {
                     </div>
                   </div>
 
-                  {msg.role === 'assistant' && msg.products && msg.products.length > 0 && (
-                    <div
-                      className={cn(
-                        'mt-4 w-full grid gap-4',
-                        colsDesktop === 4
-                          ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-                          : colsDesktop === 2
-                            ? 'grid-cols-1 md:grid-cols-2'
-                            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
-                      )}
-                    >
-                      {msg.products.map((product: any) => (
-                        <Card
-                          key={product.id}
-                          className={cn(
-                            'overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col',
-                            theme === 'professional-dark'
-                              ? 'bg-slate-800 border-slate-700'
-                              : 'bg-card border-border/50',
-                          )}
-                        >
-                          <div
+                  {msg.role === 'assistant' &&
+                    msg.products &&
+                    msg.products.length > 0 &&
+                    forceRenderCards && (
+                      <div
+                        className={cn(
+                          'mt-4 w-full grid gap-4',
+                          colsDesktop === 4
+                            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                            : colsDesktop === 2
+                              ? 'grid-cols-1 md:grid-cols-2'
+                              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+                        )}
+                      >
+                        {msg.products.map((product: any) => (
+                          <Card
+                            key={product.id}
                             className={cn(
-                              'aspect-square p-4 flex items-center justify-center relative overflow-hidden transition-colors',
+                              'overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col',
                               theme === 'professional-dark'
-                                ? 'bg-slate-900 group-hover:bg-slate-800'
-                                : 'bg-white group-hover:bg-gray-50',
+                                ? 'bg-slate-800 border-slate-700'
+                                : 'bg-card border-border/50',
                             )}
                           >
-                            {product.image_url ? (
-                              <img
-                                src={resolveImageUrl(product.image_url) || ''}
-                                alt={product.name}
-                                className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-primary font-bold text-xs">
-                                  {product.name.substring(0, 2).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            {(product.stock || 0) > 0 && (
-                              <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600 shadow-sm border-0 font-semibold px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                Em Estoque
-                              </Badge>
-                            )}
-                          </div>
-                          <CardContent className="p-4 flex-1 flex flex-col">
-                            <h4
-                              className={cn(
-                                'font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors flex-1',
-                                theme === 'professional-dark'
-                                  ? 'text-slate-200'
-                                  : 'text-foreground',
-                              )}
-                              title={product.name}
-                            >
-                              {product.name}
-                            </h4>
                             <div
                               className={cn(
-                                'flex items-center justify-between mt-auto pt-2 border-t',
+                                'aspect-square p-4 flex items-center justify-center relative overflow-hidden transition-colors',
                                 theme === 'professional-dark'
-                                  ? 'border-slate-700'
-                                  : 'border-border/50',
+                                  ? 'bg-slate-900 group-hover:bg-slate-800'
+                                  : 'bg-white group-hover:bg-gray-50',
                               )}
                             >
-                              <span className="font-bold text-lg text-primary">
-                                $
-                                {(product.price_usd || 0).toLocaleString('en-US', {
-                                  minimumFractionDigits: 2,
-                                })}
-                              </span>
-                              <span
+                              {product.image_url ? (
+                                <img
+                                  src={resolveImageUrl(product.image_url) || ''}
+                                  alt={product.name}
+                                  className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="text-primary font-bold text-xs">
+                                    {product.name.substring(0, 2).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              {(product.stock || 0) > 0 && (
+                                <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600 shadow-sm border-0 font-semibold px-2 py-0.5 text-[10px] uppercase tracking-wider">
+                                  Em Estoque
+                                </Badge>
+                              )}
+                            </div>
+                            <CardContent className="p-4 flex-1 flex flex-col">
+                              <h4
                                 className={cn(
-                                  'text-xs font-medium px-2 py-1 rounded-md',
+                                  'font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors flex-1',
                                   theme === 'professional-dark'
-                                    ? 'bg-slate-700 text-slate-300'
-                                    : 'bg-muted text-muted-foreground',
+                                    ? 'text-slate-200'
+                                    : 'text-foreground',
+                                )}
+                                title={product.name}
+                              >
+                                {product.name}
+                              </h4>
+                              <div
+                                className={cn(
+                                  'flex items-center justify-between mt-auto pt-2 border-t',
+                                  theme === 'professional-dark'
+                                    ? 'border-slate-700'
+                                    : 'border-border/50',
                                 )}
                               >
-                                USD
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                                <span className="font-bold text-lg text-primary">
+                                  $
+                                  {(product.price_usd || 0).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </span>
+                                <span
+                                  className={cn(
+                                    'text-xs font-medium px-2 py-1 rounded-md',
+                                    theme === 'professional-dark'
+                                      ? 'bg-slate-700 text-slate-300'
+                                      : 'bg-muted text-muted-foreground',
+                                  )}
+                                >
+                                  USD
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
 
                   {msg.role === 'assistant' && msg.showWhatsapp && msg.confidence === 'low' && (
                     <div className="mt-4 max-w-[85%]">
@@ -365,10 +368,10 @@ export function ChatInterface() {
             )}
 
             {isLoading && (
-              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300 w-full">
                 <div
                   className={cn(
-                    'rounded-2xl rounded-tl-sm px-5 py-4 text-sm border flex items-center space-x-3 shadow-sm',
+                    'rounded-2xl rounded-tl-sm px-5 py-4 text-sm border flex items-center space-x-3 shadow-sm mb-4',
                     theme === 'professional-dark'
                       ? 'bg-slate-800 border-slate-700'
                       : 'bg-muted/50 border-border/50',
@@ -397,6 +400,69 @@ export function ChatInterface() {
                     Analisando base de dados e conhecimentos...
                   </span>
                 </div>
+
+                {results?.is_intermediate &&
+                  results?.stock &&
+                  results.stock.length > 0 &&
+                  forceRenderCards && (
+                    <div
+                      className={cn(
+                        'w-full grid gap-4 opacity-70 animate-pulse',
+                        colsDesktop === 4
+                          ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                          : colsDesktop === 2
+                            ? 'grid-cols-1 md:grid-cols-2'
+                            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+                      )}
+                    >
+                      {results.stock.map((product: any) => (
+                        <Card
+                          key={`loading-${product.id}`}
+                          className={cn(
+                            'overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col',
+                            theme === 'professional-dark'
+                              ? 'bg-slate-800 border-slate-700'
+                              : 'bg-card border-border/50',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'aspect-square p-4 flex items-center justify-center relative overflow-hidden transition-colors',
+                              theme === 'professional-dark'
+                                ? 'bg-slate-900 group-hover:bg-slate-800'
+                                : 'bg-white group-hover:bg-gray-50',
+                            )}
+                          >
+                            {product.image_url ? (
+                              <img
+                                src={resolveImageUrl(product.image_url) || ''}
+                                alt={product.name}
+                                className="object-contain w-full h-full mix-blend-multiply"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-primary font-bold text-xs">
+                                  {product.name.substring(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <CardContent className="p-4 flex-1 flex flex-col">
+                            <h4
+                              className={cn(
+                                'font-semibold text-sm line-clamp-2 mb-2 transition-colors flex-1',
+                                theme === 'professional-dark'
+                                  ? 'text-slate-200'
+                                  : 'text-foreground',
+                              )}
+                            >
+                              {product.name}
+                            </h4>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
               </div>
             )}
             <div ref={messagesEndRef} />
