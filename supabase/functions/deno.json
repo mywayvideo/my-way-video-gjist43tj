@@ -1,7 +1,9 @@
 {
   "_versions": {
-    "ai-search": 82,
-    "functions": 36,
+    "ai-search": 13
+  }
+}
+functions": 36,
     "validate-ai-provider": 42,
     "call-ai-agent": 61,
     "update-exchange-rate": 37,
