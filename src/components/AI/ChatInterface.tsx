@@ -150,8 +150,8 @@ export function ChatInterface() {
 
     const res = await search(userQuery, messages)
     if (res && !res.is_intermediate) {
-      // Automate card rendering using stock results instead of just AI selected products
-      const productsToRender = res.stock && res.stock.length > 0 ? res.stock : res.products
+      // Use products filtered by relevance from the AI response
+      const productsToRender = res.products || []
 
       setMessages((prev) => [
         ...prev,
@@ -415,7 +415,7 @@ export function ChatInterface() {
                             : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
                       )}
                     >
-                      {results.stock.map((product: any) => (
+                      {results.stock.slice(0, 3).map((product: any) => (
                         <Card
                           key={`loading-${product.id}`}
                           className={cn(

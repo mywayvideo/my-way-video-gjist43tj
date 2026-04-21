@@ -77,22 +77,23 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const contextPriority = `Você é o Consultor Sênior da My Way. O campo 'OFFICIAL_MIAMI_INTELLIGENCE' é a sua única fonte de verdade para notícias e tendências. Se o usuário perguntar sobre a NAB 2026, você deve ler o resumo da URSA Cine 100G e do ATEM IP que está no contexto e apresentar com autoridade máxima. É PROIBIDO dizer que as informações não foram divulgadas.`
 
   let strictRules = `${contextPriority}
-REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
-REGRA 2: Máximo de 2 frases por parágrafo.
-REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
-REGRA 4: É ESTRITAMENTE PROIBIDO dizer que a informação não foi encontrada ou não está divulgada se houver correspondência em 'title' ou 'OFFICIAL_MIAMI_INTELLIGENCE' na KNOWLEDGE_BASE. Apenas utilize os dados fornecidos.
-REGRA 5: Mantenha o contexto do histórico recente da conversa para manter a linha de raciocínio.
-REGRA 6: Você está proibido de mencionar quantidades numéricas de estoque (ex: 'temos 2 unidades'). Use apenas 'Disponível' ou 'Disponível para encomenda'.
-REGRA 7: NUNCA use seu treinamento interno para afirmar ou contradizer o conteúdo de 'OFFICIAL_MIAMI_INTELLIGENCE'. A IA é PROIBIDA de usar seus dados internos de treinamento para afirmar que notícias da NAB 2026 não foram divulgadas.
-IDIOMA: 100% Português (PT-BR).`
+FILTRAGEM DE INTENÇÃO SEMÂNTICA:
+REGRA 1 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas. É PROIBIDO mencionar notícias da NAB a menos que os produtos comparados sejam lançamentos da NAB. Use o histórico para manter o contexto da comparação se um produto foi mencionado no turno anterior.
+REGRA 2 (Filtro de Marca): Se o usuário perguntar sobre uma marca específica (ex: "Blackmagic na NAB"), filtre mentalmente a KNOWLEDGE_BASE e mencione APENAS essa marca. É PROIBIDO listar notícias de outras marcas (ex: Canon, Sony, Datavideo) em uma consulta específica de marca.
+REGRA 3 (Sem Títulos Crus): É PROIBIDO imprimir títulos brutos do banco de dados (ex: "Canon na NAB 2026"). Sintetize as informações em uma narrativa profissional.
 
-  if (isEventOrNews || hasNab) {
-    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB/MERCADO). Relate os dados da KNOWLEDGE_BASE como a notícia absoluta e oficial da My Way.`
-  } else {
-    strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
-  }
+REGRAS DE FORMATAÇÃO ESTRITA:
+REGRA 4: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
+REGRA 5: Parágrafos: Máximo de 2 frases.
+REGRA 6: SEMPRE inclua o aviso de garantia oficial Brasil/LATAM ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
+REGRA 7: Idioma: 100% Português (PT-BR). Mantenha um tom de consultor profissional, evitando "não sei" se os dados estiverem no contexto.
 
-  strictRules += `\nREGRA 9: Você é um consultor técnico. Se o usuário pedir para comparar produtos, use os dados técnicos fornecidos na KNOWLEDGE_BASE para ambos. Se um produto foi mencionado em um turno anterior, use o histórico para manter o contexto da comparação.`
+FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
+Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
+{
+  "content": "Sua resposta formatada...",
+  "referenced_internal_products": ["id_1", "id_2"] // Inclua os IDs apenas dos produtos explicitamente comparados ou mencionados de forma relevante
+}`
 
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
     if (item.ai_summary) {
@@ -207,9 +208,22 @@ ${JSON.stringify(nabJson)}
     showWhatsapp = true
   }
 
+  let referencedProducts = contextProducts
+  if (
+    result.referenced_internal_products &&
+    Array.isArray(result.referenced_internal_products) &&
+    result.referenced_internal_products.length > 0
+  ) {
+    referencedProducts = contextProducts.filter((p: any) =>
+      result.referenced_internal_products.includes(p.id),
+    )
+  } else {
+    referencedProducts = [] // UI MUST ONLY render ProductCards explicitly mentioned
+  }
+
   return {
     content,
-    products: contextProducts, // ALWAYS return ALL products returned in the 'unified_search' of the current turn for card rendering
+    products: referencedProducts,
     nabData: contextNab,
     intel: contextIntel,
     should_show_whatsapp_button: showWhatsapp,

@@ -107,7 +107,33 @@ export function useUnifiedSearch() {
       let nabQ = supabase.from('nab_market').select('*')
       let intelQ = supabase.from('market_intelligence').select('*').eq('status', 'published')
 
-      if (terms.length > 0) {
+      // Targeted Intelligence Fetching: prevent data leak from other brands
+      const knownBrands = [
+        'blackmagic',
+        'sony',
+        'canon',
+        'datavideo',
+        'red',
+        'arri',
+        'dji',
+        'panasonic',
+        'aputure',
+        'godox',
+        'ptzoptics',
+      ]
+      const mentionedBrands = knownBrands.filter((b) => cleanQuery.toLowerCase().includes(b))
+
+      if (mentionedBrands.length > 0) {
+        // Enforce strict brand filtering
+        const brandOrs = mentionedBrands
+          .map((b) => `title.ilike.%${b}%,raw_content.ilike.%${b}%,ai_summary.ilike.%${b}%`)
+          .join(',')
+        intelQ = intelQ.or(brandOrs)
+        const nabBrandOrs = mentionedBrands
+          .map((b) => `title.ilike.%${b}%,content.ilike.%${b}%`)
+          .join(',')
+        nabQ = nabQ.or(nabBrandOrs)
+      } else if (terms.length > 0) {
         const nabOrStr = terms.map((t) => `title.ilike.%${t}%,content.ilike.%${t}%`).join(',')
         const intelOrStr = terms
           .map((t) => `title.ilike.%${t}%,ai_summary.ilike.%${t}%,raw_content.ilike.%${t}%`)
@@ -266,13 +292,13 @@ export function useUnifiedSearch() {
         nabData: newNab,
       }
 
-      // Emit intermediate results so UI can render cards immediately
+      // Emit intermediate results so UI can render loading state
       const intermediateResults = {
         message: 'Analisando resultados...',
         content: 'Analisando resultados...',
         confidence_level: 'high',
         stock: currentUnifiedData.stock,
-        products: currentUnifiedData.products,
+        products: [], // Do not render products until AI confirms relevance
         intel: currentUnifiedData.intel,
         nabData: currentUnifiedData.nabData,
         web: currentUnifiedData.web,
@@ -310,8 +336,13 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
 
-        // Always use all matching database stock products to ensure full visibility
-        finalProducts = currentUnifiedData.stock
+        // Card Relevance Logic: Only render ProductCards explicitly mentioned/relevant to the turn
+        if (aiResponse.products && aiResponse.products.length > 0) {
+          finalProducts = aiResponse.products
+        } else {
+          finalProducts = [] // Do not show random products
+        }
+
         shouldShowWhatsapp = newProducts.length === 0
       }
 
