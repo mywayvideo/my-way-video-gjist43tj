@@ -96,15 +96,27 @@ export function useUnifiedSearch() {
       }
 
       const [{ data: fuzzyNab }, { data: fuzzyIntel }] = await Promise.all([
-        nabQ.limit(15),
-        intelQ.limit(15),
+        nabQ.limit(50),
+        intelQ.limit(50),
       ])
 
+      const scoreItem = (item: any) => {
+        let score = 0
+        const tLower = (item.title || '').toLowerCase()
+        const sLower = (item.ai_summary || '').toLowerCase()
+        const qLower = cleanQuery.toLowerCase()
+        if (tLower.includes(qLower)) score += 10
+        if (sLower.includes(qLower)) score += 5
+        return score
+      }
+
       if (fuzzyNab && fuzzyNab.length > 0) {
-        nab = [...nab, ...fuzzyNab].filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+        const sortedNab = fuzzyNab.sort((a, b) => scoreItem(b) - scoreItem(a))
+        nab = [...nab, ...sortedNab].filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
       }
       if (fuzzyIntel && fuzzyIntel.length > 0) {
-        cache = [...cache, ...fuzzyIntel].filter(
+        const sortedIntel = fuzzyIntel.sort((a, b) => scoreItem(b) - scoreItem(a))
+        cache = [...cache, ...sortedIntel].filter(
           (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
         )
       }
@@ -168,6 +180,7 @@ export function useUnifiedSearch() {
       'INTELLIGENCE_FOUND:',
       finalResultData.nabData.length + finalResultData.intel.length,
     )
+    console.log('NAB_DATA_FETCHED:', finalResultData.nabData)
 
     return finalResultData
   }
