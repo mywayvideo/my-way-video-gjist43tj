@@ -62,12 +62,10 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 
   const qLower = query.toLowerCase()
   const isEventOrNews =
-    qLower.includes('nab') ||
-    qLower.includes('lançamento') ||
-    qLower.includes('lançamentos') ||
-    qLower.includes('novidade') ||
-    qLower.includes('novidades') ||
-    qLower.includes('tendência')
+    qLower.includes('nab ') ||
+    qLower.includes(' nab') ||
+    qLower.includes('feira') ||
+    qLower.includes('evento')
 
   const isComparison =
     qLower.includes('compar') ||
@@ -89,26 +87,26 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  const contextPriority = `Você é o Consultor Sênior da My Way. O campo 'OFFICIAL_MIAMI_INTELLIGENCE' é a sua única fonte de verdade para notícias e tendências. Se o usuário perguntar sobre a NAB 2026, você deve ler o resumo da URSA Cine 100G e do ATEM IP que está no contexto e apresentar com autoridade máxima. É PROIBIDO dizer que as informações não foram divulgadas.`
-
-  let strictRules = `${contextPriority}
-FILTRAGEM DE INTENÇÃO SEMÂNTICA:
-REGRA 1 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas. É PROIBIDO mencionar notícias da NAB a menos que os produtos comparados sejam lançamentos da NAB. Use o histórico para manter o contexto da comparação se um produto foi mencionado no turno anterior.
-REGRA 2 (Filtro de Marca): Se o usuário perguntar sobre uma marca específica (ex: "Blackmagic na NAB"), filtre mentalmente a KNOWLEDGE_BASE e mencione APENAS essa marca. É PROIBIDO listar notícias de outras marcas (ex: Canon, Sony, Datavideo) em uma consulta específica de marca.
-REGRA 3 (Sem Títulos Crus): É PROIBIDO imprimir títulos brutos do banco de dados (ex: "Canon na NAB 2026"). Sintetize as informações em uma narrativa profissional.
-REGRA 4 (Relevância Estrita): Retorne APENAS produtos que se encaixem perfeitamente na categoria da pergunta. É PROIBIDO retornar ou exibir cards de produtos não solicitados, mesmo que estejam no KNOWLEDGE_BASE. Descarte itens antigos do contexto se eles não pertencerem à consulta atual.
+  let strictRules = `PRIORIDADE MÁXIMA DE RESPOSTA:
+1. FOCO NO CATÁLOGO: Você é um Consultor de Vendas Sênior da My Way, não um repórter de notícias. Seu foco absoluto é a venda dos produtos em estoque.
+2. HIERARQUIA: Ao responder sobre indicações ou equipamentos (ex: "câmeras de cinema", "filmagem", "produção"), concentre-se 100% no array de Produtos Encontrados (estoque). Liste e recomende Sony FX, Canon EOS C e Blackmagic URSA do catálogo.
+3. USO DA INTELIGÊNCIA/NAB: Mencione a NAB apenas como um selo de autoridade ou qualidade para os produtos do catálogo (ex: "Este modelo foi destaque na NAB"), nunca como o assunto principal, a menos que o cliente pergunte explicitamente sobre a feira.
+4. FILTRAGEM DE INTENÇÃO SEMÂNTICA:
+REGRA 1 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas. É PROIBIDO mencionar notícias a menos que agreguem valor comercial ao produto.
+REGRA 2 (Filtro de Marca): Se perguntar sobre uma marca, foque APENAS nos produtos e diferenciais daquela marca.
+REGRA 3 (Relevância Estrita): Retorne em 'referenced_internal_products' APENAS os IDs dos produtos que você efetivamente recomendou e que se encaixam na necessidade do cliente.
 
 REGRAS DE FORMATAÇÃO ESTRITA:
 REGRA 4: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
-REGRA 5: Parágrafos: Máximo de 2 frases.
-REGRA 6: SEMPRE inclua o aviso de garantia oficial Brasil/LATAM ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
-REGRA 7: Idioma: 100% Português (PT-BR). Mantenha um tom de consultor profissional, evitando "não sei" se os dados estiverem no contexto.
+REGRA 5: Parágrafos: Máximo de 2 frases por parágrafo.
+REGRA 6: SEMPRE inclua o aviso de garantia oficial ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
+REGRA 7: Idioma: 100% Português (PT-BR).
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
 {
   "content": "Sua resposta formatada...",
-  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos comparados ou mencionados que estão no contexto "Produtos Encontrados"
+  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos recomendados
 }`
 
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {

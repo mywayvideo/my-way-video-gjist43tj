@@ -72,10 +72,20 @@ export function useUnifiedSearch() {
         'qual',
         'melhor',
         'diferença',
+        'indicações',
+        'indicacoes',
+        'recomendacoes',
+        'recomendações',
+        'para',
+        'de',
       ]
+      const isCinemaQuery = ['cinema', 'filmagem', 'produção', 'producao'].some((kw) =>
+        cleanQuery.toLowerCase().includes(kw),
+      )
       const terms = cleanQuery
         .split(/\s+/)
-        .filter((t) => t.length > 1 && !stopWords.includes(t.toLowerCase()))
+        .filter((t) => t.length > 2 && !stopWords.includes(t.toLowerCase()))
+
       const buildOrQuery = (term: string) => {
         const matchedMfgs =
           allMfgs
@@ -88,17 +98,47 @@ export function useUnifiedSearch() {
         return orStr
       }
 
-      if (terms.length > 0) {
-        const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
-        genericQ = genericQ.or(combinedOrStr)
+      if (isCinemaQuery) {
+        let cinemaOrStr = `category.ilike.%Cinema%,description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
+        if (terms.length > 0) {
+          const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
+          genericQ = genericQ.or(`${combinedOrStr},${cinemaOrStr}`)
+        } else {
+          genericQ = genericQ.or(cinemaOrStr)
+        }
       } else {
-        genericQ = genericQ.or(buildOrQuery(cleanQuery))
+        if (terms.length > 0) {
+          const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
+          genericQ = genericQ.or(combinedOrStr)
+        } else {
+          genericQ = genericQ.or(buildOrQuery(cleanQuery))
+        }
       }
 
       const { data: genericProducts } = await genericQ.limit(20)
 
       if (genericProducts && genericProducts.length > 0) {
-        products = [...products, ...genericProducts].filter(
+        let sortedGeneric = genericProducts
+        if (isCinemaQuery) {
+          sortedGeneric = genericProducts.sort((a, b) => {
+            const aName = (a.name || '').toUpperCase()
+            const bName = (b.name || '').toUpperCase()
+            const aIsCinema =
+              aName.includes('FX') ||
+              aName.includes('EOS C') ||
+              aName.includes('URSA') ||
+              aName.includes('POCKET')
+            const bIsCinema =
+              bName.includes('FX') ||
+              bName.includes('EOS C') ||
+              bName.includes('URSA') ||
+              bName.includes('POCKET')
+            if (aIsCinema && !bIsCinema) return -1
+            if (!aIsCinema && bIsCinema) return 1
+            return 0
+          })
+        }
+        products = [...products, ...sortedGeneric].filter(
           (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
         )
       }
@@ -339,6 +379,9 @@ export function useUnifiedSearch() {
         // Card Relevance Logic: Only render ProductCards explicitly mentioned/relevant to the turn
         if (aiResponse.products && aiResponse.products.length > 0) {
           finalProducts = aiResponse.products
+        } else if (newProducts.length > 0) {
+          // If AI fails to return referenced_internal_products but we have strong generic matches, fallback to the top 3 matches
+          finalProducts = newProducts.slice(0, 3)
         } else {
           finalProducts = [] // Do not show random products
         }

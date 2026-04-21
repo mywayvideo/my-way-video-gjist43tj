@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
 import { resolveImageUrl } from '@/hooks/use-image-fallback'
+import { ProductCard } from '@/components/ProductCard'
 
 const renderMarkdown = (text: string, theme: string = 'light') => {
   if (!text) return null
@@ -273,81 +274,9 @@ export function ChatInterface() {
                         )}
                       >
                         {msg.products.map((product: any) => (
-                          <Card
-                            key={product.id}
-                            className={cn(
-                              'overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col',
-                              theme === 'professional-dark'
-                                ? 'bg-slate-800 border-slate-700'
-                                : 'bg-card border-border/50',
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                'aspect-square p-4 flex items-center justify-center relative overflow-hidden transition-colors',
-                                theme === 'professional-dark'
-                                  ? 'bg-slate-900 group-hover:bg-slate-800'
-                                  : 'bg-white group-hover:bg-gray-50',
-                              )}
-                            >
-                              {product.image_url ? (
-                                <img
-                                  src={resolveImageUrl(product.image_url) || ''}
-                                  alt={product.name}
-                                  className="object-contain w-full h-full mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <span className="text-primary font-bold text-xs">
-                                    {product.name.substring(0, 2).toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              {(product.stock || 0) > 0 && (
-                                <Badge className="absolute top-2 right-2 bg-green-500 hover:bg-green-600 shadow-sm border-0 font-semibold px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                  Em Estoque
-                                </Badge>
-                              )}
-                            </div>
-                            <CardContent className="p-4 flex-1 flex flex-col">
-                              <h4
-                                className={cn(
-                                  'font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors flex-1',
-                                  theme === 'professional-dark'
-                                    ? 'text-slate-200'
-                                    : 'text-foreground',
-                                )}
-                                title={product.name}
-                              >
-                                {product.name}
-                              </h4>
-                              <div
-                                className={cn(
-                                  'flex items-center justify-between mt-auto pt-2 border-t',
-                                  theme === 'professional-dark'
-                                    ? 'border-slate-700'
-                                    : 'border-border/50',
-                                )}
-                              >
-                                <span className="font-bold text-lg text-primary">
-                                  $
-                                  {(product.price_usd || 0).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                  })}
-                                </span>
-                                <span
-                                  className={cn(
-                                    'text-xs font-medium px-2 py-1 rounded-md',
-                                    theme === 'professional-dark'
-                                      ? 'bg-slate-700 text-slate-300'
-                                      : 'bg-muted text-muted-foreground',
-                                  )}
-                                >
-                                  USD
-                                </span>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <div key={product.id} className="h-full">
+                            <ProductCard product={product} />
+                          </div>
                         ))}
                       </div>
                     )}
