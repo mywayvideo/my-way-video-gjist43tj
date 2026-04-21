@@ -11,6 +11,7 @@ import {
   Truck,
   Tag,
   Settings,
+  Sparkles,
 } from 'lucide-react'
 
 export default function Admin() {
@@ -68,6 +69,12 @@ export default function Admin() {
       description: 'Ajustes gerais do sistema',
       icon: Settings,
       href: '/admin/settings',
+    },
+    {
+      title: 'Market Intelligence',
+      description: 'Alimente a IA com atualizações e novidades de mercado',
+      icon: Sparkles,
+      href: '/admin/nab-hub',
     },
   ]
 

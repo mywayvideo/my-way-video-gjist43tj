@@ -28,7 +28,7 @@ const navigation = [
   { name: 'Métricas e Relatórios', href: '/admin/metrics', icon: BarChart3 },
   { name: 'IA & Inteligência Artificial', href: '/admin/ai', icon: Brain },
   { name: 'Catálogo & Produtos', href: '/admin/catalog', icon: Package },
-  { name: 'NAB Intelligence', href: '/admin/nab-hub', icon: Sparkles },
+  { name: 'Market Intelligence', href: '/admin/nab-hub', icon: Sparkles },
   { name: 'Preços & Câmbio', href: '/admin/pricing', icon: DollarSign },
   { name: 'Fretes & Shipping', href: '/admin/shipping-config', icon: Truck },
   { name: 'Descontos & Promoções', href: '/admin/discounts', icon: Tag },

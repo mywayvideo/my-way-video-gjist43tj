@@ -9,7 +9,6 @@ import { Loader2, Trash2, Link as LinkIcon, FileText, Sparkles } from 'lucide-re
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import {
   getIntelligences,
-  ingestManualKnowledge,
   updateIntelligenceStatus,
   deleteIntelligence,
 } from '@/services/intelligence'
@@ -77,38 +76,44 @@ export default function NABHub() {
     if (!url.trim() && !content.trim()) {
       toast({
         title: 'Aviso',
-        description: 'Forneça uma URL ou conteúdo manual.',
+        description: 'Forneça uma URL ou conteúdo manual para a IA processar.',
         variant: 'destructive',
       })
       return
     }
 
     setIsLoading(true)
-    const hasUrl = !!url.trim()
-    setLoadingMessage('Salvando Informação...')
+    setLoadingMessage('Processando com IA...')
 
     try {
-      await ingestManualKnowledge({
-        title: title.trim() || (hasUrl ? 'Link Adicionado' : 'Nota Manual'),
-        source_url: url || undefined,
-        raw_content: content || undefined,
-        status: 'published',
+      const { data, error } = await supabase.functions.invoke('process-knowledge', {
+        body: {
+          title: title.trim() || undefined,
+          url: url.trim() || undefined,
+          raw_content: content.trim() || undefined,
+        },
       })
+
+      if (error) throw error
+
+      if (data?.error) {
+        throw new Error(data.error)
+      }
 
       toast({
         title: 'Sucesso',
-        description: 'Informação salva na base de conhecimento',
+        description: 'Informação processada e salva na base de conhecimento',
       })
 
       setTitle('')
       setUrl('')
       setContent('')
       fetchIntelligences()
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
       toast({
         title: 'Erro',
-        description: 'Falha ao salvar informações técnicas',
+        description: error.message || 'Falha ao processar informações com IA',
         variant: 'destructive',
       })
     } finally {
@@ -146,7 +151,7 @@ export default function NABHub() {
   }
 
   return (
-    <AdminLayout breadcrumb="NAB Intelligence">
+    <AdminLayout breadcrumb="Market Intelligence">
       <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
         <div>
           <div className="flex items-center gap-3">
@@ -155,7 +160,7 @@ export default function NABHub() {
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-primary">
-                NAB 2026 - Inteligência de Mercado
+                Market Intelligence
               </h1>
               {activeProvider && (
                 <div className="flex items-center gap-1.5 mt-1">
@@ -177,13 +182,15 @@ export default function NABHub() {
           <Card className="border-primary/20 shadow-lg">
             <CardHeader className="bg-primary/5 border-b border-primary/10">
               <CardTitle className="text-xl">Nova Ingestão de Conhecimento</CardTitle>
-              <CardDescription>Adicione novas fontes ou notas manuais para a IA.</CardDescription>
+              <CardDescription>
+                Adicione novas fontes ou notas manuais para a IA processar.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 pt-6">
               <div className="space-y-2">
-                <label className="text-sm font-semibold">Título do Evento / Lançamento</label>
+                <label className="text-sm font-semibold">Título (Opcional)</label>
                 <Input
-                  placeholder="Ex: Lançamento NAB 2026 - Nova Câmera XYZ"
+                  placeholder="Ex: Lançamento de Mercado - Nova Câmera XYZ"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="bg-background"
