@@ -69,9 +69,24 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     qLower.includes('novidades') ||
     qLower.includes('tendência')
 
+  const isComparison =
+    qLower.includes('compar') ||
+    qLower.includes('vs') ||
+    qLower.includes('versus') ||
+    qLower.includes('diferença') ||
+    qLower.includes('qual o melhor') ||
+    qLower.includes('qual a melhor')
+
   const contextProducts = unifiedData.products || unifiedData.stock || []
-  const contextIntel = unifiedData.intel || []
-  const contextNab = unifiedData.nabData || unifiedData.nab_data || []
+  let contextIntel = unifiedData.intel || []
+  let contextNab = unifiedData.nabData || unifiedData.nab_data || []
+
+  // Supressão de Ruído: Descartar notícias e informações de mercado se for uma comparação
+  if (isComparison) {
+    contextIntel = []
+    contextNab = []
+  }
+
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
   const contextPriority = `Você é o Consultor Sênior da My Way. O campo 'OFFICIAL_MIAMI_INTELLIGENCE' é a sua única fonte de verdade para notícias e tendências. Se o usuário perguntar sobre a NAB 2026, você deve ler o resumo da URSA Cine 100G e do ATEM IP que está no contexto e apresentar com autoridade máxima. É PROIBIDO dizer que as informações não foram divulgadas.`
@@ -92,7 +107,7 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
 {
   "content": "Sua resposta formatada...",
-  "referenced_internal_products": ["id_1", "id_2"] // Inclua os IDs apenas dos produtos explicitamente comparados ou mencionados de forma relevante
+  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos comparados ou mencionados que estão no contexto "Produtos Encontrados"
 }`
 
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
@@ -217,6 +232,18 @@ ${JSON.stringify(nabJson)}
     referencedProducts = contextProducts.filter((p: any) =>
       result.referenced_internal_products.includes(p.id),
     )
+  } else if (isComparison && contextProducts.length > 0) {
+    // Fallback de Segurança: Se for comparação e a IA omitir IDs, tenta associar pelo nome no texto
+    referencedProducts = contextProducts.filter((p: any) => {
+      const nameParts = (p.name || '')
+        .toLowerCase()
+        .split(' ')
+        .filter((w: string) => w.length > 2)
+      return nameParts.some((part: string) => content.toLowerCase().includes(part))
+    })
+    if (referencedProducts.length === 0 && contextProducts.length >= 2) {
+      referencedProducts = contextProducts.slice(0, 2)
+    }
   } else {
     referencedProducts = [] // UI MUST ONLY render ProductCards explicitly mentioned
   }

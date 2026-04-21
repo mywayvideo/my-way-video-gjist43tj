@@ -40,6 +40,13 @@ function IntelligenceCard({
   textColorClass: string
 }) {
   if (!items || items.length === 0) return null
+
+  const validItems = items.filter(
+    (item) => item.OFFICIAL_MIAMI_INTELLIGENCE || item.ai_summary || item.OFFICIAL_SUMMARY,
+  )
+
+  if (validItems.length === 0) return null
+
   return (
     <div className="mb-8 space-y-4 animate-fade-in-up">
       <h3 className={`text-xl font-bold flex items-center gap-2 ${textColorClass}`}>
@@ -47,7 +54,7 @@ function IntelligenceCard({
         {title}
       </h3>
       <div className="grid gap-4">
-        {items.map((item, i) => (
+        {validItems.map((item, i) => (
           <Card
             key={i}
             className={`bg-muted border-l-4 ${borderColorClass} rounded-r-xl shadow-sm border-y-0 border-r-0`}
@@ -59,12 +66,7 @@ function IntelligenceCard({
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 text-sm text-foreground prose prose-invert max-w-none">
               <ReactMarkdown>
-                {item.OFFICIAL_MIAMI_INTELLIGENCE ||
-                  item.ai_summary ||
-                  item.OFFICIAL_SUMMARY ||
-                  item.content ||
-                  item.raw_content ||
-                  ''}
+                {item.OFFICIAL_MIAMI_INTELLIGENCE || item.ai_summary || item.OFFICIAL_SUMMARY || ''}
               </ReactMarkdown>
             </CardContent>
           </Card>
