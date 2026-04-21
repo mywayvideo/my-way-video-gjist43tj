@@ -18,6 +18,15 @@ export function useUnifiedSearch() {
     const cleanQuery = query.trim()
     const settings = await getAISettings()
 
+    const { data: aiSettingsData } = await supabase
+      .from('ai_settings')
+      .select('ignore_stock_count')
+      .limit(1)
+      .maybeSingle()
+
+    const ignoreStockCount =
+      aiSettingsData?.ignore_stock_count ?? settings?.ignore_stock_count ?? false
+
     let products: any[] = []
     let cache: any[] = []
     let nab: any[] = []
@@ -26,7 +35,7 @@ export function useUnifiedSearch() {
       const sqlString = settings?.search_algorithm_sql || ''
       const executedSql = sqlString.replace(/\$1/g, cleanQuery)
       console.log('SQL BEING EXECUTED:', executedSql)
-      console.log('SEARCH_PARAMS:', settings?.ignore_stock_count, cleanQuery)
+      console.log('SEARCH_STATE:', { term: cleanQuery, ignoreStock: ignoreStockCount })
 
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
         search_term: cleanQuery,
@@ -46,7 +55,7 @@ export function useUnifiedSearch() {
 
       // Generic Semantic Search Logic across all categories and manufacturers
       let genericQ = supabase.from('products').select('*').eq('is_discontinued', false)
-      if (!settings?.ignore_stock_count) {
+      if (!ignoreStockCount) {
         genericQ = genericQ.gt('stock', 0)
       }
 
@@ -154,8 +163,8 @@ export function useUnifiedSearch() {
     let finalProducts = products.length > 0 ? products : []
 
     // Respect stock visibility settings
-    console.log('IGNORE_STOCK_SETTING:', settings?.ignore_stock_count)
-    if (!settings?.ignore_stock_count) {
+    console.log('IGNORE_STOCK_SETTING:', ignoreStockCount)
+    if (!ignoreStockCount) {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
