@@ -58,7 +58,12 @@ function IntelligenceCard({
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 text-sm text-foreground prose prose-invert max-w-none">
               <ReactMarkdown>
-                {item.ai_summary || item.OFFICIAL_SUMMARY || item.content || item.raw_content || ''}
+                {item.OFFICIAL_MIAMI_INTELLIGENCE ||
+                  item.ai_summary ||
+                  item.OFFICIAL_SUMMARY ||
+                  item.content ||
+                  item.raw_content ||
+                  ''}
               </ReactMarkdown>
             </CardContent>
           </Card>
@@ -153,8 +158,8 @@ export function ResponseFormatter({
         title="Inteligência de Mercado"
         icon={Brain}
         items={intel}
-        borderColorClass="border-blue-500"
-        textColorClass="text-blue-500"
+        borderColorClass="border-orange-500"
+        textColorClass="text-orange-500"
       />
 
       {content && (

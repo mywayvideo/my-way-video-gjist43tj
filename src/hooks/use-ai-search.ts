@@ -181,6 +181,7 @@ export function useUnifiedSearch() {
       finalResultData.nabData.length + finalResultData.intel.length,
     )
     console.log('NAB_DATA_FETCHED:', finalResultData.nabData)
+    console.log('INTEL_DATA_FOUND:', finalResultData.intel)
 
     return finalResultData
   }
