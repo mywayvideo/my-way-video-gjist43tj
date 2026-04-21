@@ -2,10 +2,10 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
 Deno.serve(async () => {
   return new Response(
-    JSON.stringify({ message: 'Dummy function to satisfy entrypoint requirement' }),
+    JSON.stringify({ message: "Dummy function to satisfy entrypoint requirement" }),
     {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       status: 200,
-    },
+    }
   )
 })
