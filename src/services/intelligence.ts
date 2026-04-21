@@ -90,23 +90,24 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   let strictRules = `PRIORIDADE MÁXIMA DE RESPOSTA:
 1. Você é o Consultor Sênior da My Way. Se você citou a Sony FX6 e a Canon C400, os cards dessas câmeras DEVEM aparecer. É PROIBIDO omitir os cards dos produtos principais que você descreveu no texto.
 2. HIERARQUIA E NAB: Você é PROIBIDO de mencionar NAB ou eventos a menos que o usuário pergunte explicitamente por novidades. Use informações de mercado apenas como selo de autoridade técnica.
-3. FILTRAGEM DE INTENÇÃO SEMÂNTICA:
-REGRA 1 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas.
-REGRA 2 (Filtro de Marca): Se perguntar sobre uma marca, foque APENAS nos produtos e diferenciais daquela marca.
-REGRA 3 (Vinculação de Produtos): Você DEVE retornar os IDs corretos dos produtos cujos nomes foram citados no seu texto de resposta.
-REGRA 4: É proibido inserir IDs de produtos no texto, use apenas os nomes e mande os IDs na propriedade 'referenced_internal_products'.
+3. FILTRAGEM DE INTENÇÃO E AUTORIDADE:
+REGRA 1: É PROIBIDO usar o campo "categoria" para orientar a exibição. Baseie-se EXCLUSIVAMENTE no "nome", "descrição" e "price_usd". Um valor mais alto indica que é um produto principal (ex: câmeras vs acessórios).
+REGRA 2 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas.
+REGRA 3 (Filtro de Marca): Se perguntar sobre uma marca, foque APENAS nos produtos e diferenciais daquela marca.
+REGRA 4 (Vinculação de Produtos): Você DEVE retornar os IDs exatos dos produtos cujos nomes foram citados no seu texto de resposta. Priorize incluir os IDs dos produtos mais caros que atendam à necessidade.
+REGRA 5: É proibido inserir IDs de produtos no texto, use apenas os nomes e mande os IDs na propriedade 'referenced_internal_products'.
 
 REGRAS DE FORMATAÇÃO ESTRITA:
-REGRA 5: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
-REGRA 6: Parágrafos: Máximo de 2 frases por parágrafo.
-REGRA 7: SEMPRE inclua o aviso de garantia oficial ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
-REGRA 8: Idioma: 100% Português (PT-BR).
+REGRA 6: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
+REGRA 7: Parágrafos: Máximo de 2 frases por parágrafo.
+REGRA 8: SEMPRE inclua o aviso de garantia oficial ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
+REGRA 9: Idioma: 100% Português (PT-BR).
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
 {
   "content": "Sua resposta formatada...",
-  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos mencionados
+  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos mencionados, priorizando os de maior valor (price_usd).
 }`
 
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
@@ -228,17 +229,19 @@ ${JSON.stringify(nabJson)}
   const contentLowerForMatch = content.toLowerCase()
   const forcedMatches = contextProducts.filter((p: any) => {
     const pName = (p.name || '').toLowerCase()
-    // Exact or close match for important words
+
+    // Exact match for highly specific models first
+    const specificModels = ['fx6', 'c400', 'fx3', 'pyxis']
+    const hasSpecificModel = specificModels.some(
+      (model) => pName.includes(model) && contentLowerForMatch.includes(model),
+    )
+    if (hasSpecificModel) return true
+
+    // Match by 2 or more significant words in the name
     const importantWords = pName.split(' ').filter((w: string) => w.length > 3)
-    if (importantWords.length > 0) {
-      // Check if specific models like FX6, C400 are directly in the text
-      const hasSpecificModel = ['fx6', 'c400', 'fx3', 'pyxis'].some(
-        (model) => pName.includes(model) && contentLowerForMatch.includes(model),
-      )
-      if (hasSpecificModel) return true
-      // Otherwise check if at least 2 significant words from product name are in the text
+    if (importantWords.length >= 2) {
       const matches = importantWords.filter((w: string) => contentLowerForMatch.includes(w))
-      return matches.length >= Math.min(2, importantWords.length)
+      return matches.length >= 2
     }
     return false
   })

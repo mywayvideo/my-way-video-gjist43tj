@@ -96,7 +96,7 @@ export function useUnifiedSearch() {
           allMfgs
             ?.filter((m) => m.name.toLowerCase().includes(term.toLowerCase()))
             .map((m) => m.id) || []
-        let orStr = `name.ilike.%${term}%,sku.ilike.%${term}%,category.ilike.%${term}%,description.ilike.%${term}%`
+        let orStr = `name.ilike.%${term}%,sku.ilike.%${term}%,description.ilike.%${term}%`
         if (matchedMfgs.length > 0) {
           orStr += `,manufacturer_id.in.(${matchedMfgs.join(',')})`
         }
@@ -115,7 +115,7 @@ export function useUnifiedSearch() {
           orStr = modelsOrStr
         }
       } else if (isCinemaQuery) {
-        let cinemaOrStr = `category.ilike.%Cinema%,category.ilike.%Camera%,description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
+        let cinemaOrStr = `description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
         if (terms.length > 0) {
           const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
           orStr = `${combinedOrStr},${cinemaOrStr}`
@@ -404,10 +404,14 @@ export function useUnifiedSearch() {
 
         // Card Relevance Logic: Only render ProductCards explicitly mentioned/relevant to the turn
         if (aiResponse.products && aiResponse.products.length > 0) {
-          finalProducts = aiResponse.products
+          finalProducts = aiResponse.products.sort(
+            (a: any, b: any) => (b.price_usd || 0) - (a.price_usd || 0),
+          )
         } else if (newProducts.length > 0) {
           // If AI fails to return referenced_internal_products but we have strong generic matches, fallback to the top 3 matches
-          finalProducts = newProducts.slice(0, 3)
+          finalProducts = newProducts
+            .sort((a: any, b: any) => (b.price_usd || 0) - (a.price_usd || 0))
+            .slice(0, 3)
         } else {
           finalProducts = [] // Do not show random products
         }
