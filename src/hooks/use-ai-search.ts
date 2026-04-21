@@ -254,7 +254,8 @@ export function useUnifiedSearch() {
     const isCameraQuery =
       cleanQuery.toLowerCase().includes('câmera') ||
       cleanQuery.toLowerCase().includes('camera') ||
-      cleanQuery.toLowerCase().includes('cinema')
+      cleanQuery.toLowerCase().includes('cinema') ||
+      cleanQuery.toLowerCase().includes('filmagem')
 
     if (isCameraQuery) {
       finalProducts = finalProducts.sort((a: any, b: any) => {
@@ -294,10 +295,19 @@ export function useUnifiedSearch() {
       console.log(
         'PRIORITY_CAMERAS_LOADED:',
         finalResultData.stock
-          .filter((p: any) => (p.category || '').toLowerCase().includes('camera'))
+          .filter(
+            (p: any) =>
+              (p.category || '').toLowerCase().includes('camera') ||
+              (p.category || '').toLowerCase().includes('cinema'),
+          )
           .map((p: any) => p.name),
       )
     }
+
+    console.log(
+      'PRIORITY_CHECK:',
+      finalResultData.stock.map((p: any) => p.category),
+    )
 
     console.log('RAW_DB_RESULTS:', finalResultData)
     console.log(
