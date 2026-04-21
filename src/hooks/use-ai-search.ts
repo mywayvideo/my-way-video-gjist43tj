@@ -79,6 +79,11 @@ export function useUnifiedSearch() {
         'para',
         'de',
       ]
+      const specificModels = ['fx6', 'c400', 'fx3', 'pyxis']
+      const hasSpecificModel = specificModels.some((model) =>
+        cleanQuery.toLowerCase().includes(model),
+      )
+
       const isCinemaQuery = ['cinema', 'filmagem', 'produção', 'producao', 'câmera', 'camera'].some(
         (kw) => cleanQuery.toLowerCase().includes(kw),
       )
@@ -98,47 +103,39 @@ export function useUnifiedSearch() {
         return orStr
       }
 
-      if (isCinemaQuery) {
+      let orStr = ''
+      if (hasSpecificModel) {
+        const modelsOrStr = specificModels
+          .map((m) => `name.ilike.%${m}%,sku.ilike.%${m}%`)
+          .join(',')
+        if (terms.length > 0) {
+          const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
+          orStr = `${combinedOrStr},${modelsOrStr}`
+        } else {
+          orStr = modelsOrStr
+        }
+      } else if (isCinemaQuery) {
         let cinemaOrStr = `category.ilike.%Cinema%,category.ilike.%Camera%,description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
         if (terms.length > 0) {
           const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
-          genericQ = genericQ.or(`${combinedOrStr},${cinemaOrStr}`)
+          orStr = `${combinedOrStr},${cinemaOrStr}`
         } else {
-          genericQ = genericQ.or(cinemaOrStr)
+          orStr = cinemaOrStr
         }
       } else {
         if (terms.length > 0) {
-          const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
-          genericQ = genericQ.or(combinedOrStr)
+          orStr = terms.map((t) => buildOrQuery(t)).join(',')
         } else {
-          genericQ = genericQ.or(buildOrQuery(cleanQuery))
+          orStr = buildOrQuery(cleanQuery)
         }
       }
+
+      genericQ = genericQ.or(orStr)
 
       const { data: genericProducts } = await genericQ.limit(20)
 
       if (genericProducts && genericProducts.length > 0) {
-        let sortedGeneric = genericProducts
-        if (isCinemaQuery) {
-          sortedGeneric = genericProducts.sort((a, b) => {
-            const aName = (a.name || '').toUpperCase()
-            const bName = (b.name || '').toUpperCase()
-            const aIsCinema =
-              aName.includes('FX') ||
-              aName.includes('EOS C') ||
-              aName.includes('URSA') ||
-              aName.includes('POCKET')
-            const bIsCinema =
-              bName.includes('FX') ||
-              bName.includes('EOS C') ||
-              bName.includes('URSA') ||
-              bName.includes('POCKET')
-            if (aIsCinema && !bIsCinema) return -1
-            if (!aIsCinema && bIsCinema) return 1
-            return 0
-          })
-        }
-        products = [...products, ...sortedGeneric].filter(
+        products = [...products, ...genericProducts].filter(
           (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
         )
       }
@@ -251,29 +248,29 @@ export function useUnifiedSearch() {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
-    const isCameraQuery =
-      cleanQuery.toLowerCase().includes('câmera') ||
-      cleanQuery.toLowerCase().includes('camera') ||
-      cleanQuery.toLowerCase().includes('cinema') ||
-      cleanQuery.toLowerCase().includes('filmagem')
+    const specificModels = ['fx6', 'c400', 'fx3', 'pyxis']
+    const hasSpecificModel = specificModels.some((model) =>
+      cleanQuery.toLowerCase().includes(model),
+    )
 
-    if (isCameraQuery) {
-      finalProducts = finalProducts.sort((a: any, b: any) => {
-        const aCat = (a.category || '').toLowerCase()
-        const bCat = (b.category || '').toLowerCase()
-        const aIsCamera =
-          aCat.includes('camera') || aCat.includes('câmera') || aCat.includes('cinema')
-        const bIsCamera =
-          bCat.includes('camera') || bCat.includes('câmera') || bCat.includes('cinema')
+    finalProducts = finalProducts.sort((a: any, b: any) => {
+      if (hasSpecificModel) {
+        const aMatch = specificModels.some(
+          (m) =>
+            (a.name || '').toLowerCase().includes(m) || (a.sku || '').toLowerCase().includes(m),
+        )
+        const bMatch = specificModels.some(
+          (m) =>
+            (b.name || '').toLowerCase().includes(m) || (b.sku || '').toLowerCase().includes(m),
+        )
+        if (aMatch && !bMatch) return -1
+        if (!aMatch && bMatch) return 1
+      }
 
-        if (aIsCamera && !bIsCamera) return -1
-        if (!aIsCamera && bIsCamera) return 1
-
-        const aPrice = a.price_usd || 0
-        const bPrice = b.price_usd || 0
-        return bPrice - aPrice
-      })
-    }
+      const aPrice = a.price_usd || 0
+      const bPrice = b.price_usd || 0
+      return bPrice - aPrice
+    })
 
     const priceThreshold = settings?.price_threshold_usd || 5000
     finalProducts = finalProducts.map((p: any) => ({
@@ -291,22 +288,9 @@ export function useUnifiedSearch() {
       isNewlyCached: false,
     }
 
-    if (isCameraQuery) {
-      console.log(
-        'PRIORITY_CAMERAS_LOADED:',
-        finalResultData.stock
-          .filter(
-            (p: any) =>
-              (p.category || '').toLowerCase().includes('camera') ||
-              (p.category || '').toLowerCase().includes('cinema'),
-          )
-          .map((p: any) => p.name),
-      )
-    }
-
     console.log(
-      'PRIORITY_CHECK:',
-      finalResultData.stock.map((p: any) => p.category),
+      'MATCHED_PRODUCTS:',
+      finalResultData.stock.map((p: any) => `${p.name} - $${p.price_usd}`),
     )
 
     console.log('RAW_DB_RESULTS:', finalResultData)

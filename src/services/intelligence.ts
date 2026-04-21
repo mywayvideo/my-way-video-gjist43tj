@@ -88,24 +88,25 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
   let strictRules = `PRIORIDADE MÁXIMA DE RESPOSTA:
-1. FOCO NO CATÁLOGO: Você é o Consultor Sênior da My Way. Se você mencionou a Sony FX6 e a Canon C400 no texto, você DEVE garantir que os cards dessas câmeras apareçam primeiro. Acessórios são secundários. É PROIBIDO exibir cards de baterias ou adaptadores se as câmeras principais não estiverem visíveis.
+1. Você é o Consultor Sênior da My Way. Se você citou a Sony FX6 e a Canon C400, os cards dessas câmeras DEVEM aparecer. É PROIBIDO omitir os cards dos produtos principais que você descreveu no texto.
 2. HIERARQUIA E NAB: Você é PROIBIDO de mencionar NAB ou eventos a menos que o usuário pergunte explicitamente por novidades. Use informações de mercado apenas como selo de autoridade técnica.
 3. FILTRAGEM DE INTENÇÃO SEMÂNTICA:
 REGRA 1 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas.
 REGRA 2 (Filtro de Marca): Se perguntar sobre uma marca, foque APENAS nos produtos e diferenciais daquela marca.
-REGRA 3 (Relevância Estrita): Retorne em 'referenced_internal_products' APENAS os IDs dos produtos que você efetivamente recomendou e que se encaixam na necessidade do cliente.
+REGRA 3 (Vinculação de Produtos): Você DEVE retornar os IDs corretos dos produtos cujos nomes foram citados no seu texto de resposta.
+REGRA 4: É proibido inserir IDs de produtos no texto, use apenas os nomes e mande os IDs na propriedade 'referenced_internal_products'.
 
 REGRAS DE FORMATAÇÃO ESTRITA:
-REGRA 4: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
-REGRA 5: Parágrafos: Máximo de 2 frases por parágrafo.
-REGRA 6: SEMPRE inclua o aviso de garantia oficial ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
-REGRA 7: Idioma: 100% Português (PT-BR).
+REGRA 5: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
+REGRA 6: Parágrafos: Máximo de 2 frases por parágrafo.
+REGRA 7: SEMPRE inclua o aviso de garantia oficial ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
+REGRA 8: Idioma: 100% Português (PT-BR).
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
 {
   "content": "Sua resposta formatada...",
-  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos recomendados
+  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos mencionados
 }`
 
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
@@ -221,27 +222,47 @@ ${JSON.stringify(nabJson)}
     showWhatsapp = true
   }
 
-  let referencedProducts = contextProducts
+  let referencedProducts = []
+
+  // Ensure products explicitly mentioned by name in the text are always included
+  const contentLowerForMatch = content.toLowerCase()
+  const forcedMatches = contextProducts.filter((p: any) => {
+    const pName = (p.name || '').toLowerCase()
+    // Exact or close match for important words
+    const importantWords = pName.split(' ').filter((w: string) => w.length > 3)
+    if (importantWords.length > 0) {
+      // Check if specific models like FX6, C400 are directly in the text
+      const hasSpecificModel = ['fx6', 'c400', 'fx3', 'pyxis'].some(
+        (model) => pName.includes(model) && contentLowerForMatch.includes(model),
+      )
+      if (hasSpecificModel) return true
+      // Otherwise check if at least 2 significant words from product name are in the text
+      const matches = importantWords.filter((w: string) => contentLowerForMatch.includes(w))
+      return matches.length >= Math.min(2, importantWords.length)
+    }
+    return false
+  })
+
+  let aiMentionedProducts: any[] = []
   if (
     result.referenced_internal_products &&
     Array.isArray(result.referenced_internal_products) &&
     result.referenced_internal_products.length > 0
   ) {
-    referencedProducts = contextProducts.filter((p: any) =>
+    aiMentionedProducts = contextProducts.filter((p: any) =>
       result.referenced_internal_products.includes(p.id),
     )
-  } else if (isComparison && contextProducts.length > 0) {
-    // Fallback de Segurança: Se for comparação e a IA omitir IDs, tenta associar pelo nome no texto
-    referencedProducts = contextProducts.filter((p: any) => {
-      const nameParts = (p.name || '')
-        .toLowerCase()
-        .split(' ')
-        .filter((w: string) => w.length > 2)
-      return nameParts.some((part: string) => content.toLowerCase().includes(part))
-    })
-  } else {
-    referencedProducts = [] // UI MUST ONLY render ProductCards explicitly mentioned
   }
+
+  // Combine forced matches based on text with AI returned IDs
+  referencedProducts = [...aiMentionedProducts, ...forcedMatches].filter(
+    (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+  )
+
+  // Sort referenced products by price_usd DESC to ensure high-value items are first
+  referencedProducts = referencedProducts.sort(
+    (a: any, b: any) => (b.price_usd || 0) - (a.price_usd || 0),
+  )
 
   return {
     content,
