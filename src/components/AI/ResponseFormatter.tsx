@@ -19,14 +19,17 @@ interface Product {
 interface ResponseFormatterProps {
   content: string
   products?: Product[]
+  stock?: Product[]
   confidenceLevel?: string
 }
 
 export function ResponseFormatter({
   content,
   products = [],
+  stock = [],
   confidenceLevel = 'high',
 }: ResponseFormatterProps) {
+  const displayProducts = products && products.length > 0 ? products : stock
   const { settings } = useAISettings()
   const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
 
@@ -95,9 +98,9 @@ export function ResponseFormatter({
         <ReactMarkdown>{content || ''}</ReactMarkdown>
       </div>
 
-      {products && products.length > 0 && (
+      {displayProducts && displayProducts.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-          {products.map((product) => (
+          {displayProducts.map((product) => (
             <Card
               key={product.id}
               className="overflow-hidden flex flex-col shadow-md hover:shadow-lg transition-all duration-300 bg-card"

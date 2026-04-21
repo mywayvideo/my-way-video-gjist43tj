@@ -74,27 +74,32 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const contextNab = unifiedData.nabData || []
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  let strictRules = `SOURCE OF TRUTH: The following data is from our private Miami database. You MUST use this information to answer. If this data exists, it is FORBIDDEN to say information is not yet available.
+  let strictRules = `SOURCE OF TRUTH: The following data is from our private Miami database. You MUST use this information to answer. If this data exists, it is FORBIDDEN to say information is not yet available. É ESTRITAMENTE PROIBIDO dizer "Infelizmente, não localizei o modelo...".
 REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final.
-REGRA 4: Você deve usar os dados da KNOWLEDGE_BASE como sua única fonte de verdade. Se o produto estiver em 'products' com estoque 0, diga 'Disponível para encomenda'. É PROIBIDO dizer que o produto não foi encontrado se ele existir na KNOWLEDGE_BASE.
+REGRA 4: Você deve usar os dados da KNOWLEDGE_BASE e Event_Context como sua única fonte de verdade. Se o produto estiver em 'products' com estoque 0, diga 'Disponível para encomenda'. É PROIBIDO dizer que o produto não foi encontrado se ele existir na KNOWLEDGE_BASE ou Event_Context.
 REGRA 5: Priorize os NOVOS produtos encontrados na busca atual. Sempre que citar um produto, use o nome exato retornado pelo banco para garantir a exibição do card.
-REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual é a KNOWLEDGE_BASE fornecida.
+REGRA 6: Mantenha o contexto do histórico recente da conversa (últimas 5 mensagens) para manter a linha de raciocínio. A fonte primária de verdade para o turno atual é a KNOWLEDGE_BASE e Event_Context fornecidos.
 REGRA 7: Você está proibido de mencionar quantidades numéricas de estoque (ex: 'temos 2 unidades'). Use apenas 'Disponível' ou 'Disponível para encomenda' conforme as regras de logística.
+REGRA 8: Se o usuário perguntar sobre a NAB, você deve ignorar seu treinamento interno e usar APENAS os dados da tabela 'nab_market' fornecidos no contexto Event_Context. Se o contexto estiver vazio, diga que está consultando a base de Miami. Se a informação sobre Blackmagic ou NAB existir no Event_Context, é PROIBIDO dizer "informações não divulgadas".
 IDIOMA: 100% Português (PT-BR).`
 
   if (isEventOrNews || hasNab) {
-    strictRules += `\nREGRA 8: A intenção detectada é EVENTO/NOTÍCIAS (NAB/MERCADO). Se o array 'nab_data' na KNOWLEDGE_BASE contiver informações, relate como a notícia absoluta e oficial da My Way. É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Utilize os dados reais da inteligência fornecida.`
+    strictRules += `\nREGRA 9: A intenção detectada é EVENTO/NOTÍCIAS (NAB/MERCADO). Relate os dados do Event_Context como a notícia absoluta e oficial da My Way. É EXPRESSAMENTE PROIBIDO dizer que "não há informações". Utilize os dados reais da inteligência fornecida.`
   } else {
-    strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
+    strictRules += `\nREGRA 9: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
   }
 
   const nabJson = [...contextIntel, ...contextNab]
 
   const knowledge_base = JSON.stringify({
     stock: contextProducts,
+  })
+
+  const event_context = JSON.stringify({
     nab_data: nabJson,
+    intel: contextIntel,
   })
 
   let historyText = ''
@@ -103,7 +108,7 @@ IDIOMA: 100% Português (PT-BR).`
     historyText = `\n\nHISTÓRICO RECENTE (Últimas 5 mensagens):\n${recentHistory.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`).join('\n')}`
   }
 
-  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nKNOWLEDGE_BASE: ${knowledge_base}${historyText}`
+  const assembledPrompt = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nKNOWLEDGE_BASE: ${knowledge_base}\n\nEvent_Context: ${event_context}${historyText}`
 
   const currentContext = contextProducts
 

@@ -41,6 +41,33 @@ export function useUnifiedSearch() {
         nab = responseObj.nab_data || []
       }
 
+      const qLower = cleanQuery.toLowerCase()
+
+      // Semantic Search Logic for Categorical Queries
+      const categoricalKeywords = ['câmera', 'camera', 'cinema', 'lente', 'monitor']
+      const isCategorical = categoricalKeywords.some((kw) => qLower.includes(kw))
+
+      if (isCategorical) {
+        let catQ = supabase.from('products').select('*').eq('is_discontinued', false)
+        if (!settings?.ignore_stock_count) {
+          catQ = catQ.gt('stock', 0)
+        }
+
+        const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+        if (terms.length > 0) {
+          terms.forEach((t) => {
+            catQ = catQ.or(`name.ilike.%${t}%,category.ilike.%${t}%`)
+          })
+
+          const { data: catProducts } = await catQ.limit(20)
+          if (catProducts && catProducts.length > 0) {
+            products = [...products, ...catProducts].filter(
+              (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+            )
+          }
+        }
+      }
+
       // Fuzzy Search Fallback for products
       if (products.length === 0) {
         // Fallback for full query match first
@@ -82,7 +109,6 @@ export function useUnifiedSearch() {
       }
 
       // Explicit Intelligence Search Fallback for specific keywords
-      const qLower = cleanQuery.toLowerCase()
       const hasIntelligenceKeywords =
         qLower.includes('nab') ||
         qLower.includes('novidade') ||
@@ -90,7 +116,7 @@ export function useUnifiedSearch() {
         qLower.includes('lançamento') ||
         qLower.includes('lançamentos')
 
-      if ((nab.length === 0 || cache.length === 0) && hasIntelligenceKeywords) {
+      if (hasIntelligenceKeywords) {
         const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
         if (terms.length > 0) {
           let nabQ = supabase.from('nab_market').select('*')
@@ -102,15 +128,17 @@ export function useUnifiedSearch() {
           })
 
           const [{ data: fuzzyNab }, { data: fuzzyIntel }] = await Promise.all([
-            nabQ.limit(5),
-            intelQ.limit(5),
+            nabQ.limit(15),
+            intelQ.limit(15),
           ])
 
-          if (fuzzyNab && fuzzyNab.length > 0 && nab.length === 0) {
-            nab = fuzzyNab
+          if (fuzzyNab && fuzzyNab.length > 0) {
+            nab = [...nab, ...fuzzyNab].filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
           }
           if (fuzzyIntel && fuzzyIntel.length > 0) {
-            cache = [...cache, ...fuzzyIntel]
+            cache = [...cache, ...fuzzyIntel].filter(
+              (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+            )
           }
         }
       }
