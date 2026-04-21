@@ -92,6 +92,8 @@ IDIOMA: 100% Português (PT-BR).`
     strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
   }
 
+  strictRules += `\nREGRA 9: Você é um consultor técnico. Se o usuário pedir para comparar produtos, use os dados técnicos fornecidos na KNOWLEDGE_BASE para ambos. Se um produto foi mencionado em um turno anterior, use o histórico para manter o contexto da comparação.`
+
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
     if (item.ai_summary) {
       return {
@@ -105,8 +107,8 @@ IDIOMA: 100% Português (PT-BR).`
 
   let historyText = ''
   if (unifiedData.history && unifiedData.history.length > 0) {
-    const recentHistory = unifiedData.history.slice(-5)
-    historyText = `\n\nHISTÓRICO RECENTE (Últimas 5 mensagens):\n${recentHistory.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`).join('\n')}`
+    const recentHistory = unifiedData.history.slice(-6)
+    historyText = `\n\nHISTÓRICO RECENTE (Últimas 6 mensagens):\n${recentHistory.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`).join('\n')}`
   }
 
   // Contexto Institucional

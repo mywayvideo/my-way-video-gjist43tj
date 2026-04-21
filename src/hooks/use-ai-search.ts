@@ -59,7 +59,23 @@ export function useUnifiedSearch() {
         genericQ = genericQ.gt('stock', 0)
       }
 
-      const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+      const stopWords = [
+        'and',
+        'vs',
+        'e',
+        'ou',
+        'com',
+        'versus',
+        'comparar',
+        'compare',
+        'entre',
+        'qual',
+        'melhor',
+        'diferença',
+      ]
+      const terms = cleanQuery
+        .split(/\s+/)
+        .filter((t) => t.length > 1 && !stopWords.includes(t.toLowerCase()))
       const buildOrQuery = (term: string) => {
         const matchedMfgs =
           allMfgs
@@ -73,9 +89,8 @@ export function useUnifiedSearch() {
       }
 
       if (terms.length > 0) {
-        terms.forEach((t) => {
-          genericQ = genericQ.or(buildOrQuery(t))
-        })
+        const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
+        genericQ = genericQ.or(combinedOrStr)
       } else {
         genericQ = genericQ.or(buildOrQuery(cleanQuery))
       }
@@ -93,10 +108,12 @@ export function useUnifiedSearch() {
       let intelQ = supabase.from('market_intelligence').select('*').eq('status', 'published')
 
       if (terms.length > 0) {
-        terms.forEach((t) => {
-          nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
-          intelQ = intelQ.or(`title.ilike.%${t}%,ai_summary.ilike.%${t}%,raw_content.ilike.%${t}%`)
-        })
+        const nabOrStr = terms.map((t) => `title.ilike.%${t}%,content.ilike.%${t}%`).join(',')
+        const intelOrStr = terms
+          .map((t) => `title.ilike.%${t}%,ai_summary.ilike.%${t}%,raw_content.ilike.%${t}%`)
+          .join(',')
+        nabQ = nabQ.or(nabOrStr)
+        intelQ = intelQ.or(intelOrStr)
       } else {
         nabQ = nabQ.or(`title.ilike.%${cleanQuery}%,content.ilike.%${cleanQuery}%`)
         intelQ = intelQ.or(
@@ -203,7 +220,6 @@ export function useUnifiedSearch() {
     console.log('NEW SEARCH FOR:', cleanQuery)
     setIsLoading(true)
     setResults(null) // Explicitly clear the previous results state to avoid data overlap
-    accumulatedContext.current = { products: [], intel: [], nabData: [] }
 
     try {
       const activeAgent = await getActiveAgent()
@@ -216,16 +232,36 @@ export function useUnifiedSearch() {
 
       console.log('NEW RESULTS:', newProducts.length)
 
+      const isComparison =
+        cleanQuery.toLowerCase().includes('vs') ||
+        cleanQuery.toLowerCase().includes('versus') ||
+        cleanQuery.toLowerCase().includes('comparar') ||
+        cleanQuery.toLowerCase().includes('compare') ||
+        cleanQuery.toLowerCase().includes('diferença')
+
+      let combinedProducts = newProducts
+      if (isComparison && accumulatedContext.current.products.length > 0) {
+        combinedProducts = [...accumulatedContext.current.products, ...newProducts].filter(
+          (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+        )
+      } else if (!isComparison && newProducts.length > 0) {
+        combinedProducts = [...newProducts, ...accumulatedContext.current.products]
+          .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+          .slice(0, 6)
+      } else if (newProducts.length === 0) {
+        combinedProducts = accumulatedContext.current.products
+      }
+
       accumulatedContext.current = {
-        products: newProducts,
+        products: combinedProducts,
         intel: newIntel,
         nabData: newNab,
       }
 
       const currentUnifiedData = {
         ...unifiedData,
-        stock: newProducts,
-        products: newProducts,
+        stock: combinedProducts,
+        products: combinedProducts,
         intel: newIntel,
         nabData: newNab,
       }
