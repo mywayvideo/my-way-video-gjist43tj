@@ -58,7 +58,7 @@ function IntelligenceCard({
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 text-sm text-foreground prose prose-invert max-w-none">
               <ReactMarkdown>
-                {item.content || item.raw_content || item.ai_summary || ''}
+                {item.ai_summary || item.content || item.raw_content || ''}
               </ReactMarkdown>
             </CardContent>
           </Card>

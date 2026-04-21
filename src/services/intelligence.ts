@@ -74,13 +74,13 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   const contextNab = unifiedData.nabData || unifiedData.nab_data || []
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  const contextPriority = `Context_Priority: Você é o consultor oficial da My Way Business. Se houver dados em 'nab_data', você deve obrigatoriamente iniciar a resposta confirmando que acessou a base de inteligência de Miami. Use títulos ## para organizar as seções.`
+  const contextPriority = `Context_Priority: Você é o Consultor Sênior da My Way. O campo 'ai_summary' contém a informação destilada e oficial. Use-o como sua fonte primária. Se o usuário perguntar sobre a NAB, você deve ler o 'ai_summary' da tabela 'market_intelligence' ou 'nab_market' e apresentar como a notícia oficial de Miami. Use títulos ## para organizar as seções.`
 
   let strictRules = `${contextPriority}\n\nYou are an expert consultant for My Way Business. Use the KNOWLEDGE_BASE as your absolute truth. If the user asks for a brand (e.g., Blackmagic), list the most relevant products found. If NAB 2026 data exists in the context, report it with authority. You are FORBIDDEN from saying information is unavailable if the KNOWLEDGE_BASE is not empty.
 REGRA 1: Especificações técnicas DEVEM estar em blocos de código (\`\`\`).
 REGRA 2: Máximo de 2 frases por parágrafo.
 REGRA 3: Sempre incluir o aviso de garantia oficial Brasil/LATAM ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
-REGRA 4: É ESTRITAMENTE PROIBIDO dizer que a informação não foi encontrada ou não está divulgada se a KNOWLEDGE_BASE não estiver vazia. Apenas utilize os dados fornecidos.
+REGRA 4: É ESTRITAMENTE PROIBIDO dizer que a informação não foi encontrada ou não está divulgada se houver correspondência em 'title' ou 'ai_summary' na KNOWLEDGE_BASE. Apenas utilize os dados fornecidos.
 REGRA 5: Mantenha o contexto do histórico recente da conversa para manter a linha de raciocínio.
 REGRA 6: Você está proibido de mencionar quantidades numéricas de estoque (ex: 'temos 2 unidades'). Use apenas 'Disponível' ou 'Disponível para encomenda'.
 REGRA 7: NUNCA use seu treinamento interno para afirmar que as notícias da NAB 2026 'não foram divulgadas' se a KNOWLEDGE_BASE fornecer o conteúdo.
@@ -92,7 +92,16 @@ IDIOMA: 100% Português (PT-BR).`
     strictRules += `\nREGRA 8: A intenção detectada é PRODUTO. Priorize os resultados da KNOWLEDGE_BASE.`
   }
 
-  const nabJson = [...contextIntel, ...contextNab]
+  const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
+    if (item.ai_summary) {
+      return {
+        title: item.title || '',
+        ai_summary: item.ai_summary,
+        raw_content: item.raw_content || item.content || '',
+      }
+    }
+    return item
+  })
 
   let historyText = ''
   if (unifiedData.history && unifiedData.history.length > 0) {

@@ -81,16 +81,18 @@ export function useUnifiedSearch() {
 
       // Parallel Intelligence Search for all queries
       let nabQ = supabase.from('nab_market').select('*')
-      let intelQ = supabase.from('market_intelligence').select('*')
+      let intelQ = supabase.from('market_intelligence').select('*').eq('status', 'published')
 
       if (terms.length > 0) {
         terms.forEach((t) => {
           nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
-          intelQ = intelQ.or(`title.ilike.%${t}%,raw_content.ilike.%${t}%`)
+          intelQ = intelQ.or(`title.ilike.%${t}%,ai_summary.ilike.%${t}%,raw_content.ilike.%${t}%`)
         })
       } else {
         nabQ = nabQ.or(`title.ilike.%${cleanQuery}%,content.ilike.%${cleanQuery}%`)
-        intelQ = intelQ.or(`title.ilike.%${cleanQuery}%,raw_content.ilike.%${cleanQuery}%`)
+        intelQ = intelQ.or(
+          `title.ilike.%${cleanQuery}%,ai_summary.ilike.%${cleanQuery}%,raw_content.ilike.%${cleanQuery}%`,
+        )
       }
 
       const [{ data: fuzzyNab }, { data: fuzzyIntel }] = await Promise.all([
