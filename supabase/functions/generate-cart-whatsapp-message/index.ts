@@ -3,7 +3,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -15,7 +16,7 @@ Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
         status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -32,7 +33,7 @@ Deno.serve(async (req: Request) => {
     ) {
       return new Response(JSON.stringify({ error: 'Campos obrigatorios ausentes.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -45,15 +46,15 @@ Deno.serve(async (req: Request) => {
       ) {
         return new Response(JSON.stringify({ error: 'Campos obrigatorios ausentes.' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
     }
 
     // Generate Message
-    let message = "Ola! Gostaria de ajuda com meu carrinho de compras.\n\n"
-    message += "Itens no carrinho:\n"
-    
+    let message = 'Ola! Gostaria de ajuda com meu carrinho de compras.\n\n'
+    message += 'Itens no carrinho:\n'
+
     for (const item of cartItems) {
       message += `- ${item.productName} x ${item.quantity} = R$ ${item.itemTotal}\n`
     }
@@ -62,19 +63,18 @@ Deno.serve(async (req: Request) => {
     message += `Total: R$ ${total}\n\n`
     message += `Meu email: ${userEmail}\n`
     message += `Meu nome: ${userName}\n\n`
-    message += "Obrigado!"
+    message += 'Obrigado!'
 
     // Return Response
     return new Response(JSON.stringify({ message }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-
   } catch (error) {
     console.error('Error generating WhatsApp message:', error)
     return new Response(JSON.stringify({ error: 'Erro ao gerar mensagem.' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })

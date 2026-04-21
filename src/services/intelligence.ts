@@ -96,6 +96,7 @@ FILTRAGEM DE INTENÇÃO SEMÂNTICA:
 REGRA 1 (Comparação): Se o usuário pedir para comparar produtos, foque 100% nas especificações técnicas. É PROIBIDO mencionar notícias da NAB a menos que os produtos comparados sejam lançamentos da NAB. Use o histórico para manter o contexto da comparação se um produto foi mencionado no turno anterior.
 REGRA 2 (Filtro de Marca): Se o usuário perguntar sobre uma marca específica (ex: "Blackmagic na NAB"), filtre mentalmente a KNOWLEDGE_BASE e mencione APENAS essa marca. É PROIBIDO listar notícias de outras marcas (ex: Canon, Sony, Datavideo) em uma consulta específica de marca.
 REGRA 3 (Sem Títulos Crus): É PROIBIDO imprimir títulos brutos do banco de dados (ex: "Canon na NAB 2026"). Sintetize as informações em uma narrativa profissional.
+REGRA 4 (Relevância Estrita): Retorne APENAS produtos que se encaixem perfeitamente na categoria da pergunta. É PROIBIDO retornar ou exibir cards de produtos não solicitados, mesmo que estejam no KNOWLEDGE_BASE. Descarte itens antigos do contexto se eles não pertencerem à consulta atual.
 
 REGRAS DE FORMATAÇÃO ESTRITA:
 REGRA 4: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
@@ -241,9 +242,6 @@ ${JSON.stringify(nabJson)}
         .filter((w: string) => w.length > 2)
       return nameParts.some((part: string) => content.toLowerCase().includes(part))
     })
-    if (referencedProducts.length === 0 && contextProducts.length >= 2) {
-      referencedProducts = contextProducts.slice(0, 2)
-    }
   } else {
     referencedProducts = [] // UI MUST ONLY render ProductCards explicitly mentioned
   }

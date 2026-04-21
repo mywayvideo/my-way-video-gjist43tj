@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { MessageCircle, Rocket, Brain } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 import { useAISettings } from '@/hooks/use-ai-settings'
 import { supabase } from '@/lib/supabase/client'
 // @ts-expect-error - Assuming react-markdown is installed or provided externally for professional rendering
@@ -26,62 +25,10 @@ interface ResponseFormatterProps {
   confidenceLevel?: string
 }
 
-function IntelligenceCard({
-  title,
-  icon: Icon,
-  items,
-  borderColorClass,
-  textColorClass,
-}: {
-  title: string
-  icon: any
-  items: any[]
-  borderColorClass: string
-  textColorClass: string
-}) {
-  if (!items || items.length === 0) return null
-
-  const validItems = items.filter(
-    (item) => item.OFFICIAL_MIAMI_INTELLIGENCE || item.ai_summary || item.OFFICIAL_SUMMARY,
-  )
-
-  if (validItems.length === 0) return null
-
-  return (
-    <div className="mb-8 space-y-4 animate-fade-in-up">
-      <h3 className={`text-xl font-bold flex items-center gap-2 ${textColorClass}`}>
-        <Icon className="w-6 h-6" />
-        {title}
-      </h3>
-      <div className="grid gap-4">
-        {validItems.map((item, i) => (
-          <Card
-            key={i}
-            className={`bg-muted border-l-4 ${borderColorClass} rounded-r-xl shadow-sm border-y-0 border-r-0`}
-          >
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-base text-foreground">
-                {item.title || item.name || 'Atualização'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0 text-sm text-foreground prose prose-invert max-w-none">
-              <ReactMarkdown>
-                {item.OFFICIAL_MIAMI_INTELLIGENCE || item.ai_summary || item.OFFICIAL_SUMMARY || ''}
-              </ReactMarkdown>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export function ResponseFormatter({
   content,
   products = [],
   stock = [],
-  nabData = [],
-  intel = [],
   confidenceLevel = 'high',
 }: ResponseFormatterProps) {
   const displayProducts = stock && stock.length > 0 ? stock : products
@@ -149,22 +96,6 @@ export function ResponseFormatter({
 
   return (
     <div className="flex flex-col space-y-8 w-full animate-fade-in">
-      <IntelligenceCard
-        title="Novidades NAB 2026"
-        icon={Rocket}
-        items={nabData}
-        borderColorClass="border-orange-500"
-        textColorClass="text-orange-500"
-      />
-
-      <IntelligenceCard
-        title="Inteligência de Mercado"
-        icon={Brain}
-        items={intel}
-        borderColorClass="border-orange-500"
-        textColorClass="text-orange-500"
-      />
-
       {content && (
         <div className="prose prose-invert max-w-none text-foreground text-base leading-relaxed bg-transparent">
           <ReactMarkdown>{content}</ReactMarkdown>
