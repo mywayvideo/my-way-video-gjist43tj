@@ -150,12 +150,15 @@ export function ChatInterface() {
 
     const res = await search(userQuery, messages)
     if (res) {
+      // Automate card rendering using stock results instead of just AI selected products
+      const productsToRender = res.stock && res.stock.length > 0 ? res.stock : res.products
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content: res.message || res.content,
-          products: res.products,
+          products: productsToRender,
           showWhatsapp: res.should_show_whatsapp_button,
           confidence: res.confidence_level,
         },

@@ -7,10 +7,11 @@ import { Product } from '@/types'
 interface ResponseFormatterProps {
   content: string
   products?: Product[]
+  stock?: Product[]
   className?: string
 }
 
-export function ResponseFormatter({ content, products, className }: ResponseFormatterProps) {
+export function ResponseFormatter({ content, products, stock, className }: ResponseFormatterProps) {
   if (!content) return null
 
   return (
@@ -74,18 +75,19 @@ export function ResponseFormatter({ content, products, className }: ResponseForm
         {content}
       </ReactMarkdown>
 
-      {products && products.length > 0 && (
-        <div className="mt-8 animate-fade-in-up delay-150 not-prose">
-          <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary mb-6">
-            Equipamentos Localizados
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {products.map((p: any) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+      {(stock && stock.length > 0 ? stock : products) &&
+        (stock && stock.length > 0 ? stock : products)!.length > 0 && (
+          <div className="mt-8 animate-fade-in-up delay-150 not-prose">
+            <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary mb-6">
+              Equipamentos Localizados
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {(stock && stock.length > 0 ? stock : products)!.map((p: any) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   )
 }

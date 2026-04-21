@@ -41,106 +41,58 @@ export function useUnifiedSearch() {
         nab = responseObj.nab_data || []
       }
 
-      const qLower = cleanQuery.toLowerCase()
-
-      // Semantic Search Logic for Categorical Queries
-      const categoricalKeywords = ['câmera', 'camera', 'cinema', 'lente', 'monitor']
-      const isCategorical = categoricalKeywords.some((kw) => qLower.includes(kw))
-
-      if (isCategorical) {
-        let catQ = supabase.from('products').select('*').eq('is_discontinued', false)
-        if (!settings?.ignore_stock_count) {
-          catQ = catQ.gt('stock', 0)
-        }
-
-        const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
-        if (terms.length > 0) {
-          terms.forEach((t) => {
-            catQ = catQ.or(`name.ilike.%${t}%,category.ilike.%${t}%`)
-          })
-
-          const { data: catProducts } = await catQ.limit(20)
-          if (catProducts && catProducts.length > 0) {
-            products = [...products, ...catProducts].filter(
-              (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-            )
-          }
-        }
+      // Generic Semantic Search Logic across all categories
+      let genericQ = supabase.from('products').select('*').eq('is_discontinued', false)
+      if (!settings?.ignore_stock_count) {
+        genericQ = genericQ.gt('stock', 0)
       }
 
-      // Fuzzy Search Fallback for products
-      if (products.length === 0) {
-        // Fallback for full query match first
-        let fullFuzzyQuery = supabase
-          .from('products')
-          .select('*')
-          .eq('is_discontinued', false)
-          .or(`name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%`)
-          .limit(10)
-
-        if (!settings?.ignore_stock_count) {
-          fullFuzzyQuery = fullFuzzyQuery.gt('stock', 0)
-        }
-
-        const { data: fullFuzzy } = await fullFuzzyQuery
-
-        if (fullFuzzy && fullFuzzy.length > 0) {
-          products = fullFuzzy
-        } else {
-          const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
-          if (terms.length > 0) {
-            let q = supabase.from('products').select('*').eq('is_discontinued', false)
-
-            if (!settings?.ignore_stock_count) {
-              q = q.gt('stock', 0)
-            }
-
-            // Use Fuzzy Search (ILIKE) with wildcards '%term%' for both product names and models.
-            terms.forEach((t) => {
-              q = q.or(`name.ilike.%${t}%,sku.ilike.%${t}%`)
-            })
-
-            const { data: fuzzyProducts } = await q.limit(10)
-            if (fuzzyProducts && fuzzyProducts.length > 0) {
-              products = fuzzyProducts
-            }
-          }
-        }
+      const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
+      if (terms.length > 0) {
+        terms.forEach((t) => {
+          genericQ = genericQ.or(
+            `name.ilike.%${t}%,sku.ilike.%${t}%,category.ilike.%${t}%,description.ilike.%${t}%`,
+          )
+        })
+      } else {
+        genericQ = genericQ.or(
+          `name.ilike.%${cleanQuery}%,sku.ilike.%${cleanQuery}%,category.ilike.%${cleanQuery}%,description.ilike.%${cleanQuery}%`,
+        )
       }
 
-      // Explicit Intelligence Search Fallback for specific keywords
-      const hasIntelligenceKeywords =
-        qLower.includes('nab') ||
-        qLower.includes('novidade') ||
-        qLower.includes('mercado') ||
-        qLower.includes('lançamento') ||
-        qLower.includes('lançamentos')
+      const { data: genericProducts } = await genericQ.limit(20)
+      if (genericProducts && genericProducts.length > 0) {
+        products = [...products, ...genericProducts].filter(
+          (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+        )
+      }
 
-      if (hasIntelligenceKeywords) {
-        const terms = cleanQuery.split(/\s+/).filter((t) => t.length > 1)
-        if (terms.length > 0) {
-          let nabQ = supabase.from('nab_market').select('*')
-          let intelQ = supabase.from('market_intelligence').select('*')
+      // Parallel Intelligence Search for all queries
+      let nabQ = supabase.from('nab_market').select('*')
+      let intelQ = supabase.from('market_intelligence').select('*')
 
-          terms.forEach((t) => {
-            nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
-            intelQ = intelQ.or(`title.ilike.%${t}%,raw_content.ilike.%${t}%`)
-          })
+      if (terms.length > 0) {
+        terms.forEach((t) => {
+          nabQ = nabQ.or(`title.ilike.%${t}%,content.ilike.%${t}%`)
+          intelQ = intelQ.or(`title.ilike.%${t}%,raw_content.ilike.%${t}%`)
+        })
+      } else {
+        nabQ = nabQ.or(`title.ilike.%${cleanQuery}%,content.ilike.%${cleanQuery}%`)
+        intelQ = intelQ.or(`title.ilike.%${cleanQuery}%,raw_content.ilike.%${cleanQuery}%`)
+      }
 
-          const [{ data: fuzzyNab }, { data: fuzzyIntel }] = await Promise.all([
-            nabQ.limit(15),
-            intelQ.limit(15),
-          ])
+      const [{ data: fuzzyNab }, { data: fuzzyIntel }] = await Promise.all([
+        nabQ.limit(15),
+        intelQ.limit(15),
+      ])
 
-          if (fuzzyNab && fuzzyNab.length > 0) {
-            nab = [...nab, ...fuzzyNab].filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-          }
-          if (fuzzyIntel && fuzzyIntel.length > 0) {
-            cache = [...cache, ...fuzzyIntel].filter(
-              (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-            )
-          }
-        }
+      if (fuzzyNab && fuzzyNab.length > 0) {
+        nab = [...nab, ...fuzzyNab].filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+      }
+      if (fuzzyIntel && fuzzyIntel.length > 0) {
+        cache = [...cache, ...fuzzyIntel].filter(
+          (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+        )
       }
 
       // Augment products with full_specs if not present

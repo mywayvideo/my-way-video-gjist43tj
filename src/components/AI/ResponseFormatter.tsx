@@ -29,7 +29,7 @@ export function ResponseFormatter({
   stock = [],
   confidenceLevel = 'high',
 }: ResponseFormatterProps) {
-  const displayProducts = products && products.length > 0 ? products : stock
+  const displayProducts = stock && stock.length > 0 ? stock : products
   const { settings } = useAISettings()
   const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
 
