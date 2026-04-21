@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { AIPrompt } from '@/components/AI/AIPrompt'
-import { ResponseFormatter } from '@/components/ResponseFormatter'
+import { ResponseFormatter } from '@/components/AI/ResponseFormatter'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
@@ -72,17 +72,25 @@ export default function Index() {
           <div className="pt-8 w-full animate-fade-in" style={{ animationDelay: '200ms' }}>
             <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
             {isSearchLoading && (
-              <p className="text-center text-muted-foreground mt-6 animate-pulse text-lg">
-                Buscando produtos e novidades...
-              </p>
+              <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-pulse">
+                <p className="text-center text-muted-foreground text-lg mb-6">
+                  Consultando atualizações em tempo real com Miami...
+                </p>
+                <div className="space-y-4">
+                  <Skeleton className="h-24 w-full bg-white/5 rounded-xl border-l-4 border-orange-500/50" />
+                  <Skeleton className="h-24 w-full bg-white/5 rounded-xl border-l-4 border-blue-500/50" />
+                </div>
+              </div>
             )}
           </div>
 
-          {results && !Array.isArray(results) && (
+          {results && !isSearchLoading && !Array.isArray(results) && (
             <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up">
               <ResponseFormatter
                 content={results.content || results.message || ''}
-                products={results.products || results.referenced_internal_products}
+                products={results.products || results.referenced_internal_products || results.stock}
+                nabData={results.nabData || results.nab_data}
+                intel={results.intel}
               />
 
               {results.should_show_whatsapp_button && (
