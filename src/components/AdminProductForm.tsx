@@ -260,72 +260,80 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             )}
           />
 
-          <div className="md:col-span-2 mt-4 mb-2">
-            <h3 className="text-lg font-medium text-amber-500">Configuração de Rebate (USA)</h3>
-            <div className="h-px bg-amber-500/20 w-full mt-2" />
+          <div className="md:col-span-2 border border-amber-500/50 rounded-xl p-5 bg-amber-500/5 space-y-5 my-4">
+            <div>
+              <h3 className="text-lg font-medium text-amber-500">Configuração de Rebate (USA)</h3>
+              <p className="text-sm text-amber-500/80">
+                O preço de rebate será usado para o cálculo automático do BRL quando ativo.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <FormField
+                control={form.control}
+                name="price_usa_rebate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-amber-500">Price USA Rebate</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value || ''}
+                        className="bg-background/50 border-amber-500/30"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="price_cost_rebate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-amber-500">Price Cost Rebate</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value || ''}
+                        className="bg-background/50 border-amber-500/30"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="date_rebate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-amber-500">Data de Expiração (Rebate)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value ? new Date(e.target.value).toISOString() : null,
+                          )
+                        }
+                        className="bg-background/50 border-amber-500/30"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
-
-          <FormField
-            control={form.control}
-            name="price_usa_rebate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-amber-500">Price USA Rebate</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...field}
-                    value={field.value || ''}
-                    className="bg-background/50 border-amber-500/30"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="price_cost_rebate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-amber-500">Price Cost Rebate</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...field}
-                    value={field.value || ''}
-                    className="bg-background/50 border-amber-500/30"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="date_rebate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-amber-500">Data de Expiração (Rebate)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="datetime-local"
-                    {...field}
-                    value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                    onChange={(e) =>
-                      field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)
-                    }
-                    className="bg-background/50 border-amber-500/30"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <div className="md:col-span-2 mt-4 mb-2">
             <h3 className="text-lg font-medium">Preços Padrão</h3>
