@@ -36,7 +36,7 @@ const formSchema = z.object({
   whatsapp_trigger_project_keywords: z.boolean(),
   whatsapp_trigger_expensive_product: z.boolean(),
   whatsapp_trigger_keywords: z.string().optional(),
-  system_prompt: z.string().min(1, 'O prompt do sistema é obrigatório'),
+  system_prompt: z.string().optional(),
   confidence_threshold_for_whatsapp: z.string().optional(),
   max_web_search_attempts: z.coerce.number().min(0),
 })
@@ -95,14 +95,14 @@ export default function AdminAISettings() {
         form.reset({
           cache_expiration_days: aiSettingsData?.cache_expiration_days ?? 30,
           price_threshold_usd: aiSettingsData?.price_threshold_usd ?? 5000,
-          search_algorithm_sql: aiSettingsData?.search_algorithm_sql ?? '',
+          search_algorithm_sql: aiSettingsData?.search_algorithm_sql || '',
           result_component_config:
             typeof aiSettingsData?.result_component_config === 'string'
               ? aiSettingsData.result_component_config
               : JSON.stringify(aiSettingsData?.result_component_config || {}, null, 2),
           ignore_stock_count: aiSettingsData?.ignore_stock_count ?? true,
-          logistics_rules_prompt: aiSettingsData?.logistics_rules_prompt ?? '',
-          system_prompt_template: aiSettingsData?.system_prompt_template ?? '',
+          logistics_rules_prompt: aiSettingsData?.logistics_rules_prompt || '',
+          system_prompt_template: aiSettingsData?.system_prompt_template || '',
 
           whatsapp_trigger_low_confidence:
             aiAgentSettingsData?.whatsapp_trigger_low_confidence ?? true,
@@ -113,11 +113,11 @@ export default function AdminAISettings() {
           whatsapp_trigger_expensive_product:
             aiAgentSettingsData?.whatsapp_trigger_expensive_product ?? true,
           whatsapp_trigger_keywords:
-            aiAgentSettingsData?.whatsapp_trigger_keywords?.join(', ') ??
+            aiAgentSettingsData?.whatsapp_trigger_keywords?.join(', ') ||
             'comprar, orçamento, quanto custa, disponível, preço',
-          system_prompt: aiAgentSettingsData?.system_prompt ?? '',
+          system_prompt: aiAgentSettingsData?.system_prompt || '',
           confidence_threshold_for_whatsapp:
-            aiAgentSettingsData?.confidence_threshold_for_whatsapp ?? 'low',
+            aiAgentSettingsData?.confidence_threshold_for_whatsapp || 'low',
           max_web_search_attempts: aiAgentSettingsData?.max_web_search_attempts ?? 2,
         })
       } catch (error: any) {
@@ -174,7 +174,7 @@ export default function AdminAISettings() {
         whatsapp_trigger_project_keywords: values.whatsapp_trigger_project_keywords,
         whatsapp_trigger_expensive_product: values.whatsapp_trigger_expensive_product,
         whatsapp_trigger_keywords: keywordsArray,
-        system_prompt: values.system_prompt,
+        system_prompt: values.system_prompt || '',
         confidence_threshold_for_whatsapp: values.confidence_threshold_for_whatsapp,
         max_web_search_attempts: values.max_web_search_attempts,
         updated_at: new Date().toISOString(),

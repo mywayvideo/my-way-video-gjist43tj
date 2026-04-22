@@ -127,33 +127,7 @@ export function useUnifiedSearch() {
       let nabQ = supabase.from('nab_market').select('*')
       let intelQ = supabase.from('market_intelligence').select('*').eq('status', 'published')
 
-      // Targeted Intelligence Fetching: prevent data leak from other brands
-      const knownBrands = [
-        'blackmagic',
-        'sony',
-        'canon',
-        'datavideo',
-        'red',
-        'arri',
-        'dji',
-        'panasonic',
-        'aputure',
-        'godox',
-        'ptzoptics',
-      ]
-      const mentionedBrands = knownBrands.filter((b) => cleanQuery.toLowerCase().includes(b))
-
-      if (mentionedBrands.length > 0) {
-        // Enforce strict brand filtering
-        const brandOrs = mentionedBrands
-          .map((b) => `title.ilike.%${b}%,raw_content.ilike.%${b}%,ai_summary.ilike.%${b}%`)
-          .join(',')
-        intelQ = intelQ.or(brandOrs)
-        const nabBrandOrs = mentionedBrands
-          .map((b) => `title.ilike.%${b}%,content.ilike.%${b}%`)
-          .join(',')
-        nabQ = nabQ.or(nabBrandOrs)
-      } else if (terms.length > 0) {
+      if (terms.length > 0) {
         const nabOrStr = terms.map((t) => `title.ilike.%${t}%,content.ilike.%${t}%`).join(',')
         const intelOrStr = terms
           .map((t) => `title.ilike.%${t}%,ai_summary.ilike.%${t}%,raw_content.ilike.%${t}%`)
@@ -230,17 +204,6 @@ export function useUnifiedSearch() {
     if (!ignoreStockCount) {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
-
-    finalProducts = finalProducts.sort((a: any, b: any) => {
-      const aPrice = a.price_usd || 0
-      const bPrice = b.price_usd || 0
-      if (bPrice !== aPrice) {
-        return bPrice - aPrice // Prioritizes price_usa DESC
-      }
-      const aStock = a.stock || 0
-      const bStock = b.stock || 0
-      return bStock - aStock // Then stock DESC
-    })
 
     const priceThreshold = settings?.price_threshold_usd || 5000
     finalProducts = finalProducts.map((p: any) => ({
@@ -351,8 +314,7 @@ export function useUnifiedSearch() {
       let shouldShowWhatsapp = false
 
       if (!activeAgent) {
-        finalMessage =
-          'Nenhum agente de IA configurado. Exibindo resultados da base unificada.\n\nTodos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.'
+        finalMessage = 'Nenhum agente de IA configurado. Exibindo resultados da base unificada.'
         toast({
           title: 'Aviso',
           description: 'Nenhum agente configurado. Exibindo busca básica.',
@@ -374,13 +336,9 @@ export function useUnifiedSearch() {
 
         // Render ALL products returned explicitly by AI
         if (aiResponse.products && aiResponse.products.length > 0) {
-          finalProducts = aiResponse.products.sort((a: any, b: any) => {
-            return (b.price_usd || 0) - (a.price_usd || 0)
-          })
+          finalProducts = aiResponse.products
         } else if (newProducts.length > 0) {
-          finalProducts = newProducts.sort((a: any, b: any) => {
-            return (b.price_usd || 0) - (a.price_usd || 0)
-          })
+          finalProducts = newProducts
         } else {
           finalProducts = []
         }

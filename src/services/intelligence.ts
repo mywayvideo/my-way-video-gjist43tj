@@ -51,25 +51,17 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   // Read settings directly to synchronize authority
   const settings = await getAISettings()
 
+  const genericFallback = 'Consultor My Way Business. Responda de forma técnica e objetiva.'
+
+  let systemPrompt = settings.system_prompt || ''
   let systemPromptTemplate = settings.system_prompt_template || ''
   const logisticsRulesPrompt = settings.logistics_rules_prompt || ''
 
-  if (!systemPromptTemplate || systemPromptTemplate.trim() === '') {
-    systemPromptTemplate =
-      'Você é o Especialista My Way Business. Sua prioridade é o hardware de maior valor (price_usd) retornado pela busca. É PROIBIDO omitir cards de produtos mencionados no texto. Siga as instruções da Section G para logística.'
+  if (!systemPrompt.trim() && !systemPromptTemplate.trim()) {
+    systemPrompt = genericFallback
   }
 
   const qLower = query.toLowerCase()
-
-  // Language Rule Detection - Enforce PT-BR for all AI responses as requested in the final constraints
-  const detectedLanguage = 'PT-BR'
-  const warrantyDisclaimer =
-    'Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.'
-  const isEventOrNews =
-    qLower.includes('nab ') ||
-    qLower.includes(' nab') ||
-    qLower.includes('feira') ||
-    qLower.includes('evento')
 
   const isComparison =
     qLower.includes('compar') ||
@@ -93,28 +85,17 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 
   const hasNab = contextNab.length > 0 || contextIntel.length > 0
 
-  let strictRules = `PRIORIDADE MÁXIMA DE RESPOSTA:
-1. Você é o Consultor Sênior da My Way. ALTA PRIORIDADE: Siga estritamente as instruções definidas no prompt do sistema (system_instructions).
-2. HIERARQUIA E NAB: Você é PROIBIDO de mencionar NAB ou eventos a menos que o usuário pergunte explicitamente por novidades. Use informações de mercado apenas como selo de autoridade técnica.
-3. FILTRAGEM DE INTENÇÃO E AUTORIDADE:
-REGRA 1: Priorize o hardware de maior valor (price_usd) retornado pela busca. Se o usuário perguntar por um produto específico, priorize-o absolutamente.
-REGRA 2: Você DEVE fornecer pelo menos dois fabricantes diferentes em cada recomendação que envolva mais de um produto, exceto se o usuário pedir uma marca específica.
-REGRA 3 (Preços): Todas as menções a preços DEVEM corresponder exatamente ao campo 'price_usd' fornecido no banco de dados.
-REGRA 4: É PROIBIDO fazer comparações não solicitadas. Apenas compare produtos se o usuário perguntar explicitamente "Qual a melhor?", "Compare X com Y" ou "Indique boas opções".
-REGRA 5 (Vinculação de Produtos): Você DEVE retornar os IDs exatos dos produtos cujos nomes foram citados no seu texto de resposta.
-REGRA 6: É proibido inserir IDs de produtos no texto, use apenas os nomes e mande os IDs na propriedade 'referenced_internal_products'. É PROIBIDO omitir cards de produtos mencionados no texto.
-
-REGRAS DE FORMATAÇÃO ESTRITA:
-REGRA 7: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
-REGRA 8: Parágrafos: Máximo de 2 frases por parágrafo.
-REGRA 9: SEMPRE inclua o aviso de garantia oficial ao final ("${warrantyDisclaimer}").
-REGRA 10: Idioma: TODAS AS RESPOSTAS DEVEM SER EM PORTUGUÊS (PT-BR), independentemente do idioma da pergunta.
+  let strictRules = `MANDATORY RULES:
+1. The AI MUST respond in the EXACT same language used in the user's last message.
+2. The AI is FORBIDDEN from comparing products unless the user explicitly asks for a comparison.
+3. All technical specifications MUST be in code blocks with triple backticks.
+4. You MUST return the exact IDs of the referenced products in the "referenced_internal_products" array.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
 {
   "content": "Sua resposta formatada...",
-  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos mencionados, priorizando os de maior valor (price_usd).
+  "referenced_internal_products": ["id_1", "id_2"] // OBRIGATÓRIO: Inclua TODOS os IDs exatos dos produtos mencionados.
 }`
 
   const nabJson = [...contextIntel, ...contextNab].map((item: any) => {
@@ -147,11 +128,11 @@ ${contexto_institucional}
 2) Produtos Encontrados:
 ${JSON.stringify(contextProducts)}
 
-3) Notícias e Inteligência (NAB/Mercado):
+3) Notícias e Inteligência (Mercado):
 ${JSON.stringify(nabJson)}
 `
 
-  const finalPromptWithContext = `${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nKNOWLEDGE_BASE:\n${KNOWLEDGE_BASE}\n\n${historyText}`
+  const finalPromptWithContext = `${systemPrompt}\n\n${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nKNOWLEDGE_BASE:\n${KNOWLEDGE_BASE}\n\n${historyText}`
 
   const currentContext = contextProducts
 
