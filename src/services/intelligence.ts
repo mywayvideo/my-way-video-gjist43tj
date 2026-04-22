@@ -1,18 +1,23 @@
 import { supabase } from '@/lib/supabase/client'
 
 export async function getAISettings() {
-  const { data: specificSettings, error } = await supabase
+  const { data: specificSettings } = await supabase
     .from('ai_settings')
     .select(
       'cache_expiration_days, price_threshold_usd, search_algorithm_sql, system_prompt_template, logistics_rules_prompt, result_component_config, ignore_stock_count',
     )
-    .eq('id', '00000000-0000-0000-0000-000000000001')
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
 
-  if (error || !specificSettings) {
-    throw new Error(
-      'Falha ao carregar ai_settings do banco de dados. Verifique a conexão ou os dados da tabela.',
-    )
+  const defaultSpecificSettings = specificSettings || {
+    cache_expiration_days: 30,
+    price_threshold_usd: 5000,
+    search_algorithm_sql: '',
+    system_prompt_template: '',
+    logistics_rules_prompt: '',
+    result_component_config: '{}',
+    ignore_stock_count: false,
   }
 
   const { data: agentSettings } = await supabase
@@ -24,7 +29,9 @@ export async function getAISettings() {
     .limit(1)
     .maybeSingle()
 
-  return { ...agentSettings, ...specificSettings }
+  const defaultAgentSettings = agentSettings || {}
+
+  return { ...defaultAgentSettings, ...defaultSpecificSettings }
 }
 
 export async function getActiveAgent() {
