@@ -106,12 +106,12 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           <FormField
             control={form.control}
             name="image_url"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem className="col-span-2 md:col-span-4">
                 <FormLabel>Imagem do Produto</FormLabel>
                 <FormControl>
                   <div
@@ -148,7 +148,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="manufacturer_id"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-2">
                 <FormLabel>Fabricante</FormLabel>
                 <div className="flex gap-2">
                   <Select value={field.value} onValueChange={field.onChange}>
@@ -183,7 +183,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="sku"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-2">
                 <FormLabel>SKU</FormLabel>
                 <FormControl>
                   <Input {...field} className="bg-background/50" />
@@ -197,7 +197,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem className="col-span-2 md:col-span-4">
                 <FormLabel>Nome do Produto</FormLabel>
                 <FormControl>
                   <Input {...field} className="bg-background/50" />
@@ -211,7 +211,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="category"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-2">
                 <FormLabel>Categoria (Texto)</FormLabel>
                 <FormControl>
                   <Input {...field} className="bg-background/50" />
@@ -225,7 +225,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="category_id"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-2">
                 <FormLabel>Categoria do Sistema</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
@@ -250,7 +250,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="ncm"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-4">
                 <FormLabel>NCM</FormLabel>
                 <FormControl>
                   <Input {...field} className="bg-background/50" placeholder="0000.00.00" />
@@ -260,20 +260,20 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             )}
           />
 
-          <div className="md:col-span-2 border border-amber-500/50 rounded-xl p-5 bg-amber-500/5 space-y-5 my-4">
+          <div className="col-span-2 md:col-span-4 border border-orange-500 rounded-xl p-5 bg-orange-500/5 space-y-5 my-4">
             <div>
-              <h3 className="text-lg font-medium text-amber-500">Configuração de Rebate (USA)</h3>
-              <p className="text-sm text-amber-500/80">
+              <h3 className="text-lg font-medium text-orange-500">Configuração de Rebate (USA)</h3>
+              <p className="text-sm text-orange-500/80">
                 O preço de rebate será usado para o cálculo automático do BRL quando ativo.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               <FormField
                 control={form.control}
                 name="price_usa_rebate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-2 md:col-span-1">
                     <FormLabel className="text-amber-500">Price USA Rebate</FormLabel>
                     <FormControl>
                       <Input
@@ -281,7 +281,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                         step="0.01"
                         {...field}
                         value={field.value || ''}
-                        className="bg-background/50 border-amber-500/30"
+                        className="bg-background/50 border-orange-500/30"
                       />
                     </FormControl>
                     <FormMessage />
@@ -293,15 +293,15 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                 control={form.control}
                 name="price_cost_rebate"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-amber-500">Price Cost Rebate</FormLabel>
+                  <FormItem className="col-span-2 md:col-span-1">
+                    <FormLabel className="text-orange-500">Price Cost Rebate</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         step="0.01"
                         {...field}
                         value={field.value || ''}
-                        className="bg-background/50 border-amber-500/30"
+                        className="bg-background/50 border-orange-500/30"
                       />
                     </FormControl>
                     <FormMessage />
@@ -313,8 +313,8 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                 control={form.control}
                 name="date_rebate"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-amber-500">Data de Expiração (Rebate)</FormLabel>
+                  <FormItem className="col-span-2 md:col-span-1">
+                    <FormLabel className="text-orange-500">Data de Expiração (Rebate)</FormLabel>
                     <FormControl>
                       <Input
                         type="datetime-local"
@@ -325,7 +325,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
                             e.target.value ? new Date(e.target.value).toISOString() : null,
                           )
                         }
-                        className="bg-background/50 border-amber-500/30"
+                        className="bg-background/50 border-orange-500/30"
                       />
                     </FormControl>
                     <FormMessage />
@@ -335,7 +335,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             </div>
           </div>
 
-          <div className="md:col-span-2 mt-4 mb-2">
+          <div className="col-span-2 md:col-span-4 mt-4 mb-2">
             <h3 className="text-lg font-medium">Preços Padrão</h3>
             <div className="h-px bg-white/10 w-full mt-2" />
           </div>
@@ -344,7 +344,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="price_usa"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Preço Venda USA (USD)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} className="bg-background/50" />
@@ -358,7 +358,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="price_brl"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Preço CIF SP Estimado</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} className="bg-background/50" />
@@ -372,7 +372,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="price_cost"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel className="text-amber-500">Preço Custo USA (USD)</FormLabel>
                 <FormControl>
                   <Input
@@ -391,7 +391,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="price_nationalized_sales"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Preço de Venda Nacionalizado</FormLabel>
                 <FormControl>
                   <Input
@@ -411,7 +411,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="price_nationalized_cost"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Preço de Custo Nacionalizado</FormLabel>
                 <FormControl>
                   <Input
@@ -431,7 +431,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="price_nationalized_currency"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Moeda (Nacionalizado)</FormLabel>
                 <Select value={field.value || 'BRL'} onValueChange={field.onChange}>
                   <FormControl>
@@ -453,7 +453,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="stock"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Estoque Local</FormLabel>
                 <FormControl>
                   <Input type="number" {...field} className="bg-background/50" />
@@ -467,7 +467,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="weight"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-1">
                 <FormLabel>Peso (lb)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} className="bg-background/50" />
@@ -481,7 +481,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="dimensions"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="col-span-2 md:col-span-4">
                 <FormLabel>Dimensões (in)</FormLabel>
                 <FormControl>
                   <Input {...field} className="bg-background/50" placeholder="10x10x10" />
@@ -491,7 +491,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             )}
           />
 
-          <div className="md:col-span-2 mt-6 mb-2">
+          <div className="col-span-2 md:col-span-4 mt-6 mb-2">
             <h3 className="text-lg font-medium">Relacionamentos</h3>
             <div className="h-px bg-white/10 w-full mt-2" />
           </div>
@@ -510,7 +510,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
               )
 
               return (
-                <FormItem className="md:col-span-2">
+                <FormItem className="col-span-2 md:col-span-4">
                   <FormLabel>Gerenciar Produtos Relacionados</FormLabel>
                   <div className="border border-white/10 rounded-md p-3 bg-background/50 space-y-4 mt-2">
                     <Input
@@ -664,7 +664,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             }}
           />
 
-          <div className="md:col-span-2 mt-6 mb-2">
+          <div className="col-span-2 md:col-span-4 mt-6 mb-2">
             <h3 className="text-lg font-medium">Status do Produto</h3>
             <div className="h-px bg-white/10 w-full mt-2" />
           </div>
@@ -675,7 +675,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             render={({ field }) => (
               <FormItem
                 className={cn(
-                  'md:col-span-1 relative flex flex-col items-start gap-4 rounded-xl border p-5 shadow-sm cursor-pointer transition-colors',
+                  'col-span-2 md:col-span-2 relative flex flex-col items-start gap-4 rounded-xl border p-5 shadow-sm cursor-pointer transition-colors',
                   field.value
                     ? 'border-amber-500 bg-amber-500/10'
                     : 'border-border bg-background/50 hover:bg-muted/50',
@@ -722,7 +722,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             render={({ field }) => (
               <FormItem
                 className={cn(
-                  'md:col-span-1 relative flex flex-col items-start gap-4 rounded-xl border p-5 shadow-sm cursor-pointer transition-colors',
+                  'col-span-2 md:col-span-2 relative flex flex-col items-start gap-4 rounded-xl border p-5 shadow-sm cursor-pointer transition-colors',
                   field.value
                     ? 'border-destructive bg-destructive/10'
                     : 'border-border bg-background/50 hover:bg-muted/50',
@@ -767,7 +767,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="description"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem className="col-span-2 md:col-span-4">
                 <FormLabel>Descrição Curta</FormLabel>
                 <FormControl>
                   <Textarea
@@ -785,7 +785,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
             control={form.control}
             name="technical_info"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem className="col-span-2 md:col-span-4">
                 <FormLabel>Informações Técnicas (Markdown/HTML)</FormLabel>
                 <FormControl>
                   <Textarea
@@ -802,7 +802,7 @@ export function AdminProductForm({ initialData, onSuccess, onAddManufacturer }: 
           />
 
           {form.watch('technical_info') && (
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 col-span-2 md:col-span-4">
               <Label>Preview das Informações Técnicas</Label>
               <div className="p-4 border border-border/50 rounded-md bg-background/50 text-sm [&_h2]:text-[1.5rem] [&_h2]:font-[700] [&_h2]:mt-[1.5rem] [&_h2]:mb-[1rem] [&_h3]:text-[1.25rem] [&_h3]:font-[600] [&_h3]:mt-[1rem] [&_h3]:mb-[0.75rem] [&_strong]:font-[700] [&_strong]:text-primary [&_ul]:ml-[1.5rem] [&_ul]:mt-[0.5rem] [&_ul]:mb-[0.5rem] [&_ul]:list-disc [&_ol]:ml-[1.5rem] [&_ol]:mt-[0.5rem] [&_ol]:mb-[0.5rem] [&_ol]:list-decimal [&_li]:mb-[0.5rem] [&_blockquote]:border-l-[4px] [&_blockquote]:border-primary [&_blockquote]:pl-[1rem] [&_blockquote]:ml-0 [&_blockquote]:text-muted-foreground [&_code]:bg-muted [&_code]:py-[0.25rem] [&_code]:px-[0.5rem] [&_code]:rounded-[0.25rem] [&_code]:font-mono [&_pre]:bg-muted [&_pre]:p-[1rem] [&_pre]:rounded-[0.5rem] [&_pre]:overflow-x-auto [&_pre]:font-mono">
                 <ReactMarkdown>{form.watch('technical_info')}</ReactMarkdown>

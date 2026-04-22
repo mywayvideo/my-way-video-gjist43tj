@@ -371,10 +371,10 @@ export function useProductForm(props?: UseProductFormProps) {
           return
         }
         await productService.createProduct(payload)
-        toast({ description: 'Produto salvo com sucesso!' })
+        toast({ description: 'Produto e Rebates salvos com sucesso!' })
       } else {
         await productService.updateProduct(id!, payload)
-        toast({ description: 'Produto atualizado com sucesso!' })
+        toast({ description: 'Produto e Rebates salvos com sucesso!' })
       }
 
       if (props?.onSuccess) {
@@ -383,7 +383,7 @@ export function useProductForm(props?: UseProductFormProps) {
         setTimeout(() => navigate('/admin/catalog'), 2000)
       }
     } catch (err) {
-      toast({ description: 'Não foi possível salvar o produto', variant: 'destructive' })
+      toast({ description: 'Erro ao salvar dados. Verifique a conexão.', variant: 'destructive' })
     } finally {
       setIsSaving(false)
     }

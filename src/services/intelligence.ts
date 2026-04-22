@@ -68,7 +68,16 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     systemPrompt = genericFallback
   }
 
-  const contextProducts = unifiedData.products || unifiedData.stock || []
+  const rawProducts = unifiedData.products || unifiedData.stock || []
+  const contextProducts = rawProducts.map((p: any) => {
+    let effective_price_usd = p.price_usd || 0
+    if (p.price_usa_rebate > 0) {
+      if (!p.date_rebate || new Date(p.date_rebate) >= new Date()) {
+        effective_price_usd = p.price_usa_rebate
+      }
+    }
+    return { ...p, effective_price_usd }
+  })
   const contextIntel = unifiedData.intel || []
   const contextNab = unifiedData.nabData || unifiedData.nab_data || []
 
@@ -80,6 +89,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 4. You MUST return the exact IDs of the referenced products in the "referenced_internal_products" array.
 5. Convert all database logic into natural, professional commercial sentences. Do NOT output database field names (e.g., price_usd, stock_count) or logical conditions.
 6. Paragraphs: Maximum 2 sentences.
+7. If 'effective_price_usd' is provided for a product, use it as the base price_usd for calculations instead of the standard price_usd, as it represents an active rebate.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
