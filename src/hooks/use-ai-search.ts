@@ -36,7 +36,7 @@ export function useUnifiedSearch() {
       let sqlString = rawSql.trim()
 
       if (!sqlString) {
-        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC LIMIT 20;`
+        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 20;`
       }
 
       const executedSql = sqlString.replace(/\$1/g, cleanQuery)
@@ -85,14 +85,6 @@ export function useUnifiedSearch() {
         'para',
         'de',
       ]
-      const specificModels = ['fx6', 'c400', 'fx3', 'pyxis']
-      const hasSpecificModel = specificModels.some((model) =>
-        cleanQuery.toLowerCase().includes(model),
-      )
-
-      const isCinemaQuery = ['cinema', 'filmagem', 'produção', 'producao', 'câmera', 'camera'].some(
-        (kw) => cleanQuery.toLowerCase().includes(kw),
-      )
       const terms = cleanQuery
         .split(/\s+/)
         .filter((t) => t.length > 2 && !stopWords.includes(t.toLowerCase()))
@@ -110,36 +102,19 @@ export function useUnifiedSearch() {
       }
 
       let orStr = ''
-      if (hasSpecificModel) {
-        const modelsOrStr = specificModels
-          .map((m) => `name.ilike.%${m}%,sku.ilike.%${m}%`)
-          .join(',')
-        if (terms.length > 0) {
-          const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
-          orStr = `${combinedOrStr},${modelsOrStr}`
-        } else {
-          orStr = modelsOrStr
-        }
-      } else if (isCinemaQuery) {
-        let cinemaOrStr = `description.ilike.%Cinema%,name.ilike.%FX%,name.ilike.%EOS C%,name.ilike.%URSA%,name.ilike.%Pocket%`
-        if (terms.length > 0) {
-          const combinedOrStr = terms.map((t) => buildOrQuery(t)).join(',')
-          orStr = `${combinedOrStr},${cinemaOrStr}`
-        } else {
-          orStr = cinemaOrStr
-        }
+      if (terms.length > 0) {
+        orStr = terms.map((t) => buildOrQuery(t)).join(',')
       } else {
-        if (terms.length > 0) {
-          orStr = terms.map((t) => buildOrQuery(t)).join(',')
-        } else {
-          orStr = buildOrQuery(cleanQuery)
-        }
+        orStr = buildOrQuery(cleanQuery)
       }
 
-      genericQ = genericQ.or(orStr)
+      if (orStr) {
+        genericQ = genericQ.or(orStr)
+      }
 
       const { data: genericProducts } = await genericQ
         .order('price_usd', { ascending: false })
+        .order('stock', { ascending: false })
         .limit(20)
 
       if (genericProducts && genericProducts.length > 0) {
@@ -256,28 +231,15 @@ export function useUnifiedSearch() {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
-    const specificModels = ['fx6', 'c400', 'fx3', 'pyxis']
-    const hasSpecificModel = specificModels.some((model) =>
-      cleanQuery.toLowerCase().includes(model),
-    )
-
     finalProducts = finalProducts.sort((a: any, b: any) => {
-      if (hasSpecificModel) {
-        const aMatch = specificModels.some(
-          (m) =>
-            (a.name || '').toLowerCase().includes(m) || (a.sku || '').toLowerCase().includes(m),
-        )
-        const bMatch = specificModels.some(
-          (m) =>
-            (b.name || '').toLowerCase().includes(m) || (b.sku || '').toLowerCase().includes(m),
-        )
-        if (aMatch && !bMatch) return -1
-        if (!aMatch && bMatch) return 1
-      }
-
       const aPrice = a.price_usd || 0
       const bPrice = b.price_usd || 0
-      return bPrice - aPrice // Prioritizes price_usa DESC
+      if (bPrice !== aPrice) {
+        return bPrice - aPrice // Prioritizes price_usa DESC
+      }
+      const aStock = a.stock || 0
+      const bStock = b.stock || 0
+      return bStock - aStock // Then stock DESC
     })
 
     const priceThreshold = settings?.price_threshold_usd || 5000
@@ -410,20 +372,17 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
 
-        // Card Relevance Logic: Only render ProductCards explicitly mentioned/relevant to the turn
+        // Render ALL products returned explicitly by AI
         if (aiResponse.products && aiResponse.products.length > 0) {
           finalProducts = aiResponse.products.sort((a: any, b: any) => {
             return (b.price_usd || 0) - (a.price_usd || 0)
           })
         } else if (newProducts.length > 0) {
-          // If AI fails to return referenced_internal_products but we have strong generic matches, fallback to the top 3 matches
-          finalProducts = newProducts
-            .sort((a: any, b: any) => {
-              return (b.price_usd || 0) - (a.price_usd || 0)
-            })
-            .slice(0, 3)
+          finalProducts = newProducts.sort((a: any, b: any) => {
+            return (b.price_usd || 0) - (a.price_usd || 0)
+          })
         } else {
-          finalProducts = [] // Do not show random products
+          finalProducts = []
         }
 
         shouldShowWhatsapp = newProducts.length === 0

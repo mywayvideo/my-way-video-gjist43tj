@@ -56,21 +56,15 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 
   if (!systemPromptTemplate || systemPromptTemplate.trim() === '') {
     systemPromptTemplate =
-      'Você é o Especialista My Way Business. Prioridade absoluta: Hardware de alto valor (Câmeras, Monitores, Switchers). Cards de hardware principal devem aparecer antes de acessórios. Use a NAB apenas como autoridade técnica.'
+      'Você é o Especialista My Way Business. Sua prioridade é o hardware de maior valor (price_usd) retornado pela busca. É PROIBIDO omitir cards de produtos mencionados no texto. Siga as instruções da Section G para logística.'
   }
 
   const qLower = query.toLowerCase()
 
-  // Language Rule Detection
-  const isEnglish =
-    /^(what|how|why|where|when|can|do|is|are|will|would|could|should|please|show|tell)\b/i.test(
-      qLower,
-    ) || /\b(price|camera|lens|shipping|buy|purchase|warranty)\b/i.test(qLower)
-
-  const detectedLanguage = isEnglish ? 'EN-US' : 'PT-BR'
-  const warrantyDisclaimer = isEnglish
-    ? 'All My Way services and products are covered by our official Brazil/LATAM warranty.'
-    : 'Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.'
+  // Language Rule Detection - Enforce PT-BR for all AI responses as requested in the final constraints
+  const detectedLanguage = 'PT-BR'
+  const warrantyDisclaimer =
+    'Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.'
   const isEventOrNews =
     qLower.includes('nab ') ||
     qLower.includes(' nab') ||
@@ -83,7 +77,9 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     qLower.includes('versus') ||
     qLower.includes('diferença') ||
     qLower.includes('qual o melhor') ||
-    qLower.includes('qual a melhor')
+    qLower.includes('qual a melhor') ||
+    qLower.includes('indique') ||
+    qLower.includes('opções')
 
   const contextProducts = unifiedData.products || unifiedData.stock || []
   let contextIntel = unifiedData.intel || []
@@ -101,18 +97,18 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 1. Você é o Consultor Sênior da My Way. ALTA PRIORIDADE: Siga estritamente as instruções definidas no prompt do sistema (system_instructions).
 2. HIERARQUIA E NAB: Você é PROIBIDO de mencionar NAB ou eventos a menos que o usuário pergunte explicitamente por novidades. Use informações de mercado apenas como selo de autoridade técnica.
 3. FILTRAGEM DE INTENÇÃO E AUTORIDADE:
-REGRA 1: Analyze the 'stock' array. Identify the lowest-priced item that meets the user's technical needs and label it as 'Melhor Custo-Benefício' in the text.
-REGRA 2: Você DEVE fornecer pelo menos dois fabricantes diferentes em cada recomendação que envolva mais de um produto.
+REGRA 1: Priorize o hardware de maior valor (price_usd) retornado pela busca. Se o usuário perguntar por um produto específico, priorize-o absolutamente.
+REGRA 2: Você DEVE fornecer pelo menos dois fabricantes diferentes em cada recomendação que envolva mais de um produto, exceto se o usuário pedir uma marca específica.
 REGRA 3 (Preços): Todas as menções a preços DEVEM corresponder exatamente ao campo 'price_usd' fornecido no banco de dados.
-REGRA 4 (Filtro de Marca): Se perguntar sobre uma marca específica, foque nela, mas se for recomendação aberta, aplique a REGRA 2.
+REGRA 4: É PROIBIDO fazer comparações não solicitadas. Apenas compare produtos se o usuário perguntar explicitamente "Qual a melhor?", "Compare X com Y" ou "Indique boas opções".
 REGRA 5 (Vinculação de Produtos): Você DEVE retornar os IDs exatos dos produtos cujos nomes foram citados no seu texto de resposta.
-REGRA 6: É proibido inserir IDs de produtos no texto, use apenas os nomes e mande os IDs na propriedade 'referenced_internal_products'.
+REGRA 6: É proibido inserir IDs de produtos no texto, use apenas os nomes e mande os IDs na propriedade 'referenced_internal_products'. É PROIBIDO omitir cards de produtos mencionados no texto.
 
 REGRAS DE FORMATAÇÃO ESTRITA:
 REGRA 7: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
 REGRA 8: Parágrafos: Máximo de 2 frases por parágrafo.
 REGRA 9: SEMPRE inclua o aviso de garantia oficial ao final ("${warrantyDisclaimer}").
-REGRA 10: Idioma: Você MUST detect and answer in the user's language. Detected language: ${detectedLanguage}. Se o usuário falou em português, responda em PT-BR. Se falou em inglês, responda em EN-US.
+REGRA 10: Idioma: TODAS AS RESPOSTAS DEVEM SER EM PORTUGUÊS (PT-BR), independentemente do idioma da pergunta.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
@@ -240,13 +236,6 @@ ${JSON.stringify(nabJson)}
   const contentLowerForMatch = content.toLowerCase()
   const forcedMatches = contextProducts.filter((p: any) => {
     const pName = (p.name || '').toLowerCase()
-
-    // Exact match for highly specific models first
-    const specificModels = ['fx6', 'c400', 'fx3', 'pyxis']
-    const hasSpecificModel = specificModels.some(
-      (model) => pName.includes(model) && contentLowerForMatch.includes(model),
-    )
-    if (hasSpecificModel) return true
 
     // Match by 2 or more significant words in the name
     const importantWords = pName.split(' ').filter((w: string) => w.length > 3)

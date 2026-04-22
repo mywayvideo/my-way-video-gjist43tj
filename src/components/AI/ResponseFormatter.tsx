@@ -31,7 +31,7 @@ export function ResponseFormatter({
   stock = [],
   confidenceLevel = 'high',
 }: ResponseFormatterProps) {
-  const displayProducts = stock && stock.length > 0 ? stock : products
+  const displayProducts = products && products.length > 0 ? products : stock
   const { settings } = useAISettings()
   const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
   const [gridConfig, setGridConfig] = useState({ columns_desktop: 4, columns_mobile: 2 })
