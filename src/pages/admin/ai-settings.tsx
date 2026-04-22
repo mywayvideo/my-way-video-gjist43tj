@@ -400,7 +400,7 @@ export default function AdminAISettings() {
               <Textarea
                 value={searchAlgorithmSql}
                 onChange={(e) => setSearchAlgorithmSql(e.target.value)}
-                className="font-mono h-32"
+                className="font-mono min-h-[250px]"
                 placeholder="Ex: SELECT * FROM products WHERE name ILIKE $1 ORDER BY price_usa DESC"
               />
             </CardContent>
@@ -424,7 +424,7 @@ export default function AdminAISettings() {
                 <Textarea
                   value={systemPromptTemplate}
                   onChange={(e) => setSystemPromptTemplate(e.target.value)}
-                  className="min-h-[100px]"
+                  className="min-h-[250px]"
                 />
               </div>
               <div className="space-y-2">
@@ -432,7 +432,7 @@ export default function AdminAISettings() {
                 <Textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
-                  className="min-h-[150px]"
+                  className="min-h-[400px]"
                 />
               </div>
             </CardContent>
@@ -454,7 +454,7 @@ export default function AdminAISettings() {
               <Textarea
                 value={resultComponentConfig}
                 onChange={(e) => setResultComponentConfig(e.target.value)}
-                className="font-mono h-32"
+                className="font-mono min-h-[250px]"
               />
             </CardContent>
           </Card>
