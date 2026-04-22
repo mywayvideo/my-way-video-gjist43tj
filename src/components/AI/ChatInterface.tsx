@@ -281,7 +281,7 @@ export function ChatInterface() {
                       </div>
                     )}
 
-                  {msg.role === 'assistant' && msg.showWhatsapp && msg.confidence === 'low' && (
+                  {msg.role === 'assistant' && (msg.showWhatsapp || msg.confidence === 'low') && (
                     <div className="mt-4 max-w-[85%]">
                       <Button
                         onClick={() => window.open('https://wa.me/5511999999999', '_blank')}

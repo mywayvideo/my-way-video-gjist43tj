@@ -90,6 +90,8 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 2. The AI is FORBIDDEN from comparing products unless the user explicitly asks for a comparison.
 3. All technical specifications MUST be in code blocks with triple backticks.
 4. You MUST return the exact IDs of the referenced products in the "referenced_internal_products" array.
+5. Convert all database logic into natural, professional commercial sentences. Do NOT output database field names (e.g., price_usd, stock_count) or logical conditions.
+6. Paragraphs: Maximum 2 sentences.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
@@ -208,6 +210,16 @@ ${JSON.stringify(nabJson)}
   // Se algum produto no contexto for caro
   const hasExpensive = contextProducts.some((p: any) => p.is_expensive)
   if (hasExpensive) {
+    showWhatsapp = true
+  }
+
+  const contentLowerCheck = content.toLowerCase()
+  if (
+    contentLowerCheck.includes('suporte') ||
+    contentLowerCheck.includes('especialista') ||
+    contentLowerCheck.includes('equipe')
+  ) {
+    confidence = 'low'
     showWhatsapp = true
   }
 
