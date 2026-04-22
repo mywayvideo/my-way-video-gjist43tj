@@ -36,7 +36,7 @@ export function useUnifiedSearch() {
       let sqlString = rawSql.trim()
 
       if (!sqlString) {
-        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC LIMIT 20;`
+        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY manufacturer_id ASC, price_usd ASC LIMIT 20;`
       }
 
       const executedSql = sqlString.replace(/\$1/g, cleanQuery)
@@ -139,7 +139,8 @@ export function useUnifiedSearch() {
       genericQ = genericQ.or(orStr)
 
       const { data: genericProducts } = await genericQ
-        .order('price_usd', { ascending: false, nullsFirst: false })
+        .order('manufacturer_id', { ascending: true })
+        .order('price_usd', { ascending: true })
         .limit(20)
 
       if (genericProducts && genericProducts.length > 0) {
@@ -275,9 +276,14 @@ export function useUnifiedSearch() {
         if (!aMatch && bMatch) return 1
       }
 
+      const aMfg = a.manufacturer_id || ''
+      const bMfg = b.manufacturer_id || ''
+      if (aMfg < bMfg) return -1
+      if (aMfg > bMfg) return 1
+
       const aPrice = a.price_usd || 0
       const bPrice = b.price_usd || 0
-      return bPrice - aPrice
+      return aPrice - bPrice
     })
 
     const priceThreshold = settings?.price_threshold_usd || 5000
@@ -412,13 +418,23 @@ export function useUnifiedSearch() {
 
         // Card Relevance Logic: Only render ProductCards explicitly mentioned/relevant to the turn
         if (aiResponse.products && aiResponse.products.length > 0) {
-          finalProducts = aiResponse.products.sort(
-            (a: any, b: any) => (b.price_usd || 0) - (a.price_usd || 0),
-          )
+          finalProducts = aiResponse.products.sort((a: any, b: any) => {
+            const aMfg = a.manufacturer_id || ''
+            const bMfg = b.manufacturer_id || ''
+            if (aMfg < bMfg) return -1
+            if (aMfg > bMfg) return 1
+            return (a.price_usd || 0) - (b.price_usd || 0)
+          })
         } else if (newProducts.length > 0) {
           // If AI fails to return referenced_internal_products but we have strong generic matches, fallback to the top 3 matches
           finalProducts = newProducts
-            .sort((a: any, b: any) => (b.price_usd || 0) - (a.price_usd || 0))
+            .sort((a: any, b: any) => {
+              const aMfg = a.manufacturer_id || ''
+              const bMfg = b.manufacturer_id || ''
+              if (aMfg < bMfg) return -1
+              if (aMfg > bMfg) return 1
+              return (a.price_usd || 0) - (b.price_usd || 0)
+            })
             .slice(0, 3)
         } else {
           finalProducts = [] // Do not show random products
