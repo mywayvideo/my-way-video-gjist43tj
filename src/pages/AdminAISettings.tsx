@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { supabase } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -31,8 +32,30 @@ export default function AdminAISettings() {
 
   const handleSave = async () => {
     if (!localSettings) return
+    if (
+      !localSettings.system_prompt_template ||
+      localSettings.system_prompt_template.trim() === ''
+    ) {
+      if (
+        !window.confirm(
+          'Campos de estratégia não podem ser salvos vazios sem confirmação de ativação do Fallback. Deseja continuar?',
+        )
+      ) {
+        return
+      }
+    }
     setSaving(true)
-    await saveSettings(localSettings)
+    try {
+      const { error } = await supabase.from('ai_settings').upsert({
+        id: '00000000-0000-0000-0000-000000000001',
+        ...localSettings,
+        updated_at: new Date().toISOString(),
+      })
+      if (error) throw error
+      await saveSettings(localSettings)
+    } catch (err) {
+      console.error('Error saving settings:', err)
+    }
     setSaving(false)
   }
 

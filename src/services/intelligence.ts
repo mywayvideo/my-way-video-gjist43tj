@@ -60,6 +60,17 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   }
 
   const qLower = query.toLowerCase()
+
+  // Language Rule Detection
+  const isEnglish =
+    /^(what|how|why|where|when|can|do|is|are|will|would|could|should|please|show|tell)\b/i.test(
+      qLower,
+    ) || /\b(price|camera|lens|shipping|buy|purchase|warranty)\b/i.test(qLower)
+
+  const detectedLanguage = isEnglish ? 'EN-US' : 'PT-BR'
+  const warrantyDisclaimer = isEnglish
+    ? 'All My Way services and products are covered by our official Brazil/LATAM warranty.'
+    : 'Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.'
   const isEventOrNews =
     qLower.includes('nab ') ||
     qLower.includes(' nab') ||
@@ -100,8 +111,8 @@ REGRA 6: É proibido inserir IDs de produtos no texto, use apenas os nomes e man
 REGRAS DE FORMATAÇÃO ESTRITA:
 REGRA 7: Especificações técnicas DEVEM SEMPRE estar em blocos de código usando crases triplas (\`\`\`).
 REGRA 8: Parágrafos: Máximo de 2 frases por parágrafo.
-REGRA 9: SEMPRE inclua o aviso de garantia oficial ao final ("Todos os serviços e produtos da My Way estão cobertos pela nossa garantia oficial Brasil/LATAM.").
-REGRA 10: Idioma: 100% Português (PT-BR).
+REGRA 9: SEMPRE inclua o aviso de garantia oficial ao final ("${warrantyDisclaimer}").
+REGRA 10: Idioma: Você MUST detect and answer in the user's language. Detected language: ${detectedLanguage}. Se o usuário falou em português, responda em PT-BR. Se falou em inglês, responda em EN-US.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
@@ -262,13 +273,9 @@ ${JSON.stringify(nabJson)}
     (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
   )
 
-  // Sort referenced products by manufacturer_id ASC, price_usd ASC
+  // Sort referenced products by price_usd DESC
   referencedProducts = referencedProducts.sort((a: any, b: any) => {
-    const aMfg = a.manufacturer_id || ''
-    const bMfg = b.manufacturer_id || ''
-    if (aMfg < bMfg) return -1
-    if (aMfg > bMfg) return 1
-    return (a.price_usd || 0) - (b.price_usd || 0)
+    return (b.price_usd || 0) - (a.price_usd || 0)
   })
 
   return {
