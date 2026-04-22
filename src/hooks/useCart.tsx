@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { toast } from '@/hooks/use-toast'
 
 interface CartItem {
   id: string
@@ -11,7 +12,7 @@ interface CartItem {
 
 interface CartContextType {
   items: CartItem[]
-  addToCart: (productId: string, quantity?: number) => Promise<void>
+  addToCart: (productId: string, quantity?: number, product?: any) => Promise<void>
   removeFromCart: (itemId: string) => Promise<void>
   updateQuantity: (itemId: string, quantity: number) => Promise<void>
   clearCart: () => Promise<void>
@@ -64,7 +65,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addToCart = async (productId: string, quantity = 1) => {
+  const addToCart = async (productId: string, quantity = 1, product?: any) => {
+    let p = product
+    if (!p) {
+      try {
+        const { data } = await supabase.from('products').select('*').eq('id', productId).single()
+        p = data
+      } catch (e) {
+        console.error('Error fetching product for cart validation:', e)
+      }
+    }
+
+    if (p) {
+      const hasPrice =
+        (p.price_usd && p.price_usd > 0) ||
+        (p.price_nationalized_sales && p.price_nationalized_sales > 0)
+      if (!hasPrice) {
+        toast({
+          title: 'Atenção',
+          description:
+            'Este item requer consultoria técnica. Redirecionando para um especialista...',
+        })
+        const msg = encodeURIComponent(
+          `Olá, gostaria de uma cotação personalizada para o produto: ${p.name}`,
+        )
+        window.open(`https://wa.me/5561981815050?text=${msg}`, '_blank')
+        return
+      }
+    }
+
     if (!user) return
     setIsLoading(true)
     try {

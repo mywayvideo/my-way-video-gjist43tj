@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, HelpCircle, Heart } from 'lucide-react'
+import { ShoppingCart, HelpCircle, Heart, MessageCircle } from 'lucide-react'
 import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
@@ -19,6 +19,10 @@ export function ProductCard({ product }: { product: any }) {
     useProductDiscount(product)
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
+
+  const hasPrice =
+    (product.price_usd && product.price_usd > 0) ||
+    (product.price_nationalized_sales && product.price_nationalized_sales > 0)
 
   const triggerFavoriteEffects = (e: React.MouseEvent) => {
     try {
@@ -152,30 +156,50 @@ export function ProductCard({ product }: { product: any }) {
           </h3>
         </Link>
         <div className="mt-auto pt-1 flex flex-col items-center w-full">
-          {(!product.price_usd || product.price_usd <= 0) &&
+          {hasPrice &&
+            (!product.price_usd || product.price_usd <= 0) &&
             product.price_nationalized_sales > 0 && (
               <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1">
                 Preço Brasil
               </span>
             )}
-          <ProductPrice
-            originalPrice={originalPrice}
-            discountedPrice={discountedPrice}
-            weight={product.weight}
-            discountPercentage={discountPercentage}
-            ruleName={ruleName}
-            currency={currency}
-          />
+          {hasPrice && (
+            <ProductPrice
+              originalPrice={originalPrice}
+              discountedPrice={discountedPrice}
+              weight={product.weight}
+              discountPercentage={discountPercentage}
+              ruleName={ruleName}
+              currency={currency}
+            />
+          )}
         </div>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">
-        <Button
-          className="w-full gap-2 transition-all hover:scale-[1.02]"
-          onClick={() => setShowQtyModal(true)}
-        >
-          <ShoppingCart className="w-4 h-4" />
-          Adicionar
-        </Button>
+        {hasPrice ? (
+          <Button
+            className="w-full gap-2 transition-all hover:scale-[1.02]"
+            onClick={() => setShowQtyModal(true)}
+          >
+            <ShoppingCart className="w-4 h-4" />
+            Adicionar
+          </Button>
+        ) : (
+          <Button
+            className="w-full gap-2 transition-all hover:scale-[1.02] bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const msg = encodeURIComponent(
+                `Olá, gostaria de uma cotação personalizada para o produto: ${product.name}`,
+              )
+              window.open(`https://wa.me/5561981815050?text=${msg}`, '_blank')
+            }}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Consultar Especialista
+          </Button>
+        )}
       </CardFooter>
       {showQtyModal && <QuantityModal product={product} onClose={() => setShowQtyModal(false)} />}
     </Card>

@@ -191,6 +191,9 @@ export default function Product() {
   }, [])
 
   const hasNationalizedPrice = (product?.price_nationalized_sales || 0) > 0
+  const hasPrice = product
+    ? (product.price_usd && product.price_usd > 0) || hasNationalizedPrice
+    : false
 
   const calculatePriceBRL = useCallback(
     (prod: { price_usd: number; weight_lb: number }) => {
@@ -627,143 +630,168 @@ export default function Product() {
                 )}
               </div>
 
-              <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
-                <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
-                  <Globe className="w-32 h-32" />
-                </div>
+              {hasPrice && (
+                <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
+                  <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
+                    <Globe className="w-32 h-32" />
+                  </div>
 
-                <div className="relative z-10 flex flex-col gap-6">
-                  {product.price_usd !== null && product.price_usd > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                        <span className="text-xs font-bold uppercase tracking-widest">
-                          Preço Miami (FOB)
-                        </span>
+                  <div className="relative z-10 flex flex-col gap-6">
+                    {product.price_usd !== null && product.price_usd > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                          <span className="text-xs font-bold uppercase tracking-widest">
+                            Preço Miami (FOB)
+                          </span>
+                        </div>
+                        <ProductPrice
+                          originalPrice={product.price_usd}
+                          discountedPrice={discountedPrice}
+                          discountPercentage={discountPercentage}
+                          ruleName={ruleName}
+                          size="lg"
+                          align="left"
+                        />
                       </div>
-                      <ProductPrice
-                        originalPrice={product.price_usd}
-                        discountedPrice={discountedPrice}
-                        discountPercentage={discountPercentage}
-                        ruleName={ruleName}
-                        size="lg"
-                        align="left"
-                      />
-                    </div>
-                  )}
+                    )}
 
-                  {hasNationalizedPrice && (
-                    <div
-                      className={cn(
-                        product.price_usd !== null &&
-                          product.price_usd > 0 &&
-                          'pt-6 border-t border-border/50',
-                      )}
-                    >
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                        <span className="text-xs font-bold uppercase tracking-widest">
-                          Preço Brasil (Nacionalizado)
-                        </span>
-                      </div>
-                      <ProductPrice
-                        originalPrice={product.price_nationalized_sales!}
-                        discountedPrice={
-                          discountPercentage > 0
-                            ? product.price_nationalized_sales! * (1 - discountPercentage / 100)
-                            : product.price_nationalized_sales!
-                        }
-                        discountPercentage={discountPercentage}
-                        ruleName={ruleName}
-                        size="lg"
-                        currency={product.price_nationalized_currency || 'BRL'}
-                        align="left"
-                      />
-                    </div>
-                  )}
-
-                  {isAdmin && showPriceCost && (
-                    <div className="mt-2 text-xs text-muted-foreground font-mono flex flex-col gap-1">
-                      <span className="font-medium">
-                        Preço de Custo (FOB Miami / Nacionalizado):
-                      </span>
-                      <span className="text-foreground flex items-center gap-1">
-                        {(() => {
-                          const costPrice = formatPrice(product.price_cost)
-                          const natCurrency = product.price_nationalized_currency || 'BRL'
-                          const costPriceNat = product.price_nationalized_cost
-                            ? new Intl.NumberFormat(natCurrency === 'BRL' ? 'pt-BR' : 'en-US', {
-                                style: 'currency',
-                                currency: natCurrency,
-                              }).format(product.price_nationalized_cost)
-                            : null
-
-                          return (
-                            <>
-                              {costPrice.isPlaceholder ? 'US$ N/A' : costPrice.text}
-                              {' / '}
-                              {costPriceNat ? costPriceNat : `${natCurrency} N/A`}
-                            </>
-                          )
-                        })()}
-                      </span>
-                    </div>
-                  )}
-
-                  {!hasNationalizedPrice && product.price_usd !== null && product.price_usd > 0 && (
-                    <div className="mt-2 pt-6 border-t border-border/50">
-                      <Button
-                        variant="secondary"
-                        className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
-                        onClick={() => setIsBrlModalOpen(true)}
-                        disabled={isLoading}
+                    {hasNationalizedPrice && (
+                      <div
+                        className={cn(
+                          product.price_usd !== null &&
+                            product.price_usd > 0 &&
+                            'pt-6 border-t border-border/50',
+                        )}
                       >
-                        <span className="flex items-center gap-2 text-foreground font-medium">
-                          <Calculator className="w-4 h-4 text-green-500" />
-                          Estimar Preço Entregue no Brasil
+                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                          <span className="text-xs font-bold uppercase tracking-widest">
+                            Preço Brasil (Nacionalizado)
+                          </span>
+                        </div>
+                        <ProductPrice
+                          originalPrice={product.price_nationalized_sales!}
+                          discountedPrice={
+                            discountPercentage > 0
+                              ? product.price_nationalized_sales! * (1 - discountPercentage / 100)
+                              : product.price_nationalized_sales!
+                          }
+                          discountPercentage={discountPercentage}
+                          ruleName={ruleName}
+                          size="lg"
+                          currency={product.price_nationalized_currency || 'BRL'}
+                          align="left"
+                        />
+                      </div>
+                    )}
+
+                    {isAdmin && showPriceCost && (
+                      <div className="mt-2 text-xs text-muted-foreground font-mono flex flex-col gap-1">
+                        <span className="font-medium">
+                          Preço de Custo (FOB Miami / Nacionalizado):
                         </span>
-                        <ChevronRight className="w-4 h-4 opacity-50" />
-                      </Button>
-                    </div>
-                  )}
+                        <span className="text-foreground flex items-center gap-1">
+                          {(() => {
+                            const costPrice = formatPrice(product.price_cost)
+                            const natCurrency = product.price_nationalized_currency || 'BRL'
+                            const costPriceNat = product.price_nationalized_cost
+                              ? new Intl.NumberFormat(natCurrency === 'BRL' ? 'pt-BR' : 'en-US', {
+                                  style: 'currency',
+                                  currency: natCurrency,
+                                }).format(product.price_nationalized_cost)
+                              : null
+
+                            return (
+                              <>
+                                {costPrice.isPlaceholder ? 'US$ N/A' : costPrice.text}
+                                {' / '}
+                                {costPriceNat ? costPriceNat : `${natCurrency} N/A`}
+                              </>
+                            )
+                          })()}
+                        </span>
+                      </div>
+                    )}
+
+                    {!hasNationalizedPrice &&
+                      product.price_usd !== null &&
+                      product.price_usd > 0 && (
+                        <div className="mt-2 pt-6 border-t border-border/50">
+                          <Button
+                            variant="secondary"
+                            className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
+                            onClick={() => setIsBrlModalOpen(true)}
+                            disabled={isLoading}
+                          >
+                            <span className="flex items-center gap-2 text-foreground font-medium">
+                              <Calculator className="w-4 h-4 text-green-500" />
+                              Estimar Preço Entregue no Brasil
+                            </span>
+                            <ChevronRight className="w-4 h-4 opacity-50" />
+                          </Button>
+                        </div>
+                      )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="order-3 lg:order-none w-full mb-10 lg:mb-0 flex gap-4">
-              <Button
-                size="lg"
-                disabled={product.is_discontinued}
-                aria-label={
-                  product.is_discontinued
-                    ? 'Produto descontinuado. Nao disponivel para adicionar.'
-                    : undefined
-                }
-                onClick={() => {
-                  if (!product.is_discontinued) {
-                    addToCart(product.id, 1, product)
-                      .then(() => {
-                        toast({
-                          title: 'Adicionado ao carrinho!',
-                          description: `${product.name} adicionado com sucesso.`,
-                        })
-                      })
-                      .catch(() => {
-                        toast({
-                          variant: 'destructive',
-                          title: 'Erro',
-                          description: 'Falha ao adicionar ao carrinho.',
-                        })
-                      })
+              {hasPrice ? (
+                <Button
+                  size="lg"
+                  disabled={product.is_discontinued}
+                  aria-label={
+                    product.is_discontinued
+                      ? 'Produto descontinuado. Nao disponivel para adicionar.'
+                      : undefined
                   }
-                }}
-                className={cn(
-                  'flex-1 h-14 text-base font-semibold shadow-lg transition-all',
-                  product.is_discontinued
-                    ? 'opacity-50 cursor-not-allowed !pointer-events-auto'
-                    : 'hover:shadow-primary/20 hover:-translate-y-0.5',
-                )}
-              >
-                <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Carrinho
-              </Button>
+                  onClick={() => {
+                    if (!product.is_discontinued) {
+                      addToCart(product.id, 1, product)
+                        .then(() => {
+                          toast({
+                            title: 'Adicionado ao carrinho!',
+                            description: `${product.name} adicionado com sucesso.`,
+                          })
+                        })
+                        .catch(() => {
+                          toast({
+                            variant: 'destructive',
+                            title: 'Erro',
+                            description: 'Falha ao adicionar ao carrinho.',
+                          })
+                        })
+                    }
+                  }}
+                  className={cn(
+                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all',
+                    product.is_discontinued
+                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto'
+                      : 'hover:shadow-primary/20 hover:-translate-y-0.5',
+                  )}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Carrinho
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  disabled={product.is_discontinued}
+                  onClick={() => {
+                    const msg = encodeURIComponent(
+                      `Olá, gostaria de uma cotação personalizada para o produto: ${product.name}`,
+                    )
+                    window.open(`https://wa.me/5561981815050?text=${msg}`, '_blank')
+                  }}
+                  className={cn(
+                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all bg-emerald-600 hover:bg-emerald-700 text-white',
+                    product.is_discontinued
+                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto'
+                      : 'hover:shadow-emerald-600/20 hover:-translate-y-0.5',
+                  )}
+                >
+                  <MessageCircle className="w-5 h-5 mr-3" /> Consultar Especialista
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="icon"
