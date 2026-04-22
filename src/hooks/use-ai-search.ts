@@ -32,9 +32,15 @@ export function useUnifiedSearch() {
     let nab: any[] = []
 
     try {
-      const sqlString = settings?.search_algorithm_sql || ''
+      const rawSql = settings?.search_algorithm_sql || ''
+      let sqlString = rawSql.trim()
+
+      if (!sqlString) {
+        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC LIMIT 20;`
+      }
+
       const executedSql = sqlString.replace(/\$1/g, cleanQuery)
-      console.log('SQL BEING EXECUTED:', executedSql)
+      console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)
       console.log('SEARCH_STATE:', { term: cleanQuery, ignoreStock: ignoreStockCount })
 
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
@@ -132,7 +138,9 @@ export function useUnifiedSearch() {
 
       genericQ = genericQ.or(orStr)
 
-      const { data: genericProducts } = await genericQ.limit(20)
+      const { data: genericProducts } = await genericQ
+        .order('price_usd', { ascending: false, nullsFirst: false })
+        .limit(20)
 
       if (genericProducts && genericProducts.length > 0) {
         products = [...products, ...genericProducts].filter(

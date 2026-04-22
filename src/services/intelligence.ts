@@ -51,13 +51,12 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
   // Read settings directly to synchronize authority
   const settings = await getAISettings()
 
-  const systemPromptTemplate = settings.system_prompt_template || ''
+  let systemPromptTemplate = settings.system_prompt_template || ''
   const logisticsRulesPrompt = settings.logistics_rules_prompt || ''
 
   if (!systemPromptTemplate || systemPromptTemplate.trim() === '') {
-    throw new Error(
-      'Configuração de sistema (system_prompt_template) vazia ou não encontrada. Operação abortada.',
-    )
+    systemPromptTemplate =
+      'Você é o Especialista My Way Business. Prioridade absoluta: Hardware de alto valor (Câmeras, Monitores, Switchers). Cards de hardware principal devem aparecer antes de acessórios. Use a NAB apenas como autoridade técnica.'
   }
 
   const qLower = query.toLowerCase()

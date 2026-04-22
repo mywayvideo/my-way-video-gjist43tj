@@ -34,8 +34,25 @@ export function ResponseFormatter({
   const displayProducts = stock && stock.length > 0 ? stock : products
   const { settings } = useAISettings()
   const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
+  const [gridConfig, setGridConfig] = useState({ columns_desktop: 4, columns_mobile: 2 })
 
   useEffect(() => {
+    const fetchGridConfig = async () => {
+      const { data } = await supabase
+        .from('ai_settings')
+        .select('result_component_config')
+        .eq('id', '00000000-0000-0000-0000-000000000001')
+        .maybeSingle()
+      if (data?.result_component_config) {
+        const conf = data.result_component_config as any
+        setGridConfig({
+          columns_desktop: conf.columns_desktop || 4,
+          columns_mobile: conf.columns_mobile || 2,
+        })
+      }
+    }
+    fetchGridConfig()
+
     const fetchCompanyProfile = async () => {
       // Fetch whatsapp_number from app_settings
       const { data } = await supabase
@@ -103,7 +120,9 @@ export function ResponseFormatter({
       )}
 
       {displayProducts && displayProducts.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+        <div
+          className={`grid gap-6 mt-8 ${gridConfig.columns_mobile === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${gridConfig.columns_desktop === 3 ? 'md:grid-cols-3' : gridConfig.columns_desktop === 4 ? 'md:grid-cols-4' : 'md:grid-cols-4'}`}
+        >
           {displayProducts.map((product) => (
             <ProductCard key={product.id} product={product as any} />
           ))}
