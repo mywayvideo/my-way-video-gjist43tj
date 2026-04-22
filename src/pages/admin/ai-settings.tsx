@@ -28,6 +28,7 @@ const formSchema = z.object({
   result_component_config: z.string().optional(),
   ignore_stock_count: z.boolean(),
   logistics_rules_prompt: z.string().optional(),
+  system_prompt_template: z.string().optional(),
 
   // ai_agent_settings
   whatsapp_trigger_low_confidence: z.boolean(),
@@ -58,6 +59,7 @@ export default function AdminAISettings() {
       result_component_config: '{}',
       ignore_stock_count: true,
       logistics_rules_prompt: '',
+      system_prompt_template: '',
       whatsapp_trigger_low_confidence: true,
       whatsapp_trigger_purchase_keywords: true,
       whatsapp_trigger_project_keywords: true,
@@ -100,6 +102,7 @@ export default function AdminAISettings() {
               : JSON.stringify(aiSettingsData?.result_component_config || {}, null, 2),
           ignore_stock_count: aiSettingsData?.ignore_stock_count ?? true,
           logistics_rules_prompt: aiSettingsData?.logistics_rules_prompt ?? '',
+          system_prompt_template: aiSettingsData?.system_prompt_template ?? '',
 
           whatsapp_trigger_low_confidence:
             aiAgentSettingsData?.whatsapp_trigger_low_confidence ?? true,
@@ -157,6 +160,7 @@ export default function AdminAISettings() {
         result_component_config: parsedComponentConfig,
         ignore_stock_count: values.ignore_stock_count,
         logistics_rules_prompt: values.logistics_rules_prompt,
+        system_prompt_template: values.system_prompt_template,
         updated_at: new Date().toISOString(),
       }
 
@@ -443,12 +447,26 @@ export default function AdminAISettings() {
                 principal.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="system_prompt"
                 render={({ field }) => (
                   <FormItem>
+                    <FormLabel>Função Principal (System Prompt)</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} className="font-mono text-sm min-h-[300px]" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="system_prompt_template"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Funções Complementares (System Prompt Template)</FormLabel>
                     <FormControl>
                       <Textarea {...field} className="font-mono text-sm min-h-[300px]" />
                     </FormControl>
