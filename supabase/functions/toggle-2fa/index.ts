@@ -15,10 +15,7 @@ Deno.serve(async (req: Request) => {
     const { user_id, enable } = await req.json()
 
     if (!user_id) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'User ID is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const { error } = await supabaseAdmin
@@ -31,13 +28,8 @@ Deno.serve(async (req: Request) => {
     // Generate mock recovery codes if enabling
     const recoveryCodes = enable ? ['A1B2C3D4', 'E5F6G7H8', 'I9J0K1L2'] : []
 
-    return new Response(JSON.stringify({ success: true, recoveryCodes }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ success: true, recoveryCodes }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
