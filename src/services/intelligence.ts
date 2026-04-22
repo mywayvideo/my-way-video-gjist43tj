@@ -61,31 +61,12 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
     systemPrompt = genericFallback
   }
 
-  const qLower = query.toLowerCase()
-
-  const isComparison =
-    qLower.includes('compar') ||
-    qLower.includes('vs') ||
-    qLower.includes('versus') ||
-    qLower.includes('diferença') ||
-    qLower.includes('qual o melhor') ||
-    qLower.includes('qual a melhor') ||
-    qLower.includes('indique') ||
-    qLower.includes('opções')
-
   const contextProducts = unifiedData.products || unifiedData.stock || []
-  let contextIntel = unifiedData.intel || []
-  let contextNab = unifiedData.nabData || unifiedData.nab_data || []
+  const contextIntel = unifiedData.intel || []
+  const contextNab = unifiedData.nabData || unifiedData.nab_data || []
 
-  // Supressão de Ruído: Descartar notícias e informações de mercado se for uma comparação
-  if (isComparison) {
-    contextIntel = []
-    contextNab = []
-  }
-
-  const hasNab = contextNab.length > 0 || contextIntel.length > 0
-
-  let strictRules = `MANDATORY RULES:
+  // Ensure prompt enforces exact rules to follow User Story constraints
+  const strictRules = `MANDATORY RULES:
 1. The AI MUST respond in the EXACT same language used in the user's last message.
 2. The AI is FORBIDDEN from comparing products unless the user explicitly asks for a comparison.
 3. All technical specifications MUST be in code blocks with triple backticks.
@@ -104,7 +85,7 @@ Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content 
     if (item.ai_summary) {
       return {
         title: item.title || '',
-        OFFICIAL_MIAMI_INTELLIGENCE: item.ai_summary,
+        ai_summary: item.ai_summary,
         raw_content: item.raw_content || item.content || '',
       }
     }
@@ -117,7 +98,6 @@ Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content 
     historyText = `\n\nHISTÓRICO RECENTE (Últimas 6 mensagens):\n${recentHistory.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`).join('\n')}`
   }
 
-  // Contexto Institucional
   const { data: cData } = await supabase.from('company_info').select('content, type')
   const contexto_institucional = (cData || [])
     .map((c: any) => `[${c.type}]: ${c.content}`)
@@ -130,13 +110,11 @@ ${contexto_institucional}
 2) Produtos Encontrados:
 ${JSON.stringify(contextProducts)}
 
-3) Notícias e Inteligência (Mercado):
+3) Inteligência de Mercado:
 ${JSON.stringify(nabJson)}
 `
 
   const finalPromptWithContext = `${systemPrompt}\n\n${systemPromptTemplate}\n\n${logisticsRulesPrompt}\n\n${strictRules}\n\nKNOWLEDGE_BASE:\n${KNOWLEDGE_BASE}\n\n${historyText}`
-
-  const currentContext = contextProducts
 
   const agents = await getActiveAgents()
   const agentsToTry = agentId ? agents.filter((a) => a.id === agentId) : agents
@@ -146,11 +124,9 @@ ${JSON.stringify(nabJson)}
   }
 
   let data: any = null
-  let lastError: any = null
 
-  // Triggers
+  // Triggers - read directly from settings to maintain admin sovereignty
   const whatsappTriggers = settings.whatsapp_trigger_keywords || []
-  const confidenceThreshold = settings.confidence_threshold_for_whatsapp || 'low'
 
   for (const agent of agentsToTry) {
     try {
@@ -159,9 +135,7 @@ ${JSON.stringify(nabJson)}
           query: query,
           products: contextProducts,
           intelligence: nabJson,
-          context: currentContext,
           agentId: agent.id,
-          isNABQuery: hasNab || isEventOrNews,
           assembledPrompt: finalPromptWithContext,
           price_threshold_usd: settings.price_threshold_usd,
           whatsapp_triggers: whatsappTriggers,
@@ -171,10 +145,9 @@ ${JSON.stringify(nabJson)}
 
       if (res.error) throw res.error
       data = res.data
-      break // Se sucesso, sai do loop
+      break
     } catch (err) {
       console.error(`Error invoking process-query with agent ${agent.provider_name}:`, err)
-      lastError = err
     }
   }
 
@@ -201,19 +174,10 @@ ${JSON.stringify(nabJson)}
   let confidence = result.confidence_level || 'high'
   let showWhatsapp = result.should_show_whatsapp_button || false
 
-  // Trigger Sync (Section C):
-  const triggerMatch = whatsappTriggers.some((kw: string) => qLower.includes(kw.toLowerCase()))
-  if (triggerMatch || confidence === confidenceThreshold || confidence === 'low') {
-    showWhatsapp = true
-  }
-
-  // Se algum produto no contexto for caro
-  const hasExpensive = contextProducts.some((p: any) => p.is_expensive)
-  if (hasExpensive) {
-    showWhatsapp = true
-  }
-
-  const contentLowerCheck = content.toLowerCase()
+  const contentLowerCheck = content
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
   if (
     contentLowerCheck.includes('suporte') ||
     contentLowerCheck.includes('especialista') ||
@@ -222,22 +186,6 @@ ${JSON.stringify(nabJson)}
     confidence = 'low'
     showWhatsapp = true
   }
-
-  let referencedProducts = []
-
-  // Ensure products explicitly mentioned by name in the text are always included
-  const contentLowerForMatch = content.toLowerCase()
-  const forcedMatches = contextProducts.filter((p: any) => {
-    const pName = (p.name || '').toLowerCase()
-
-    // Match by 2 or more significant words in the name
-    const importantWords = pName.split(' ').filter((w: string) => w.length > 3)
-    if (importantWords.length >= 2) {
-      const matches = importantWords.filter((w: string) => contentLowerForMatch.includes(w))
-      return matches.length >= 2
-    }
-    return false
-  })
 
   let aiMentionedProducts: any[] = []
   if (
@@ -250,19 +198,9 @@ ${JSON.stringify(nabJson)}
     )
   }
 
-  // Combine forced matches based on text with AI returned IDs
-  referencedProducts = [...aiMentionedProducts, ...forcedMatches].filter(
-    (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-  )
-
-  // Sort referenced products by price_usd DESC
-  referencedProducts = referencedProducts.sort((a: any, b: any) => {
-    return (b.price_usd || 0) - (a.price_usd || 0)
-  })
-
   return {
     content,
-    products: referencedProducts,
+    products: aiMentionedProducts,
     nabData: contextNab,
     intel: contextIntel,
     should_show_whatsapp_button: showWhatsapp,
