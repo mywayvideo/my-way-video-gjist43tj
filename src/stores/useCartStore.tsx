@@ -11,6 +11,7 @@ export interface CartItem {
   quantity: number
   originalPrice?: number
   discountRule?: string | null
+  isRebateActive?: boolean
 }
 
 class CartStore {
@@ -72,6 +73,50 @@ class CartStore {
     this.items = []
     this.notify()
   }
+
+  validateCartRebates = async () => {
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { toast } = await import('@/hooks/use-toast')
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, price_usa_rebate, date_rebate')
+        .in(
+          'id',
+          this.items.map((i) => i.id),
+        )
+
+      if (products) {
+        let hasExpired = false
+        const now = new Date()
+
+        this.items = this.items.map((item) => {
+          const p = products.find((prod) => prod.id === item.id)
+          if (p) {
+            const isActiveNow =
+              p.price_usa_rebate > 0 && (!p.date_rebate || new Date(p.date_rebate) >= now)
+            if (item.isRebateActive && !isActiveNow) {
+              hasExpired = true
+              item.isRebateActive = false
+            }
+          }
+          return item
+        })
+
+        if (hasExpired) {
+          this.notify()
+          toast({
+            title: 'Atenção',
+            description:
+              'Um ou mais rebates expiraram. Os preços no carrinho foram atualizados para o valor padrão.',
+            variant: 'destructive',
+          })
+        }
+      }
+    } catch (e) {
+      console.error('Failed to validate rebates', e)
+    }
+  }
 }
 
 const cartStore = new CartStore()
@@ -112,6 +157,7 @@ export function useCartStore() {
     removeItem: cartStore.removeItem,
     updateQuantity: cartStore.updateQuantity,
     clearCart: cartStore.clearCart,
+    validateCartRebates: cartStore.validateCartRebates,
     totalItems,
     totalPrice,
   }

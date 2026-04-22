@@ -40,6 +40,15 @@ const productSchema = z.object({
   is_discontinued: z.boolean().catch(false).default(false),
   manual_related_ids: z.array(z.string()).catch([]).default([]),
   ai_related_ids: z.array(z.string()).catch([]).default([]),
+  price_usa_rebate: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.coerce.number().nullable().optional(),
+  ),
+  price_cost_rebate: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.coerce.number().nullable().optional(),
+  ),
+  date_rebate: z.string().nullable().optional(),
 })
 
 export interface UseProductFormProps {
@@ -91,6 +100,9 @@ export function useProductForm(props?: UseProductFormProps) {
       is_discontinued: false,
       manual_related_ids: [],
       ai_related_ids: [],
+      price_usa_rebate: null,
+      price_cost_rebate: null,
+      date_rebate: '',
     },
   })
 
@@ -148,6 +160,9 @@ export function useProductForm(props?: UseProductFormProps) {
         is_discontinued: props.initialData.is_discontinued || false,
         manual_related_ids: props.initialData.manual_related_ids || [],
         ai_related_ids: props.initialData.ai_related_ids || [],
+        price_usa_rebate: props.initialData.price_usa_rebate ?? null,
+        price_cost_rebate: props.initialData.price_cost_rebate ?? null,
+        date_rebate: props.initialData.date_rebate || '',
       })
       setIsLoadingProduct(false)
     } else if (routeId) {
@@ -184,6 +199,9 @@ export function useProductForm(props?: UseProductFormProps) {
               is_discontinued: data.is_discontinued || false,
               manual_related_ids: data.manual_related_ids || [],
               ai_related_ids: data.ai_related_ids || [],
+              price_usa_rebate: data.price_usa_rebate ?? null,
+              price_cost_rebate: data.price_cost_rebate ?? null,
+              date_rebate: data.date_rebate || '',
             })
           }
         } catch (e) {

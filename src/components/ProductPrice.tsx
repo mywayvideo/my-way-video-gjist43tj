@@ -21,6 +21,7 @@ export function ProductPrice({
   size?: 'sm' | 'default' | 'lg'
   currency?: string
   align?: 'left' | 'center' | 'right'
+  isRebateActive?: boolean
 }) {
   if (originalPrice === null || originalPrice === undefined || originalPrice <= 0) {
     return (
@@ -62,11 +63,11 @@ export function ProductPrice({
         className,
       )}
     >
-      {showDiscount ? (
+      {showDiscount || isRebateActive ? (
         <>
           <div
             className={cn(
-              'flex items-center gap-2 mb-1 w-full',
+              'flex flex-wrap items-center gap-2 mb-1 w-full',
               align === 'center'
                 ? 'justify-center'
                 : align === 'left'
@@ -82,6 +83,11 @@ export function ProductPrice({
                 {discountPercentage.toFixed(0)}% OFF
               </span>
             ) : null}
+            {isRebateActive && (
+              <span className="bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider shadow-sm animate-pulse">
+                REBATE ATIVO
+              </span>
+            )}
           </div>
           <span
             className={cn(
@@ -90,7 +96,7 @@ export function ProductPrice({
               size === 'sm' ? 'text-[16px]' : size === 'lg' ? 'text-[26px]' : 'text-[22px]',
             )}
           >
-            {formatPrice(discountedPrice!)}
+            {formatPrice(discountedPrice ?? originalPrice)}
           </span>
           {originalPrice - discountedPrice! > 0 && (
             <div

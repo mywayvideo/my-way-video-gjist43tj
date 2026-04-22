@@ -23,6 +23,9 @@ export const productSchema = z.object({
   price_nationalized_sales: z.coerce.number().optional(),
   price_nationalized_cost: z.coerce.number().optional(),
   price_nationalized_currency: z.string().optional().default('BRL'),
+  price_usa_rebate: z.coerce.number().optional().nullable(),
+  price_cost_rebate: z.coerce.number().optional().nullable(),
+  date_rebate: z.string().optional().nullable(),
 })
 
 export type ProductFormData = z.infer<typeof productSchema>
