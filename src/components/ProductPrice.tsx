@@ -11,6 +11,7 @@ export function ProductPrice({
   size,
   currency,
   align = 'center',
+  isRebateActive,
 }: {
   originalPrice: number | null | undefined
   discountedPrice?: number | null | undefined
