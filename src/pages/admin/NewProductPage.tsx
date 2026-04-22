@@ -417,6 +417,87 @@ export default function NewProductPage() {
                 </div>
               </div>
 
+              {/* SECTION 2.5 - REBATE */}
+              <div className="space-y-4 p-5 border rounded-lg bg-amber-500/5 border-amber-500/20">
+                <h3 className="text-lg font-bold text-amber-600 dark:text-amber-500">
+                  Configuração de Rebate (USA)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="price_usa_rebate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-amber-600 dark:text-amber-500">
+                          Price USA Rebate
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            value={field.value || ''}
+                            disabled={isBusy}
+                            className="border-amber-500/30"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="price_cost_rebate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-amber-600 dark:text-amber-500">
+                          Price Cost Rebate
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...field}
+                            value={field.value || ''}
+                            disabled={isBusy}
+                            className="border-amber-500/30"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="date_rebate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-amber-600 dark:text-amber-500">
+                          Data de Expiração (Rebate)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            {...field}
+                            value={
+                              field.value ? new Date(field.value).toISOString().slice(0, 16) : ''
+                            }
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value ? new Date(e.target.value).toISOString() : null,
+                              )
+                            }
+                            disabled={isBusy}
+                            className="border-amber-500/30"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
               {/* SECTION 3 - PHYSICAL SPECIFICATIONS */}
               <div className="space-y-4 p-5 border rounded-lg bg-muted/5">
                 <h3 className="text-lg font-bold">Especificações Físicas</h3>
