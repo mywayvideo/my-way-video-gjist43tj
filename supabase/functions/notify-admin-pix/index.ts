@@ -9,7 +9,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 
@@ -20,7 +20,7 @@ Deno.serve(async (req: Request) => {
     if (!orderId || !orderNumber || !customerName || !customerEmail || amount === undefined) {
       return new Response(JSON.stringify({ error: 'Dados invalidos para notificacao.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -30,12 +30,12 @@ Deno.serve(async (req: Request) => {
     if (!resendApiKey) {
       return new Response(JSON.stringify({ error: 'Configuracao email nao encontrada.' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     const origin = req.headers.get('origin') || 'https://my-way-beta-ia.goskip.app'
-
+    
     const subject = `Novo Pedido Pendente de PIX - ${orderNumber}`
     let text = `Ola Admin,\n\n`
     text += `Detalhes do Pedido:\n`
@@ -61,15 +61,15 @@ Deno.serve(async (req: Request) => {
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             from: 'noreply@mywayvideo.com',
             to: [adminEmail],
             subject: subject,
-            text: text,
-          }),
+            text: text
+          })
         })
 
         if (response.ok) {
@@ -77,11 +77,11 @@ Deno.serve(async (req: Request) => {
         } else {
           const errorData = await response.text()
           lastError = new Error(`Resend Error ${response.status}: ${errorData}`)
-
+          
           if (response.status === 503) {
             attempt++
             if (attempt < maxAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt - 1]))
+              await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt - 1]))
             }
           } else {
             // Do not retry on 400/401/404 or other errors
@@ -92,7 +92,7 @@ Deno.serve(async (req: Request) => {
         lastError = err
         attempt++
         if (attempt < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, backoffDelays[attempt - 1]))
+          await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt - 1]))
         }
       }
     }
@@ -101,19 +101,20 @@ Deno.serve(async (req: Request) => {
       console.error('Erro ao enviar notificacao via Resend:', lastError)
       return new Response(JSON.stringify({ error: 'Erro ao enviar notificacao.' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     return new Response(JSON.stringify({ message: 'Notificacao enviada para admin' }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
+
   } catch (error: any) {
     console.error('Unhandled error in notify-admin-pix:', error)
     return new Response(JSON.stringify({ error: 'Erro interno do servidor.' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
