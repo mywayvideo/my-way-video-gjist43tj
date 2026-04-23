@@ -74,6 +74,39 @@ const formatNCM = (ncm?: string | number | null) => {
   return formatted
 }
 
+const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(
+    null,
+  )
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - new Date().getTime()
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+        })
+      } else {
+        setTimeLeft(null)
+      }
+    }
+
+    calculateTimeLeft()
+    const timer = setInterval(calculateTimeLeft, 60000)
+    return () => clearInterval(timer)
+  }, [targetDate])
+
+  if (!timeLeft) return <span className="font-mono font-bold">Encerrado</span>
+
+  return (
+    <span className="font-mono font-bold text-sm mt-1">
+      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+    </span>
+  )
+}
+
 const markdownComponents = {
   h2: ({ node, ...props }: any) => (
     <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
@@ -158,7 +191,8 @@ export default function Product() {
   const { isAnimating, triggerAnimation } = useHeartAnimation()
   const { user: authUser, isLoading: isAuthLoading } = useAuthState()
 
-  const { discountedPrice, discountPercentage, ruleName } = useProductDiscount(product)
+  const { originalPrice, discountedPrice, discountPercentage, ruleName, isRebateActive } =
+    useProductDiscount(product)
 
   const effectiveDiscountPercentage = discountPercentage || 0
 
@@ -196,18 +230,18 @@ export default function Product() {
     : false
 
   const calculatePriceBRL = useCallback(
-    (prod: { price_usd: number; weight_lb: number }) => {
-      if (!prod.price_usd || exchangeRate === 0) return null
+    (priceUsd: number, weightLb: number) => {
+      if (!priceUsd || exchangeRate === 0) return null
 
-      const weight_kg = prod.weight_lb / 2.204
+      const weight_kg = weightLb / 2.204
       const total_weight_kg = weight_kg + additionalWeightKg
       const freight_usd = total_weight_kg * pricePerKg
-      const percentage_charge = (prod.price_usd * percentageValue) / 100
-      const total_usd = prod.price_usd + freight_usd + percentage_charge
+      const percentage_charge = (priceUsd * percentageValue) / 100
+      const total_usd = priceUsd + freight_usd + percentage_charge
 
       const total_brl = total_usd * exchangeRate
       const freight_brl = freight_usd * exchangeRate
-      const product_brl = prod.price_usd * exchangeRate
+      const product_brl = priceUsd * exchangeRate
 
       return { total_brl, freight_brl, product_brl }
     },
@@ -216,15 +250,20 @@ export default function Product() {
 
   const priceBrlResult = useMemo(() => {
     if (!product) return null
-    const result = calculatePriceBRL({
-      price_usd: product.price_usd || 0,
-      weight_lb: product.weight || 0,
-    })
-    if (result) {
-      console.log('Price calculated:', result)
+    const usdOrig = originalPrice && originalPrice > 0 ? originalPrice : product.price_usd || 0
+    const usdFinal = discountedPrice && discountedPrice > 0 ? discountedPrice : usdOrig
+
+    const origCalc = calculatePriceBRL(usdOrig, product.weight || 0)
+    const finalCalc = calculatePriceBRL(usdFinal, product.weight || 0)
+
+    if (!finalCalc) return null
+
+    return {
+      total_brl: finalCalc.total_brl,
+      original_brl: origCalc?.total_brl || finalCalc.total_brl,
+      savings_brl: (origCalc?.total_brl || 0) - finalCalc.total_brl,
     }
-    return result
-  }, [calculatePriceBRL, product])
+  }, [calculatePriceBRL, product, originalPrice, discountedPrice])
 
   const handleToggleFavorite = async () => {
     if (!product) return
@@ -1015,21 +1054,74 @@ export default function Product() {
                   </p>
                 </div>
               ) : (
-                <div className="text-center animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
-                  {settingsError && (
-                    <div className="text-sm font-medium text-destructive mb-4">{settingsError}</div>
+                <div
+                  className={cn(
+                    'relative w-full max-w-[340px] mx-auto transition-all duration-500',
+                    isRebateActive ? 'p-[2px]' : '',
                   )}
-                  <span className="text-sm font-semibold text-green-500 uppercase tracking-wider block mb-2">
-                    Preço Final BRL
-                  </span>
-                  <p className="text-4xl font-mono font-extrabold text-green-500 drop-shadow-sm">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      priceBrlResult.total_brl,
+                >
+                  {isRebateActive && (
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 rounded-xl animate-pulse"
+                      style={{ animationDuration: '2.5s' }}
+                    />
+                  )}
+                  <div
+                    className={cn(
+                      'text-center animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center w-full',
+                      isRebateActive ? 'bg-background rounded-[10px] p-6 shadow-xl' : '',
                     )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2 max-w-[280px] mx-auto leading-relaxed">
-                    * Referencial dinâmico sujeito a variação cambial
-                  </p>
+                  >
+                    {settingsError && (
+                      <div className="text-sm font-medium text-destructive mb-4">
+                        {settingsError}
+                      </div>
+                    )}
+                    <span className="text-sm font-semibold text-green-500 uppercase tracking-wider block mb-2">
+                      Preço Final BRL
+                    </span>
+
+                    <div className="[&_[class*='mt-1.5']]:hidden w-full flex justify-center">
+                      <ProductPrice
+                        originalPrice={priceBrlResult.original_brl}
+                        discountedPrice={priceBrlResult.total_brl}
+                        discountPercentage={discountPercentage}
+                        ruleName={ruleName}
+                        isRebateActive={isRebateActive}
+                        currency="BRL"
+                        size="lg"
+                      />
+                    </div>
+
+                    {priceBrlResult.savings_brl > 0 && (
+                      <div className="mt-5 bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 w-full text-sm shadow-sm">
+                        <Sparkles className="w-4 h-4 shrink-0" />
+                        <span>
+                          Você economiza{' '}
+                          <strong>
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(priceBrlResult.savings_brl)}
+                          </strong>{' '}
+                          nesta compra
+                        </span>
+                      </div>
+                    )}
+
+                    {isRebateActive && product?.date_rebate && (
+                      <div className="mt-4 flex flex-col items-center text-amber-600 dark:text-amber-500 bg-amber-500/10 px-4 py-2.5 rounded-lg border border-amber-500/20 w-full text-sm shadow-sm">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600/80 dark:text-amber-500/80">
+                          Oferta termina em
+                        </span>
+                        <CountdownTimer targetDate={product.date_rebate} />
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-muted-foreground mt-4 max-w-[280px] mx-auto leading-relaxed">
+                      * Referencial dinâmico sujeito a variação cambial
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
