@@ -97,25 +97,36 @@ export function useAISettings() {
         aiSettingsId = data?.id || '00000000-0000-0000-0000-000000000001'
       }
 
-      await supabase.from('ai_settings').upsert(
-        {
-          id: aiSettingsId,
-          cache_expiration_days: newSettings.cache_expiration_days,
-          price_threshold_usd: newSettings.price_threshold_usd,
-          search_algorithm_sql: newSettings.search_algorithm_sql,
-          result_component_config: parsedConfig,
-          system_prompt_template: newSettings.system_prompt_template,
-          logistics_rules_prompt: newSettings.logistics_rules_prompt,
-          ignore_stock_count: newSettings.ignore_stock_count,
-        },
-        { onConflict: 'id' },
-      )
+      const { error } = await supabase
+        .from('ai_settings')
+        .upsert(
+          {
+            id: aiSettingsId,
+            cache_expiration_days: newSettings.cache_expiration_days,
+            price_threshold_usd: newSettings.price_threshold_usd,
+            search_algorithm_sql: newSettings.search_algorithm_sql,
+            result_component_config: parsedConfig,
+            system_prompt_template: newSettings.system_prompt_template,
+            logistics_rules_prompt: newSettings.logistics_rules_prompt,
+            ignore_stock_count: newSettings.ignore_stock_count,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        )
+        .select()
+        .single()
+
+      if (error) throw error
 
       toast.success('Configurações da IA salvas com sucesso!')
       await fetchSettings()
       return true
-    } catch (error) {
-      toast.error('Erro ao salvar configurações da IA.')
+    } catch (error: any) {
+      console.error(error)
+      toast.error(
+        'Erro ao salvar configurações da IA: ' +
+          (error.message || 'Falha na comunicação com o banco.'),
+      )
       return false
     }
   }
@@ -134,21 +145,27 @@ export function useAISettings() {
           .from('ai_agent_settings')
           .update({ system_prompt: prompt, updated_at: new Date().toISOString() })
           .eq('id', data.id)
+          .select()
+          .single()
         if (error) throw error
       } else {
-        const { error } = await supabase.from('ai_agent_settings').insert({
-          system_prompt: prompt,
-          id: '00000000-0000-0000-0000-000000000001',
-        })
+        const { error } = await supabase
+          .from('ai_agent_settings')
+          .insert({
+            system_prompt: prompt,
+            id: '00000000-0000-0000-0000-000000000001',
+          })
+          .select()
+          .single()
         if (error) throw error
       }
 
       setAgentSystemPrompt(prompt)
       toast.success('Instruções da IA salvas com sucesso!')
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast.error('Erro ao salvar instruções. Tente novamente.')
+      toast.error('Erro ao salvar instruções: ' + (error.message || 'Sem permissão ou falha.'))
       return false
     }
   }

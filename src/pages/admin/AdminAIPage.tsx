@@ -41,33 +41,55 @@ export default function AdminAIPage() {
   const handleSaveCompanyInfo = async () => {
     setSavingInfo(true)
 
-    // Save context info to company_info
-    if (companyInfo.id) {
-      await supabase
-        .from('company_info')
-        .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
-        .eq('id', companyInfo.id)
-    } else if (companyInfo.content) {
-      await supabase
-        .from('company_info')
-        .insert([{ type: 'ai_knowledge', content: companyInfo.content }])
-    }
+    try {
+      // Save context info to company_info
+      if (companyInfo.id) {
+        const { error } = await supabase
+          .from('company_info')
+          .update({ content: companyInfo.content, updated_at: new Date().toISOString() })
+          .eq('id', companyInfo.id)
+          .select()
+          .single()
+        if (error) throw error
+      } else if (companyInfo.content) {
+        const { error } = await supabase
+          .from('company_info')
+          .insert([{ type: 'ai_knowledge', content: companyInfo.content }])
+          .select()
+          .single()
+        if (error) throw error
+      }
 
-    // Save footer info to company_info
-    if (footerInfo.id) {
-      await supabase
-        .from('company_info')
-        .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
-        .eq('id', footerInfo.id)
-    } else if (footerInfo.content) {
-      await supabase
-        .from('company_info')
-        .insert([{ type: footerInfo.type, content: footerInfo.content }])
-    }
+      // Save footer info to company_info
+      if (footerInfo.id) {
+        const { error } = await supabase
+          .from('company_info')
+          .update({ content: footerInfo.content, updated_at: new Date().toISOString() })
+          .eq('id', footerInfo.id)
+          .select()
+          .single()
+        if (error) throw error
+      } else if (footerInfo.content) {
+        const { error } = await supabase
+          .from('company_info')
+          .insert([{ type: footerInfo.type, content: footerInfo.content }])
+          .select()
+          .single()
+        if (error) throw error
+      }
 
-    setSavingInfo(false)
-    toast({ title: 'Salvo', description: 'Informações atualizadas com sucesso.' })
-    fetchCompanyInfo()
+      toast({ title: 'Salvo', description: 'Informações atualizadas com sucesso.' })
+      await fetchCompanyInfo()
+    } catch (err: any) {
+      console.error(err)
+      toast({
+        title: 'Erro ao salvar',
+        description: err.message || 'Falha de comunicação com o banco.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingInfo(false)
+    }
   }
 
   if (authLoading)
