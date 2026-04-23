@@ -115,7 +115,7 @@ export default function Cart() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const ids = cartItems.map((i) => i.id)
+      const ids = (cartItems || []).map((i) => i.id)
       if (!ids.length) {
         setProductDetails({})
         setIsHydratingDetails(false)
@@ -142,7 +142,7 @@ export default function Cart() {
   }, [cartItems, isLoading])
 
   const evaluatedItems = useMemo(() => {
-    if (isLoading || isHydratingDetails) return []
+    if (isLoading || isHydratingDetails || !cartItems) return []
 
     return cartItems.map((item) => {
       const details = productDetails[item.id] || item
@@ -237,8 +237,8 @@ export default function Cart() {
   }
 
   const generateWaMessage = () => {
-    const items = cartItems.filter((item) => !fadingItems.includes(item.id))
-    return `Ola! Gostaria de fazer checkout com um especialista. Itens:\n${items.map((i) => `- ${i.quantity}x ${i.name} (R$ ${i.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`).join('\n')}\nSubtotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nTotal: R$ ${cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const items = (cartItems || []).filter((item) => !fadingItems.includes(item.id))
+    return `Ola! Gostaria de fazer checkout com um especialista. Itens:\n${items.map((i) => `- ${i.quantity}x ${i.name} (R$ ${i.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`).join('\n')}\nSubtotal: R$ ${(cartTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nTotal: R$ ${(cartTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const handleWhatsAppCheckout = () => {
