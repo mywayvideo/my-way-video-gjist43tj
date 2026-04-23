@@ -170,7 +170,7 @@ export function ProductCard({ product }: { product: any }) {
                     {discountPercentage > 0 && currency === 'USD' && (
                       <span className="text-[10px] text-muted-foreground line-through">
                         US${' '}
-                        {originalPrice.toLocaleString('en-US', {
+                        {(originalPrice || 0).toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
@@ -178,10 +178,12 @@ export function ProductCard({ product }: { product: any }) {
                     )}
                     <span className="font-bold text-sm text-foreground">
                       US${' '}
-                      {(currency === 'USD' ? discountedPrice : product.price_usd).toLocaleString(
-                        'en-US',
-                        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-                      )}
+                      {(
+                        (currency === 'USD' ? discountedPrice : product.price_usd) || 0
+                      ).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -195,7 +197,7 @@ export function ProductCard({ product }: { product: any }) {
                     {discountPercentage > 0 && currency === 'BRL' && (
                       <span className="text-[10px] text-muted-foreground line-through">
                         R${' '}
-                        {originalPrice.toLocaleString('pt-BR', {
+                        {(originalPrice || 0).toLocaleString('pt-BR', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
@@ -203,9 +205,10 @@ export function ProductCard({ product }: { product: any }) {
                     )}
                     <span className="font-bold text-sm text-emerald-600">
                       R${' '}
-                      {(currency === 'BRL'
-                        ? discountedPrice
-                        : product.price_brl || product.price_nationalized_sales
+                      {(
+                        (currency === 'BRL'
+                          ? discountedPrice
+                          : product.price_brl || product.price_nationalized_sales) || 0
                       ).toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
