@@ -44,10 +44,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!user) return
     setIsLoading(true)
     try {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!customer) return
+
       const { data: cart } = await supabase
         .from('shopping_carts')
         .select('id')
-        .eq('customer_id', user.id)
+        .eq('customer_id', customer.id)
         .maybeSingle()
 
       if (cart) {
@@ -97,11 +105,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!user) return
     setIsLoading(true)
     try {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      let customerId = user.id
+
+      if (customer) {
+        customerId = customer.id
+      } else {
+        const { data: newCustomer } = await supabase
+          .from('customers')
+          .insert({ user_id: user.id, email: user.email })
+          .select('id')
+          .single()
+
+        if (newCustomer) {
+          customerId = newCustomer.id
+        }
+      }
+
       let cartId = ''
       const { data: cart } = await supabase
         .from('shopping_carts')
         .select('id')
-        .eq('customer_id', user.id)
+        .eq('customer_id', customerId)
         .maybeSingle()
 
       if (cart) {
@@ -109,7 +139,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         const { data: newCart } = await supabase
           .from('shopping_carts')
-          .insert({ customer_id: user.id })
+          .insert({ customer_id: customerId })
           .select('id')
           .single()
         if (newCart) cartId = newCart.id
@@ -168,10 +198,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!user) return
     setIsLoading(true)
     try {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!customer) return
+
       const { data: cart } = await supabase
         .from('shopping_carts')
         .select('id')
-        .eq('customer_id', user.id)
+        .eq('customer_id', customer.id)
         .maybeSingle()
 
       if (cart) {
