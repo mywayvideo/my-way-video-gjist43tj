@@ -11,8 +11,6 @@ import {
   ArrowRight,
   Zap,
   MessageCircle,
-  Copy,
-  ExternalLink,
   Loader2,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -33,10 +31,11 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
+import { Card, CardContent } from '@/components/ui/card'
 
 export default function Cart() {
   const { currentUser: user } = useAuthContext()
-  const { cartItems, cartTotal, isLoading, error, removeFromCart, updateQuantity } = useCart()
+  const { items, isLoading, removeFromCart, updateQuantity } = useCart()
   const { addFavorite } = useFavorites()
   const navigate = useNavigate()
   const [fadingItems, setFadingItems] = useState<string[]>([])
@@ -57,6 +56,7 @@ export default function Cart() {
     additionalWeightKg: 0.5,
   })
   const [isHydratingDetails, setIsHydratingDetails] = useState(true)
+  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -95,6 +95,17 @@ export default function Cart() {
       if (discData) setActiveDiscounts(discData)
     }
     fetchSettings()
+
+    const fetchRecommended = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('id, name, image_url, price_usd, price_brl')
+        .eq('is_discontinued', false)
+        .order('created_at', { ascending: false })
+        .limit(4)
+      if (data) setRecommendedProducts(data)
+    }
+    fetchRecommended()
   }, [])
 
   useEffect(() => {
@@ -115,7 +126,7 @@ export default function Cart() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const ids = (cartItems || []).map((i) => i.id)
+      const ids = (items || []).map((i) => i.product_id).filter(Boolean)
       if (!ids.length) {
         setProductDetails({})
         setIsHydratingDetails(false)
@@ -125,7 +136,7 @@ export default function Cart() {
       const { data } = await supabase
         .from('products')
         .select(
-          'id, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, price_usd, price_cost, weight, manufacturer_id, category_id',
+          'id, name, image_url, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, price_usd, price_cost, weight, manufacturer_id, category_id',
         )
         .in('id', ids)
       if (data) {
@@ -139,18 +150,18 @@ export default function Cart() {
     if (!isLoading) {
       fetchProducts()
     }
-  }, [cartItems, isLoading])
+  }, [items, isLoading])
 
   const evaluatedItems = useMemo(() => {
-    if (isLoading || isHydratingDetails || !cartItems) return []
+    if (isLoading || isHydratingDetails || !items) return []
 
-    return cartItems.map((item) => {
-      const details = productDetails[item.id] || item
+    return items.map((item) => {
+      const details = productDetails[item.product_id] || item.product || {}
 
       let discountedDetails = { ...details }
-      // the pricing logic expects details.price_usa, but our DB uses price_usd.
-      // we'll normalize it for getEligibilityAndPrice
-      const normalizedPriceUsa = details.price_usd || details.price_usa || item.price_usa || 0
+      const normalizedPriceUsa =
+        details.price_usd || details.price_usa || item.product?.price_usa || 0
+
       discountedDetails.price_usa = normalizedPriceUsa
       discountedDetails.price_usd = normalizedPriceUsa
       details.price_usa = normalizedPriceUsa
@@ -158,7 +169,8 @@ export default function Cart() {
 
       let hasDiscount = false
       let originalPriceUsa = normalizedPriceUsa
-      let originalPriceNat = details.price_nationalized_sales || item.price_nationalized_sales || 0
+      let originalPriceNat =
+        details.price_nationalized_sales || item.product?.price_nationalized_sales || 0
 
       const originalEvalResult = getEligibilityAndPrice(
         details,
@@ -172,10 +184,11 @@ export default function Cart() {
 
       if (destination === 'brasil' && originalPriceNat > 0) {
         originalBasePrice = originalPriceNat
-        originalCostPrice = details.price_nationalized_cost || item.price_nationalized_cost || 0
+        originalCostPrice =
+          details.price_nationalized_cost || item.product?.price_nationalized_cost || 0
       } else {
         originalBasePrice = originalPriceUsa
-        originalCostPrice = details.price_cost || item.price_cost || 0
+        originalCostPrice = details.price_cost || item.product?.price_cost || 0
       }
 
       if (activeDiscounts.length > 0 && originalBasePrice > 0) {
@@ -210,6 +223,7 @@ export default function Cart() {
 
       return {
         ...item,
+        productDetails: details,
         ...evalResult,
         originalPrice: originalEvalResult.price,
         hasDiscount,
@@ -217,12 +231,13 @@ export default function Cart() {
       }
     })
   }, [
-    cartItems,
+    items,
     productDetails,
     destination,
     exchangeRate,
     shippingSettings,
     isLoading,
+    isHydratingDetails,
     activeDiscounts,
     customer,
   ])
@@ -237,8 +252,8 @@ export default function Cart() {
   }
 
   const generateWaMessage = () => {
-    const items = (cartItems || []).filter((item) => !fadingItems.includes(item.id))
-    return `Ola! Gostaria de fazer checkout com um especialista. Itens:\n${items.map((i) => `- ${i.quantity}x ${i.name} (R$ ${i.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`).join('\n')}\nSubtotal: R$ ${(cartTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nTotal: R$ ${(cartTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const cartList = (items || []).filter((item) => !fadingItems.includes(item.id))
+    return `Ola! Gostaria de fazer checkout com um especialista. Subtotal: R$ ${dynamicSubtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
   }
 
   const handleWhatsAppCheckout = () => {
@@ -266,47 +281,42 @@ export default function Cart() {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
-  const handleCopyMessage = () => {
-    navigator.clipboard.writeText(waMessage)
-    toast.success('Mensagem copiada!')
-  }
-
-  const handleMoveToFavorites = async (productId: string) => {
-    setLoadingItems((prev) => [...prev, productId])
+  const handleMoveToFavorites = async (item: any) => {
+    setLoadingItems((prev) => [...prev, item.id])
     try {
-      await addFavorite(productId)
-      await removeFromCart(productId)
-      setFadingItems((prev) => [...prev, productId])
+      await addFavorite(item.product_id)
+      await removeFromCart(item.id, item.product_id)
+      setFadingItems((prev) => [...prev, item.id])
       toast.success('Movido para favoritos!')
     } catch (e) {
       toast.error('Erro ao mover para favoritos.')
     } finally {
-      setLoadingItems((prev) => prev.filter((id) => id !== productId))
+      setLoadingItems((prev) => prev.filter((id) => id !== item.id))
     }
   }
 
-  const handleRemove = async (productId: string) => {
-    setLoadingItems((prev) => [...prev, productId])
+  const handleRemove = async (item: any) => {
+    setLoadingItems((prev) => [...prev, item.id])
     try {
-      await removeFromCart(productId)
-      setFadingItems((prev) => [...prev, productId])
+      await removeFromCart(item.id, item.product_id)
+      setFadingItems((prev) => [...prev, item.id])
       toast.success('Item removido do carrinho.')
     } catch (e) {
       toast.error('Erro ao remover item.')
     } finally {
-      setLoadingItems((prev) => prev.filter((id) => id !== productId))
+      setLoadingItems((prev) => prev.filter((id) => id !== item.id))
     }
   }
 
-  const handleUpdateQty = async (productId: string, qty: number) => {
+  const handleUpdateQty = async (item: any, qty: number) => {
     if (qty < 1 || qty > 50) return
-    setLoadingItems((prev) => [...prev, productId])
+    setLoadingItems((prev) => [...prev, item.id])
     try {
-      await updateQuantity(productId, qty)
+      await updateQuantity(item.id, qty, item.product_id)
     } catch (e) {
       toast.error('Erro ao atualizar quantidade.')
     } finally {
-      setLoadingItems((prev) => prev.filter((id) => id !== productId))
+      setLoadingItems((prev) => prev.filter((id) => id !== item.id))
     }
   }
 
@@ -328,33 +338,55 @@ export default function Cart() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto py-16 px-4 flex flex-col items-center justify-center text-center animate-fade-in">
-        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Erro ao carregar carrinho</h2>
-        <p className="text-muted-foreground mb-6">{error}</p>
-        <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
-      </div>
-    )
-  }
-
   const visibleItems = evaluatedItems.filter((item) => !fadingItems.includes(item.id))
 
   if (visibleItems.length === 0) {
     return (
-      <div className="container mx-auto py-16 px-4 flex flex-col items-center justify-center text-center animate-fade-in-up">
-        <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-          <ShoppingCart className="w-12 h-12 text-primary" />
+      <div className="container mx-auto py-16 px-4 max-w-5xl animate-fade-in-up">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+            <ShoppingCart className="w-12 h-12 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Carrinho Vazio</h2>
+          <p className="text-muted-foreground mb-8 max-w-md">
+            Adicione produtos ao carrinho para continuar. Explore nosso catálogo de equipamentos
+            profissionais.
+          </p>
+          <Button size="lg" onClick={() => navigate('/search')}>
+            Voltar para Loja <ArrowRight className="ml-2 w-4 h-4" />
+          </Button>
         </div>
-        <h2 className="text-2xl font-bold mb-2">Seu carrinho está vazio</h2>
-        <p className="text-muted-foreground mb-8 max-w-md">
-          Adicione produtos ao carrinho para continuar. Explore nosso catálogo de equipamentos
-          profissionais.
-        </p>
-        <Button size="lg" onClick={() => navigate('/search')}>
-          Explorar Produtos <ArrowRight className="ml-2 w-4 h-4" />
-        </Button>
+
+        {recommendedProducts.length > 0 && (
+          <div className="mt-20">
+            <h3 className="text-xl font-bold mb-6">Recomendados para você</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {recommendedProducts.map((p) => (
+                <Link key={p.id} to={`/product/${p.id}`}>
+                  <Card className="hover:border-primary/50 transition-colors h-full">
+                    <CardContent className="p-4 flex flex-col items-center text-center h-full">
+                      <div className="w-full h-32 mb-4 bg-muted/20 rounded-md flex items-center justify-center">
+                        {p.image_url ? (
+                          <img
+                            src={p.image_url}
+                            alt={p.name}
+                            className="h-full object-contain p-2"
+                          />
+                        ) : (
+                          <ShoppingCart className="w-8 h-8 text-muted-foreground/30" />
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-sm line-clamp-2 mb-2">{p.name}</h4>
+                      <p className="text-primary font-bold text-sm mt-auto">
+                        A partir de ${p.price_usd?.toFixed(2)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -407,11 +439,11 @@ export default function Cart() {
                 key={item.id}
                 className={`flex flex-col sm:flex-row bg-card border border-border rounded-xl p-4 gap-4 items-center transition-all animate-fade-in`}
               >
-                <Link to={`/product/${item.id}`} className="shrink-0">
-                  {item.image_url ? (
+                <Link to={`/product/${item.product_id}`} className="shrink-0">
+                  {item.productDetails?.image_url ? (
                     <img
-                      src={item.image_url}
-                      alt={item.name}
+                      src={item.productDetails.image_url}
+                      alt={item.productDetails?.name}
                       className="w-24 h-24 object-contain rounded-md bg-muted/30 p-2"
                     />
                   ) : (
@@ -423,10 +455,10 @@ export default function Cart() {
 
                 <div className="flex-1 text-center sm:text-left">
                   <Link
-                    to={`/product/${item.id}`}
+                    to={`/product/${item.product_id}`}
                     className="font-semibold text-lg hover:text-primary transition-colors line-clamp-2"
                   >
-                    {item.name}
+                    {item.productDetails?.name || 'Produto'}
                   </Link>
                   {item.eligible ? (
                     <div className="mt-1 flex items-center gap-2">
@@ -470,7 +502,7 @@ export default function Cart() {
                         size="icon"
                         className="h-8 w-8 rounded-none"
                         disabled={isProcessing || item.quantity <= 1}
-                        onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                        onClick={() => handleUpdateQty(item, item.quantity - 1)}
                       >
                         <Minus className="w-3 h-3" />
                       </Button>
@@ -480,7 +512,7 @@ export default function Cart() {
                         size="icon"
                         className="h-8 w-8 rounded-none"
                         disabled={isProcessing || item.quantity >= 50}
-                        onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                        onClick={() => handleUpdateQty(item, item.quantity + 1)}
                       >
                         <Plus className="w-3 h-3" />
                       </Button>
@@ -523,7 +555,7 @@ export default function Cart() {
                       size="sm"
                       className="h-8 text-xs gap-1.5 hover:scale-[1.02] shadow-sm"
                       disabled={isProcessing}
-                      onClick={() => handleMoveToFavorites(item.id)}
+                      onClick={() => handleMoveToFavorites(item)}
                     >
                       <Heart className="w-3.5 h-3.5" />{' '}
                       <span className="hidden sm:inline">Mover para Favoritos</span>
@@ -533,7 +565,7 @@ export default function Cart() {
                       size="icon"
                       className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:scale-[1.02] shadow-sm"
                       disabled={isProcessing}
-                      onClick={() => handleRemove(item.id)}
+                      onClick={() => handleRemove(item)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -625,6 +657,33 @@ export default function Cart() {
           </div>
         </div>
       </div>
+
+      {recommendedProducts.length > 0 && (
+        <div className="mt-20 border-t border-border pt-12">
+          <h3 className="text-xl font-bold mb-6">Recomendados para você</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {recommendedProducts.map((p) => (
+              <Link key={p.id} to={`/product/${p.id}`}>
+                <Card className="hover:border-primary/50 transition-colors h-full">
+                  <CardContent className="p-4 flex flex-col items-center text-center h-full">
+                    <div className="w-full h-32 mb-4 bg-muted/20 rounded-md flex items-center justify-center">
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} className="h-full object-contain p-2" />
+                      ) : (
+                        <ShoppingCart className="w-8 h-8 text-muted-foreground/30" />
+                      )}
+                    </div>
+                    <h4 className="font-semibold text-sm line-clamp-2 mb-2">{p.name}</h4>
+                    <p className="text-primary font-bold text-sm mt-auto">
+                      A partir de ${p.price_usd?.toFixed(2)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={showHoursModal} onOpenChange={setShowHoursModal}>
         <AlertDialogContent>

@@ -49,11 +49,7 @@ export function Header() {
   const [isMobileAiNavigating, setIsMobileAiNavigating] = useState(false)
   const [mobileDbQuery, setMobileDbQuery] = useState('')
   const cartContext = useCart() as any
-  const itemsArray = cartContext?.items || cartContext?.cartItems || cartContext?.cart || []
-  const totalItemCount = itemsArray.reduce(
-    (acc: number, item: any) => acc + (item.quantity || 1),
-    0,
-  )
+  const totalItemCount = cartContext?.totalItems || 0
   const { customer } = useCurrentCustomer()
   const { saveSearchState } = useSearchState()
   const { favorites } = useFavorites()

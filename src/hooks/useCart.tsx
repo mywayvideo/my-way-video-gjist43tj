@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useCallback,
+} from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/hooks/use-toast'
+import { cartService } from '@/services/cartService'
 
 interface CartItem {
   id: string
@@ -13,8 +21,8 @@ interface CartItem {
 interface CartContextType {
   items: CartItem[]
   addToCart: (productId: string, quantity?: number, product?: any) => Promise<void>
-  removeFromCart: (itemId: string) => Promise<void>
-  updateQuantity: (itemId: string, quantity: number) => Promise<void>
+  removeFromCart: (itemId: string, productId?: string) => Promise<void>
+  updateQuantity: (itemId: string, quantity: number, productId?: string) => Promise<void>
   clearCart: () => Promise<void>
   isLoading: boolean
   totalItems: number
@@ -22,56 +30,60 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
+const LOCAL_CART_KEY = 'myway_local_cart'
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
 
-  useEffect(() => {
-    // SECURITY ISOLATION: Do not fetch cart on home page to avoid 403 errors
-    if (window.location.pathname === '/') {
-      return
-    }
-
-    if (user) {
-      fetchCart()
-    } else {
-      setItems([])
-    }
-  }, [user])
-
-  const fetchCart = async () => {
-    if (!user) return
-    setIsLoading(true)
+  const loadLocalCart = useCallback(() => {
     try {
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (!customer) return
-
-      const { data: cart } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', customer.id)
-        .maybeSingle()
-
-      if (cart) {
-        const { data: cartItems } = await supabase
-          .from('cart_items')
-          .select('*, product:products(*)')
-          .eq('cart_id', cart.id)
-
-        if (cartItems) setItems(cartItems)
+      const local = localStorage.getItem(LOCAL_CART_KEY)
+      if (local) {
+        return JSON.parse(local)
       }
     } catch (e) {
-      console.error('Error fetching cart:', e)
-    } finally {
-      setIsLoading(false)
+      console.error('Error parsing local cart', e)
     }
-  }
+    return []
+  }, [])
+
+  const saveLocalCart = useCallback((newItems: CartItem[]) => {
+    try {
+      localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(newItems))
+      setItems(newItems)
+    } catch (e) {
+      console.error('Error saving local cart', e)
+    }
+  }, [])
+
+  const fetchCart = useCallback(async () => {
+    if (window.location.pathname === '/') return
+
+    if (user) {
+      setIsLoading(true)
+      try {
+        const localCart = loadLocalCart()
+        if (localCart.length > 0) {
+          await cartService.syncLocalCart(user.id, localCart)
+          localStorage.removeItem(LOCAL_CART_KEY)
+        }
+        const dbItems = await cartService.fetchCart(user.id)
+        setItems(dbItems)
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      setItems(loadLocalCart())
+    }
+  }, [user, loadLocalCart])
+
+  useEffect(() => {
+    fetchCart()
+  }, [fetchCart])
 
   const addToCart = async (productId: string, quantity = 1, product?: any) => {
     let p = product
@@ -102,122 +114,98 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    if (!user) return
     setIsLoading(true)
     try {
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      let customerId = user.id
-
-      if (customer) {
-        customerId = customer.id
+      if (user) {
+        await cartService.addToCart(user.id, productId, quantity)
+        const dbItems = await cartService.fetchCart(user.id)
+        setItems(dbItems)
+        toast({ title: 'Sucesso', description: 'Produto adicionado ao carrinho.' })
       } else {
-        const { data: newCustomer } = await supabase
-          .from('customers')
-          .insert({ user_id: user.id, email: user.email })
-          .select('id')
-          .single()
-
-        if (newCustomer) {
-          customerId = newCustomer.id
-        }
-      }
-
-      let cartId = ''
-      const { data: cart } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', customerId)
-        .maybeSingle()
-
-      if (cart) {
-        cartId = cart.id
-      } else {
-        const { data: newCart } = await supabase
-          .from('shopping_carts')
-          .insert({ customer_id: customerId })
-          .select('id')
-          .single()
-        if (newCart) cartId = newCart.id
-      }
-
-      if (cartId) {
-        const existingItem = items.find((i) => i.product_id === productId)
-        if (existingItem) {
-          await supabase
-            .from('cart_items')
-            .update({ quantity: existingItem.quantity + quantity })
-            .eq('id', existingItem.id)
+        const currentItems = loadLocalCart()
+        const existing = currentItems.find((i: any) => i.product_id === productId)
+        if (existing) {
+          existing.quantity += quantity
         } else {
-          await supabase
-            .from('cart_items')
-            .insert({ cart_id: cartId, product_id: productId, quantity, user_id: user.id })
+          currentItems.push({
+            id: `local_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            product_id: productId,
+            quantity,
+            product: p,
+          })
         }
-        await fetchCart()
+        saveLocalCart(currentItems)
+        toast({ title: 'Sucesso', description: 'Produto adicionado ao carrinho.' })
       }
     } catch (e) {
-      console.error('Error adding to cart:', e)
+      console.error(e)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const removeFromCart = async (itemId: string) => {
+  const removeFromCart = async (itemId: string, productId?: string) => {
     setIsLoading(true)
     try {
-      await supabase.from('cart_items').delete().eq('id', itemId)
-      setItems(items.filter((i) => i.id !== itemId))
+      if (user) {
+        await cartService.removeFromCart(itemId)
+        const dbItems = await cartService.fetchCart(user.id)
+        setItems(dbItems)
+      } else {
+        const currentItems = loadLocalCart()
+        const newItems = currentItems.filter(
+          (i: any) => i.id !== itemId && i.product_id !== productId,
+        )
+        saveLocalCart(newItems)
+      }
     } catch (e) {
-      console.error('Error removing from cart:', e)
+      console.error(e)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const updateQuantity = async (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      await removeFromCart(itemId)
-      return
-    }
+  const updateQuantity = async (itemId: string, quantity: number, productId?: string) => {
     setIsLoading(true)
     try {
-      await supabase.from('cart_items').update({ quantity }).eq('id', itemId)
-      setItems(items.map((i) => (i.id === itemId ? { ...i, quantity } : i)))
+      if (user) {
+        if (quantity <= 0) {
+          await cartService.removeFromCart(itemId)
+        } else {
+          await cartService.updateQuantity(itemId, quantity)
+        }
+        const dbItems = await cartService.fetchCart(user.id)
+        setItems(dbItems)
+      } else {
+        let currentItems = loadLocalCart()
+        if (quantity <= 0) {
+          currentItems = currentItems.filter(
+            (i: any) => i.id !== itemId && i.product_id !== productId,
+          )
+        } else {
+          const item = currentItems.find((i: any) => i.id === itemId || i.product_id === productId)
+          if (item) item.quantity = quantity
+        }
+        saveLocalCart(currentItems)
+      }
     } catch (e) {
-      console.error('Error updating quantity:', e)
+      console.error(e)
     } finally {
       setIsLoading(false)
     }
   }
 
   const clearCart = async () => {
-    if (!user) return
     setIsLoading(true)
     try {
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (!customer) return
-
-      const { data: cart } = await supabase
-        .from('shopping_carts')
-        .select('id')
-        .eq('customer_id', customer.id)
-        .maybeSingle()
-
-      if (cart) {
-        await supabase.from('cart_items').delete().eq('cart_id', cart.id)
+      if (user) {
+        await cartService.clearCart(user.id)
         setItems([])
+      } else {
+        saveLocalCart([])
       }
     } catch (e) {
-      console.error('Error clearing cart:', e)
+      console.error(e)
     } finally {
       setIsLoading(false)
     }
