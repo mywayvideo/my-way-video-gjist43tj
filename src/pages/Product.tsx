@@ -688,6 +688,7 @@ export default function Product() {
                           discountedPrice={discountedPrice}
                           discountPercentage={discountPercentage}
                           ruleName={ruleName}
+                          isRebateActive={isRebateActive}
                           size="lg"
                           align="left"
                         />
@@ -716,6 +717,7 @@ export default function Product() {
                           }
                           discountPercentage={discountPercentage}
                           ruleName={ruleName}
+                          isRebateActive={isRebateActive}
                           size="lg"
                           currency={product.price_nationalized_currency || 'BRL'}
                           align="left"
@@ -1054,24 +1056,8 @@ export default function Product() {
                   </p>
                 </div>
               ) : (
-                <div
-                  className={cn(
-                    'relative w-full max-w-[340px] mx-auto transition-all duration-500',
-                    isRebateActive ? 'p-[2px]' : '',
-                  )}
-                >
-                  {isRebateActive && (
-                    <div
-                      className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 rounded-xl animate-pulse"
-                      style={{ animationDuration: '2.5s' }}
-                    />
-                  )}
-                  <div
-                    className={cn(
-                      'text-center animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center w-full',
-                      isRebateActive ? 'bg-background rounded-[10px] p-6 shadow-xl' : '',
-                    )}
-                  >
+                <div className="relative w-full max-w-[340px] mx-auto transition-all duration-500">
+                  <div className="text-center animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center w-full">
                     {settingsError && (
                       <div className="text-sm font-medium text-destructive mb-4">
                         {settingsError}

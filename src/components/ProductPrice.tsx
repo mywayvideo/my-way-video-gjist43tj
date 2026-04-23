@@ -85,8 +85,8 @@ export function ProductPrice({
               </span>
             ) : null}
             {isRebateActive && (
-              <span className="bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider shadow-sm animate-pulse">
-                REBATE ATIVO
+              <span className="bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">
+                REBATE
               </span>
             )}
           </div>
@@ -110,7 +110,7 @@ export function ProductPrice({
                     : 'items-end text-right',
               )}
             >
-              <span className="text-[12px] font-medium text-green-600 dark:text-green-400 animate-pulse">
+              <span className="text-[12px] font-medium text-green-600 dark:text-green-400">
                 Economize {formatPrice(originalPrice - discountedPrice!)}
               </span>
               {ruleName && (
