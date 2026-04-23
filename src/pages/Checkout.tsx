@@ -1321,6 +1321,7 @@ export default function Checkout() {
 
       if (cartContext?.clearCart) cartContext.clearCart()
       localStorage.removeItem('cart')
+      localStorage.removeItem('myway_local_cart')
       setCreatedOrderId(order_id)
       setOrderConfirmed(true)
 
@@ -1389,13 +1390,15 @@ export default function Checkout() {
         clearCartFromLocalStorage()
         await clearCartFromSupabase(user!.id)
         if (cartContext?.clearCart) cartContext.clearCart()
+        localStorage.removeItem('cart')
+        localStorage.removeItem('myway_local_cart')
 
         toast({
-          description: 'Pagamento Square confirmado! Redirecionando...',
+          description: 'Pedido confirmado com sucesso! Redirecionando para seu histórico...',
           className: 'bg-emerald-600 text-white border-emerald-700',
         })
 
-        setTimeout(() => navigate('/dashboard/orders'), 1000)
+        setTimeout(() => navigate('/dashboard'), 1000)
       } else {
         toast({
           description: result.errors?.[0]?.message || 'Erro no cartão.',
@@ -1517,14 +1520,16 @@ export default function Checkout() {
           clearCartFromLocalStorage()
           await clearCartFromSupabase(user!.id)
           if (cartContext?.clearCart) cartContext.clearCart()
+          localStorage.removeItem('cart')
+          localStorage.removeItem('myway_local_cart')
 
           toast({
-            description: 'Pagamento confirmado! Redirecionando para pedidos...',
+            description: 'Pedido confirmado com sucesso! Redirecionando para seu histórico...',
             className: 'bg-emerald-600 text-white border-emerald-700',
           })
 
           setTimeout(() => {
-            navigate('/dashboard/orders')
+            navigate('/dashboard')
           }, 1000)
         }
       }
@@ -2183,10 +2188,7 @@ Valor: ${formatCurrency(total)}
             será notificado assim que o processo for concluído.
           </p>
           <div className="flex flex-col gap-3">
-            <button
-              onClick={() => navigate('/dashboard/orders')}
-              className={cn(btnPrimary, 'w-full')}
-            >
+            <button onClick={() => navigate('/dashboard')} className={cn(btnPrimary, 'w-full')}>
               Acompanhar Pedido
             </button>
             <button onClick={() => navigate('/')} className={cn(btnSecondary, 'w-full')}>

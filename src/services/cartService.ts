@@ -140,6 +140,8 @@ export const cartService = {
       if (!cartId) return
       const { error } = await supabase.from('cart_items').delete().eq('cart_id', cartId)
       if (error) throw error
+      localStorage.removeItem('cart')
+      localStorage.removeItem('myway_local_cart')
     } catch (e) {
       toast({
         title: 'Erro',
