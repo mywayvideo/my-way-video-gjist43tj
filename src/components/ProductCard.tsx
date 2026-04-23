@@ -9,18 +9,22 @@ import { useProductDiscount } from '@/hooks/useProductDiscount'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useState } from 'react'
 import { QuantityModal } from '@/components/QuantityModal'
+import { useExchangeRate } from '@/hooks/use-exchange-rate'
 
 export function ProductCard({ product }: { product: any }) {
   const [showQtyModal, setShowQtyModal] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
+  const exchangeRate = useExchangeRate()
   const { originalPrice, discountedPrice, discountPercentage, ruleName, currency } =
     useProductDiscount(product)
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
 
-  const hasPrice =
-    (product.price_usd && product.price_usd > 0) ||
-    (product.price_nationalized_sales && product.price_nationalized_sales > 0)
+  const hasNationalizedPrice =
+    product.price_nationalized_sales && product.price_nationalized_sales > 0
+  const hasUsaPriceWithWeight = product.price_usd > 0 && product.weight > 0
+
+  const hasPrice = hasNationalizedPrice || hasUsaPriceWithWeight
 
   const triggerFavoriteEffects = (e: React.MouseEvent) => {
     try {
@@ -205,14 +209,23 @@ export function ProductCard({ product }: { product: any }) {
                     )}
                     <span className="font-bold text-sm text-emerald-600">
                       R${' '}
-                      {(
-                        (currency === 'BRL'
-                          ? discountedPrice
-                          : product.price_brl || product.price_nationalized_sales) || 0
-                      ).toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {(() => {
+                        let finalVal = 0
+                        if (currency === 'BRL') {
+                          finalVal = discountedPrice || 0
+                        } else if (product.price_nationalized_sales > 0) {
+                          finalVal =
+                            product.price_nationalized_currency === 'USD'
+                              ? product.price_nationalized_sales * exchangeRate
+                              : product.price_nationalized_sales
+                        } else {
+                          finalVal = product.price_brl || 0
+                        }
+                        return finalVal.toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      })()}
                     </span>
                   </div>
                 </div>

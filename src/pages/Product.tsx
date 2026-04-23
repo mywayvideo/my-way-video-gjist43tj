@@ -225,9 +225,10 @@ export default function Product() {
   }, [])
 
   const hasNationalizedPrice = (product?.price_nationalized_sales || 0) > 0
-  const hasPrice = product
-    ? (product.price_usd && product.price_usd > 0) || hasNationalizedPrice
+  const hasUsaPriceWithWeight = product
+    ? (product.price_usd || 0) > 0 && (product.weight || 0) > 0
     : false
+  const hasPrice = hasNationalizedPrice || hasUsaPriceWithWeight
 
   const calculatePriceBRL = useCallback(
     (priceUsd: number, weightLb: number) => {
@@ -709,17 +710,26 @@ export default function Product() {
                           </span>
                         </div>
                         <ProductPrice
-                          originalPrice={product.price_nationalized_sales!}
+                          originalPrice={
+                            product.price_nationalized_currency === 'USD'
+                              ? product.price_nationalized_sales! * exchangeRate
+                              : product.price_nationalized_sales!
+                          }
                           discountedPrice={
                             discountPercentage > 0
-                              ? product.price_nationalized_sales! * (1 - discountPercentage / 100)
-                              : product.price_nationalized_sales!
+                              ? (product.price_nationalized_currency === 'USD'
+                                  ? product.price_nationalized_sales! * exchangeRate
+                                  : product.price_nationalized_sales!) *
+                                (1 - discountPercentage / 100)
+                              : product.price_nationalized_currency === 'USD'
+                                ? product.price_nationalized_sales! * exchangeRate
+                                : product.price_nationalized_sales!
                           }
                           discountPercentage={discountPercentage}
                           ruleName={ruleName}
                           isRebateActive={isRebateActive}
                           size="lg"
-                          currency={product.price_nationalized_currency || 'BRL'}
+                          currency="BRL"
                           align="left"
                         />
                       </div>
@@ -753,24 +763,22 @@ export default function Product() {
                       </div>
                     )}
 
-                    {!hasNationalizedPrice &&
-                      product.price_usd !== null &&
-                      product.price_usd > 0 && (
-                        <div className="mt-2 pt-6 border-t border-border/50">
-                          <Button
-                            variant="secondary"
-                            className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
-                            onClick={() => setIsBrlModalOpen(true)}
-                            disabled={isLoading}
-                          >
-                            <span className="flex items-center gap-2 text-foreground font-medium">
-                              <Calculator className="w-4 h-4 text-green-500" />
-                              Estimar Preço Entregue no Brasil
-                            </span>
-                            <ChevronRight className="w-4 h-4 opacity-50" />
-                          </Button>
-                        </div>
-                      )}
+                    {!hasNationalizedPrice && hasUsaPriceWithWeight && (
+                      <div className="mt-2 pt-6 border-t border-border/50">
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
+                          onClick={() => setIsBrlModalOpen(true)}
+                          disabled={isLoading}
+                        >
+                          <span className="flex items-center gap-2 text-foreground font-medium">
+                            <Calculator className="w-4 h-4 text-green-500" />
+                            Estimar Preço Entregue no Brasil
+                          </span>
+                          <ChevronRight className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -904,7 +912,7 @@ export default function Product() {
           </h2>
 
           {isLoadingRelated ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
@@ -921,7 +929,7 @@ export default function Product() {
               ))}
             </div>
           ) : relatedProducts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

@@ -116,13 +116,13 @@ export default function Index() {
         </h2>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
             ))}
           </div>
         ) : specials.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
             {specials.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

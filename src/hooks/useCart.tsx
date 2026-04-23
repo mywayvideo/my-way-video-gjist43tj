@@ -151,9 +151,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(dbItems)
       } else {
         const currentItems = loadLocalCart()
-        const newItems = currentItems.filter(
-          (i: any) => i.id !== itemId && i.product_id !== productId,
-        )
+        const newItems = currentItems.filter((i: any) => i.id !== itemId)
         saveLocalCart(newItems)
       }
     } catch (e) {
@@ -177,11 +175,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         let currentItems = loadLocalCart()
         if (quantity <= 0) {
-          currentItems = currentItems.filter(
-            (i: any) => i.id !== itemId && i.product_id !== productId,
-          )
+          currentItems = currentItems.filter((i: any) => i.id !== itemId)
         } else {
-          const item = currentItems.find((i: any) => i.id === itemId || i.product_id === productId)
+          const item = currentItems.find((i: any) => i.id === itemId)
           if (item) item.quantity = quantity
         }
         saveLocalCart(currentItems)

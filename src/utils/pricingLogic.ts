@@ -21,8 +21,10 @@ export function getEligibilityAndPrice(
   if (destination === 'brasil') {
     if (price_nationalized_sales > 0) {
       eligible = true
-      price = price_nationalized_sales
       currency = product?.price_nationalized_currency || 'BRL'
+      price =
+        currency === 'USD' ? price_nationalized_sales * exchangeRate : price_nationalized_sales
+      currency = 'BRL' // After conversion, it's always BRL
       rule = 'A'
     } else if (price_usa > 0 && weight > 0) {
       eligible = true

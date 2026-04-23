@@ -76,10 +76,10 @@ export const productService = {
       manual_related_ids: productData.manual_related_ids || [],
       ai_related_ids: productData.ai_related_ids || [],
       price_usa_rebate:
-        productData.price_usa_rebate !== undefined ? productData.price_usa_rebate : null,
+        productData.price_usa_rebate === '' ? null : (productData.price_usa_rebate ?? null),
       price_cost_rebate:
-        productData.price_cost_rebate !== undefined ? productData.price_cost_rebate : null,
-      date_rebate: productData.date_rebate !== undefined ? productData.date_rebate : null,
+        productData.price_cost_rebate === '' ? null : (productData.price_cost_rebate ?? null),
+      date_rebate: productData.date_rebate === '' ? null : (productData.date_rebate ?? null),
     }
 
     const { data, error } = await supabase.from('products').insert(payload).select().single()
@@ -113,10 +113,10 @@ export const productService = {
       manual_related_ids: productData.manual_related_ids || [],
       ai_related_ids: productData.ai_related_ids || [],
       price_usa_rebate:
-        productData.price_usa_rebate !== undefined ? productData.price_usa_rebate : null,
+        productData.price_usa_rebate === '' ? null : (productData.price_usa_rebate ?? null),
       price_cost_rebate:
-        productData.price_cost_rebate !== undefined ? productData.price_cost_rebate : null,
-      date_rebate: productData.date_rebate !== undefined ? productData.date_rebate : null,
+        productData.price_cost_rebate === '' ? null : (productData.price_cost_rebate ?? null),
+      date_rebate: productData.date_rebate === '' ? null : (productData.date_rebate ?? null),
     }
 
     const { error } = await supabase.from('products').update(payload).eq('id', id)

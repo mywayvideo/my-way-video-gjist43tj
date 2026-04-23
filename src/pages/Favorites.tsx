@@ -89,7 +89,7 @@ export default function Favorites() {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Meus Favoritos</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex flex-col h-full bg-card border rounded-lg overflow-hidden">
               <Skeleton className="h-[200px] w-full rounded-none" />
@@ -138,7 +138,7 @@ export default function Favorites() {
           {products.length} {products.length === 1 ? 'produto' : 'produtos'}
         </Badge>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
         {products.map((product) => (
           <FavoriteProductCard
             key={product.id}

@@ -176,7 +176,7 @@ export default function Search() {
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Recomendados
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

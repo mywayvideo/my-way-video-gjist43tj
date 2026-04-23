@@ -361,6 +361,9 @@ export function useProductForm(props?: UseProductFormProps) {
         category_id: data.category_id && data.category_id.trim() !== '' ? data.category_id : null,
         manufacturer_id:
           data.manufacturer_id && data.manufacturer_id.trim() !== '' ? data.manufacturer_id : null,
+        price_usa_rebate: data.price_usa_rebate === '' ? null : (data.price_usa_rebate ?? null),
+        price_cost_rebate: data.price_cost_rebate === '' ? null : (data.price_cost_rebate ?? null),
+        date_rebate: data.date_rebate === '' ? null : (data.date_rebate ?? null),
       }
 
       if (!isEditMode) {

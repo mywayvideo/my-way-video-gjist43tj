@@ -2774,8 +2774,8 @@ Valor: ${formatCurrency(total)}
                     : paymentMethod === 'pix'
                       ? 'Confirmar Pagamento PIX'
                       : paymentMethod.startsWith('transferencia')
-                        ? 'Confirmar Depósito'
-                        : 'Confirmar Pedido'}
+                        ? 'Confirmar o Pedido'
+                        : 'Confirmar o Pedido'}
               </button>
               <button
                 className="w-full bg-gray-200 text-gray-800 p-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
