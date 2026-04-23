@@ -25,7 +25,12 @@ export function DirectSearch() {
         )
         .limit(6)
         .then(({ data }) => {
-          setResults(data || [])
+          const sorted = (data || []).sort((a, b) => {
+            if (a.sku?.toLowerCase() === debouncedQuery.toLowerCase()) return -1
+            if (b.sku?.toLowerCase() === debouncedQuery.toLowerCase()) return 1
+            return 0
+          })
+          setResults(sorted)
           setLoading(false)
           setOpen(true)
         })
@@ -96,7 +101,7 @@ export function DirectSearch() {
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground font-mono truncate">
-                  {p.sku} • {p.category || 'Geral'}
+                  SKU: {p.sku || 'N/A'} • {p.category || 'Geral'}
                 </span>
               </div>
             </Link>

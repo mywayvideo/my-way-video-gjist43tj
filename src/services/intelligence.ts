@@ -90,6 +90,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 5. Convert all database logic into natural, professional commercial sentences. Do NOT output database field names (e.g., price_usd, stock_count) or logical conditions.
 6. Paragraphs: Maximum 2 sentences.
 7. If 'effective_price_usd' is provided for a product, use it as the base price_usd for calculations instead of the standard price_usd, as it represents an active rebate.
+8. Ao realizar buscas, o campo SKU é tão importante quanto o nome. Se o usuário digitar um código técnico, priorize a correspondência exata por SKU.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:

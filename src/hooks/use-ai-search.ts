@@ -166,16 +166,22 @@ export function useUnifiedSearch() {
         combinedProducts = accumulatedContext.current.products
       }
 
+      const sortedCombinedProducts = combinedProducts.sort((a, b) => {
+        if (a.sku?.toLowerCase() === cleanQuery.toLowerCase()) return -1
+        if (b.sku?.toLowerCase() === cleanQuery.toLowerCase()) return 1
+        return 0
+      })
+
       accumulatedContext.current = {
-        products: combinedProducts,
+        products: sortedCombinedProducts,
         intel: newIntel,
         nabData: newNab,
       }
 
       const currentUnifiedData = {
         ...unifiedData,
-        stock: combinedProducts,
-        products: combinedProducts,
+        stock: sortedCombinedProducts,
+        products: sortedCombinedProducts,
         intel: newIntel,
         nabData: newNab,
       }
