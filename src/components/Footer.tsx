@@ -8,6 +8,9 @@ export function Footer() {
   const [aboutText, setAboutText] = useState(
     'Seu parceiro definitivo em equipamentos de audiovisual profissional. Qualidade, garantia e suporte técnico especializado.',
   )
+  const [address, setAddress] = useState('1735 NW 79th Av., Doral, FL 33126')
+  const [phone, setPhone] = useState('+1-786-716-1170')
+  const [email, setEmail] = useState('sales@mywayvideo.com')
 
   useEffect(() => {
     supabase
@@ -18,6 +21,22 @@ export function Footer() {
       .single()
       .then(({ data }) => {
         if (data && data.content) setAboutText(data.content)
+      })
+
+    supabase
+      .from('app_settings')
+      .select('setting_key, setting_value')
+      .in('setting_key', ['company_address', 'company_whatsapp', 'company_email'])
+      .then(({ data }) => {
+        if (data) {
+          const addr = data.find((d) => d.setting_key === 'company_address')?.setting_value
+          const wapp = data.find((d) => d.setting_key === 'company_whatsapp')?.setting_value
+          const em = data.find((d) => d.setting_key === 'company_email')?.setting_value
+
+          if (addr) setAddress(addr)
+          if (wapp) setPhone(wapp)
+          if (em) setEmail(em)
+        }
       })
   }, [])
 
@@ -64,21 +83,19 @@ export function Footer() {
             <h3 className="font-semibold text-lg mb-6 text-foreground">Informações de Contato</h3>
             <ul className="space-y-4 text-sm w-full">
               <li className="flex items-start md:justify-end gap-4 text-muted-foreground group">
-                <span className="pt-1 leading-relaxed text-left md:text-right">
-                  1735 NW 79th Av., Doral, FL 33126
-                </span>
+                <span className="pt-1 leading-relaxed text-left md:text-right">{address}</span>
                 <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
                   <MapPin className="w-4 h-4" />
                 </div>
               </li>
               <li className="flex items-center md:justify-end gap-4 text-muted-foreground group">
-                <span className="font-medium tracking-wide">+1-786-716-1170</span>
+                <span className="font-medium tracking-wide">{phone}</span>
                 <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
                   <Phone className="w-4 h-4" />
                 </div>
               </li>
               <li className="flex items-center md:justify-end gap-4 text-muted-foreground group">
-                <span>sales@mywayvideo.com</span>
+                <span>{email}</span>
                 <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
                   <Mail className="w-4 h-4" />
                 </div>
