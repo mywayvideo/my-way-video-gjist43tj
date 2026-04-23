@@ -59,8 +59,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const fetchCart = useCallback(async () => {
-    if (window.location.pathname === '/') return
-
     if (user) {
       setIsLoading(true)
       try {

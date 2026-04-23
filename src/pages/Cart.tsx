@@ -32,6 +32,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
 import { Card, CardContent } from '@/components/ui/card'
+import { ProductCard } from '@/components/ProductCard'
 
 export default function Cart() {
   const { currentUser: user } = useAuthContext()
@@ -99,7 +100,9 @@ export default function Cart() {
     const fetchRecommended = async () => {
       const { data } = await supabase
         .from('products')
-        .select('id, name, image_url, price_usd, price_brl')
+        .select(
+          'id, name, image_url, price_usd, price_brl, price_nationalized_sales, manufacturers(name)',
+        )
         .eq('is_discontinued', false)
         .order('created_at', { ascending: false })
         .limit(4)
@@ -360,29 +363,9 @@ export default function Cart() {
         {recommendedProducts.length > 0 && (
           <div className="mt-20">
             <h3 className="text-xl font-bold mb-6">Recomendados para você</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               {recommendedProducts.map((p) => (
-                <Link key={p.id} to={`/product/${p.id}`}>
-                  <Card className="hover:border-primary/50 transition-colors h-full">
-                    <CardContent className="p-4 flex flex-col items-center text-center h-full">
-                      <div className="w-full h-32 mb-4 bg-muted/20 rounded-md flex items-center justify-center">
-                        {p.image_url ? (
-                          <img
-                            src={p.image_url}
-                            alt={p.name}
-                            className="h-full object-contain p-2"
-                          />
-                        ) : (
-                          <ShoppingCart className="w-8 h-8 text-muted-foreground/30" />
-                        )}
-                      </div>
-                      <h4 className="font-semibold text-sm line-clamp-2 mb-2">{p.name}</h4>
-                      <p className="text-primary font-bold text-sm mt-auto">
-                        A partir de ${p.price_usd?.toFixed(2)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           </div>
@@ -661,25 +644,9 @@ export default function Cart() {
       {recommendedProducts.length > 0 && (
         <div className="mt-20 border-t border-border pt-12">
           <h3 className="text-xl font-bold mb-6">Recomendados para você</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {recommendedProducts.map((p) => (
-              <Link key={p.id} to={`/product/${p.id}`}>
-                <Card className="hover:border-primary/50 transition-colors h-full">
-                  <CardContent className="p-4 flex flex-col items-center text-center h-full">
-                    <div className="w-full h-32 mb-4 bg-muted/20 rounded-md flex items-center justify-center">
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} className="h-full object-contain p-2" />
-                      ) : (
-                        <ShoppingCart className="w-8 h-8 text-muted-foreground/30" />
-                      )}
-                    </div>
-                    <h4 className="font-semibold text-sm line-clamp-2 mb-2">{p.name}</h4>
-                    <p className="text-primary font-bold text-sm mt-auto">
-                      A partir de ${p.price_usd?.toFixed(2)}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </div>

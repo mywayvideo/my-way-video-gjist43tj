@@ -2,11 +2,9 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, HelpCircle, Heart, MessageCircle } from 'lucide-react'
-import { formatPrice } from '@/utils/priceFormatter'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
-import { ProductPrice } from '@/components/ProductPrice'
 import { useProductDiscount } from '@/hooks/useProductDiscount'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useState } from 'react'
@@ -155,23 +153,72 @@ export function ProductCard({ product }: { product: any }) {
             {product.name}
           </h3>
         </Link>
-        <div className="mt-auto pt-1 flex flex-col items-center w-full">
-          {hasPrice &&
-            (!product.price_usd || product.price_usd <= 0) &&
-            product.price_nationalized_sales > 0 && (
-              <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1">
-                Preço Brasil
-              </span>
-            )}
-          {hasPrice && (
-            <ProductPrice
-              originalPrice={originalPrice}
-              discountedPrice={discountedPrice}
-              weight={product.weight}
-              discountPercentage={discountPercentage}
-              ruleName={ruleName}
-              currency={currency}
-            />
+        <div className="mt-auto pt-1 flex flex-col items-start w-full">
+          {discountPercentage > 0 && (
+            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1 inline-block">
+              {discountPercentage.toFixed(0)}% OFF
+            </span>
+          )}
+          {hasPrice ? (
+            <div className="flex flex-col gap-1 w-full mt-1">
+              {product.price_usd > 0 && (
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    USA
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {discountPercentage > 0 && currency === 'USD' && (
+                      <span className="text-[10px] text-muted-foreground line-through">
+                        US${' '}
+                        {originalPrice.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    )}
+                    <span className="font-bold text-sm text-foreground">
+                      US${' '}
+                      {(currency === 'USD' ? discountedPrice : product.price_usd).toLocaleString(
+                        'en-US',
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {(product.price_brl > 0 || product.price_nationalized_sales > 0) && (
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-[10px] text-emerald-600 uppercase font-semibold">
+                    Brasil
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {discountPercentage > 0 && currency === 'BRL' && (
+                      <span className="text-[10px] text-muted-foreground line-through">
+                        R${' '}
+                        {originalPrice.toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    )}
+                    <span className="font-bold text-sm text-emerald-600">
+                      R${' '}
+                      {(currency === 'BRL'
+                        ? discountedPrice
+                        : product.price_brl || product.price_nationalized_sales
+                      ).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm font-medium text-muted-foreground mt-1 inline-block">
+              Preço sob consulta
+            </span>
           )}
         </div>
       </CardContent>

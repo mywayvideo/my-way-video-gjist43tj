@@ -120,9 +120,7 @@ export function ResponseFormatter({
       )}
 
       {displayProducts && displayProducts.length > 0 && (
-        <div
-          className={`grid gap-6 mt-8 ${gridConfig.columns_mobile === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${gridConfig.columns_desktop === 3 ? 'md:grid-cols-3' : gridConfig.columns_desktop === 4 ? 'md:grid-cols-4' : 'md:grid-cols-4'}`}
-        >
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mt-8">
           {displayProducts.map((product) => (
             <ProductCard key={product.id} product={product as any} />
           ))}
