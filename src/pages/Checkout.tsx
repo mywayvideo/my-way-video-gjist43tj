@@ -453,7 +453,7 @@ export default function Checkout() {
 
   const formatCurrency = (value: number, currencyParam?: string) => {
     const curr = currencyParam || (destType === 'brasil' ? 'BRL' : 'USD')
-    return new Intl.NumberFormat(curr === 'BRL' ? 'pt-BR' : 'en-US', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: curr,
     }).format(value)
@@ -1323,15 +1323,15 @@ export default function Checkout() {
       localStorage.removeItem('cart')
       localStorage.removeItem('myway_local_cart')
       setCreatedOrderId(order_id)
-      setOrderConfirmed(true)
 
-      if (paymentMethod === 'transferencia_brasil') {
-        toast({ description: 'Pedido criado! Dados bancários serão enviados por email.' })
-      } else if (paymentMethod === 'pix') {
-        toast({ description: 'Pedido criado! Dados PIX serão enviados por email.' })
-      } else {
-        toast({ description: 'Pedido criado! Aguardando confirmação do pagamento.' })
-      }
+      toast({
+        description: 'Pedido confirmado com sucesso! Redirecionando para seu histórico...',
+        className: 'bg-emerald-600 text-white border-emerald-700',
+      })
+
+      setTimeout(() => {
+        navigate('/dashboard')
+      }, 1000)
     } catch (err: any) {
       toast({
         description: err.message || 'Erro ao processar pedido. Tente novamente.',
@@ -2225,8 +2225,8 @@ Valor: ${formatCurrency(total)}
         Checkout Automatizado
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-        <div className="lg:col-span-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
           {/* STEP 1 */}
           <StepWrapper
             step={1}
@@ -2787,43 +2787,13 @@ Valor: ${formatCurrency(total)}
           </StepWrapper>
         </div>
 
-        {/* Right Column Summary - Desktop Only */}
-        <div className="hidden lg:block lg:col-span-4">
-          <div className="bg-slate-50 rounded-2xl p-8 sticky top-8 border border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        {/* Right Column Summary */}
+        <div className="block w-full lg:col-span-1">
+          <div className="bg-slate-50 rounded-2xl p-8 sticky top-24 border border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
             <h3 className="text-2xl font-bold text-slate-900 mb-6">Resumo do Pedido</h3>
             {renderOrderSummary()}
           </div>
         </div>
-      </div>
-
-      {/* Mobile Sticky Summary Drawer */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 z-50 flex justify-between items-center shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-safe">
-        <div>
-          <p className="text-sm font-semibold text-[hsl(215,15%,45%)] uppercase tracking-wider mb-0.5">
-            Total a Pagar
-          </p>
-          <p className="text-2xl font-bold text-[hsl(152,68%,40%)] font-mono tracking-tight">
-            {formatCurrency(total)}
-          </p>
-        </div>
-        <Sheet>
-          <SheetTrigger asChild>
-            <button className="text-[hsl(152,68%,40%)] bg-[hsl(152,68%,95%)] font-bold px-6 py-3 border-2 border-[hsl(152,68%,40%)] hover:bg-[hsl(152,68%,90%)] rounded-xl transition-colors shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(152,68%,40%)]">
-              Ver Resumo
-            </button>
-          </SheetTrigger>
-          <SheetContent
-            side="bottom"
-            className="rounded-t-[2rem] px-6 pt-8 pb-12 bg-white max-h-[85vh] overflow-y-auto border-t border-slate-200 shadow-2xl"
-          >
-            <SheetHeader className="mb-6 text-left">
-              <SheetTitle className="text-2xl font-bold text-slate-900">
-                Resumo do Pedido
-              </SheetTitle>
-            </SheetHeader>
-            {renderOrderSummary()}
-          </SheetContent>
-        </Sheet>
       </div>
     </div>
   )
