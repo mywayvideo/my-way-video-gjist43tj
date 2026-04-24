@@ -41,7 +41,7 @@ export function ProductCard({ product }: { product: any }) {
       particle.style.position = 'fixed'
       particle.style.left = `${x}px`
       particle.style.top = `${y}px`
-      particle.style.color = '#ef4444'
+      particle.style.color = '#00FF00'
       particle.style.fontSize = '12px'
       particle.style.pointerEvents = 'none'
       particle.style.zIndex = '9999'
@@ -107,25 +107,25 @@ export function ProductCard({ product }: { product: any }) {
   }
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative">
+    <Card className="flex flex-col h-full overflow-hidden group bg-[#000000] border border-[#00FF00] shadow-[0_0_5px_#00FF00] text-[#00FF00] font-mono rounded-none transition-colors relative">
       <CardHeader className="p-0 relative">
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
           {product.is_discontinued && (
-            <div className="bg-yellow-100 text-yellow-700 rounded-md px-2 py-1 font-[600] text-xs shadow-sm pointer-events-none">
+            <div className="bg-[#00FF00] text-black px-2 py-1 font-bold text-xs pointer-events-none rounded-none uppercase tracking-wider shadow-sm">
               DESCONTINUADO
             </div>
           )}
           <Button
             variant="secondary"
             size="icon"
-            className="h-8 w-8 rounded-full shadow-sm bg-white/80 hover:bg-white backdrop-blur-sm transition-all"
+            className="h-8 w-8 rounded-none border border-[#00FF00] bg-transparent hover:bg-[#00FF00] text-[#00FF00] hover:text-black transition-all shadow-sm"
             onClick={handleToggleFavorite}
             disabled={favLoading}
           >
             <Heart
               className={cn(
                 'h-4 w-4 transition-colors',
-                isFavorite(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
+                isFavorite(product.id) ? 'fill-current' : '',
               )}
             />
           </Button>
@@ -133,30 +133,36 @@ export function ProductCard({ product }: { product: any }) {
         <Link
           to={linkTo}
           onClick={handleLinkClick}
-          className="w-full h-[200px] overflow-hidden rounded bg-muted/30 flex items-center justify-center"
+          className="w-full h-[200px] overflow-hidden bg-black flex items-center justify-center relative p-3"
         >
+          {/* Corner brackets simulating targeting reticle */}
+          <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#00FF00]"></div>
+          <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#00FF00]"></div>
+          <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#00FF00]"></div>
+          <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#00FF00]"></div>
+
           <ImageWithFallback
             src={product.image_url}
             alt={product.name}
             productId={product.id}
-            className="w-full h-full object-cover rounded transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
       </CardHeader>
       <CardContent className="flex-1 p-5 flex flex-col text-left">
         <Link to={linkTo} onClick={handleLinkClick} className="mb-2 block w-full">
           {product.manufacturers?.name && (
-            <span className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+            <span className="text-[10px] md:text-xs font-bold opacity-80 uppercase tracking-wider mb-1 block">
               {product.manufacturers.name}
             </span>
           )}
-          <h3 className="font-semibold text-sm md:text-base group-hover:text-primary transition-colors line-clamp-3 h-[60px] md:h-[72px] text-left">
+          <h3 className="font-bold text-sm md:text-base line-clamp-3 h-[60px] md:h-[72px] text-left">
             {product.name}
           </h3>
         </Link>
         <div className="mt-auto pt-1 flex flex-col items-start w-full min-h-[50px]">
           {discountPercentage > 0 && (
-            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1 inline-block">
+            <span className="bg-[#00FF00] text-black px-2 py-0.5 rounded-none text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1 inline-block">
               {discountPercentage.toFixed(0)}% OFF
             </span>
           )}
@@ -164,59 +170,25 @@ export function ProductCard({ product }: { product: any }) {
             hasPrice ? (
               <div className="flex flex-col gap-1 w-full mt-1">
                 {primaryPrice && (
-                  <div className="flex items-center justify-between w-full truncate">
-                    <span
-                      className={cn(
-                        'text-[10px] uppercase font-semibold',
-                        primaryPrice.currency === 'BRL'
-                          ? 'text-emerald-600'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      {primaryPrice.label}
-                    </span>
-                    <span
-                      className={cn(
-                        'font-bold text-sm truncate',
-                        primaryPrice.currency === 'BRL' ? 'text-emerald-600' : 'text-foreground',
-                      )}
-                    >
-                      {formatCurrency(primaryPrice.value, primaryPrice.currency)}
-                    </span>
+                  <div className="text-2xl font-bold whitespace-nowrap">
+                    {formatCurrency(primaryPrice.value, primaryPrice.currency)}
                   </div>
                 )}
                 {secondaryPrice && (
-                  <div className="flex items-center justify-between w-full truncate">
-                    <span
-                      className={cn(
-                        'text-[10px] uppercase font-semibold',
-                        secondaryPrice.currency === 'BRL'
-                          ? 'text-emerald-600'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      {secondaryPrice.label}
-                    </span>
-                    <span
-                      className={cn(
-                        'font-bold text-sm truncate',
-                        secondaryPrice.currency === 'BRL' ? 'text-emerald-600' : 'text-foreground',
-                      )}
-                    >
-                      {formatCurrency(secondaryPrice.value, secondaryPrice.currency)}
-                    </span>
+                  <div className="text-xs opacity-70 whitespace-nowrap">
+                    {formatCurrency(secondaryPrice.value, secondaryPrice.currency)}
                   </div>
                 )}
               </div>
             ) : (
-              <span className="text-sm font-medium text-muted-foreground mt-1 inline-block">
+              <span className="text-sm font-bold opacity-70 mt-1 inline-block uppercase">
                 PREÇO SOB CONSULTA
               </span>
             )
           ) : (
             <div className="w-full space-y-2 mt-2">
-              <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
-              <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+              <div className="h-6 bg-[#00FF00]/20 animate-pulse rounded-none w-full"></div>
+              <div className="h-4 bg-[#00FF00]/20 animate-pulse rounded-none w-3/4"></div>
             </div>
           )}
         </div>
@@ -224,7 +196,7 @@ export function ProductCard({ product }: { product: any }) {
       <CardFooter className="p-5 pt-0 mt-auto">
         {hasPrice && !pricingLoading ? (
           <Button
-            className="w-full gap-2 transition-all hover:scale-[1.02]"
+            className="w-full gap-2 transition-all border border-[#00FF00] bg-transparent text-[#00FF00] hover:bg-[#00FF00] hover:text-black rounded-none font-bold uppercase tracking-wider"
             onClick={() => setShowQtyModal(true)}
           >
             <ShoppingCart className="w-4 h-4" />
@@ -232,7 +204,7 @@ export function ProductCard({ product }: { product: any }) {
           </Button>
         ) : (
           <Button
-            className="w-full gap-2 transition-all hover:scale-[1.02] bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="w-full gap-2 transition-all border border-[#00FF00] bg-transparent text-[#00FF00] hover:bg-[#00FF00] hover:text-black rounded-none font-bold uppercase tracking-wider"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
