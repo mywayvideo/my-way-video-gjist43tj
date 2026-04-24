@@ -273,7 +273,22 @@ export function useUnifiedSearch() {
         const stockSkus = currentUnifiedData.stock.map((p: any) => p.sku).filter(Boolean)
         const mentionedSkus = stockSkus.filter((sku: string) => finalMessage.includes(sku))
 
+        // Varredura de SKUs e UUIDs mencionados DIRETAMENTE NO PROMPT DO USUÁRIO
+        const promptUuids = cleanQuery.match(uuidRegex) || []
+        const promptMentionedSkus = stockSkus.filter((sku: string) =>
+          cleanQuery.toLowerCase().includes(sku.toLowerCase()),
+        )
+
+        // Extração de possíveis SKUs do prompt (palavras com letras e números)
+        const potentialPromptSkus = cleanQuery
+          .replace(/[^\w\s-]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length >= 3 && /[0-9]/.test(w) && /[a-zA-Z]/.test(w))
+
         let allIdsOrObjects = [
+          ...promptUuids,
+          ...promptMentionedSkus,
+          ...potentialPromptSkus,
           ...aiReturnedProducts,
           ...referencedIds,
           ...textUuids,
@@ -293,7 +308,11 @@ export function useUnifiedSearch() {
         if (uniqueItems.length > 0) {
           const hydrated = uniqueItems.map((item: any) => {
             if (typeof item === 'object' && item !== null && item.id) return item
-            const found = currentUnifiedData.stock.find((p: any) => p.id === item || p.sku === item)
+            const found = currentUnifiedData.stock.find(
+              (p: any) =>
+                p.id === item ||
+                (typeof item === 'string' && p.sku?.toLowerCase() === item.toLowerCase()),
+            )
             return found || item
           })
 
@@ -313,14 +332,23 @@ export function useUnifiedSearch() {
           }
 
           if (missingSkus.length > 0) {
-            const { data } = await supabase.from('products').select('*').in('sku', missingSkus)
+            // Fazer busca case-insensitive para SKUs (adicionando versões maiúsculas)
+            const missingSkusUpper = missingSkus.map((s: string) => s.toUpperCase())
+            const { data } = await supabase
+              .from('products')
+              .select('*')
+              .in('sku', [...missingSkus, ...missingSkusUpper])
             if (data) fetchedMissing = [...fetchedMissing, ...data]
           }
 
           aiReturnedProducts = hydrated
             .map((p: any) => {
               if (typeof p === 'string') {
-                return fetchedMissing.find((m) => m.id === p || m.sku === p) || null
+                return (
+                  fetchedMissing.find(
+                    (m) => m.id === p || m.sku?.toLowerCase() === p.toLowerCase(),
+                  ) || null
+                )
               }
               return p
             })
