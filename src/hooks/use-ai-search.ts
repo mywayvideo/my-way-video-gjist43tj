@@ -269,7 +269,16 @@ export function useUnifiedSearch() {
         const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
         const textUuids = finalMessage.match(uuidRegex) || []
 
-        let allIdsOrObjects = [...aiReturnedProducts, ...referencedIds, ...textUuids]
+        // Varredura de SKUs mencionados no texto (cruzando com os produtos que já estão no contexto)
+        const stockSkus = currentUnifiedData.stock.map((p: any) => p.sku).filter(Boolean)
+        const mentionedSkus = stockSkus.filter((sku: string) => finalMessage.includes(sku))
+
+        let allIdsOrObjects = [
+          ...aiReturnedProducts,
+          ...referencedIds,
+          ...textUuids,
+          ...mentionedSkus,
+        ]
         const uniqueItems: any[] = []
         const seenIds = new Set()
 
@@ -284,7 +293,7 @@ export function useUnifiedSearch() {
         if (uniqueItems.length > 0) {
           const hydrated = uniqueItems.map((item: any) => {
             if (typeof item === 'object' && item !== null && item.id) return item
-            const found = currentUnifiedData.stock.find((p: any) => p.id === item)
+            const found = currentUnifiedData.stock.find((p: any) => p.id === item || p.sku === item)
             return found || item
           })
 
