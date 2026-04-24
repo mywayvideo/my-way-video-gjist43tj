@@ -110,7 +110,7 @@ export function ProductPrice({
                     : 'items-end text-right',
               )}
             >
-              <span className="text-[12px] font-medium text-green-600 dark:text-green-400">
+              <span className="text-[12px] font-medium text-green-600 dark:text-green-400 animate-pulse">
                 Economize {formatPrice(originalPrice - discountedPrice!)}
               </span>
               {ruleName && (

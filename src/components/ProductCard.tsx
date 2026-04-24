@@ -157,7 +157,7 @@ export function ProductCard({ product }: { product: any }) {
   const savingsValue = showSavings ? mainOriginalVal! - mainPriceVal! : 0
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden group bg-card border hover:border-primary/50 transition-all duration-300 relative shadow-sm hover:shadow-md rounded-xl">
+    <Card className="flex flex-col h-full overflow-hidden group bg-card border-transparent transition-all duration-300 relative shadow-sm hover:shadow-xl hover:-translate-y-1 rounded-xl">
       <CardHeader className="p-0 relative bg-white dark:bg-zinc-950">
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
           {product.is_discontinued && (
@@ -185,7 +185,9 @@ export function ProductCard({ product }: { product: any }) {
             <Heart
               className={cn(
                 'h-4 w-4 transition-colors',
-                isFavorite(product.id) ? 'fill-primary text-primary' : 'text-muted-foreground',
+                isFavorite(product.id)
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-gray-400 hover:text-red-400',
               )}
             />
           </Button>
@@ -204,8 +206,8 @@ export function ProductCard({ product }: { product: any }) {
         </Link>
       </CardHeader>
 
-      <CardContent className="flex-1 p-4 flex flex-col gap-3 border-t">
-        <Link to={linkTo} onClick={handleLinkClick} className="flex-1">
+      <CardContent className="flex-1 p-4 flex flex-col gap-3">
+        <Link to={linkTo} onClick={handleLinkClick} className="flex flex-col gap-1">
           {product.manufacturers?.name && (
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
               {product.manufacturers.name}
@@ -216,7 +218,7 @@ export function ProductCard({ product }: { product: any }) {
           </h3>
         </Link>
 
-        <div className="mt-auto flex flex-col items-start w-full min-h-[60px]">
+        <div className="flex flex-col items-start w-full min-h-[60px]">
           {!pricingLoading ? (
             hasAnyPrice ? (
               <div className="flex flex-col w-full gap-1">
@@ -229,13 +231,13 @@ export function ProductCard({ product }: { product: any }) {
                       </span>
                     )}
                     <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-                      <span className="text-xl font-bold text-foreground">
+                      <span className="text-xl font-bold text-green-500">
                         {formatCurrency(mainPriceVal, mainCurrency)}
                       </span>
                       <span className="text-xs font-medium text-muted-foreground">{mainLabel}</span>
                     </div>
                     {showSavings && (
-                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5 whitespace-nowrap">
+                      <span className="text-[11px] font-medium text-green-600 dark:text-green-400 mt-0.5 whitespace-nowrap animate-pulse">
                         Economize {formatCurrency(savingsValue, mainCurrency)}
                       </span>
                     )}
