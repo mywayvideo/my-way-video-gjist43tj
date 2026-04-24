@@ -234,6 +234,8 @@ export default function Product() {
     (priceUsd: number, weightLb: number) => {
       if (!priceUsd || exchangeRate === 0) return null
 
+      if (!weightLb || weightLb <= 0) return null
+
       const weight_kg = weightLb / 2.204
       const total_weight_kg = weight_kg + additionalWeightKg
       const freight_usd = total_weight_kg * pricePerKg
@@ -251,6 +253,27 @@ export default function Product() {
 
   const priceBrlResult = useMemo(() => {
     if (!product) return null
+
+    const hasNat = (product.price_nationalized_sales || 0) > 0
+
+    if (hasNat) {
+      let natOriginal =
+        product.price_nationalized_currency === 'USD'
+          ? product.price_nationalized_sales! * exchangeRate
+          : product.price_nationalized_sales!
+
+      let natFinal = natOriginal
+      if (discountPercentage > 0) {
+        natFinal = natOriginal * (1 - discountPercentage / 100)
+      }
+
+      return {
+        total_brl: natFinal,
+        original_brl: natOriginal,
+        savings_brl: natOriginal - natFinal,
+      }
+    }
+
     const usdOrig = originalPrice && originalPrice > 0 ? originalPrice : product.price_usd || 0
     const usdFinal = discountedPrice && discountedPrice > 0 ? discountedPrice : usdOrig
 
@@ -264,7 +287,7 @@ export default function Product() {
       original_brl: origCalc?.total_brl || finalCalc.total_brl,
       savings_brl: (origCalc?.total_brl || 0) - finalCalc.total_brl,
     }
-  }, [calculatePriceBRL, product, originalPrice, discountedPrice])
+  }, [calculatePriceBRL, product, originalPrice, discountedPrice, discountPercentage, exchangeRate])
 
   const handleToggleFavorite = async () => {
     if (!product) return
@@ -1058,8 +1081,10 @@ export default function Product() {
                     Preço sob consulta
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {!product?.weight ? 'Peso não cadastrado. ' : ''}Entre em contato para um
-                    orçamento detalhado em BRL.
+                    {!product?.weight && !(product?.price_nationalized_sales || 0)
+                      ? 'Peso e preço nacional não cadastrados. '
+                      : ''}
+                    Entre em contato para um orçamento detalhado em BRL.
                   </p>
                 </div>
               ) : (
