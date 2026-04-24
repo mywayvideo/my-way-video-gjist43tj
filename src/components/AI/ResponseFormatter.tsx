@@ -31,7 +31,15 @@ export function ResponseFormatter({
   stock = [],
   confidenceLevel = 'high',
 }: ResponseFormatterProps) {
-  const displayProducts = products && products.length > 0 ? products : stock
+  const displayProductsRaw = products && products.length > 0 ? products : stock
+  const displayProducts = []
+  const seenIds = new Set()
+  for (const p of displayProductsRaw) {
+    if (p && p.id && !seenIds.has(p.id)) {
+      seenIds.add(p.id)
+      displayProducts.push(p)
+    }
+  }
   const { settings } = useAISettings()
   const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
   const [gridConfig, setGridConfig] = useState({ columns_desktop: 4, columns_mobile: 2 })

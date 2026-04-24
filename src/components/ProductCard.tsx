@@ -159,19 +159,19 @@ export function ProductCard({ product }: { product: any }) {
   return (
     <Card className="flex flex-col h-full overflow-hidden group bg-card border-transparent transition-all duration-300 relative shadow-sm hover:shadow-xl hover:-translate-y-1 rounded-xl">
       <CardHeader className="p-0 relative bg-white dark:bg-zinc-950">
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-2 items-start pointer-events-none">
+        <div className="absolute top-3 left-2 z-10 flex flex-col gap-2 items-start pointer-events-none">
           {product.is_discontinued && (
-            <div className="bg-destructive text-destructive-foreground px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider">
+            <div className="bg-destructive text-destructive-foreground px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider flex items-center h-6">
               Descontinuado
             </div>
           )}
           {isRebateActive && (
-            <div className="bg-amber-500 text-white px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider">
+            <div className="bg-green-600 text-white px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider flex items-center h-6">
               Rebate
             </div>
           )}
           {discountPercentage > 0 && !isRebateActive && (
-            <div className="bg-primary text-primary-foreground px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider">
+            <div className="bg-green-600 text-white px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider flex items-center h-6">
               {discountPercentage.toFixed(0)}% OFF
             </div>
           )}
