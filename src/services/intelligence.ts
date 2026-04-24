@@ -206,14 +206,15 @@ ${JSON.stringify(nabJson)}
   }
 
   let aiMentionedProducts: any[] = []
-  if (
-    result.referenced_internal_products &&
-    Array.isArray(result.referenced_internal_products) &&
-    result.referenced_internal_products.length > 0
-  ) {
-    aiMentionedProducts = contextProducts.filter((p: any) =>
-      result.referenced_internal_products.includes(p.id),
-    )
+  let refs = result.referenced_internal_products || []
+  if (!Array.isArray(refs) || refs.length === 0) {
+    if (result.products && Array.isArray(result.products)) {
+      refs = result.products.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
+    }
+  }
+
+  if (refs && Array.isArray(refs) && refs.length > 0) {
+    aiMentionedProducts = contextProducts.filter((p: any) => refs.includes(p.id))
   }
 
   return {
