@@ -229,9 +229,49 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
 
+        let aiReturnedProducts = aiResponse.products || []
+        const referencedIds = aiResponse.referenced_internal_products || []
+
+        let allIdsOrObjects = [...aiReturnedProducts, ...referencedIds]
+        const uniqueItems: any[] = []
+        const seenIds = new Set()
+
+        for (const item of allIdsOrObjects) {
+          const id = typeof item === 'object' && item !== null ? item.id : item
+          if (id && !seenIds.has(id)) {
+            seenIds.add(id)
+            uniqueItems.push(item)
+          }
+        }
+
+        if (uniqueItems.length > 0) {
+          const hydrated = uniqueItems.map((item: any) => {
+            if (typeof item === 'object' && item !== null && item.id) return item
+            const found = currentUnifiedData.stock.find((p: any) => p.id === item)
+            return found || item
+          })
+
+          const missingIds = hydrated.filter((p: any) => typeof p === 'string')
+          let fetchedMissing: any[] = []
+
+          if (missingIds.length > 0) {
+            const { data } = await supabase.from('products').select('*').in('id', missingIds)
+            if (data) fetchedMissing = data
+          }
+
+          aiReturnedProducts = hydrated
+            .map((p: any) => {
+              if (typeof p === 'string') {
+                return fetchedMissing.find((m) => m.id === p) || null
+              }
+              return p
+            })
+            .filter(Boolean)
+        }
+
         // Render ALL products returned explicitly by AI
-        if (aiResponse.products && aiResponse.products.length > 0) {
-          finalProducts = aiResponse.products
+        if (aiReturnedProducts && aiReturnedProducts.length > 0) {
+          finalProducts = aiReturnedProducts
         } else if (newProducts.length > 0) {
           finalProducts = newProducts
         } else {
