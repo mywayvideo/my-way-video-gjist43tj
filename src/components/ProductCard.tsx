@@ -1,49 +1,34 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, HelpCircle, Heart, MessageCircle } from 'lucide-react'
+import { ShoppingCart, Heart, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
-import { useProductDiscount } from '@/hooks/useProductDiscount'
 import { useFavorites } from '@/hooks/useFavorites'
 import { useState } from 'react'
 import { QuantityModal } from '@/components/QuantityModal'
-import { useExchangeRate } from '@/hooks/use-exchange-rate'
+import { usePricing } from '@/hooks/use-pricing'
+import { useProductDiscount } from '@/hooks/useProductDiscount'
 
 export function ProductCard({ product }: { product: any }) {
   const [showQtyModal, setShowQtyModal] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
-  const exchangeRate = useExchangeRate()
-  const { originalPrice, discountedPrice, discountPercentage, ruleName, currency } =
-    useProductDiscount(product)
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
   const [favLoading, setFavLoading] = useState(false)
 
-  const hasNationalizedPrice =
-    product.price_nationalized_sales && product.price_nationalized_sales > 0
-  const hasUsaPriceWithWeight = product.price_usd > 0 && product.weight > 0
+  const { primaryPrice, secondaryPrice, isLoading: pricingLoading } = usePricing(product)
+  const { discountPercentage } = useProductDiscount(product)
 
-  const hasPrice = hasNationalizedPrice || hasUsaPriceWithWeight
+  const hasPrice = primaryPrice !== null || secondaryPrice !== null
 
   const triggerFavoriteEffects = (e: React.MouseEvent) => {
     try {
       const audio = new Audio('/sounds/coin-drop.mp3')
       audio.volume = 0.5
-      audio.play().catch(() => {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.setValueAtTime(800, ctx.currentTime)
-        gain.gain.setValueAtTime(0.5, ctx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
-        osc.start(ctx.currentTime)
-        osc.stop(ctx.currentTime + 0.5)
-      })
-    } catch (err) {
-      // Ignore audio play errors
+      audio.play().catch(() => {})
+    } catch {
+      /* intentionally ignored */
     }
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -109,6 +94,18 @@ export function ProductCard({ product }: { product: any }) {
     }
   }
 
+  const formatCurrency = (val: number, currency: string) => {
+    return val
+      .toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: currency === 'USD' ? 'USD' : 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+      .replace('US$', 'US$ ')
+      .replace('R$', 'R$ ')
+  }
+
   return (
     <Card className="flex flex-col h-full overflow-hidden group border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md relative">
       <CardHeader className="p-0 relative">
@@ -157,89 +154,75 @@ export function ProductCard({ product }: { product: any }) {
             {product.name}
           </h3>
         </Link>
-        <div className="mt-auto pt-1 flex flex-col items-start w-full">
+        <div className="mt-auto pt-1 flex flex-col items-start w-full min-h-[50px]">
           {discountPercentage > 0 && (
             <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-sm text-[10px] font-bold shadow-sm uppercase tracking-wider mb-1 inline-block">
               {discountPercentage.toFixed(0)}% OFF
             </span>
           )}
-          {hasPrice ? (
-            <div className="flex flex-col gap-1 w-full mt-1">
-              {product.price_usd > 0 && (
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                    USA
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {discountPercentage > 0 && currency === 'USD' && (
-                      <span className="text-[10px] text-muted-foreground line-through">
-                        US${' '}
-                        {(originalPrice || 0).toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    )}
-                    <span className="font-bold text-sm text-foreground">
-                      US${' '}
-                      {(
-                        (currency === 'USD' ? discountedPrice : product.price_usd) || 0
-                      ).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+          {!pricingLoading ? (
+            hasPrice ? (
+              <div className="flex flex-col gap-1 w-full mt-1">
+                {primaryPrice && (
+                  <div className="flex items-center justify-between w-full truncate">
+                    <span
+                      className={cn(
+                        'text-[10px] uppercase font-semibold',
+                        primaryPrice.currency === 'BRL'
+                          ? 'text-emerald-600'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {primaryPrice.label}
+                    </span>
+                    <span
+                      className={cn(
+                        'font-bold text-sm truncate',
+                        primaryPrice.currency === 'BRL' ? 'text-emerald-600' : 'text-foreground',
+                      )}
+                    >
+                      {formatCurrency(primaryPrice.value, primaryPrice.currency)}
                     </span>
                   </div>
-                </div>
-              )}
-              {(product.price_brl > 0 || product.price_nationalized_sales > 0) && (
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-[10px] text-emerald-600 uppercase font-semibold">
-                    Brasil
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {discountPercentage > 0 && currency === 'BRL' && (
-                      <span className="text-[10px] text-muted-foreground line-through">
-                        R${' '}
-                        {(originalPrice || 0).toLocaleString('pt-BR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    )}
-                    <span className="font-bold text-sm text-emerald-600">
-                      R${' '}
-                      {(() => {
-                        let finalVal = 0
-                        if (currency === 'BRL') {
-                          finalVal = discountedPrice || 0
-                        } else if (product.price_nationalized_sales > 0) {
-                          finalVal =
-                            product.price_nationalized_currency === 'USD'
-                              ? product.price_nationalized_sales * exchangeRate
-                              : product.price_nationalized_sales
-                        } else {
-                          finalVal = product.price_brl || 0
-                        }
-                        return finalVal.toLocaleString('pt-BR', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
-                      })()}
+                )}
+                {secondaryPrice && (
+                  <div className="flex items-center justify-between w-full truncate">
+                    <span
+                      className={cn(
+                        'text-[10px] uppercase font-semibold',
+                        secondaryPrice.currency === 'BRL'
+                          ? 'text-emerald-600'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {secondaryPrice.label}
+                    </span>
+                    <span
+                      className={cn(
+                        'font-bold text-sm truncate',
+                        secondaryPrice.currency === 'BRL' ? 'text-emerald-600' : 'text-foreground',
+                      )}
+                    >
+                      {formatCurrency(secondaryPrice.value, secondaryPrice.currency)}
                     </span>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <span className="text-sm font-medium text-muted-foreground mt-1 inline-block">
+                PREÇO SOB CONSULTA
+              </span>
+            )
           ) : (
-            <span className="text-sm font-medium text-muted-foreground mt-1 inline-block">
-              Preço sob consulta
-            </span>
+            <div className="w-full space-y-2 mt-2">
+              <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
+              <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+            </div>
           )}
         </div>
       </CardContent>
       <CardFooter className="p-5 pt-0 mt-auto">
-        {hasPrice ? (
+        {hasPrice && !pricingLoading ? (
           <Button
             className="w-full gap-2 transition-all hover:scale-[1.02]"
             onClick={() => setShowQtyModal(true)}
