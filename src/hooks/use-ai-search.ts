@@ -21,11 +21,12 @@ export function useUnifiedSearch() {
     const { data: aiSettingsData } = await supabase
       .from('ai_settings')
       .select('ignore_stock_count')
+      .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
 
     const ignoreStockCount =
-      aiSettingsData?.ignore_stock_count ?? settings?.ignore_stock_count ?? false
+      aiSettingsData?.ignore_stock_count ?? settings?.ignore_stock_count ?? true
 
     let products: any[] = []
     let cache: any[] = []
@@ -43,6 +44,7 @@ export function useUnifiedSearch() {
       console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)
       console.log('SEARCH_STATE:', { term: cleanQuery, ignoreStock: ignoreStockCount })
 
+      // 1. Busca Unificada Padrão
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
         search_term: cleanQuery,
       })
@@ -56,18 +58,48 @@ export function useUnifiedSearch() {
         nab = responseObj.nab_data || []
       }
 
-      // Augment products with full_specs if not present
-      if (products.length > 0 && !products[0].full_specs && !products[0].technical_info) {
-        const productIds = products.map((p: any) => p.id)
-        const { data: fullProducts } = await supabase
+      // 2. Escaneamento Prévio do Prompt (Extração de palavras-chave para garantir que produtos citados entrem no contexto)
+      const keywords = cleanQuery
+        .replace(/[^\w\s-]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 2)
+
+      if (keywords.length > 0) {
+        const orConditions = keywords.map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`).join(',')
+        const { data: kwProducts } = await supabase
           .from('products')
           .select('*')
-          .in('id', productIds)
-        if (fullProducts) {
-          products = products.map((p: any) => {
-            const fullP = fullProducts.find((fp) => fp.id === p.id)
-            return fullP ? { ...p, ...fullP, full_specs: fullP.technical_info } : p
+          .or(orConditions)
+          .eq('is_discontinued', false)
+          .limit(30)
+
+        if (kwProducts && kwProducts.length > 0) {
+          const existingIds = new Set(products.map((p) => p.id))
+          kwProducts.forEach((p) => {
+            if (!existingIds.has(p.id)) {
+              products.push(p)
+              existingIds.add(p.id)
+            }
           })
+        }
+      }
+
+      // Augment products with full_specs if not present
+      if (products.length > 0) {
+        const productIdsToFetch = products
+          .filter((p) => !p.full_specs && !p.technical_info)
+          .map((p) => p.id)
+        if (productIdsToFetch.length > 0) {
+          const { data: fullProducts } = await supabase
+            .from('products')
+            .select('*')
+            .in('id', productIdsToFetch)
+          if (fullProducts) {
+            products = products.map((p: any) => {
+              const fullP = fullProducts.find((fp) => fp.id === p.id)
+              return fullP ? { ...p, ...fullP, full_specs: fullP.technical_info } : p
+            })
+          }
         }
       }
 
@@ -229,10 +261,15 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
 
+        // Busca de "Última Hora" (Pós-Resposta)
         let aiReturnedProducts = aiResponse.products || []
         const referencedIds = aiResponse.referenced_internal_products || []
 
-        let allIdsOrObjects = [...aiReturnedProducts, ...referencedIds]
+        // Varredura de emergência: Extrair UUIDs do texto da mensagem da IA, caso ela não tenha preenchido o array corretamente
+        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
+        const textUuids = finalMessage.match(uuidRegex) || []
+
+        let allIdsOrObjects = [...aiReturnedProducts, ...referencedIds, ...textUuids]
         const uniqueItems: any[] = []
         const seenIds = new Set()
 
@@ -251,18 +288,30 @@ export function useUnifiedSearch() {
             return found || item
           })
 
-          const missingIds = hydrated.filter((p: any) => typeof p === 'string')
+          // Separa IDs válidos (UUID) de possíveis SKUs informados incorretamente pela IA
+          const missingIds = hydrated.filter(
+            (p: any) => typeof p === 'string' && /^[0-9a-fA-F]{8}-/.test(p),
+          )
+          const missingSkus = hydrated.filter(
+            (p: any) => typeof p === 'string' && !/^[0-9a-fA-F]{8}-/.test(p),
+          )
+
           let fetchedMissing: any[] = []
 
           if (missingIds.length > 0) {
             const { data } = await supabase.from('products').select('*').in('id', missingIds)
-            if (data) fetchedMissing = data
+            if (data) fetchedMissing = [...fetchedMissing, ...data]
+          }
+
+          if (missingSkus.length > 0) {
+            const { data } = await supabase.from('products').select('*').in('sku', missingSkus)
+            if (data) fetchedMissing = [...fetchedMissing, ...data]
           }
 
           aiReturnedProducts = hydrated
             .map((p: any) => {
               if (typeof p === 'string') {
-                return fetchedMissing.find((m) => m.id === p) || null
+                return fetchedMissing.find((m) => m.id === p || m.sku === p) || null
               }
               return p
             })
