@@ -40,13 +40,74 @@ export function useUnifiedSearch() {
         sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 20;`
       }
 
-      const executedSql = sqlString.replace(/\$1/g, cleanQuery)
+      const stopWordsForRpc = new Set([
+        'que',
+        'qual',
+        'como',
+        'para',
+        'por',
+        'com',
+        'uma',
+        'um',
+        'tem',
+        'temos',
+        'voces',
+        'voce',
+        'mostrar',
+        'mostre',
+        'quero',
+        'gostaria',
+        'saber',
+        'preco',
+        'valor',
+        'sobre',
+        'esse',
+        'essa',
+        'este',
+        'esta',
+        'aqui',
+        'ali',
+        'camera',
+        'lente',
+        'cabo',
+        'modelo',
+        'marca',
+        'the',
+        'what',
+        'who',
+        'how',
+        'why',
+        'can',
+        'you',
+        'show',
+        'tell',
+        'about',
+        'price',
+        'cost',
+        'temos',
+        'favor',
+        'poderia',
+        'quais',
+      ])
+      const allWords = cleanQuery
+        .replace(/[^\w\s-]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 2)
+      const alphaNumWords = allWords.filter(
+        (w) => /[0-9]/.test(w) && !stopWordsForRpc.has(w.toLowerCase()),
+      )
+
+      // If the query has specific models/SKUs (alphanumeric), use the first one as the main search term for the RPC
+      // This mimics the search bar behavior where users just type "7m4"
+      const optimizedSearchTerm = alphaNumWords.length > 0 ? alphaNumWords[0] : cleanQuery
+
+      const executedSql = sqlString.replace(/\$1/g, optimizedSearchTerm)
       console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)
-      console.log('SEARCH_STATE:', { term: cleanQuery, ignoreStock: ignoreStockCount })
+      console.log('SEARCH_STATE:', { term: optimizedSearchTerm, ignoreStock: ignoreStockCount })
 
       // 1. Busca Unificada Padrão
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
-        search_term: cleanQuery,
+        search_term: optimizedSearchTerm,
       })
 
       if (searchError) {
@@ -62,10 +123,16 @@ export function useUnifiedSearch() {
       const keywords = cleanQuery
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
-        .filter((w) => w.length > 2)
+        .filter((w) => w.length > 2 && !stopWordsForRpc.has(w.toLowerCase()))
 
       if (keywords.length > 0) {
-        const orConditions = keywords.map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`).join(',')
+        // Prioritize keywords with numbers (like 7m4)
+        const alphaNumKeywords = keywords.filter((w) => /[0-9]/.test(w))
+        const searchKeywords = alphaNumKeywords.length > 0 ? alphaNumKeywords : keywords
+
+        const orConditions = searchKeywords
+          .map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`)
+          .join(',')
         const { data: kwProducts } = await supabase
           .from('products')
           .select('*')
@@ -193,7 +260,7 @@ export function useUnifiedSearch() {
       } else if (!isComparison && newProducts.length > 0) {
         combinedProducts = [...newProducts, ...accumulatedContext.current.products]
           .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-          .slice(0, 6)
+          .slice(0, 10)
       } else if (newProducts.length === 0) {
         combinedProducts = accumulatedContext.current.products
       }
@@ -285,7 +352,19 @@ export function useUnifiedSearch() {
           .split(/\s+/)
           .filter((w) => w.length >= 3 && /[0-9]/.test(w) && /[a-zA-Z]/.test(w))
 
+        // Adiciona os produtos que encontramos no passo "Escaneamento Prévio do Prompt"
+        // para garantir que eles tenham precedência se houver match forte.
+        const explicitSearchProducts = currentUnifiedData.stock.filter(
+          (p: any) =>
+            potentialPromptSkus.some(
+              (sku) =>
+                p.sku?.toLowerCase().includes(sku.toLowerCase()) ||
+                p.name?.toLowerCase().includes(sku.toLowerCase()),
+            ) || promptMentionedSkus.includes(p.sku),
+        )
+
         let allIdsOrObjects = [
+          ...explicitSearchProducts,
           ...promptUuids,
           ...promptMentionedSkus,
           ...potentialPromptSkus,
@@ -332,12 +411,15 @@ export function useUnifiedSearch() {
           }
 
           if (missingSkus.length > 0) {
-            // Fazer busca case-insensitive para SKUs (adicionando versões maiúsculas)
-            const missingSkusUpper = missingSkus.map((s: string) => s.toUpperCase())
+            const orConditions = missingSkus
+              .map((s: string) => `sku.ilike.%${s}%,name.ilike.%${s}%`)
+              .join(',')
             const { data } = await supabase
               .from('products')
               .select('*')
-              .in('sku', [...missingSkus, ...missingSkusUpper])
+              .or(orConditions)
+              .eq('is_discontinued', false)
+              .limit(10)
             if (data) fetchedMissing = [...fetchedMissing, ...data]
           }
 
@@ -346,7 +428,10 @@ export function useUnifiedSearch() {
               if (typeof p === 'string') {
                 return (
                   fetchedMissing.find(
-                    (m) => m.id === p || m.sku?.toLowerCase() === p.toLowerCase(),
+                    (m) =>
+                      m.id === p ||
+                      m.sku?.toLowerCase().includes(p.toLowerCase()) ||
+                      m.name?.toLowerCase().includes(p.toLowerCase()),
                   ) || null
                 )
               }
@@ -355,16 +440,30 @@ export function useUnifiedSearch() {
             .filter(Boolean)
         }
 
-        // Render ALL products returned explicitly by AI
-        if (aiReturnedProducts && aiReturnedProducts.length > 0) {
-          finalProducts = aiReturnedProducts
+        // Render ALL products returned explicitly by AI, but merged with explicit prompt matches
+        let mergedFinalProducts = [...aiReturnedProducts]
+
+        // Also ensure any product explicitly searched in the prompt is included at the top
+        if (explicitSearchProducts && explicitSearchProducts.length > 0) {
+          const existingIds = new Set(mergedFinalProducts.map((p: any) => p.id))
+
+          explicitSearchProducts.forEach((p: any) => {
+            if (!existingIds.has(p.id)) {
+              mergedFinalProducts.unshift(p) // Add to the top
+              existingIds.add(p.id)
+            }
+          })
+        }
+
+        if (mergedFinalProducts.length > 0) {
+          finalProducts = mergedFinalProducts
         } else if (newProducts.length > 0) {
           finalProducts = newProducts
         } else {
           finalProducts = []
         }
 
-        shouldShowWhatsapp = newProducts.length === 0
+        shouldShowWhatsapp = finalProducts.length === 0
       }
 
       const combinedResults = {
