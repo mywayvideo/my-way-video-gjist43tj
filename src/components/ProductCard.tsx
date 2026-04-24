@@ -159,7 +159,7 @@ export function ProductCard({ product }: { product: any }) {
   return (
     <Card className="flex flex-col h-full overflow-hidden group bg-card border-transparent transition-all duration-300 relative shadow-sm hover:shadow-xl hover:-translate-y-1 rounded-xl">
       <CardHeader className="p-0 relative bg-white dark:bg-zinc-950">
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-2 items-start">
           {product.is_discontinued && (
             <div className="bg-destructive text-destructive-foreground px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider">
               Descontinuado
@@ -175,6 +175,8 @@ export function ProductCard({ product }: { product: any }) {
               {discountPercentage.toFixed(0)}% OFF
             </div>
           )}
+        </div>
+        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
           <Button
             variant="ghost"
             size="icon"
@@ -283,7 +285,7 @@ export function ProductCard({ product }: { product: any }) {
         ) : (
           <Button
             variant="outline"
-            className="w-full gap-2 transition-all font-semibold rounded-lg border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            className="w-full gap-1.5 sm:gap-2 transition-all font-semibold rounded-lg bg-[#25D366] text-white hover:bg-[#1DA851] border-transparent hover:border-transparent hover:text-white"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -293,8 +295,8 @@ export function ProductCard({ product }: { product: any }) {
               window.open(`https://wa.me/5561981815050?text=${msg}`, '_blank')
             }}
           >
-            <MessageCircle className="w-4 h-4" />
-            Consultar Especialista
+            <MessageCircle className="w-4 h-4 shrink-0" />
+            <span className="truncate text-xs sm:text-sm">Consultar Especialista</span>
           </Button>
         )}
       </CardFooter>

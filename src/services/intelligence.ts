@@ -91,6 +91,7 @@ export async function generateResponse(query: string, unifiedData: any = {}, age
 6. Paragraphs: Maximum 2 sentences.
 7. If 'effective_price_usd' is provided for a product, use it as the base price_usd for calculations instead of the standard price_usd, as it represents an active rebate.
 8. Ao realizar buscas, o campo SKU é tão importante quanto o nome. Se o usuário digitar um código técnico, priorize a correspondência exata por SKU.
+9. IMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta". NUNCA presuma que é estoque exclusivo do Brasil pela ausência de preço em USD.
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 Retorne APENAS um objeto JSON válido com a seguinte estrutura. O campo content é a sua resposta em Markdown:
@@ -215,6 +216,44 @@ ${JSON.stringify(nabJson)}
 
   if (refs && Array.isArray(refs) && refs.length > 0) {
     aiMentionedProducts = contextProducts.filter((p: any) => refs.includes(p.id))
+  }
+
+  // Fallback text matching to ensure products mentioned are always displayed
+  const contentLowerCheckStr = content
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  const queryLowerCheckStr = query
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  if (aiMentionedProducts.length === 0) {
+    aiMentionedProducts = contextProducts.filter((p: any) => {
+      if (!p.name) return false
+      const name = p.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+      const sku = p.sku
+        ? p.sku
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+        : ''
+
+      const inContent =
+        contentLowerCheckStr.includes(name) || (sku && contentLowerCheckStr.includes(sku))
+      const inQuery = queryLowerCheckStr.includes(name) || (sku && queryLowerCheckStr.includes(sku))
+
+      return inContent || inQuery
+    })
+  }
+
+  // If still empty, return top context products to ensure SOMETHING shows if we found items.
+  if (aiMentionedProducts.length === 0 && contextProducts.length > 0) {
+    aiMentionedProducts = contextProducts.slice(0, 4)
   }
 
   return {
