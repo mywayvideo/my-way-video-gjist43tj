@@ -82,28 +82,27 @@ export function usePricing(product: any) {
     }
   }
 
-  const exchangeRate = config?.exchange_rate || 5.0
-  const spread = config?.spread_percentage || 0
-  const weightFactor = config?.weight_factor || 0
-  const fixedImportFee = config?.fixed_import_fee || 0
+  const exchangeRate = Number(config?.exchange_rate) || 5.0
+  const spread = Number(config?.spread_percentage) || 0
+  const weightFactor = Number(config?.weight_factor) || 0
+  const fixedImportFee = Number(config?.fixed_import_fee) || 0
 
-  const rateWithSpread = exchangeRate * (1 + spread / 100)
+  const calculateBRL = (baseUsd: number, w: number = 0) => {
+    const rateWithSpread = exchangeRate * (1 + spread / 100)
+    return baseUsd * rateWithSpread + w * weightFactor + fixedImportFee
+  }
 
   let primaryPrice: PriceDisplay | null = null
   let secondaryPrice: PriceDisplay | null = null
 
   const hasNationalized = priceNationalizedSales > 0
-  const hasUsaWithWeight = baseUsaPrice > 0 && weight > 0
 
-  if (!hasNationalized && !hasUsaWithWeight) {
-    primaryPrice = null
-    secondaryPrice = null
-  } else if (hasNationalized) {
+  if (hasNationalized) {
     let nationalizedVal = 0
-    if (priceNationalizedCurrency === 'BRL') {
+    if (priceNationalizedCurrency === 'USD') {
+      nationalizedVal = calculateBRL(priceNationalizedSales, 0)
+    } else {
       nationalizedVal = priceNationalizedSales
-    } else if (priceNationalizedCurrency === 'USD') {
-      nationalizedVal = priceNationalizedSales * rateWithSpread + fixedImportFee
     }
 
     primaryPrice = {
@@ -119,18 +118,18 @@ export function usePricing(product: any) {
         currency: 'USD',
       }
     }
-  } else {
+  } else if (baseUsaPrice > 0) {
     primaryPrice = {
       label: 'USA',
       value: baseUsaPrice,
       currency: 'USD',
     }
-
-    const calculatedBrl = baseUsaPrice * rateWithSpread + weight * weightFactor + fixedImportFee
-    secondaryPrice = {
-      label: 'Brasil',
-      value: calculatedBrl,
-      currency: 'BRL',
+    if (weight > 0) {
+      secondaryPrice = {
+        label: 'Brasil',
+        value: calculateBRL(baseUsaPrice, weight),
+        currency: 'BRL',
+      }
     }
   }
 
