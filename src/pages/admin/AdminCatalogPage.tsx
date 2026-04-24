@@ -29,6 +29,7 @@ import {
   ArrowUp,
   ArrowDown,
   Package,
+  Star,
 } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from '@/hooks/use-toast'
@@ -97,6 +98,7 @@ export default function AdminCatalogPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
+  const [togglingSpecialIds, setTogglingSpecialIds] = useState<Set<string>>(new Set())
 
   const [sortColumn, setSortColumn] = useState<string>('created_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
@@ -307,6 +309,40 @@ export default function AdminCatalogPage() {
   ).toLowerCase()
   const canToggleStatus = ['admin', 'administrador', 'colaborador'].includes(userRole)
 
+  const handleToggleSpecial = async (product: Product) => {
+    if (!canToggleStatus) return
+    const newStatus = !product.is_special
+
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, is_special: newStatus } : p)),
+    )
+    setTogglingSpecialIds((prev) => new Set(prev).add(product.id))
+
+    const { error } = await supabase
+      .from('products')
+      .update({ is_special: newStatus })
+      .eq('id', product.id)
+
+    setTogglingSpecialIds((prev) => {
+      const next = new Set(prev)
+      next.delete(product.id)
+      return next
+    })
+
+    if (error) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, is_special: product.is_special } : p)),
+      )
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar destaque. Tente novamente.',
+        variant: 'destructive',
+      })
+    } else {
+      toast({ title: 'Sucesso', description: 'Destaque atualizado com sucesso.' })
+    }
+  }
+
   const handleToggleStatus = async (product: Product) => {
     if (!canToggleStatus) return
     const newStatus = !product.is_discontinued
@@ -464,18 +500,26 @@ export default function AdminCatalogPage() {
                       Status {renderSortIndicator('is_discontinued')}
                     </div>
                   </TableHead>
-                  <TableHead
-                    className={sortableHeaderClasses('name')}
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center">Produto {renderSortIndicator('name')}</div>
-                  </TableHead>
                   <TableHead className="w-32">Status da Imagem</TableHead>
+                  <TableHead
+                    className={cn('w-24', sortableHeaderClasses('is_special'))}
+                    onClick={() => handleSort('is_special')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Destaque {renderSortIndicator('is_special')}
+                    </div>
+                  </TableHead>
                   <TableHead
                     className={sortableHeaderClasses('brand')}
                     onClick={() => handleSort('brand')}
                   >
                     <div className="flex items-center">Marca {renderSortIndicator('brand')}</div>
+                  </TableHead>
+                  <TableHead
+                    className={sortableHeaderClasses('name')}
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center">Produto {renderSortIndicator('name')}</div>
                   </TableHead>
                   <TableHead
                     className={sortableHeaderClasses('sku')}
@@ -535,19 +579,6 @@ export default function AdminCatalogPage() {
                         {p.is_discontinued ? 'Descontinuado' : 'Ativo'}
                       </Button>
                     </TableCell>
-                    <TableCell className="font-medium max-w-[200px]" title={p.name}>
-                      <div className="flex items-center gap-2">
-                        <span className="truncate">{p.name}</span>
-                        {p.is_discontinued && (
-                          <Badge
-                            variant="destructive"
-                            className="text-[9px] h-4 px-1 py-0 uppercase tracking-wider shrink-0"
-                          >
-                            Inativo
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
                     <TableCell>
                       {!p.image_url || p.image_url.trim() === '' ? (
                         <Badge
@@ -565,8 +596,43 @@ export default function AdminCatalogPage() {
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell className="text-center align-middle">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={!canToggleStatus || togglingSpecialIds.has(p.id)}
+                        onClick={() => handleToggleSpecial(p)}
+                        className="h-8 w-8 hover:bg-transparent"
+                      >
+                        {togglingSpecialIds.has(p.id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Star
+                            className={cn(
+                              'w-5 h-5 transition-colors',
+                              p.is_special
+                                ? 'text-amber-500 fill-amber-500'
+                                : 'text-muted-foreground hover:text-amber-500/70',
+                            )}
+                          />
+                        )}
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {p.manufacturer?.name || '-'}
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[200px]" title={p.name}>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{p.name}</span>
+                        {p.is_discontinued && (
+                          <Badge
+                            variant="destructive"
+                            className="text-[9px] h-4 px-1 py-0 uppercase tracking-wider shrink-0"
+                          >
+                            Inativo
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{p.sku}</TableCell>
                     <TableCell className="text-right font-mono font-medium text-primary">
