@@ -454,8 +454,12 @@ export default function AdminAISettings() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Função Principal (System Prompt)</FormLabel>
+                    <FormDescription>
+                      Define a "persona" do agente e seu objetivo central de negócio. Use para
+                      configurar o tom de voz e como ele aborda as vendas e consultorias técnicas.
+                    </FormDescription>
                     <FormControl>
-                      <Textarea {...field} className="font-mono text-sm min-h-[300px]" />
+                      <Textarea {...field} className="font-mono text-sm min-h-[250px]" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -466,9 +470,18 @@ export default function AdminAISettings() {
                 name="system_prompt_template"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Funções Complementares (System Prompt Template)</FormLabel>
+                    <FormLabel>
+                      Regras Estritas e Gatilhos Visuais (System Prompt Template)
+                    </FormLabel>
+                    <FormDescription>
+                      Define as "hard rules" que o modelo não pode ignorar.{' '}
+                      <strong>Instruções críticas para garantir que os cards apareçam:</strong>{' '}
+                      Exija expressamente que o modelo retorne os IDs no JSON
+                      ('referenced_internal_products') e oriente-o a cruzar apelidos/siglas curtas
+                      (como '7M4' ou 'Pyxis') com os SKUs oficiais do inventário.
+                    </FormDescription>
                     <FormControl>
-                      <Textarea {...field} className="font-mono text-sm min-h-[300px]" />
+                      <Textarea {...field} className="font-mono text-sm min-h-[250px]" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

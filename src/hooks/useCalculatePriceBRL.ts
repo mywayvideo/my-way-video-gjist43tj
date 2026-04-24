@@ -22,22 +22,44 @@ export function useCalculatePriceBRL(
 
     if (!fetchPromise) {
       fetchPromise = supabase
-        .from('price_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (!error && data) {
-            cachedSettings = {
-              exchange_rate: Number(data.exchange_rate),
-              exchange_spread: Number(data.exchange_spread),
-              freight_per_kg_usd: Number(data.freight_per_kg_usd),
-              weight_margin: Number(data.weight_margin),
-              markup: Number(data.markup),
-            }
-            return cachedSettings
+      Promise.all([
+        supabase
+          .from('price_settings')
+          .select('exchange_rate, exchange_spread')
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('app_settings')
+          .select('setting_key, setting_value, setting_value_numeric')
+          .in('setting_key', [
+            'shipping_sao_paulo_price_per_kg',
+            'shipping_sao_paulo_percentage_value',
+            'shipping_sao_paulo_additional_weight_kg',
+          ]),
+      ])
+        .then(([{ data: priceSettings }, { data: appSettings }]) => {
+          let price_per_kg = 0
+          let percentage_value = 0
+          let additional_weight_kg = 0.5
+
+          appSettings?.forEach((setting) => {
+            const val = setting.setting_value_numeric ?? Number(setting.setting_value)
+            if (setting.setting_key === 'shipping_sao_paulo_price_per_kg')
+              price_per_kg = isNaN(val) ? 0 : val
+            if (setting.setting_key === 'shipping_sao_paulo_percentage_value')
+              percentage_value = isNaN(val) ? 0 : val
+            if (setting.setting_key === 'shipping_sao_paulo_additional_weight_kg')
+              additional_weight_kg = isNaN(val) ? 0.5 : val
+          })
+
+          cachedSettings = {
+            exchange_rate: Number(priceSettings?.exchange_rate) || 5.0,
+            exchange_spread: Number(priceSettings?.exchange_spread) || 0,
+            price_per_kg,
+            percentage_value,
+            additional_weight_kg,
           }
-          return null
+          return cachedSettings
         })
         .catch((err) => {
           console.error(err)
