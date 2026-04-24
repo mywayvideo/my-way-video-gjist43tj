@@ -225,10 +225,10 @@ export default function Product() {
   }, [])
 
   const hasNationalizedPrice = (product?.price_nationalized_sales || 0) > 0
-  const hasUsaPriceWithWeight = product
-    ? (product.price_usd || 0) > 0 && (product.weight || 0) > 0
+  const hasUsaPrice = product
+    ? (product.price_usd || 0) > 0 || (product.price_usa_rebate || 0) > 0
     : false
-  const hasPrice = hasNationalizedPrice || hasUsaPriceWithWeight
+  const hasPrice = hasNationalizedPrice || hasUsaPrice
 
   const calculatePriceBRL = useCallback(
     (priceUsd: number, weightLb: number) => {
@@ -543,7 +543,7 @@ export default function Product() {
         <div className="flex flex-col lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16">
           <div className="contents lg:block lg:space-y-8">
             <div className="order-1 lg:order-none mb-8 lg:mb-0">
-              <div className="aspect-square bg-gradient-to-br from-white/5 to-transparent rounded overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
+              <div className="aspect-square bg-white rounded-xl overflow-hidden border border-border/50 p-8 flex items-center justify-center relative group shadow-sm">
                 <ImageWithFallback
                   src={product.image_url}
                   alt={product.name}
@@ -670,118 +670,116 @@ export default function Product() {
                 )}
               </div>
 
-              {hasPrice && (
-                <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
-                    <Globe className="w-32 h-32" />
-                  </div>
+              <div className="bg-card border border-border/50 rounded-xl p-6 shadow-sm mb-6 relative overflow-hidden">
+                <div className="absolute -top-4 -right-4 p-4 opacity-5 pointer-events-none">
+                  <Globe className="w-32 h-32" />
+                </div>
 
-                  <div className="relative z-10 flex flex-col gap-6">
-                    {product.price_usd !== null && product.price_usd > 0 && (
-                      <div>
-                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                          <span className="text-xs font-bold uppercase tracking-widest">
-                            Preço Miami (FOB)
-                          </span>
-                        </div>
-                        <ProductPrice
-                          originalPrice={product.price_usd}
-                          discountedPrice={discountedPrice}
-                          discountPercentage={discountPercentage}
-                          ruleName={ruleName}
-                          isRebateActive={isRebateActive}
-                          size="lg"
-                          align="left"
-                        />
+                <div className="relative z-10 flex flex-col gap-6">
+                  {!hasPrice && (
+                    <div>
+                      <ProductPrice originalPrice={null} size="lg" align="left" />
+                    </div>
+                  )}
+
+                  {hasUsaPrice ? (
+                    <div>
+                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                        <span className="text-xs font-bold uppercase tracking-widest">
+                          Preço Miami (FOB)
+                        </span>
                       </div>
-                    )}
-
-                    {hasNationalizedPrice && (
-                      <div
-                        className={cn(
-                          product.price_usd !== null &&
-                            product.price_usd > 0 &&
-                            'pt-6 border-t border-border/50',
-                        )}
-                      >
-                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                          <span className="text-xs font-bold uppercase tracking-widest">
-                            Preço Brasil (Nacionalizado)
-                          </span>
-                        </div>
-                        <ProductPrice
-                          originalPrice={
-                            product.price_nationalized_currency === 'USD'
+                      <ProductPrice
+                        originalPrice={
+                          originalPrice || product.price_usd || product.price_usa_rebate
+                        }
+                        discountedPrice={discountedPrice}
+                        discountPercentage={discountPercentage}
+                        ruleName={ruleName}
+                        isRebateActive={isRebateActive}
+                        size="lg"
+                        align="left"
+                      />
+                    </div>
+                  ) : hasNationalizedPrice ? (
+                    <div>
+                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                        <span className="text-xs font-bold uppercase tracking-widest">
+                          Preço Brasil (Nacionalizado)
+                        </span>
+                      </div>
+                      <ProductPrice
+                        originalPrice={
+                          product.price_nationalized_currency === 'USD'
+                            ? product.price_nationalized_sales! * exchangeRate
+                            : product.price_nationalized_sales!
+                        }
+                        discountedPrice={
+                          discountPercentage > 0
+                            ? (product.price_nationalized_currency === 'USD'
+                                ? product.price_nationalized_sales! * exchangeRate
+                                : product.price_nationalized_sales!) *
+                              (1 - discountPercentage / 100)
+                            : product.price_nationalized_currency === 'USD'
                               ? product.price_nationalized_sales! * exchangeRate
                               : product.price_nationalized_sales!
-                          }
-                          discountedPrice={
-                            discountPercentage > 0
-                              ? (product.price_nationalized_currency === 'USD'
-                                  ? product.price_nationalized_sales! * exchangeRate
-                                  : product.price_nationalized_sales!) *
-                                (1 - discountPercentage / 100)
-                              : product.price_nationalized_currency === 'USD'
-                                ? product.price_nationalized_sales! * exchangeRate
-                                : product.price_nationalized_sales!
-                          }
-                          discountPercentage={discountPercentage}
-                          ruleName={ruleName}
-                          isRebateActive={isRebateActive}
-                          size="lg"
-                          currency="BRL"
-                          align="left"
-                        />
-                      </div>
-                    )}
+                        }
+                        discountPercentage={discountPercentage}
+                        ruleName={ruleName}
+                        isRebateActive={false}
+                        size="lg"
+                        currency="BRL"
+                        align="left"
+                      />
+                    </div>
+                  ) : null}
 
-                    {isAdmin && showPriceCost && (
-                      <div className="mt-2 text-xs text-muted-foreground font-mono flex flex-col gap-1">
-                        <span className="font-medium">
-                          Preço de Custo (FOB Miami / Nacionalizado):
+                  {isAdmin && showPriceCost && (
+                    <div className="mt-2 text-xs text-muted-foreground font-mono flex flex-col gap-1">
+                      <span className="font-medium">
+                        Preço de Custo (FOB Miami / Nacionalizado):
+                      </span>
+                      <span className="text-foreground flex items-center gap-1">
+                        {(() => {
+                          const costPrice = formatPrice(product.price_cost)
+                          const natCurrency = product.price_nationalized_currency || 'BRL'
+                          const costPriceNat = product.price_nationalized_cost
+                            ? new Intl.NumberFormat(natCurrency === 'BRL' ? 'pt-BR' : 'en-US', {
+                                style: 'currency',
+                                currency: natCurrency,
+                              }).format(product.price_nationalized_cost)
+                            : null
+
+                          return (
+                            <>
+                              {costPrice.isPlaceholder ? 'US$ N/A' : costPrice.text}
+                              {' / '}
+                              {costPriceNat ? costPriceNat : `${natCurrency} N/A`}
+                            </>
+                          )
+                        })()}
+                      </span>
+                    </div>
+                  )}
+
+                  {hasUsaPrice && (
+                    <div className="mt-2 pt-6 border-t border-border/50">
+                      <Button
+                        variant="secondary"
+                        className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
+                        onClick={() => setIsBrlModalOpen(true)}
+                        disabled={isLoading}
+                      >
+                        <span className="flex items-center gap-2 text-foreground font-medium">
+                          <Calculator className="w-4 h-4 text-green-500" />
+                          Estimar Preço Entregue no Brasil
                         </span>
-                        <span className="text-foreground flex items-center gap-1">
-                          {(() => {
-                            const costPrice = formatPrice(product.price_cost)
-                            const natCurrency = product.price_nationalized_currency || 'BRL'
-                            const costPriceNat = product.price_nationalized_cost
-                              ? new Intl.NumberFormat(natCurrency === 'BRL' ? 'pt-BR' : 'en-US', {
-                                  style: 'currency',
-                                  currency: natCurrency,
-                                }).format(product.price_nationalized_cost)
-                              : null
-
-                            return (
-                              <>
-                                {costPrice.isPlaceholder ? 'US$ N/A' : costPrice.text}
-                                {' / '}
-                                {costPriceNat ? costPriceNat : `${natCurrency} N/A`}
-                              </>
-                            )
-                          })()}
-                        </span>
-                      </div>
-                    )}
-
-                    {!hasNationalizedPrice && hasUsaPriceWithWeight && (
-                      <div className="mt-2 pt-6 border-t border-border/50">
-                        <Button
-                          variant="secondary"
-                          className="w-full justify-between h-12 text-sm bg-muted/50 hover:bg-muted"
-                          onClick={() => setIsBrlModalOpen(true)}
-                          disabled={isLoading}
-                        >
-                          <span className="flex items-center gap-2 text-foreground font-medium">
-                            <Calculator className="w-4 h-4 text-green-500" />
-                            Estimar Preço Entregue no Brasil
-                          </span>
-                          <ChevronRight className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                        <ChevronRight className="w-4 h-4 opacity-50" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="order-3 lg:order-none w-full mb-10 lg:mb-0 flex gap-4">
@@ -1060,7 +1058,8 @@ export default function Product() {
                     Preço sob consulta
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Entre em contato para um orçamento detalhado em BRL.
+                    {!product?.weight ? 'Peso não cadastrado. ' : ''}Entre em contato para um
+                    orçamento detalhado em BRL.
                   </p>
                 </div>
               ) : (
