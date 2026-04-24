@@ -2,6 +2,7 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import { ProductCard } from '@/components/ProductCard'
+import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { Product } from '@/types'
 
 interface ResponseFormatterProps {
@@ -81,11 +82,7 @@ export function ResponseFormatter({ content, products, stock, className }: Respo
             <h3 className="text-xl font-bold text-white/90 pl-3 border-l-4 border-primary mb-6">
               Equipamentos Localizados
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {(stock && stock.length > 0 ? stock : products)!.map((p: any) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
+            <ReferencedProducts ids={stock && stock.length > 0 ? stock : products!} />
           </div>
         )}
     </div>

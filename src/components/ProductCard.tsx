@@ -159,7 +159,7 @@ export function ProductCard({ product }: { product: any }) {
   return (
     <Card className="flex flex-col h-full overflow-hidden group bg-card border-transparent transition-all duration-300 relative shadow-sm hover:shadow-xl hover:-translate-y-1 rounded-xl">
       <CardHeader className="p-0 relative bg-white dark:bg-zinc-950">
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-2 items-start">
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-2 items-start pointer-events-none">
           {product.is_discontinued && (
             <div className="bg-destructive text-destructive-foreground px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider">
               Descontinuado
@@ -285,7 +285,7 @@ export function ProductCard({ product }: { product: any }) {
         ) : (
           <Button
             variant="outline"
-            className="w-full gap-1.5 sm:gap-2 transition-all font-semibold rounded-lg bg-[#25D366] text-white hover:bg-[#1DA851] border-transparent hover:border-transparent hover:text-white"
+            className="w-full gap-1.5 sm:gap-2 transition-all font-semibold rounded-lg bg-[#25D366] text-white hover:bg-[#1DA851] border-transparent hover:border-transparent hover:text-white px-2"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -296,7 +296,9 @@ export function ProductCard({ product }: { product: any }) {
             }}
           >
             <MessageCircle className="w-4 h-4 shrink-0" />
-            <span className="truncate text-xs sm:text-sm">Consultar Especialista</span>
+            <span className="truncate text-[11px] sm:text-xs md:text-[13px]">
+              Consultar Especialista
+            </span>
           </Button>
         )}
       </CardFooter>

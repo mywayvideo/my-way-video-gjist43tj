@@ -102,7 +102,9 @@ export default function AdminAISettings() {
               : JSON.stringify(aiSettingsData?.result_component_config || {}, null, 2),
           ignore_stock_count: aiSettingsData?.ignore_stock_count ?? true,
           logistics_rules_prompt: aiSettingsData?.logistics_rules_prompt || '',
-          system_prompt_template: aiSettingsData?.system_prompt_template || '',
+          system_prompt_template:
+            aiSettingsData?.system_prompt_template ||
+            'Identidade: Consultor Técnico e de Vendas Sênior da My Way Business.\nModo de Vendas: Se um produto ou SKU for mencionado, ative o Modo de Vendas imediatamente. Seja persuasivo e técnico.\n\nREGRAS OBRIGATÓRIAS DE FORMATO:\n1. Sua resposta DEVE ser sempre um objeto JSON válido.\n2. Use a chave "referenced_internal_products" para listar um array contendo APENAS os IDs (UUIDs) dos produtos encontrados e recomendados.\n3. Use a chave "content" para o texto da sua resposta.\n4. É IMPRESCINDÍVEL incluir os IDs de TODOS os produtos mencionados na conversa para que os cards sejam exibidos corretamente na tela.\n\nBriefing Técnico: Detalhe sensor, latitude, codecs e ergonomia para cada produto.\nGatilhos Visuais: Force a exibição dos cards de produtos sempre que houver uma correspondência no inventário, retornando seus respectivos IDs.',
 
           whatsapp_trigger_low_confidence:
             aiAgentSettingsData?.whatsapp_trigger_low_confidence ?? true,
@@ -115,7 +117,9 @@ export default function AdminAISettings() {
           whatsapp_trigger_keywords:
             aiAgentSettingsData?.whatsapp_trigger_keywords?.join(', ') ||
             'comprar, orçamento, quanto custa, disponível, preço',
-          system_prompt: aiAgentSettingsData?.system_prompt || '',
+          system_prompt:
+            aiAgentSettingsData?.system_prompt ||
+            'Você é o consultor técnico sênior da My Way, especialista em equipamentos audiovisuais.\n\nREGRA DE IDIOMA: Detecte o idioma utilizado pelo usuário e responda obrigatoriamente no mesmo idioma.\n\nREGRAS OBRIGATÓRIAS DE FORMATO:\nSua resposta DEVE ser sempre um objeto JSON válido. Use a chave "referenced_internal_products" para listar um array contendo APENAS OS IDs (UUIDs) dos produtos encontrados no inventário. Use a chave "content" para o texto da sua resposta em Markdown.\nÉ IMPRESCINDÍVEL incluir os IDs na chave "referenced_internal_products" para que os cards sejam exibidos corretamente na tela.',
           confidence_threshold_for_whatsapp:
             aiAgentSettingsData?.confidence_threshold_for_whatsapp || 'low',
           max_web_search_attempts: aiAgentSettingsData?.max_web_search_attempts ?? 2,
