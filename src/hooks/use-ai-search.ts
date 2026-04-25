@@ -264,6 +264,8 @@ export function useUnifiedSearch() {
         model: p.sku || p.model,
         price_usa: finalUsdPrice,
         price_usd: finalUsdPrice,
+        price_brl: Number(p.price_brl || 0),
+        stock: Number(p.stock || 0),
       }
     })
 
@@ -375,6 +377,7 @@ export function useUnifiedSearch() {
       let finalConfidence = 'high'
       let finalProducts = currentUnifiedData.products
       let shouldShowWhatsapp = false
+      let referencedIds: string[] = []
 
       if (!activeAgent) {
         finalMessage = 'Nenhum agente de IA configurado. Exibindo resultados da base unificada.'
@@ -397,144 +400,27 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
 
-        // Busca de "Última Hora" (Pós-Resposta)
-        let aiReturnedProducts = aiResponse.products || []
-        const referencedIds = aiResponse.referenced_internal_products || []
+        referencedIds = aiResponse.referenced_internal_products || []
 
-        // Varredura de emergência: Extrair UUIDs do texto da mensagem da IA, caso ela não tenha preenchido o array corretamente
-        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
-        const textUuids = finalMessage.match(uuidRegex) || []
-
-        // Varredura de SKUs mencionados no texto (cruzando com os produtos que já estão no contexto)
-        const stockSkus = currentUnifiedData.stock.map((p: any) => p.sku).filter(Boolean)
-        const mentionedSkus = stockSkus.filter((sku: string) => finalMessage.includes(sku))
-
-        // Varredura de SKUs e UUIDs mencionados DIRETAMENTE NO PROMPT DO USUÁRIO
-        const promptUuids = cleanQuery.match(uuidRegex) || []
-        const promptMentionedSkus = stockSkus.filter((sku: string) =>
-          cleanQuery.toLowerCase().includes(sku.toLowerCase()),
+        // 1. Priority: Filter 'stock' results where product.id is included in 'referencedIds'
+        let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
+          referencedIds.includes(p.id),
         )
 
-        // Extração de possíveis palavras-chave específicas do prompt unificado
-        const potentialPromptSkus = cleanQuery
-          .replace(/[^\w\s-]/g, ' ')
-          .split(/\s+/)
-          .filter((w) => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase()))
-
-        // Adiciona os produtos que encontramos no passo "Escaneamento Prévio do Prompt"
-        // para garantir que eles tenham precedência se houver match forte.
-        // Rank products by how many keywords they match to avoid generic matches (like "Sony") pushing out specific ones (like "Burano")
-        const explicitSearchProducts = currentUnifiedData.stock
-          .map((p: any) => {
-            const matches = potentialPromptSkus.filter(
-              (sku) =>
-                p.sku?.toLowerCase().includes(sku.toLowerCase()) ||
-                p.name?.toLowerCase().includes(sku.toLowerCase()),
-            ).length
-
-            const isExplicitSku = promptMentionedSkus.includes(p.sku)
-            const score = matches + (isExplicitSku ? 5 : 0)
-
-            return { product: p, score }
-          })
-          .filter((item: any) => item.score > 0)
-          .sort((a: any, b: any) => b.score - a.score)
-          .map((item: any) => item.product)
-
-        let allIdsOrObjects = [
-          ...explicitSearchProducts,
-          ...promptUuids,
-          ...promptMentionedSkus,
-          ...potentialPromptSkus,
-          ...aiReturnedProducts,
-          ...referencedIds,
-          ...textUuids,
-          ...mentionedSkus,
-        ]
-        const uniqueItems: any[] = []
-        const seenIds = new Set()
-
-        for (const item of allIdsOrObjects) {
-          const id = typeof item === 'object' && item !== null ? item.id : item
-          if (id && !seenIds.has(id)) {
-            seenIds.add(id)
-            uniqueItems.push(item)
-          }
-        }
-
-        if (uniqueItems.length > 0) {
-          const hydrated = uniqueItems.map((item: any) => {
-            if (typeof item === 'object' && item !== null && item.id) return item
-            const found = currentUnifiedData.stock.find(
-              (p: any) =>
-                p.id === item ||
-                (typeof item === 'string' && p.sku?.toLowerCase() === item.toLowerCase()),
-            )
-            return found || item
-          })
-
-          // Separa IDs válidos (UUID) de possíveis SKUs informados incorretamente pela IA
-          const missingIds = hydrated.filter(
-            (p: any) => typeof p === 'string' && /^[0-9a-fA-F]{8}-/.test(p),
-          )
-          const missingSkus = hydrated.filter(
-            (p: any) => typeof p === 'string' && !/^[0-9a-fA-F]{8}-/.test(p),
-          )
-
-          let fetchedMissing: any[] = []
-
-          if (missingIds.length > 0) {
-            const { data } = await supabase.from('products').select('*').in('id', missingIds)
-            if (data) fetchedMissing = [...fetchedMissing, ...data]
-          }
-
-          if (missingSkus.length > 0) {
-            const orConditions = missingSkus
-              .map((s: string) => `sku.ilike.%${s}%,name.ilike.%${s}%`)
-              .join(',')
-            const { data } = await supabase
-              .from('products')
-              .select('*')
-              .or(orConditions)
-              .eq('is_discontinued', false)
-              .limit(10)
-            if (data) fetchedMissing = [...fetchedMissing, ...data]
-          }
-
-          aiReturnedProducts = hydrated
-            .map((p: any) => {
-              if (typeof p === 'string') {
-                return (
-                  fetchedMissing.find(
-                    (m) =>
-                      m.id === p ||
-                      m.sku?.toLowerCase().includes(p.toLowerCase()) ||
-                      m.name?.toLowerCase().includes(p.toLowerCase()),
-                  ) || null
-                )
-              }
-              return p
-            })
-            .filter(Boolean)
-        }
-
-        // Render ALL products returned explicitly by AI, but merged with explicit prompt matches
-        let mergedFinalProducts = [...aiReturnedProducts]
-
-        // Also ensure any product explicitly searched in the prompt is included at the top
-        if (explicitSearchProducts && explicitSearchProducts.length > 0) {
-          const existingIds = new Set(mergedFinalProducts.map((p: any) => p.id))
-
-          explicitSearchProducts.forEach((p: any) => {
-            if (!existingIds.has(p.id)) {
-              mergedFinalProducts.unshift(p) // Add to the top
-              existingIds.add(p.id)
-            }
+        // 2. Fallback: If Priority results are empty, filter 'stock' by matching product.name or product.model with the message text
+        if (filteredProducts.length === 0 && finalMessage) {
+          const lowerMessage = finalMessage.toLowerCase()
+          filteredProducts = currentUnifiedData.stock.filter((p: any) => {
+            const nameMatch = p.name && lowerMessage.includes(p.name.toLowerCase())
+            const modelMatch = p.sku && lowerMessage.includes(p.sku.toLowerCase())
+            return nameMatch || modelMatch
           })
         }
 
-        // STRICT CONSTRAINT: Do NOT fallback to all 'newProducts' if AI didn't reference them and no names matched.
-        finalProducts = mergedFinalProducts
+        // Remove duplicates just in case
+        finalProducts = filteredProducts.filter(
+          (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
+        )
 
         shouldShowWhatsapp = finalProducts.length === 0
       }
