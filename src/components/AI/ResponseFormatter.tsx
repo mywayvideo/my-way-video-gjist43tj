@@ -13,6 +13,8 @@ interface Product {
   description?: string
   price_usd?: number
   image_url?: string
+  sku?: string
+  model?: string
   [key: string]: any
 }
 
@@ -23,6 +25,7 @@ interface ResponseFormatterProps {
   nabData?: any[]
   intel?: any[]
   confidenceLevel?: string
+  referenced_internal_products?: string[]
 }
 
 export function ResponseFormatter({
@@ -30,16 +33,8 @@ export function ResponseFormatter({
   products = [],
   stock = [],
   confidenceLevel = 'high',
+  referenced_internal_products = [],
 }: ResponseFormatterProps) {
-  const displayProductsRaw = products && products.length > 0 ? products : stock
-  const displayProducts = []
-  const seenIds = new Set()
-  for (const p of displayProductsRaw) {
-    if (p && p.id && !seenIds.has(p.id)) {
-      seenIds.add(p.id)
-      displayProducts.push(p)
-    }
-  }
   const { settings } = useAISettings()
   const [whatsappNumber, setWhatsappNumber] = useState('1234567890')
   const [gridConfig, setGridConfig] = useState({ columns_desktop: 4, columns_mobile: 2 })
@@ -62,7 +57,6 @@ export function ResponseFormatter({
     fetchGridConfig()
 
     const fetchCompanyProfile = async () => {
-      // Fetch whatsapp_number from app_settings
       const { data } = await supabase
         .from('app_settings')
         .select('setting_value')
@@ -71,7 +65,6 @@ export function ResponseFormatter({
       if (data?.setting_value) {
         setWhatsappNumber(data.setting_value)
       } else {
-        // Fallback to check company_info if it exists
         const { data: cData } = await supabase
           .from('company_info')
           .select('content')
@@ -82,6 +75,42 @@ export function ResponseFormatter({
     }
     fetchCompanyProfile()
   }, [])
+
+  const getFilteredProducts = () => {
+    let filtered: Product[] = []
+
+    const combinedSource = [...(stock || []), ...(products || [])]
+
+    // Layer 1: Priority by ID
+    if (referenced_internal_products && referenced_internal_products.length > 0) {
+      filtered = combinedSource.filter((p) => referenced_internal_products.includes(p.id))
+    }
+
+    // Layer 2: Fallback by Name match in content
+    if (filtered.length === 0 && content) {
+      const lowerContent = content.toLowerCase()
+      filtered = combinedSource.filter((p) => {
+        const nameMatch = p.name && lowerContent.includes(p.name.toLowerCase())
+        const modelMatch =
+          (p.sku || p.model) && lowerContent.includes((p.sku || p.model).toLowerCase())
+        return nameMatch || modelMatch
+      })
+    }
+
+    // Remove duplicates
+    const seen = new Set()
+    const uniqueFiltered = []
+    for (const p of filtered) {
+      if (p && p.id && !seen.has(p.id)) {
+        seen.add(p.id)
+        uniqueFiltered.push(p)
+      }
+    }
+
+    return uniqueFiltered
+  }
+
+  const displayProducts = getFilteredProducts()
 
   let showWhatsapp = false
 

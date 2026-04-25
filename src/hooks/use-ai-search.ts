@@ -342,6 +342,7 @@ export function useUnifiedSearch() {
         confidence_level: 'high',
         stock: currentUnifiedData.stock,
         products: [], // Do not render products until AI confirms relevance
+        referenced_internal_products: [],
         intel: currentUnifiedData.intel,
         nabData: currentUnifiedData.nabData,
         web: currentUnifiedData.web,
@@ -531,6 +532,7 @@ export function useUnifiedSearch() {
         confidence_level: finalConfidence,
         stock: currentUnifiedData.stock,
         products: finalProducts,
+        referenced_internal_products: referencedIds,
         intel: currentUnifiedData.intel,
         nabData: currentUnifiedData.nabData,
         web: currentUnifiedData.web,

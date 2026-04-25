@@ -15,12 +15,14 @@ interface Product {
 
 interface SearchResults {
   stock?: Product[]
+  referenced_internal_products?: string[]
   [key: string]: any
 }
 
 interface Message {
   text?: string
   content?: string
+  referenced_internal_products?: string[]
   [key: string]: any
 }
 
@@ -29,47 +31,61 @@ interface AIResponseProps {
   search_results: SearchResults
 }
 
-export function getMentionedProducts(text: string, stock: Product[]) {
+export function getMentionedProducts(text: string, stock: Product[], referencedIds: string[] = []) {
   if (!text || !stock || !Array.isArray(stock)) return []
 
-  const lowerText = text.toLowerCase()
+  let filtered: Product[] = []
 
-  const mentioned = stock.filter((product) => {
-    const name = (product.name || '').toLowerCase()
-    const model = (product.model || product.sku || '').toLowerCase()
+  // Layer 1 (Priority): Filter by exact IDs if provided
+  if (referencedIds && referencedIds.length > 0) {
+    filtered = stock.filter((p) => referencedIds.includes(p.id))
+  }
 
-    const hasName = name && lowerText.includes(name)
-    const hasModel = model && lowerText.includes(model)
+  // Layer 2 (Fallback): Scan the message text for exact matches
+  if (filtered.length === 0) {
+    const lowerText = text.toLowerCase()
 
-    return hasName || hasModel
-  })
+    filtered = stock.filter((product) => {
+      const name = (product.name || '').toLowerCase()
+      const model = (product.model || product.sku || '').toLowerCase()
 
-  return mentioned.sort((a, b) => {
-    const aNameIdx = a.name ? lowerText.indexOf(a.name.toLowerCase()) : -1
-    const aModelIdx = a.model || a.sku ? lowerText.indexOf((a.model || a.sku).toLowerCase()) : -1
+      const hasName = name && lowerText.includes(name)
+      const hasModel = model && lowerText.includes(model)
 
-    const bNameIdx = b.name ? lowerText.indexOf(b.name.toLowerCase()) : -1
-    const bModelIdx = b.model || b.sku ? lowerText.indexOf((b.model || b.sku).toLowerCase()) : -1
+      return hasName || hasModel
+    })
 
-    const aIdx = Math.min(
-      aNameIdx !== -1 ? aNameIdx : Infinity,
-      aModelIdx !== -1 ? aModelIdx : Infinity,
-    )
+    return filtered.sort((a, b) => {
+      const aNameIdx = a.name ? lowerText.indexOf(a.name.toLowerCase()) : -1
+      const aModelIdx = a.model || a.sku ? lowerText.indexOf((a.model || a.sku).toLowerCase()) : -1
 
-    const bIdx = Math.min(
-      bNameIdx !== -1 ? bNameIdx : Infinity,
-      bModelIdx !== -1 ? bModelIdx : Infinity,
-    )
+      const bNameIdx = b.name ? lowerText.indexOf(b.name.toLowerCase()) : -1
+      const bModelIdx = b.model || b.sku ? lowerText.indexOf((b.model || b.sku).toLowerCase()) : -1
 
-    return aIdx - bIdx
-  })
+      const aIdx = Math.min(
+        aNameIdx !== -1 ? aNameIdx : Infinity,
+        aModelIdx !== -1 ? aModelIdx : Infinity,
+      )
+
+      const bIdx = Math.min(
+        bNameIdx !== -1 ? bNameIdx : Infinity,
+        bModelIdx !== -1 ? bModelIdx : Infinity,
+      )
+
+      return aIdx - bIdx
+    })
+  }
+
+  return filtered
 }
 
 export function AIResponse({ message, search_results }: AIResponseProps) {
   const stock = search_results?.stock || []
   const text = message?.text || message?.content || ''
+  const referencedIds =
+    message?.referenced_internal_products || search_results?.referenced_internal_products || []
 
-  const mentionedProducts = getMentionedProducts(text, stock)
+  const mentionedProducts = getMentionedProducts(text, stock, referencedIds)
 
   return (
     <div className="flex flex-col space-y-4">
