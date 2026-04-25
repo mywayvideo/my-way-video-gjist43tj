@@ -100,7 +100,23 @@ export function useUnifiedSearch() {
       const searchKeywords = allWords.filter((w) => !STOP_WORDS.has(w.toLowerCase()))
 
       // 4. Ensure the longest and most specific terms are prioritized
-      const sortedSearchWords = [...searchKeywords].sort((a, b) => b.length - a.length)
+      const PROPER_NAMES = new Set(['burano', 'venice', 'alexa'])
+      const sortedSearchWords = [...searchKeywords].sort((a, b) => {
+        const aLower = a.toLowerCase()
+        const bLower = b.toLowerCase()
+        const aHasNumber = /\d/.test(a)
+        const bHasNumber = /\d/.test(b)
+        const aIsProper = PROPER_NAMES.has(aLower)
+        const bIsProper = PROPER_NAMES.has(bLower)
+
+        const aPriority = aHasNumber || aIsProper ? 1 : 0
+        const bPriority = bHasNumber || bIsProper ? 1 : 0
+
+        if (aPriority !== bPriority) {
+          return bPriority - aPriority
+        }
+        return b.length - a.length
+      })
 
       const topKeywords = sortedSearchWords.slice(0, 6)
 
@@ -154,7 +170,7 @@ export function useUnifiedSearch() {
           supabase
             .from('products')
             .select('*')
-            .or(`name.ilike.%${kw}%,sku.ilike.%${kw}%`)
+            .or('name.ilike.%' + kw + '%,sku.ilike.%' + kw + '%')
             .eq('is_discontinued', false)
             .limit(10),
         )
@@ -405,11 +421,26 @@ export function useUnifiedSearch() {
         // 2. Fallback: If Priority results are empty, filter 'stock' by matching product.name, product.model, or product.sku with the message text
         if (filteredProducts.length === 0 && finalMessage) {
           const lowerMessage = finalMessage.toLowerCase()
+
+          const searchKeywords = cleanQuery
+            .replace(/[^\w\s-]/g, ' ')
+            .split(/\s+/)
+            .filter((w) => w.length >= 2 && !STOP_WORDS.has(w.toLowerCase()))
+
           filteredProducts = currentUnifiedData.stock.filter((p: any) => {
             const nameMatch = p.name && lowerMessage.includes(p.name.toLowerCase())
             const skuMatch = p.sku && lowerMessage.includes(p.sku.toLowerCase())
             const modelMatch = p.model && lowerMessage.includes(p.model.toLowerCase())
-            return nameMatch || skuMatch || modelMatch
+
+            const kwMatch = searchKeywords.some((kw) => {
+              const lowerKw = kw.toLowerCase()
+              return (
+                (p.sku && p.sku.toLowerCase().includes(lowerKw)) ||
+                (p.model && p.model.toLowerCase().includes(lowerKw))
+              )
+            })
+
+            return nameMatch || skuMatch || modelMatch || kwMatch
           })
         }
 
