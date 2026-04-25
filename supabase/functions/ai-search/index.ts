@@ -157,8 +157,16 @@ Deno.serve(async (req: Request) => {
     const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
     
     // Use the exact same logic as database-search.ts (which works well) if we have a strong single term like "7m4"
-    const optimizedSearchTerm = alphaNumTerms.length > 0 ? alphaNumTerms[0] : safeQueryForOr;
-    const productOrQuery = `name.ilike.%${optimizedSearchTerm}%,description.ilike.%${optimizedSearchTerm}%,sku.ilike.%${optimizedSearchTerm}%`;
+    let productOrQuery = '';
+    if (alphaNumTerms.length > 0) {
+      const optimizedSearchTerm = alphaNumTerms[0];
+      productOrQuery = `name.ilike.%${optimizedSearchTerm}%,description.ilike.%${optimizedSearchTerm}%,sku.ilike.%${optimizedSearchTerm}%`;
+    } else if (qTerms.length > 0) {
+      const topTerms = [...qTerms].sort((a, b) => b.length - a.length).slice(0, 3);
+      productOrQuery = topTerms.map((t: string) => `name.ilike.%${t}%,description.ilike.%${t}%,sku.ilike.%${t}%`).join(',');
+    } else {
+      productOrQuery = `name.ilike.%${safeQueryForOr}%,description.ilike.%${safeQueryForOr}%,sku.ilike.%${safeQueryForOr}%`;
+    }
 
     const { data: allProducts } = await supabase
       .from('products')
