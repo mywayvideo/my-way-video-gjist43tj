@@ -236,11 +236,8 @@ export function useUnifiedSearch() {
 
     let finalProducts = products.length > 0 ? products : []
 
-    // Respect stock visibility settings
+    // Respect stock visibility settings (removed stock > 0 filter to ensure catalog sovereignty)
     console.log('IGNORE_STOCK_SETTING:', ignoreStockCount)
-    if (!ignoreStockCount) {
-      finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
-    }
 
     const priceThreshold = Number(settings?.price_threshold_usd) || 5000
     finalProducts = finalProducts.map((p: any) => {
@@ -400,7 +397,9 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse.content
         finalConfidence = aiResponse.confidence_level || 'high'
 
-        referencedIds = aiResponse.referenced_internal_products || []
+        referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
+          ? aiResponse.referenced_internal_products
+          : []
 
         // 1. Priority: Filter 'stock' results where product.id is included in 'referencedIds'
         let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
@@ -412,7 +411,8 @@ export function useUnifiedSearch() {
           const lowerMessage = finalMessage.toLowerCase()
           filteredProducts = currentUnifiedData.stock.filter((p: any) => {
             const nameMatch = p.name && lowerMessage.includes(p.name.toLowerCase())
-            const modelMatch = p.sku && lowerMessage.includes(p.sku.toLowerCase())
+            const modelMatch =
+              (p.sku || p.model) && lowerMessage.includes((p.sku || p.model).toLowerCase())
             return nameMatch || modelMatch
           })
         }
