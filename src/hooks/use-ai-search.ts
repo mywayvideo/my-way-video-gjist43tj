@@ -170,7 +170,7 @@ export function useUnifiedSearch() {
             .select('*')
             .or(orConditions)
             .eq('is_discontinued', false)
-            .limit(50)
+            .limit(30)
 
           if (looseProducts && looseProducts.length > 0) {
             // Rank products by how many keywords they match
@@ -245,6 +245,8 @@ export function useUnifiedSearch() {
     finalProducts = finalProducts.map((p: any) => ({
       ...p,
       is_expensive: p.price_usd > priceThreshold,
+      model: p.sku || p.model,
+      price_usa: p.price_usd || p.price_usa,
     }))
 
     const finalResultData = {
