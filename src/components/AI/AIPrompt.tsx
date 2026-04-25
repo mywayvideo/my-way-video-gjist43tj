@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Loader2, Search, Sparkles, Bot } from 'lucide-react'
+import { Loader2, Search, Sparkles, Bot, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getActiveAgent, getAISettings } from '@/services/intelligence'
 import { Link } from 'react-router-dom'
@@ -247,19 +247,31 @@ export function AIPrompt({
               }
             />
           </div>
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              isSettingsLoading
-                ? 'Carregando inteligência...'
-                : 'O que você está procurando para sua produção?'
-            }
-            className="w-full bg-transparent text-white placeholder:text-white/50 px-4 py-3 sm:py-4 resize-none outline-none min-h-[60px] sm:min-h-[64px] max-h-[150px] text-lg"
-            disabled={isLoading || isExternalLoading || isSettingsLoading}
-            rows={1}
-          />
+          <div className="relative w-full flex items-center">
+            <textarea
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isSettingsLoading
+                  ? 'Carregando inteligência...'
+                  : 'O que você está procurando para sua produção?'
+              }
+              className="w-full bg-transparent text-white placeholder:text-white/50 px-4 py-3 sm:py-4 pr-10 resize-none outline-none min-h-[60px] sm:min-h-[64px] max-h-[150px] text-lg"
+              disabled={isLoading || isExternalLoading || isSettingsLoading}
+              rows={1}
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-2 text-white/50 hover:text-white transition-colors p-2"
+                disabled={isLoading || isExternalLoading || isSettingsLoading}
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
           <button
             type="submit"
             disabled={isLoading || isExternalLoading || !query.trim() || isSettingsLoading}
