@@ -1,4 +1,5 @@
 import React from 'react'
+import ReactMarkdown from 'react-markdown'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface Product {
@@ -92,7 +93,9 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">{text}</div>
+      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+        {text}
+      </ReactMarkdown>
 
       {mentionedProducts.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">

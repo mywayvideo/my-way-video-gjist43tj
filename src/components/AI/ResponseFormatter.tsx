@@ -1,4 +1,5 @@
 import React from 'react'
+import ReactMarkdown from 'react-markdown'
 import { ProductCard } from '@/components/ProductCard'
 
 interface ResponseFormatterProps {
@@ -48,9 +49,9 @@ export function ResponseFormatter({
   return (
     <div className="space-y-6">
       {content && (
-        <div className="prose prose-invert max-w-none whitespace-pre-wrap text-white/90">
+        <ReactMarkdown className="prose prose-invert max-w-none whitespace-pre-wrap text-white/90">
           {content}
-        </div>
+        </ReactMarkdown>
       )}
 
       {finalProducts && finalProducts.length > 0 && (
