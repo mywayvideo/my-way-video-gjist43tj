@@ -144,11 +144,4 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
                     </span>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+              </CardConte
