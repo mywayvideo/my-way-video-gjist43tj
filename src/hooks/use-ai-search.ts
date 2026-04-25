@@ -86,7 +86,7 @@ export function useUnifiedSearch() {
       let sqlString = rawSql.trim()
 
       if (!sqlString) {
-        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 20;`
+        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 30;`
       }
 
       // 1. Extract all words from the query that are NOT in the 'stopWords' list.
@@ -242,18 +242,18 @@ export function useUnifiedSearch() {
       finalProducts = finalProducts.filter((p: any) => p.stock && p.stock > 0)
     }
 
-    const priceThreshold = settings?.price_threshold_usd || 5000
+    const priceThreshold = Number(settings?.price_threshold_usd) || 5000
     finalProducts = finalProducts.map((p: any) => {
-      let finalUsdPrice = p.price_usd || p.price_usa
+      let finalUsdPrice = Number(p.price_usd || p.price_usa || 0)
 
-      if (p.price_usa_rebate && p.price_usa_rebate > 0) {
+      if (Number(p.price_usa_rebate) > 0) {
         if (!p.date_rebate) {
-          finalUsdPrice = p.price_usa_rebate
+          finalUsdPrice = Number(p.price_usa_rebate)
         } else {
           const rebateDate = new Date(p.date_rebate)
           const currentDate = new Date()
           if (currentDate <= rebateDate) {
-            finalUsdPrice = p.price_usa_rebate
+            finalUsdPrice = Number(p.price_usa_rebate)
           }
         }
       }
