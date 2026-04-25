@@ -22,25 +22,22 @@ export function ResponseFormatter(props: ResponseFormatterProps) {
 
   const textContent = message || content || ''
 
-  const filteredProducts = useMemo(() => {
+  const visibleProducts = useMemo(() => {
     const stockItems = Array.isArray(stock) ? stock : []
     const refIds = Array.isArray(referenced_internal_products) ? referenced_internal_products : []
 
     if (stockItems.length === 0) return []
 
-    // Priority: Filter 'stock' results where product.id is included in 'referencedIds'
-    let matches = stockItems.filter((p) => refIds.includes(p.id))
+    const lowerText = textContent.toLowerCase()
 
-    // Fallback: If Priority results are empty, filter 'stock' by matching product.name, product.model, or product.sku with the message text
-    if (matches.length === 0 && textContent) {
-      const lowerText = textContent.toLowerCase()
-      matches = stockItems.filter((p) => {
-        const nameMatch = p.name && lowerText.includes(p.name.toLowerCase())
-        const skuMatch = p.sku && lowerText.includes(p.sku.toLowerCase())
-        const modelMatch = p.model && lowerText.includes(p.model.toLowerCase())
-        return nameMatch || skuMatch || modelMatch
-      })
-    }
+    const matches = stockItems.filter((p) => {
+      const isReferenced = refIds.includes(p.id)
+      const nameMatch = p.name && lowerText.includes(p.name.toLowerCase())
+      const skuMatch = p.sku && lowerText.includes(p.sku.toLowerCase())
+      const modelMatch = p.model && lowerText.includes(p.model.toLowerCase())
+
+      return isReferenced || nameMatch || skuMatch || modelMatch
+    })
 
     // Remove duplicates
     return matches.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
@@ -51,9 +48,9 @@ export function ResponseFormatter(props: ResponseFormatterProps) {
       {...rest}
       message={textContent}
       content={textContent}
-      stock={stock}
+      stock={visibleProducts}
       referenced_internal_products={referenced_internal_products}
-      products={filteredProducts}
+      products={visibleProducts}
     />
   )
 }
