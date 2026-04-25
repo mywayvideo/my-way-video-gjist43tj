@@ -3,6 +3,55 @@ import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
 
+const STOP_WORDS = new Set([
+  'que',
+  'qual',
+  'como',
+  'para',
+  'por',
+  'com',
+  'uma',
+  'um',
+  'tem',
+  'temos',
+  'voces',
+  'voce',
+  'mostrar',
+  'mostre',
+  'quero',
+  'gostaria',
+  'saber',
+  'preco',
+  'valor',
+  'sobre',
+  'esse',
+  'essa',
+  'este',
+  'esta',
+  'aqui',
+  'ali',
+  'camera',
+  'lente',
+  'cabo',
+  'modelo',
+  'marca',
+  'the',
+  'what',
+  'who',
+  'how',
+  'why',
+  'can',
+  'you',
+  'show',
+  'tell',
+  'about',
+  'price',
+  'cost',
+  'favor',
+  'poderia',
+  'quais',
+])
+
 export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
@@ -40,66 +89,17 @@ export function useUnifiedSearch() {
         sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 20;`
       }
 
-      const stopWordsForRpc = new Set([
-        'que',
-        'qual',
-        'como',
-        'para',
-        'por',
-        'com',
-        'uma',
-        'um',
-        'tem',
-        'temos',
-        'voces',
-        'voce',
-        'mostrar',
-        'mostre',
-        'quero',
-        'gostaria',
-        'saber',
-        'preco',
-        'valor',
-        'sobre',
-        'esse',
-        'essa',
-        'este',
-        'esta',
-        'aqui',
-        'ali',
-        'camera',
-        'lente',
-        'cabo',
-        'modelo',
-        'marca',
-        'the',
-        'what',
-        'who',
-        'how',
-        'why',
-        'can',
-        'you',
-        'show',
-        'tell',
-        'about',
-        'price',
-        'cost',
-        'temos',
-        'favor',
-        'poderia',
-        'quais',
-      ])
       const allWords = cleanQuery
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
         .filter((w) => w.length > 2)
-      const alphaNumWords = allWords.filter(
-        (w) => /[0-9]/.test(w) && !stopWordsForRpc.has(w.toLowerCase()),
-      )
 
-      // If the query has specific models/SKUs (alphanumeric), use the first one as the main search term for the RPC
-      // This mimics the search bar behavior where users just type "7m4"
-      const optimizedSearchTerm = alphaNumWords.length > 0 ? alphaNumWords[0] : cleanQuery
+      const searchWords = allWords.filter((w) => !STOP_WORDS.has(w.toLowerCase()))
+
+      // Prioritize the longest and most specific terms
+      const sortedSearchWords = [...searchWords].sort((a, b) => b.length - a.length)
+
+      const optimizedSearchTerm = sortedSearchWords.length > 0 ? sortedSearchWords[0] : cleanQuery
 
       const executedSql = sqlString.replace(/\$1/g, optimizedSearchTerm)
       console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)
@@ -120,17 +120,16 @@ export function useUnifiedSearch() {
       }
 
       // 2. Escaneamento Prévio do Prompt (Extração de palavras-chave para garantir que produtos citados entrem no contexto)
-      const keywords = cleanQuery
+      const searchKeywords = cleanQuery
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
-        .filter((w) => w.length > 2 && !stopWordsForRpc.has(w.toLowerCase()))
+        .filter((w) => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()))
 
-      if (keywords.length > 0) {
-        // Prioritize keywords with numbers (like 7m4)
-        const alphaNumKeywords = keywords.filter((w) => /[0-9]/.test(w))
-        const searchKeywords = alphaNumKeywords.length > 0 ? alphaNumKeywords : keywords
+      if (searchKeywords.length > 0) {
+        // We use up to 3 top terms (longest first) to prevent massive OR queries that fail
+        const topKeywords = [...searchKeywords].sort((a, b) => b.length - a.length).slice(0, 3)
 
-        const orConditions = searchKeywords
+        const orConditions = topKeywords
           .map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`)
           .join(',')
         const { data: kwProducts } = await supabase
@@ -346,11 +345,11 @@ export function useUnifiedSearch() {
           cleanQuery.toLowerCase().includes(sku.toLowerCase()),
         )
 
-        // Extração de possíveis SKUs do prompt (palavras com letras e números)
+        // Extração de possíveis palavras-chave específicas do prompt
         const potentialPromptSkus = cleanQuery
           .replace(/[^\w\s-]/g, ' ')
           .split(/\s+/)
-          .filter((w) => w.length >= 3 && /[0-9]/.test(w) && /[a-zA-Z]/.test(w))
+          .filter((w) => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase()))
 
         // Adiciona os produtos que encontramos no passo "Escaneamento Prévio do Prompt"
         // para garantir que eles tenham precedência se houver match forte.
