@@ -94,7 +94,7 @@ export function useUnifiedSearch() {
       const allWords = cleanQuery
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
-        .filter((w) => w.length > 2)
+        .filter((w) => w.length >= 2)
 
       // 3. Create a unified 'searchKeywords' array containing all relevant terms
       const searchKeywords = allWords.filter((w) => !STOP_WORDS.has(w.toLowerCase()))
@@ -148,46 +148,27 @@ export function useUnifiedSearch() {
       if (searchKeywords.length > 0) {
         let kwProducts: any[] = []
 
-        // Attempt an AND condition for high precision if there are multiple keywords
-        if (searchKeywords.length > 1) {
-          let query = supabase.from('products').select('*').eq('is_discontinued', false).limit(30)
-          searchKeywords.forEach((kw) => {
-            // Check both name and sku for each keyword using OR inside an AND chain
-            query = query.or(`name.ilike.%${kw}%,sku.ilike.%${kw}%`)
-          })
-          const { data: preciseProducts } = await query
-          if (preciseProducts && preciseProducts.length > 0) {
-            kwProducts = preciseProducts
-          }
-        }
-
-        // Fallback to OR conditions for all searchKeywords to avoid missing products completely
-        if (kwProducts.length === 0) {
-          const orConditions = searchKeywords
-            .map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`)
-            .join(',')
-          const { data: looseProducts } = await supabase
+        // Fetch products for each top keyword individually to ensure we don't miss specific models
+        // due to a generic keyword like "Sony" filling up the limit.
+        const keywordPromises = topKeywords.map((kw) =>
+          supabase
             .from('products')
             .select('*')
-            .or(orConditions)
+            .or(`name.ilike.%${kw}%,sku.ilike.%${kw}%`)
             .eq('is_discontinued', false)
-            .limit(30)
-
-          if (looseProducts && looseProducts.length > 0) {
-            // Rank products by how many keywords they match
-            kwProducts = looseProducts
-              .map((p) => {
-                const matches = searchKeywords.filter(
-                  (kw) =>
-                    p.name?.toLowerCase().includes(kw.toLowerCase()) ||
-                    p.sku?.toLowerCase().includes(kw.toLowerCase()),
-                ).length
-                return { product: p, score: matches }
-              })
-              .sort((a, b) => b.score - a.score)
-              .map((item) => item.product)
+            .limit(10),
+        )
+        const keywordResults = await Promise.all(keywordPromises)
+        keywordResults.forEach((res) => {
+          if (res.data) {
+            res.data.forEach((p) => {
+              kwProducts.push(p)
+            })
           }
-        }
+        })
+
+        // Remove duplicates
+        kwProducts = kwProducts.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
 
         if (kwProducts && kwProducts.length > 0) {
           const existingIds = new Set(products.map((p) => p.id))

@@ -53,7 +53,7 @@ export function ResponseFormatter(props: ResponseFormatterProps) {
       content={textContent}
       stock={stock}
       referenced_internal_products={referenced_internal_products}
-      products={filteredProducts.length > 0 ? filteredProducts : []}
+      products={filteredProducts}
     />
   )
 }
