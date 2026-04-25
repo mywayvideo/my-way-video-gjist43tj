@@ -89,23 +89,30 @@ export function useUnifiedSearch() {
         sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 20;`
       }
 
+      // 1. Extract all words from the query that are NOT in the 'stopWords' list.
+      // 2. Do NOT filter out words just because they lack numbers.
       const allWords = cleanQuery
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
         .filter((w) => w.length > 2)
 
-      const searchWords = allWords.filter((w) => !STOP_WORDS.has(w.toLowerCase()))
+      // 3. Create a unified 'searchKeywords' array containing all relevant terms
+      const searchKeywords = allWords.filter((w) => !STOP_WORDS.has(w.toLowerCase()))
 
-      // Prioritize the longest and most specific terms
-      const sortedSearchWords = [...searchWords].sort((a, b) => b.length - a.length)
+      // 4. Ensure the longest and most specific terms are prioritized
+      const sortedSearchWords = [...searchKeywords].sort((a, b) => b.length - a.length)
 
-      const optimizedSearchTerm = sortedSearchWords.length > 0 ? sortedSearchWords[0] : cleanQuery
+      const topKeywords = sortedSearchWords.slice(0, 3)
+
+      // To treat the search as a specific entity, use the original keywords sequence or the most specific term
+      const exactPhrase = searchKeywords.join(' ')
+      const optimizedSearchTerm = exactPhrase || cleanQuery
 
       const executedSql = sqlString.replace(/\$1/g, optimizedSearchTerm)
       console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)
       console.log('SEARCH_STATE:', { term: optimizedSearchTerm, ignoreStock: ignoreStockCount })
 
-      // 1. Busca Unificada Padrão
+      // 1. Busca Unificada Padrão (Entidade Única / Frase Exata)
       const { data: searchData, error: searchError } = await supabase.rpc('unified_search', {
         search_term: optimizedSearchTerm,
       })
@@ -119,25 +126,54 @@ export function useUnifiedSearch() {
         nab = responseObj.nab_data || []
       }
 
-      // 2. Escaneamento Prévio do Prompt (Extração de palavras-chave para garantir que produtos citados entrem no contexto)
-      const searchKeywords = cleanQuery
-        .replace(/[^\w\s-]/g, ' ')
-        .split(/\s+/)
-        .filter((w) => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()))
+      // Se a frase exata não retornar produtos, fazemos fallback com o termo mais específico
+      if (
+        products.length === 0 &&
+        topKeywords.length > 0 &&
+        topKeywords[0] !== optimizedSearchTerm
+      ) {
+        const { data: fallbackData } = await supabase.rpc('unified_search', {
+          search_term: topKeywords[0],
+        })
+        if (fallbackData) {
+          const fallbackObj = fallbackData as any
+          products = fallbackObj.stock || []
+          if (cache.length === 0) cache = fallbackObj.intel || []
+          if (nab.length === 0) nab = fallbackObj.nab_data || []
+        }
+      }
 
+      // 2. Escaneamento Prévio do Prompt (Garantir resultados para as palavras-chave)
       if (searchKeywords.length > 0) {
-        // We use up to 3 top terms (longest first) to prevent massive OR queries that fail
-        const topKeywords = [...searchKeywords].sort((a, b) => b.length - a.length).slice(0, 3)
+        let kwProducts: any[] = []
 
-        const orConditions = topKeywords
-          .map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`)
-          .join(',')
-        const { data: kwProducts } = await supabase
-          .from('products')
-          .select('*')
-          .or(orConditions)
-          .eq('is_discontinued', false)
-          .limit(30)
+        // Attempt an AND condition for high precision if there are multiple keywords
+        if (searchKeywords.length > 1) {
+          let query = supabase.from('products').select('*').eq('is_discontinued', false).limit(10)
+          searchKeywords.forEach((kw) => {
+            query = query.ilike('name', `%${kw}%`)
+          })
+          const { data: preciseProducts } = await query
+          if (preciseProducts && preciseProducts.length > 0) {
+            kwProducts = preciseProducts
+          }
+        }
+
+        // Fallback to OR conditions for the top terms to avoid missing products completely
+        if (kwProducts.length === 0) {
+          const orConditions = topKeywords
+            .map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`)
+            .join(',')
+          const { data: looseProducts } = await supabase
+            .from('products')
+            .select('*')
+            .or(orConditions)
+            .eq('is_discontinued', false)
+            .limit(30)
+          if (looseProducts) {
+            kwProducts = looseProducts
+          }
+        }
 
         if (kwProducts && kwProducts.length > 0) {
           const existingIds = new Set(products.map((p) => p.id))
