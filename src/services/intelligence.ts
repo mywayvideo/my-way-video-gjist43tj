@@ -289,6 +289,16 @@ export async function ingestManualKnowledge(payload: any) {
   return data
 }
 
+export async function updateIntelligenceSummary(id: string, summary: string) {
+  const { error } = await supabase
+    .from('market_intelligence')
+    .update({ ai_summary: summary })
+    .eq('id', id)
+
+  if (error) throw error
+  return true
+}
+
 export async function updateIntelligenceStatus(id: string, status: any) {
   let updateData: any = {}
   if (typeof status === 'object') {

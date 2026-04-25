@@ -5,11 +5,19 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, Trash2, Link as LinkIcon, FileText, Sparkles } from 'lucide-react'
+import { Loader2, Trash2, Edit2, Link as LinkIcon, FileText, Sparkles } from 'lucide-react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   getIntelligences,
   updateIntelligenceStatus,
+  updateIntelligenceSummary,
   deleteIntelligence,
 } from '@/services/intelligence'
 
@@ -24,6 +32,12 @@ export default function NABHub() {
   const [url, setUrl] = useState('')
   const [content, setContent] = useState('')
   const [activeProvider, setActiveProvider] = useState<string>('')
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [editedSummary, setEditedSummary] = useState('')
+  const [isSavingSummary, setIsSavingSummary] = useState(false)
+
   const { toast } = useToast()
 
   const fetchActiveProvider = async () => {
@@ -133,6 +147,35 @@ export default function NABHub() {
         description: 'Falha ao atualizar status',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleEditClick = (item: any) => {
+    setEditingItem(item)
+    setEditedSummary(item.ai_summary || '')
+    setIsEditDialogOpen(true)
+  }
+
+  const handleSaveSummary = async () => {
+    if (!editingItem) return
+    setIsSavingSummary(true)
+    try {
+      await updateIntelligenceSummary(editingItem.id, editedSummary)
+      toast({
+        title: 'Sucesso',
+        description: 'Resumo atualizado com sucesso.',
+      })
+      setIsEditDialogOpen(false)
+      fetchIntelligences()
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: 'Erro',
+        description: 'Falha ao atualizar resumo',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSavingSummary(false)
     }
   }
 
@@ -263,9 +306,14 @@ export default function NABHub() {
                       className="flex items-center justify-between p-4 hover:bg-muted/10 transition-colors"
                     >
                       <div className="space-y-1.5 overflow-hidden pr-4 flex-1">
-                        <p className="font-semibold text-sm truncate" title={item.title}>
-                          {item.title}
-                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-sm truncate" title={item.title}>
+                            {item.title}
+                          </p>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            • {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           <span
                             className={`px-2.5 py-0.5 rounded-full font-medium ${item.status === 'published' ? 'bg-green-500/10 text-green-600 border border-green-500/20' : 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'}`}
@@ -293,8 +341,18 @@ export default function NABHub() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleEditClick(item)}
+                          className="h-8 w-8 hover:bg-primary/10 hover:text-primary text-muted-foreground transition-colors"
+                          title="Editar Resumo"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDelete(item.id)}
                           className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors"
+                          title="Excluir"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -307,6 +365,35 @@ export default function NABHub() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Resumo da IA</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              className="min-h-[300px] text-sm resize-y"
+              value={editedSummary}
+              onChange={(e) => setEditedSummary(e.target.value)}
+              placeholder="O resumo da IA aparecerá aqui..."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isSavingSummary}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveSummary} disabled={isSavingSummary}>
+              {isSavingSummary && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   )
 }
