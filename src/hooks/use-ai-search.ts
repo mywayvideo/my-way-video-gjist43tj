@@ -149,9 +149,10 @@ export function useUnifiedSearch() {
 
         // Attempt an AND condition for high precision if there are multiple keywords
         if (searchKeywords.length > 1) {
-          let query = supabase.from('products').select('*').eq('is_discontinued', false).limit(10)
+          let query = supabase.from('products').select('*').eq('is_discontinued', false).limit(30)
           searchKeywords.forEach((kw) => {
-            query = query.ilike('name', `%${kw}%`)
+            // Check both name and sku for each keyword using OR inside an AND chain
+            query = query.or(`name.ilike.%${kw}%,sku.ilike.%${kw}%`)
           })
           const { data: preciseProducts } = await query
           if (preciseProducts && preciseProducts.length > 0) {
@@ -159,9 +160,9 @@ export function useUnifiedSearch() {
           }
         }
 
-        // Fallback to OR conditions for the top terms to avoid missing products completely
+        // Fallback to OR conditions for all searchKeywords to avoid missing products completely
         if (kwProducts.length === 0) {
-          const orConditions = topKeywords
+          const orConditions = searchKeywords
             .map((kw) => `name.ilike.%${kw}%,sku.ilike.%${kw}%`)
             .join(',')
           const { data: looseProducts } = await supabase
@@ -169,9 +170,21 @@ export function useUnifiedSearch() {
             .select('*')
             .or(orConditions)
             .eq('is_discontinued', false)
-            .limit(30)
-          if (looseProducts) {
+            .limit(50)
+
+          if (looseProducts && looseProducts.length > 0) {
+            // Rank products by how many keywords they match
             kwProducts = looseProducts
+              .map((p) => {
+                const matches = searchKeywords.filter(
+                  (kw) =>
+                    p.name?.toLowerCase().includes(kw.toLowerCase()) ||
+                    p.sku?.toLowerCase().includes(kw.toLowerCase()),
+                ).length
+                return { product: p, score: matches }
+              })
+              .sort((a, b) => b.score - a.score)
+              .map((item) => item.product)
           }
         }
 
@@ -381,7 +394,7 @@ export function useUnifiedSearch() {
           cleanQuery.toLowerCase().includes(sku.toLowerCase()),
         )
 
-        // Extração de possíveis palavras-chave específicas do prompt
+        // Extração de possíveis palavras-chave específicas do prompt unificado
         const potentialPromptSkus = cleanQuery
           .replace(/[^\w\s-]/g, ' ')
           .split(/\s+/)
@@ -389,14 +402,23 @@ export function useUnifiedSearch() {
 
         // Adiciona os produtos que encontramos no passo "Escaneamento Prévio do Prompt"
         // para garantir que eles tenham precedência se houver match forte.
-        const explicitSearchProducts = currentUnifiedData.stock.filter(
-          (p: any) =>
-            potentialPromptSkus.some(
+        // Rank products by how many keywords they match to avoid generic matches (like "Sony") pushing out specific ones (like "Burano")
+        const explicitSearchProducts = currentUnifiedData.stock
+          .map((p: any) => {
+            const matches = potentialPromptSkus.filter(
               (sku) =>
                 p.sku?.toLowerCase().includes(sku.toLowerCase()) ||
                 p.name?.toLowerCase().includes(sku.toLowerCase()),
-            ) || promptMentionedSkus.includes(p.sku),
-        )
+            ).length
+
+            const isExplicitSku = promptMentionedSkus.includes(p.sku)
+            const score = matches + (isExplicitSku ? 5 : 0)
+
+            return { product: p, score }
+          })
+          .filter((item: any) => item.score > 0)
+          .sort((a: any, b: any) => b.score - a.score)
+          .map((item: any) => item.product)
 
         let allIdsOrObjects = [
           ...explicitSearchProducts,
