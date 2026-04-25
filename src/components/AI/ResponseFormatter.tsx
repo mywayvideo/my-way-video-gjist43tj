@@ -61,4 +61,10 @@ export function ResponseFormatter({
               <React.Fragment key={product.id || index}>
                 <ProductCard product={product} />
               </React.Fragment>
-           
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
