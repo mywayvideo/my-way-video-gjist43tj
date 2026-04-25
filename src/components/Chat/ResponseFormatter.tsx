@@ -31,14 +31,14 @@ export function ResponseFormatter(props: ResponseFormatterProps) {
     // Priority: Filter 'stock' results where product.id is included in 'referencedIds'
     let matches = stockItems.filter((p) => refIds.includes(p.id))
 
-    // Fallback: If Priority results are empty, filter 'stock' by matching product.name or product.model with the message text
+    // Fallback: If Priority results are empty, filter 'stock' by matching product.name, product.model, or product.sku with the message text
     if (matches.length === 0 && textContent) {
       const lowerText = textContent.toLowerCase()
       matches = stockItems.filter((p) => {
         const nameMatch = p.name && lowerText.includes(p.name.toLowerCase())
-        const modelMatch =
-          (p.sku || p.model) && lowerText.includes((p.sku || p.model).toLowerCase())
-        return nameMatch || modelMatch
+        const skuMatch = p.sku && lowerText.includes(p.sku.toLowerCase())
+        const modelMatch = p.model && lowerText.includes(p.model.toLowerCase())
+        return nameMatch || skuMatch || modelMatch
       })
     }
 

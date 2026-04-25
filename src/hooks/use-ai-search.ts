@@ -102,7 +102,7 @@ export function useUnifiedSearch() {
       // 4. Ensure the longest and most specific terms are prioritized
       const sortedSearchWords = [...searchKeywords].sort((a, b) => b.length - a.length)
 
-      const topKeywords = sortedSearchWords.slice(0, 3)
+      const topKeywords = sortedSearchWords.slice(0, 6)
 
       // To treat the search as a specific entity, use the original keywords sequence or the most specific term
       const exactPhrase = searchKeywords.join(' ')
@@ -283,6 +283,12 @@ export function useUnifiedSearch() {
     setResults(null) // Explicitly clear the previous results state to avoid data overlap
 
     try {
+      let referencedIds: string[] = []
+      let finalMessage = ''
+      let finalConfidence = 'high'
+      let finalProducts: any[] = []
+      let shouldShowWhatsapp = false
+
       const activeAgent = await getActiveAgent()
       const unifiedData = await fetchUnifiedData(cleanQuery)
 
@@ -351,11 +357,7 @@ export function useUnifiedSearch() {
       }
       setResults(intermediateResults)
 
-      let finalMessage = ''
-      let finalConfidence = 'high'
-      let finalProducts = currentUnifiedData.products
-      let shouldShowWhatsapp = false
-      let referencedIds: string[] = []
+      finalProducts = currentUnifiedData.products
 
       if (!activeAgent) {
         finalMessage = 'Nenhum agente de IA configurado. Exibindo resultados da base unificada.'
@@ -370,13 +372,26 @@ export function useUnifiedSearch() {
           nab_data: currentUnifiedData.nabData,
         })
         console.log('KNOWLEDGE_BASE_SENT_TO_AI:', contextString)
-        const aiResponse = await generateExpertResponse(
-          cleanQuery,
-          { ...currentUnifiedData, stringifiedContext: contextString, history },
-          activeAgent.id,
-        )
-        finalMessage = aiResponse.content
-        finalConfidence = aiResponse.confidence_level || 'high'
+
+        let aiResponse: any = null
+        try {
+          aiResponse = await generateExpertResponse(
+            cleanQuery,
+            { ...currentUnifiedData, stringifiedContext: contextString, history },
+            activeAgent.id,
+          )
+        } catch (aiError) {
+          console.error('Error parsing AI response:', aiError)
+          aiResponse = {
+            content:
+              'Desculpe, ocorreu um erro ao processar a resposta da IA. Por favor, tente novamente.',
+            confidence_level: 'low',
+            referenced_internal_products: [],
+          }
+        }
+
+        finalMessage = aiResponse?.content || ''
+        finalConfidence = aiResponse?.confidence_level || 'high'
 
         referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
           ? aiResponse.referenced_internal_products
@@ -387,14 +402,14 @@ export function useUnifiedSearch() {
           referencedIds.includes(p.id),
         )
 
-        // 2. Fallback: If Priority results are empty, filter 'stock' by matching product.name or product.model with the message text
+        // 2. Fallback: If Priority results are empty, filter 'stock' by matching product.name, product.model, or product.sku with the message text
         if (filteredProducts.length === 0 && finalMessage) {
           const lowerMessage = finalMessage.toLowerCase()
           filteredProducts = currentUnifiedData.stock.filter((p: any) => {
             const nameMatch = p.name && lowerMessage.includes(p.name.toLowerCase())
-            const modelMatch =
-              (p.sku || p.model) && lowerMessage.includes((p.sku || p.model).toLowerCase())
-            return nameMatch || modelMatch
+            const skuMatch = p.sku && lowerMessage.includes(p.sku.toLowerCase())
+            const modelMatch = p.model && lowerMessage.includes(p.model.toLowerCase())
+            return nameMatch || skuMatch || modelMatch
           })
         }
 
