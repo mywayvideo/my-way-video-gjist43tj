@@ -79,17 +79,25 @@ export function ResponseFormatter({
   const getFilteredProducts = () => {
     let filtered: Product[] = []
 
-    const combinedSource = [...(stock || []), ...(products || [])]
+    // Ensure we only deal with valid product objects
+    const validStock = (stock || []).filter((p) => typeof p === 'object' && p !== null && p.id)
+    const validProducts = (products || []).filter(
+      (p) => typeof p === 'object' && p !== null && p.id,
+    )
+    const combinedSource = [...validStock, ...validProducts]
+    const uniqueSource = Array.from(new Map(combinedSource.map((p) => [p.id, p])).values())
+
+    const validRefs = (referenced_internal_products || []).filter((ref) => typeof ref === 'string')
 
     // Layer 1: Priority by ID
-    if (referenced_internal_products && referenced_internal_products.length > 0) {
-      filtered = combinedSource.filter((p) => referenced_internal_products.includes(p.id))
+    if (validRefs.length > 0) {
+      filtered = uniqueSource.filter((p) => validRefs.includes(p.id))
     }
 
     // Layer 2: Fallback by Name match in content
     if (filtered.length === 0 && content) {
       const lowerContent = content.toLowerCase()
-      filtered = combinedSource.filter((p) => {
+      filtered = uniqueSource.filter((p) => {
         const nameMatch = p.name && lowerContent.includes(p.name.toLowerCase())
         const modelMatch =
           (p.sku || p.model) && lowerContent.includes((p.sku || p.model).toLowerCase())
@@ -97,17 +105,7 @@ export function ResponseFormatter({
       })
     }
 
-    // Remove duplicates
-    const seen = new Set()
-    const uniqueFiltered = []
-    for (const p of filtered) {
-      if (p && p.id && !seen.has(p.id)) {
-        seen.add(p.id)
-        uniqueFiltered.push(p)
-      }
-    }
-
-    return uniqueFiltered
+    return filtered
   }
 
   const displayProducts = getFilteredProducts()

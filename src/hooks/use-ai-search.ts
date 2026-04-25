@@ -121,9 +121,9 @@ export function useUnifiedSearch() {
         console.error('Error calling unified_search:', searchError)
       } else if (searchData) {
         const responseObj = searchData as any
-        products = responseObj.stock || []
-        cache = responseObj.intel || []
-        nab = responseObj.nab_data || []
+        products = Array.isArray(responseObj?.stock) ? responseObj.stock : []
+        cache = Array.isArray(responseObj?.intel) ? responseObj.intel : []
+        nab = Array.isArray(responseObj?.nab_data) ? responseObj.nab_data : []
       }
 
       // Se a frase exata não retornar produtos, fazemos fallback com o termo mais específico
@@ -132,14 +132,15 @@ export function useUnifiedSearch() {
         topKeywords.length > 0 &&
         topKeywords[0] !== optimizedSearchTerm
       ) {
-        const { data: fallbackData } = await supabase.rpc('unified_search', {
+        const { data: fallbackData, error: fallbackError } = await supabase.rpc('unified_search', {
           search_term: topKeywords[0],
         })
-        if (fallbackData) {
+        if (!fallbackError && fallbackData) {
           const fallbackObj = fallbackData as any
-          products = fallbackObj.stock || []
-          if (cache.length === 0) cache = fallbackObj.intel || []
-          if (nab.length === 0) nab = fallbackObj.nab_data || []
+          products = Array.isArray(fallbackObj?.stock) ? fallbackObj.stock : []
+          if (cache.length === 0) cache = Array.isArray(fallbackObj?.intel) ? fallbackObj.intel : []
+          if (nab.length === 0)
+            nab = Array.isArray(fallbackObj?.nab_data) ? fallbackObj.nab_data : []
         }
       }
 
@@ -242,12 +243,29 @@ export function useUnifiedSearch() {
     }
 
     const priceThreshold = settings?.price_threshold_usd || 5000
-    finalProducts = finalProducts.map((p: any) => ({
-      ...p,
-      is_expensive: p.price_usd > priceThreshold,
-      model: p.sku || p.model,
-      price_usa: p.price_usd || p.price_usa,
-    }))
+    finalProducts = finalProducts.map((p: any) => {
+      let finalUsdPrice = p.price_usd || p.price_usa
+
+      if (p.price_usa_rebate && p.price_usa_rebate > 0) {
+        if (!p.date_rebate) {
+          finalUsdPrice = p.price_usa_rebate
+        } else {
+          const rebateDate = new Date(p.date_rebate)
+          const currentDate = new Date()
+          if (currentDate <= rebateDate) {
+            finalUsdPrice = p.price_usa_rebate
+          }
+        }
+      }
+
+      return {
+        ...p,
+        is_expensive: finalUsdPrice > priceThreshold,
+        model: p.sku || p.model,
+        price_usa: finalUsdPrice,
+        price_usd: finalUsdPrice,
+      }
+    })
 
     const finalResultData = {
       stock: finalProducts,
@@ -515,13 +533,8 @@ export function useUnifiedSearch() {
           })
         }
 
-        if (mergedFinalProducts.length > 0) {
-          finalProducts = mergedFinalProducts
-        } else if (newProducts.length > 0) {
-          finalProducts = newProducts
-        } else {
-          finalProducts = []
-        }
+        // STRICT CONSTRAINT: Do NOT fallback to all 'newProducts' if AI didn't reference them and no names matched.
+        finalProducts = mergedFinalProducts
 
         shouldShowWhatsapp = finalProducts.length === 0
       }

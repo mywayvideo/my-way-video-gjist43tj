@@ -32,20 +32,23 @@ interface AIResponseProps {
 }
 
 export function getMentionedProducts(text: string, stock: Product[], referencedIds: string[] = []) {
-  if (!text || !stock || !Array.isArray(stock)) return []
+  if (!stock || !Array.isArray(stock)) return []
 
   let filtered: Product[] = []
+  const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
+
+  const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
 
   // Layer 1 (Priority): Filter by exact IDs if provided
-  if (referencedIds && referencedIds.length > 0) {
-    filtered = stock.filter((p) => referencedIds.includes(p.id))
+  if (validRefs.length > 0) {
+    filtered = uniqueStock.filter((p) => validRefs.includes(p.id))
   }
 
   // Layer 2 (Fallback): Scan the message text for exact matches
-  if (filtered.length === 0) {
+  if (filtered.length === 0 && text) {
     const lowerText = text.toLowerCase()
 
-    filtered = stock.filter((product) => {
+    filtered = uniqueStock.filter((product) => {
       const name = (product.name || '').toLowerCase()
       const model = (product.model || product.sku || '').toLowerCase()
 
