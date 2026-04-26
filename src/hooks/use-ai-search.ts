@@ -101,6 +101,23 @@ export function useUnifiedSearch() {
 
       // 4. Ensure the longest and most specific terms are prioritized
       const PROPER_NAMES = new Set(['burano', 'venice', 'alexa'])
+      const TECHNICAL_POWER_TERMS = new Set([
+        '12g',
+        '4k',
+        '8k',
+        'sfp',
+        'sdi',
+        'fiber',
+        'fibra',
+        'optical',
+        '6k',
+        'uhd',
+        'hdmi',
+        'wireless',
+        'ndiv',
+        'ptz',
+      ])
+
       const sortedSearchWords = [...searchKeywords].sort((a, b) => {
         const aLower = a.toLowerCase()
         const bLower = b.toLowerCase()
@@ -108,9 +125,11 @@ export function useUnifiedSearch() {
         const bHasNumber = /\d/.test(b)
         const aIsProper = PROPER_NAMES.has(aLower)
         const bIsProper = PROPER_NAMES.has(bLower)
+        const aIsPower = TECHNICAL_POWER_TERMS.has(aLower)
+        const bIsPower = TECHNICAL_POWER_TERMS.has(bLower)
 
-        const aPriority = aHasNumber || aIsProper ? 1 : 0
-        const bPriority = bHasNumber || bIsProper ? 1 : 0
+        const aPriority = aIsPower ? 2 : aHasNumber || aIsProper ? 1 : 0
+        const bPriority = bIsPower ? 2 : bHasNumber || bIsProper ? 1 : 0
 
         if (aPriority !== bPriority) {
           return bPriority - aPriority
@@ -118,7 +137,7 @@ export function useUnifiedSearch() {
         return b.length - a.length
       })
 
-      const topKeywords = sortedSearchWords.slice(0, 6)
+      const topKeywords = sortedSearchWords.slice(0, 10)
 
       // To treat the search as a specific entity, use the original keywords sequence or the most specific term
       const exactPhrase = searchKeywords.join(' ')
@@ -330,7 +349,7 @@ export function useUnifiedSearch() {
       } else if (!isComparison && newProducts.length > 0) {
         combinedProducts = [...newProducts, ...accumulatedContext.current.products]
           .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-          .slice(0, 10)
+          .slice(0, 25)
       } else if (newProducts.length === 0) {
         combinedProducts = accumulatedContext.current.products
       }
