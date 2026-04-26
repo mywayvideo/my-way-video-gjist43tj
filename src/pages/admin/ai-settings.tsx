@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { supabase } from '@/lib/supabase/client'
@@ -18,7 +18,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Save } from 'lucide-react'
+import { Slider } from '@/components/ui/slider'
+import { Loader2, Save, Trash2, Plus } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const formSchema = z.object({
   // ai_settings
@@ -39,6 +41,27 @@ const formSchema = z.object({
   system_prompt: z.string().optional(),
   confidence_threshold_for_whatsapp: z.string().optional(),
   max_web_search_attempts: z.coerce.number().min(0),
+
+  // New fields
+  intent_mapping: z
+    .array(
+      z.object({
+        trigger: z.string().min(1, 'Campo obrigatório'),
+        expansions: z.string().min(1, 'Campo obrigatório'),
+      }),
+    )
+    .default([]),
+  technical_bridge: z
+    .array(
+      z.object({
+        source: z.string().min(1, 'Campo obrigatório'),
+        target: z.string().min(1, 'Campo obrigatório'),
+        bridge: z.string().min(1, 'Campo obrigatório'),
+      }),
+    )
+    .default([]),
+  custom_stop_words: z.string().optional(),
+  proactivity_level: z.coerce.number().min(1).max(10).default(5),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -68,7 +91,29 @@ export default function AdminAISettings() {
       system_prompt: '',
       confidence_threshold_for_whatsapp: 'low',
       max_web_search_attempts: 2,
+      intent_mapping: [],
+      technical_bridge: [],
+      custom_stop_words: '',
+      proactivity_level: 5,
     },
+  })
+
+  const {
+    fields: intentFields,
+    append: appendIntent,
+    remove: removeIntent,
+  } = useFieldArray({
+    name: 'intent_mapping',
+    control: form.control,
+  })
+
+  const {
+    fields: bridgeFields,
+    append: appendBridge,
+    remove: removeBridge,
+  } = useFieldArray({
+    name: 'technical_bridge',
+    control: form.control,
   })
 
   useEffect(() => {
@@ -123,6 +168,15 @@ export default function AdminAISettings() {
           confidence_threshold_for_whatsapp:
             aiAgentSettingsData?.confidence_threshold_for_whatsapp || 'low',
           max_web_search_attempts: aiAgentSettingsData?.max_web_search_attempts ?? 2,
+
+          intent_mapping: Array.isArray(aiSettingsData?.intent_mapping)
+            ? aiSettingsData.intent_mapping
+            : [],
+          technical_bridge: Array.isArray(aiSettingsData?.technical_bridge)
+            ? aiSettingsData.technical_bridge
+            : [],
+          custom_stop_words: aiSettingsData?.custom_stop_words || '',
+          proactivity_level: aiAgentSettingsData?.proactivity_level ?? 5,
         })
       } catch (error: any) {
         toast({
@@ -165,6 +219,9 @@ export default function AdminAISettings() {
         ignore_stock_count: values.ignore_stock_count,
         logistics_rules_prompt: values.logistics_rules_prompt,
         system_prompt_template: values.system_prompt_template,
+        intent_mapping: values.intent_mapping,
+        technical_bridge: values.technical_bridge,
+        custom_stop_words: values.custom_stop_words,
         updated_at: new Date().toISOString(),
       }
 
@@ -181,6 +238,7 @@ export default function AdminAISettings() {
         system_prompt: values.system_prompt || '',
         confidence_threshold_for_whatsapp: values.confidence_threshold_for_whatsapp,
         max_web_search_attempts: values.max_web_search_attempts,
+        proactivity_level: values.proactivity_level,
         updated_at: new Date().toISOString(),
       }
 
@@ -201,7 +259,7 @@ export default function AdminAISettings() {
 
       toast({
         title: 'Sucesso',
-        description: 'Configurações salvas com sucesso.',
+        description: 'Configurações de Inteligência atualizadas!',
       })
     } catch (error: any) {
       toast({
@@ -216,8 +274,10 @@ export default function AdminAISettings() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="container mx-auto py-8 max-w-4xl space-y-8">
+        <Skeleton className="h-12 w-[400px]" />
+        <Skeleton className="h-[200px] w-full" />
+        <Skeleton className="h-[200px] w-full" />
       </div>
     )
   }
@@ -553,6 +613,241 @@ export default function AdminAISettings() {
                     <FormLabel>Prompt de Regras Logísticas</FormLabel>
                     <FormControl>
                       <Textarea {...field} className="font-mono text-sm min-h-[150px]" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Seção H */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Seção H (Mapeamento Semântico de Intenção)</CardTitle>
+              <CardDescription>
+                Defina palavras-chave que acionam termos de busca adicionais para melhorar os
+                resultados.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {intentFields.length === 0 ? (
+                <div className="text-center p-6 border rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Nenhum mapeamento configurado.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendIntent({ trigger: '', expansions: '' })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Mapeamento
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {intentFields.map((field, index) => (
+                    <div key={field.id} className="flex gap-4 items-start">
+                      <FormField
+                        control={form.control}
+                        name={`intent_mapping.${index}.trigger`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel className="sr-only">Termo Gatilho</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Termo Gatilho (ex: Produção)" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`intent_mapping.${index}.expansions`}
+                        render={({ field }) => (
+                          <FormItem className="flex-[2]">
+                            <FormLabel className="sr-only">Palavras-chave de Expansão</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Palavras de Expansão (ex: Câmera, Lente, Tripé)"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeIntent(index)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendIntent({ trigger: '', expansions: '' })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Mapeamento
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção I */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Seção I (Ponte de Soluções Técnicas)</CardTitle>
+              <CardDescription>
+                Defina regras para dependências técnicas (ex: conversão HDMI para SDI).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {bridgeFields.length === 0 ? (
+                <div className="text-center p-6 border rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Nenhuma ponte técnica configurada.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendBridge({ source: '', target: '', bridge: '' })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Regra
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {bridgeFields.map((field, index) => (
+                    <div key={field.id} className="flex gap-4 items-start">
+                      <FormField
+                        control={form.control}
+                        name={`technical_bridge.${index}.source`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel className="sr-only">Protocolo Origem</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Origem (ex: HDMI)" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`technical_bridge.${index}.target`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel className="sr-only">Protocolo Destino</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Destino (ex: SDI)" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`technical_bridge.${index}.bridge`}
+                        render={({ field }) => (
+                          <FormItem className="flex-[2]">
+                            <FormLabel className="sr-only">Solução (Ponte)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Ponte (ex: Micro Converter BiDirectional)"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeBridge(index)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendBridge({ source: '', target: '', bridge: '' })}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Regra
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção J */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Seção J (Comportamento e Vocabulário)</CardTitle>
+              <CardDescription>
+                Ajuste a proatividade do agente e configurações de filtro de palavras.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <FormField
+                control={form.control}
+                name="proactivity_level"
+                render={({ field: { value, onChange } }) => (
+                  <FormItem>
+                    <FormLabel>Nível de Proatividade (1 a 10)</FormLabel>
+                    <FormDescription>
+                      1 (Passivo/Reativo) a 10 (Consultor Ativo/Vendedor)
+                    </FormDescription>
+                    <FormControl>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium">1</span>
+                        <Slider
+                          min={1}
+                          max={10}
+                          step={1}
+                          value={[value]}
+                          onValueChange={(vals) => onChange(vals[0])}
+                          className="flex-1"
+                        />
+                        <span className="text-sm font-medium">10</span>
+                        <span className="text-sm font-bold ml-4 w-6 text-center">{value}</span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="custom_stop_words"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Palavras Ignoradas (Stop Words Customizadas)</FormLabel>
+                    <FormDescription>
+                      Palavras a serem ignoradas pelo motor de busca (separadas por vírgula).
+                    </FormDescription>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        className="font-mono text-sm min-h-[100px]"
+                        placeholder="Palavras a ignorar..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
