@@ -35,52 +35,52 @@ interface AIResponseProps {
 export function getMentionedProducts(text: string, stock: Product[], referencedIds: string[] = []) {
   if (!stock || !Array.isArray(stock)) return []
 
-  let filtered: Product[] = []
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
-
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
+  const lowerText = (text || '').toLowerCase()
 
-  // Layer 1 (Priority): Filter by exact IDs if provided
-  if (validRefs.length > 0) {
-    filtered = uniqueStock.filter((p) => validRefs.includes(p.id))
-  }
+  const filtered = uniqueStock.filter((product) => {
+    const isIdMatch = validRefs.includes(product.id)
 
-  // Layer 2 (Fallback): Scan the message text for exact matches
-  if (filtered.length === 0 && text) {
-    const lowerText = text.toLowerCase()
+    const skuLower = (product.sku || '').toLowerCase()
+    const isSkuMatch =
+      skuLower.length > 3 &&
+      (lowerText.includes(skuLower) ||
+        (skuLower.includes('-') &&
+          skuLower.split('-').some((p) => p.length >= 3 && lowerText.includes(p))))
 
-    filtered = uniqueStock.filter((product) => {
-      const name = (product.name || '').toLowerCase()
-      const model = (product.model || product.sku || '').toLowerCase()
+    const modelLower = (product.model || '').toLowerCase()
+    const isModelMatch =
+      modelLower.length > 3 &&
+      (lowerText.includes(modelLower) ||
+        (modelLower.includes('-') &&
+          modelLower.split('-').some((p) => p.length >= 3 && lowerText.includes(p))))
 
-      const hasName = name && lowerText.includes(name)
-      const hasModel = model && lowerText.includes(model)
+    const nameLower = (product.name || '').toLowerCase()
+    const isNameMatch = nameLower.length > 10 && lowerText.includes(nameLower)
 
-      return hasName || hasModel
-    })
+    return isIdMatch || isSkuMatch || isModelMatch || isNameMatch
+  })
 
-    return filtered.sort((a, b) => {
-      const aNameIdx = a.name ? lowerText.indexOf(a.name.toLowerCase()) : -1
-      const aModelIdx = a.model || a.sku ? lowerText.indexOf((a.model || a.sku).toLowerCase()) : -1
+  return filtered.sort((a, b) => {
+    const aNameIdx = a.name ? lowerText.indexOf(a.name.toLowerCase()) : -1
+    const aModelIdx = a.model || a.sku ? lowerText.indexOf((a.model || a.sku).toLowerCase()) : -1
 
-      const bNameIdx = b.name ? lowerText.indexOf(b.name.toLowerCase()) : -1
-      const bModelIdx = b.model || b.sku ? lowerText.indexOf((b.model || b.sku).toLowerCase()) : -1
+    const bNameIdx = b.name ? lowerText.indexOf(b.name.toLowerCase()) : -1
+    const bModelIdx = b.model || b.sku ? lowerText.indexOf((b.model || b.sku).toLowerCase()) : -1
 
-      const aIdx = Math.min(
-        aNameIdx !== -1 ? aNameIdx : Infinity,
-        aModelIdx !== -1 ? aModelIdx : Infinity,
-      )
+    const aIdx = Math.min(
+      aNameIdx !== -1 ? aNameIdx : Infinity,
+      aModelIdx !== -1 ? aModelIdx : Infinity,
+    )
 
-      const bIdx = Math.min(
-        bNameIdx !== -1 ? bNameIdx : Infinity,
-        bModelIdx !== -1 ? bModelIdx : Infinity,
-      )
+    const bIdx = Math.min(
+      bNameIdx !== -1 ? bNameIdx : Infinity,
+      bModelIdx !== -1 ? bModelIdx : Infinity,
+    )
 
-      return aIdx - bIdx
-    })
-  }
-
-  return filtered
+    return aIdx - bIdx
+  })
 }
 
 export function AIResponse({ message, search_results }: AIResponseProps) {
