@@ -513,6 +513,9 @@ export default function Product() {
   }
 
   const checkWhatsAppTrigger = (msg: Message, currentProduct: ProductType) => {
+    const content = msg?.content || (msg as any)?.text || ''
+    if (!content) return false
+
     if (!msg.aiData) return false
     const d = msg.aiData
 
@@ -525,7 +528,7 @@ export default function Product() {
     )
       return true
 
-    const contentLower = msg.content.toLowerCase()
+    const contentLower = content.toLowerCase()
     if (
       contentLower.includes('não encontrei') ||
       contentLower.includes('consulte o fabricante') ||
@@ -987,39 +990,48 @@ export default function Product() {
               )}
 
               {messages.map((msg, idx) => {
+                if (!msg) return null
+
                 if (msg.role === 'ai') {
+                  const content = msg?.content || (msg as any)?.text || ''
                   const hasError =
-                    msg.content === 'Ocorreu um erro ao consultar o especialista. Tente novamente.'
+                    content === 'Ocorreu um erro ao consultar o especialista. Tente novamente.'
                   const showWhatsApp = checkWhatsAppTrigger(msg, product)
                   return (
                     <div key={msg.id} className="w-full flex flex-col items-start my-2">
-                      <AISearchResults
-                        isLoading={msg.isLoading || false}
-                        result={
-                          msg.aiData
-                            ? {
-                                message: msg.content,
-                                confidence_level: msg.aiData.confidence_level,
-                                referenced_internal_products: msg.aiData
-                                  .referenced_internal_products as any,
-                                should_show_whatsapp_button: showWhatsApp,
-                                whatsapp_reason: msg.aiData.whatsapp_reason,
-                              }
-                            : { message: msg.content, should_show_whatsapp_button: showWhatsApp }
-                        }
-                        error={hasError ? msg.content : null}
-                        className="w-full shadow-md"
-                        isAdmin={isAdmin}
-                      />
+                      {msg && (
+                        <AISearchResults
+                          isLoading={msg.isLoading || false}
+                          result={
+                            msg.aiData
+                              ? {
+                                  message: content,
+                                  confidence_level: msg.aiData.confidence_level,
+                                  referenced_internal_products: msg.aiData
+                                    .referenced_internal_products as any,
+                                  should_show_whatsapp_button: showWhatsApp,
+                                  whatsapp_reason: msg.aiData.whatsapp_reason,
+                                }
+                              : { message: content, should_show_whatsapp_button: showWhatsApp }
+                          }
+                          error={hasError ? content : null}
+                          className="w-full shadow-md"
+                          isAdmin={isAdmin}
+                        />
+                      )}
                     </div>
                   )
                 }
 
                 return (
                   <div key={msg.id} className="flex flex-col items-end gap-1 my-2">
-                    <div className="p-3 bg-primary text-primary-foreground rounded-2xl rounded-tr-sm text-sm leading-[1.5] max-w-[90%] sm:max-w-[85%] shadow-sm">
-                      <p className="m-0 whitespace-pre-wrap">{msg.content}</p>
-                    </div>
+                    {msg && (
+                      <div className="p-3 bg-primary text-primary-foreground rounded-2xl rounded-tr-sm text-sm leading-[1.5] max-w-[90%] sm:max-w-[85%] shadow-sm">
+                        <p className="m-0 whitespace-pre-wrap">
+                          {msg?.content || (msg as any)?.text}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               })}
