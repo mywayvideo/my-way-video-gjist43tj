@@ -73,15 +73,11 @@ export function useUnifiedSearch() {
     const ignoreStockCount =
       aiSettingsData?.ignore_stock_count ?? settings?.ignore_stock_count ?? true
 
-    // Remove critical words from STOP_WORDS globally
-    const wordsToRemove = ['camera', 'cameras', 'lente', 'lentes', 'modelo', 'marca', 'câmera']
-    wordsToRemove.forEach((w) => STOP_WORDS.delete(w))
-
     // Apply custom stop words
     if (aiSettingsData?.custom_stop_words) {
       aiSettingsData.custom_stop_words.split(',').forEach((w: string) => {
         const cleanW = w.trim().toLowerCase()
-        if (cleanW && !wordsToRemove.includes(cleanW)) {
+        if (cleanW) {
           STOP_WORDS.add(cleanW)
         }
       })
@@ -129,37 +125,13 @@ export function useUnifiedSearch() {
       // 3. Create a unified 'searchKeywords' array containing all relevant terms
       const searchKeywords = allWords.filter((w) => !STOP_WORDS.has(w.toLowerCase()))
 
-      // 4. Ensure the longest and most specific terms are prioritized
-      const PROPER_NAMES = new Set(['burano', 'venice', 'alexa'])
-      const TECHNICAL_POWER_TERMS = new Set([
-        '12g',
-        '4k',
-        '8k',
-        'sfp',
-        'sdi',
-        'fiber',
-        'fibra',
-        'optical',
-        '6k',
-        'uhd',
-        'hdmi',
-        'wireless',
-        'ndiv',
-        'ptz',
-      ])
-
+      // 4. Ensure the longest and most specific terms are prioritized without hardcoded lists
       const sortedSearchWords = [...searchKeywords].sort((a, b) => {
-        const aLower = a.toLowerCase()
-        const bLower = b.toLowerCase()
         const aHasNumber = /\d/.test(a)
         const bHasNumber = /\d/.test(b)
-        const aIsProper = PROPER_NAMES.has(aLower)
-        const bIsProper = PROPER_NAMES.has(bLower)
-        const aIsPower = TECHNICAL_POWER_TERMS.has(aLower)
-        const bIsPower = TECHNICAL_POWER_TERMS.has(bLower)
 
-        const aPriority = aIsPower ? 2 : aHasNumber || aIsProper ? 1 : 0
-        const bPriority = bIsPower ? 2 : bHasNumber || bIsProper ? 1 : 0
+        const aPriority = aHasNumber ? 1 : 0
+        const bPriority = bHasNumber ? 1 : 0
 
         if (aPriority !== bPriority) {
           return bPriority - aPriority
@@ -466,28 +438,6 @@ export function useUnifiedSearch() {
         let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
           referencedIds.includes(p.id),
         )
-
-        // 2. Fallback: If Priority results are empty, filter 'stock' by matching product.name, product.model, or product.sku with the message text
-        if (filteredProducts.length === 0 && finalMessage) {
-          const lowerMessage = finalMessage.toLowerCase()
-
-          filteredProducts = currentUnifiedData.stock.filter((p: any) => {
-            if (p.sku && lowerMessage.includes(p.sku.toLowerCase())) return true
-            if (p.model && lowerMessage.includes(p.model.toLowerCase())) return true
-
-            if (p.name) {
-              const nameWords = p.name
-                .toLowerCase()
-                .split(/\s+/)
-                .filter((w: string) => w.length > 3)
-              for (const word of nameWords) {
-                if (lowerMessage.includes(word)) return true
-              }
-            }
-
-            return false
-          })
-        }
 
         // Remove duplicates just in case
         finalProducts = filteredProducts.filter(

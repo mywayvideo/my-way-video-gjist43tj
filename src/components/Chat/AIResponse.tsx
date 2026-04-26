@@ -37,48 +37,12 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
 
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
-  const lowerText = (text || '').toLowerCase()
 
   const filtered = uniqueStock.filter((product) => {
-    // 1. Direct Reference Match
-    const isIdMatch = validRefs.includes(product.id)
-    if (isIdMatch) return true
-
-    // 2. SKU Match (Exact lowercase substring match)
-    if (product.sku && lowerText.includes(product.sku.toLowerCase())) {
-      return true
-    }
-
-    // 3. One Significant Word Match
-    const productNameLower = (product.name || '').toLowerCase()
-    if (!productNameLower) return false
-
-    const nameWords = productNameLower.split(/\s+/).filter((w) => w.length > 3)
-
-    let matchedWordsCount = 0
-    for (const word of nameWords) {
-      if (lowerText.includes(word)) {
-        matchedWordsCount++
-      }
-    }
-
-    return matchedWordsCount >= 1
+    return validRefs.includes(product.id)
   })
 
-  return filtered.sort((a, b) => {
-    const isIdMatchA = validRefs.includes(a.id)
-    const isIdMatchB = validRefs.includes(b.id)
-    if (isIdMatchA && !isIdMatchB) return -1
-    if (isIdMatchB && !isIdMatchA) return 1
-
-    const aNameIdx = a.name ? lowerText.indexOf(a.name.toLowerCase()) : -1
-    const bNameIdx = b.name ? lowerText.indexOf(b.name.toLowerCase()) : -1
-
-    const aIdx = aNameIdx !== -1 ? aNameIdx : Infinity
-    const bIdx = bNameIdx !== -1 ? bNameIdx : Infinity
-
-    return aIdx - bIdx
-  })
+  return filtered
 }
 
 export function AIResponse({ message, search_results }: AIResponseProps) {
