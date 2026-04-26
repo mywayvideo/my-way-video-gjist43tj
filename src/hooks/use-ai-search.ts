@@ -139,10 +139,10 @@ export function useUnifiedSearch() {
         return b.length - a.length
       })
 
-      const topKeywords = sortedSearchWords.slice(0, 10)
+      const topKeywords = sortedSearchWords.slice(0, 12)
 
       // To treat the search as a specific entity, use the original keywords sequence or the most specific term
-      // Incorporates the full expandedQuery from intent mapping
+      // Incorporates the full expandedQuery from intent mapping without any truncation
       const optimizedSearchTerm = expandedQuery
 
       const executedSql = sqlString.replace(/\$1/g, optimizedSearchTerm)
