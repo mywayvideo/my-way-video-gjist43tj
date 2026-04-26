@@ -1175,4 +1175,14 @@ export default function Product() {
         }}
         aria-label="Voltar para busca anterior"
         className={cn(
-          'fixed z-40 flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.15)] backdrop-blur-[8px] transition-all duration-200 ease-out hover:bg-[rgba(0,0,0,0.25)] active:scale-95 active:bg-[rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group a
+          'fixed z-40 flex items-center justify-center rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.15)] backdrop-blur-[8px] transition-all duration-200 ease-out hover:bg-[rgba(0,0,0,0.25)] active:scale-95 active:bg-[rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary group animate-in fade-in slide-in-from-left-5 duration-300',
+          'bottom-4 left-4 h-12 w-12',
+          'md:bottom-5 md:left-5 md:h-[52px] md:w-[52px]',
+          'lg:bottom-6 lg:left-6 lg:h-14 lg:w-14',
+        )}
+      >
+        <ChevronLeft className="text-white/80 group-hover:text-white group-hover:opacity-100 transition-opacity w-5 h-5 md:w-[22px] md:h-[22px] lg:w-6 lg:h-6" />
+      </button>
+    </>
+  )
+}
