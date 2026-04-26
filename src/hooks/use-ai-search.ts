@@ -30,11 +30,7 @@ const STOP_WORDS = new Set([
   'esta',
   'aqui',
   'ali',
-  'camera',
-  'lente',
   'cabo',
-  'modelo',
-  'marca',
   'the',
   'what',
   'who',
@@ -441,25 +437,21 @@ export function useUnifiedSearch() {
         if (filteredProducts.length === 0 && finalMessage) {
           const lowerMessage = finalMessage.toLowerCase()
 
-          const searchKeywords = cleanQuery
-            .replace(/[^\w\s-]/g, ' ')
-            .split(/\s+/)
-            .filter((w) => w.length >= 2 && !STOP_WORDS.has(w.toLowerCase()))
-
           filteredProducts = currentUnifiedData.stock.filter((p: any) => {
-            const nameMatch = p.name && lowerMessage.includes(p.name.toLowerCase())
-            const skuMatch = p.sku && lowerMessage.includes(p.sku.toLowerCase())
-            const modelMatch = p.model && lowerMessage.includes(p.model.toLowerCase())
+            if (p.sku && lowerMessage.includes(p.sku.toLowerCase())) return true
+            if (p.model && lowerMessage.includes(p.model.toLowerCase())) return true
 
-            const kwMatch = searchKeywords.some((kw) => {
-              const lowerKw = kw.toLowerCase()
-              return (
-                (p.sku && p.sku.toLowerCase().includes(lowerKw)) ||
-                (p.model && p.model.toLowerCase().includes(lowerKw))
-              )
-            })
+            if (p.name) {
+              const nameWords = p.name
+                .toLowerCase()
+                .split(/\s+/)
+                .filter((w: string) => w.length > 3)
+              for (const word of nameWords) {
+                if (lowerMessage.includes(word)) return true
+              }
+            }
 
-            return nameMatch || skuMatch || modelMatch || kwMatch
+            return false
           })
         }
 

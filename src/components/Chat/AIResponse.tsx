@@ -43,6 +43,10 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
     const isIdMatch = validRefs.includes(product.id)
     if (isIdMatch) return true
 
+    if (product.sku && lowerText.includes(product.sku.toLowerCase())) {
+      return true
+    }
+
     const productNameLower = (product.name || '').toLowerCase()
     if (!productNameLower) return false
 
@@ -55,7 +59,7 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
       }
     }
 
-    return matchedWordsCount >= 2
+    return matchedWordsCount >= 1
   })
 
   return filtered.sort((a, b) => {
