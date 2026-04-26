@@ -40,13 +40,16 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
   const lowerText = (text || '').toLowerCase()
 
   const filtered = uniqueStock.filter((product) => {
+    // 1. Direct Reference Match
     const isIdMatch = validRefs.includes(product.id)
     if (isIdMatch) return true
 
+    // 2. SKU Match (Exact lowercase substring match)
     if (product.sku && lowerText.includes(product.sku.toLowerCase())) {
       return true
     }
 
+    // 3. One Significant Word Match
     const productNameLower = (product.name || '').toLowerCase()
     if (!productNameLower) return false
 

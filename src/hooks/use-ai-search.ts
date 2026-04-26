@@ -65,13 +65,48 @@ export function useUnifiedSearch() {
 
     const { data: aiSettingsData } = await supabase
       .from('ai_settings')
-      .select('ignore_stock_count')
+      .select('ignore_stock_count, custom_stop_words, intent_mapping')
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
 
     const ignoreStockCount =
       aiSettingsData?.ignore_stock_count ?? settings?.ignore_stock_count ?? true
+
+    // Remove critical words from STOP_WORDS globally
+    const wordsToRemove = ['camera', 'cameras', 'lente', 'lentes', 'modelo', 'marca', 'câmera']
+    wordsToRemove.forEach((w) => STOP_WORDS.delete(w))
+
+    // Apply custom stop words
+    if (aiSettingsData?.custom_stop_words) {
+      aiSettingsData.custom_stop_words.split(',').forEach((w: string) => {
+        const cleanW = w.trim().toLowerCase()
+        if (cleanW && !wordsToRemove.includes(cleanW)) {
+          STOP_WORDS.add(cleanW)
+        }
+      })
+    }
+
+    // EXPAND: Intent Mapping
+    let expandedQuery = cleanQuery
+    if (aiSettingsData?.intent_mapping) {
+      try {
+        const intentMap =
+          typeof aiSettingsData.intent_mapping === 'string'
+            ? JSON.parse(aiSettingsData.intent_mapping)
+            : aiSettingsData.intent_mapping
+
+        if (Array.isArray(intentMap)) {
+          for (const intent of intentMap) {
+            if (intent.trigger && cleanQuery.toLowerCase().includes(intent.trigger.toLowerCase())) {
+              expandedQuery += ' ' + (intent.expansion || '')
+            }
+          }
+        }
+      } catch {
+        /* intentionally ignored */
+      }
+    }
 
     let products: any[] = []
     let cache: any[] = []
@@ -85,9 +120,8 @@ export function useUnifiedSearch() {
         sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 30;`
       }
 
-      // 1. Extract all words from the query that are NOT in the 'stopWords' list.
-      // 2. Do NOT filter out words just because they lack numbers.
-      const allWords = cleanQuery
+      // 1. Extract all words from the expanded query that are NOT in the 'stopWords' list.
+      const allWords = expandedQuery
         .replace(/[^\w\s-]/g, ' ')
         .split(/\s+/)
         .filter((w) => w.length >= 2)
