@@ -142,8 +142,8 @@ export function useUnifiedSearch() {
       const topKeywords = sortedSearchWords.slice(0, 10)
 
       // To treat the search as a specific entity, use the original keywords sequence or the most specific term
-      const exactPhrase = searchKeywords.join(' ')
-      const optimizedSearchTerm = exactPhrase || expandedQuery
+      // Incorporates the full expandedQuery from intent mapping
+      const optimizedSearchTerm = expandedQuery
 
       const executedSql = sqlString.replace(/\$1/g, optimizedSearchTerm)
       console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)

@@ -45,18 +45,19 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
       return true
     }
 
-    // 2. Exact SKU mentioned in text
+    // 2. Exact SKU mentioned in text (case-insensitive, safe regex)
     if (product.sku && product.sku.trim() !== '') {
       try {
-        const escapedSku = product.sku.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const skuRegex = new RegExp(`\\b${escapedSku}\\b`, 'i')
+        const cleanSku = product.sku.trim()
+        const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+        const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
         if (skuRegex.test(text)) return true
       } catch (e) {
         if (lowerText.includes(product.sku.toLowerCase().trim())) return true
       }
     }
 
-    // 3. Full name mentioned in text
+    // 3. Full name mentioned in text (case-insensitive)
     if (product.name && product.name.trim() !== '') {
       if (lowerText.includes(product.name.toLowerCase().trim())) {
         return true
