@@ -15,6 +15,7 @@ export const performAISearch = async (
   query: string,
   signal?: AbortSignal,
 ): Promise<{ data: AISearchResponse | null; error: any }> => {
+  console.log('performAISearch called with query:', query)
   try {
     const {
       data: { session },
