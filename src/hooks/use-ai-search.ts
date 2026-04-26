@@ -113,7 +113,7 @@ export function useUnifiedSearch() {
       let sqlString = rawSql.trim()
 
       if (!sqlString) {
-        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 30;`
+        sqlString = `SELECT * FROM products WHERE (name ILIKE '%$1%' OR sku ILIKE '%$1%' OR description ILIKE '%$1%') ORDER BY price_usd DESC, stock DESC LIMIT 50;`
       }
 
       // 1. Extract all words from the expanded query that are NOT in the 'stopWords' list.
@@ -143,7 +143,7 @@ export function useUnifiedSearch() {
 
       // To treat the search as a specific entity, use the original keywords sequence or the most specific term
       const exactPhrase = searchKeywords.join(' ')
-      const optimizedSearchTerm = exactPhrase || cleanQuery
+      const optimizedSearchTerm = exactPhrase || expandedQuery
 
       const executedSql = sqlString.replace(/\$1/g, optimizedSearchTerm)
       console.log('SQL_SEARCH_SOVEREIGNTY_EXECUTED:', executedSql)
@@ -193,7 +193,7 @@ export function useUnifiedSearch() {
             .select('*')
             .or('name.ilike.%' + kw + '%,sku.ilike.%' + kw + '%')
             .eq('is_discontinued', false)
-            .limit(10),
+            .limit(50),
         )
         const keywordResults = await Promise.all(keywordPromises)
         keywordResults.forEach((res) => {
@@ -351,7 +351,7 @@ export function useUnifiedSearch() {
       } else if (!isComparison && newProducts.length > 0) {
         combinedProducts = [...newProducts, ...accumulatedContext.current.products]
           .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-          .slice(0, 25)
+          .slice(0, 50)
       } else if (newProducts.length === 0) {
         combinedProducts = accumulatedContext.current.products
       }

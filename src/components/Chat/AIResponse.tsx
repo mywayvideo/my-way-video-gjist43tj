@@ -37,9 +37,33 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
 
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
+  const lowerText = text ? text.toLowerCase() : ''
 
   const filtered = uniqueStock.filter((product) => {
-    return validRefs.includes(product.id)
+    // 1. ID in referenced array
+    if (validRefs.includes(product.id)) {
+      return true
+    }
+
+    // 2. Exact SKU mentioned in text
+    if (product.sku && product.sku.trim() !== '') {
+      try {
+        const escapedSku = product.sku.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const skuRegex = new RegExp(`\\b${escapedSku}\\b`, 'i')
+        if (skuRegex.test(text)) return true
+      } catch (e) {
+        if (lowerText.includes(product.sku.toLowerCase().trim())) return true
+      }
+    }
+
+    // 3. Full name mentioned in text
+    if (product.name && product.name.trim() !== '') {
+      if (lowerText.includes(product.name.toLowerCase().trim())) {
+        return true
+      }
+    }
+
+    return false
   })
 
   return filtered
