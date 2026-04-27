@@ -37,7 +37,6 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
 
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
-  const lowerText = text ? text.toLowerCase() : ''
 
   const filtered = uniqueStock.filter((product) => {
     if (validRefs.includes(product.id)) {
@@ -45,16 +44,33 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
     }
 
     if (product.sku && product.sku.trim() !== '') {
+      const cleanSku = product.sku.trim()
+
       try {
-        const cleanSku = product.sku.trim()
         const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
         const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
         if (skuRegex.test(text)) return true
       } catch (e) {
-        const cleanSku = product.sku.toLowerCase().trim()
-        if (lowerText.includes(cleanSku)) {
-          const parts = lowerText.split(/[\s,.-]+/)
-          if (parts.includes(cleanSku)) return true
+        if (text.toLowerCase().includes(cleanSku.toLowerCase())) return true
+      }
+
+      if (cleanSku.includes('-')) {
+        const parts = cleanSku
+          .split('-')
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0)
+        if (parts.length >= 2) {
+          const escapedPart1 = parts[0].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+          const escapedPart2 = parts[1].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+          try {
+            const proximityRegex1 = new RegExp(escapedPart1 + '.{0,10}' + escapedPart2, 'i')
+            const proximityRegex2 = new RegExp(escapedPart2 + '.{0,10}' + escapedPart1, 'i')
+            if (proximityRegex1.test(text) || proximityRegex2.test(text)) {
+              return true
+            }
+          } catch {
+            /* intentionally ignored */
+          }
         }
       }
     }
@@ -75,10 +91,12 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="max-h-96 overflow-y-auto border-b pb-4 pr-2 custom-scrollbar">
-        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-          {text}
-        </ReactMarkdown>
+      <div className="max-h-96 overflow-y-auto overflow-x-auto max-w-full bg-muted/10 border rounded-lg mb-6 custom-scrollbar">
+        <div className="px-8 py-6 max-w-4xl mx-auto">
+          <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+            {text}
+          </ReactMarkdown>
+        </div>
       </div>
 
       {mentionedProducts.length > 0 && (

@@ -320,6 +320,41 @@ export function useUnifiedSearch() {
     setResults(null) // Explicitly clear the previous results state to avoid data overlap
 
     try {
+      let sessionId = sessionStorage.getItem('ai_chat_session_id')
+      if (!sessionId) {
+        sessionId = crypto.randomUUID()
+        sessionStorage.setItem('ai_chat_session_id', sessionId)
+      }
+
+      let chatHistory: any[] = []
+      let userId: string | null = null
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        userId = user?.id || null
+
+        let queryDb = supabase
+          .from('chat_messages')
+          .select('role, content')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        if (userId) {
+          queryDb = queryDb.eq('user_id', userId)
+        } else {
+          queryDb = queryDb.is('user_id', null)
+        }
+
+        const { data: historyData } = await queryDb
+        if (historyData) {
+          chatHistory = historyData.reverse().map((h) => ({ role: h.role, content: h.content }))
+        }
+      } catch (e) {
+        console.error('Error fetching history:', e)
+      }
+
       let referencedIds: string[] = []
       let finalMessage = ''
       let finalConfidence = 'high'
@@ -414,7 +449,7 @@ export function useUnifiedSearch() {
         try {
           aiResponse = await generateExpertResponse(
             cleanQuery,
-            { ...currentUnifiedData, stringifiedContext: contextString, history },
+            { ...currentUnifiedData, stringifiedContext: contextString, history: chatHistory },
             activeAgent.id,
           )
         } catch (aiError) {
@@ -434,21 +469,37 @@ export function useUnifiedSearch() {
           ? aiResponse.referenced_internal_products
           : []
 
-        const lowerResponse = finalMessage.toLowerCase()
         let filteredProducts = currentUnifiedData.stock.filter((p: any) => {
           if (referencedIds.includes(p.id)) return true
 
           if (p.sku && p.sku.trim() !== '') {
+            const cleanSku = p.sku.trim()
+
             try {
-              const cleanSku = p.sku.trim()
               const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
               const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
               if (skuRegex.test(finalMessage)) return true
             } catch (e) {
-              const cleanSku = p.sku.toLowerCase().trim()
-              if (lowerResponse.includes(cleanSku)) {
-                const parts = lowerResponse.split(/[\s,.-]+/)
-                if (parts.includes(cleanSku)) return true
+              if (finalMessage.toLowerCase().includes(cleanSku.toLowerCase())) return true
+            }
+
+            if (cleanSku.includes('-')) {
+              const parts = cleanSku
+                .split('-')
+                .map((pt: string) => pt.trim())
+                .filter((pt: string) => pt.length > 0)
+              if (parts.length >= 2) {
+                const escapedPart1 = parts[0].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+                const escapedPart2 = parts[1].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+                try {
+                  const proximityRegex1 = new RegExp(escapedPart1 + '.{0,10}' + escapedPart2, 'i')
+                  const proximityRegex2 = new RegExp(escapedPart2 + '.{0,10}' + escapedPart1, 'i')
+                  if (proximityRegex1.test(finalMessage) || proximityRegex2.test(finalMessage)) {
+                    return true
+                  }
+                } catch {
+                  /* intentionally ignored */
+                }
               }
             }
           }
@@ -482,6 +533,15 @@ export function useUnifiedSearch() {
 
       console.log('SEARCH_RESULTS:', combinedResults)
       console.log('DATA_FOUND:', combinedResults.stock?.length || 0)
+
+      try {
+        await supabase.from('chat_messages').insert([
+          { session_id: sessionId, user_id: userId, role: 'user', content: cleanQuery },
+          { session_id: sessionId, user_id: userId, role: 'assistant', content: finalMessage },
+        ])
+      } catch (e) {
+        console.error('Error saving history:', e)
+      }
 
       setResults(combinedResults)
 
