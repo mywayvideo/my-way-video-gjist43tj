@@ -465,6 +465,7 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse?.content || ''
         finalConfidence = aiResponse?.confidence_level || 'high'
 
+        // 1. Extração de IDs com prioridade para a nova lógica de related_product_ids
         referencedIds =
           Array.isArray(aiResponse?.related_product_ids) &&
           aiResponse.related_product_ids.length > 0
@@ -473,12 +474,12 @@ export function useUnifiedSearch() {
               ? aiResponse.referenced_internal_products
               : []
 
-        let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
-          referencedIds.includes(p.id),
-        )
+        // 2. Filtragem Direta: Se o ID está na lista da IA, ele VAI para a tela.
+        // Removemos qualquer dependência de busca por texto/SKU no frontend.
+        finalProducts = currentUnifiedData.stock.filter((p: any) => referencedIds.includes(p.id))
 
-        // Remove duplicates just in case
-        finalProducts = filteredProducts.filter(
+        // 3. Garantia de Unicidade (Evita cards duplicados)
+        finalProducts = finalProducts.filter(
           (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
         )
 

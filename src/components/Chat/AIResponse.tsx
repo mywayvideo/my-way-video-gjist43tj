@@ -59,7 +59,7 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
     <div className="flex flex-col space-y-4">
       <div className="max-h-96 overflow-y-auto overflow-x-auto px-10 py-8 border rounded-xl bg-muted/5 mb-6 custom-scrollbar">
         <div className="max-w-4xl mx-auto">
-          <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-normal prose-table:w-full prose-table:border-collapse prose-table:my-4 prose-th:border prose-th:bg-muted/50 prose-th:p-3 prose-th:text-left prose-th:font-bold prose-td:border prose-td:p-3 prose-td:align-top prose-tr:even:bg-muted/20 prose-p:leading-relaxed prose-li:my-2">
+          <ReactMarkdown className="prose prose-base dark:prose-invert max-w-none whitespace-normal prose-table:w-full prose-table:table-fixed prose-table:border-collapse prose-table:my-6 prose-th:border prose-th:bg-muted/50 prose-th:p-4 prose-th:text-left prose-th:font-bold prose-td:border prose-td:p-4 prose-td:align-top prose-tr:even:bg-muted/10 prose-p:leading-relaxed prose-li:my-2">
             {text}
           </ReactMarkdown>
         </div>
