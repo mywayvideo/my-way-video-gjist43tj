@@ -413,8 +413,8 @@ export function useUnifiedSearch() {
 
       // Emit intermediate results so UI can render loading state
       const intermediateResults = {
-        message: 'Analisando resultados...',
-        content: 'Analisando resultados...',
+        message: 'Sincronizando inteligência audiovisual...',
+        content: 'Sincronizando inteligência audiovisual...',
         confidence_level: 'high',
         stock: currentUnifiedData.stock,
         products: [], // Do not render products until AI confirms relevance

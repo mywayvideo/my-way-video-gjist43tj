@@ -49,7 +49,7 @@ export default function Index() {
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
-        <div className="text-center space-y-6 z-10 w-full max-w-4xl animate-fade-in-up">
+        <div className="text-center space-y-6 z-10 w-full max-w-2xl mx-auto animate-fade-in-up">
           {results?.has_nab_intelligence && (
             <Badge
               variant="destructive"
@@ -77,7 +77,7 @@ export default function Index() {
             {isSearchLoading && (
               <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-pulse">
                 <p className="text-center text-muted-foreground text-lg mb-6">
-                  Consultando atualizações em tempo real com Miami...
+                  Sincronizando inteligência audiovisual...
                 </p>
                 <div className="space-y-4">
                   <Skeleton className="h-24 w-full bg-white/5 rounded-xl border-l-4 border-orange-500/50" />
