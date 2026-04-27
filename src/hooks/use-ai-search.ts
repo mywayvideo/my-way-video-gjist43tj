@@ -435,25 +435,21 @@ export function useUnifiedSearch() {
           : []
 
         const lowerResponse = finalMessage.toLowerCase()
-        // 1. Priority: Filter 'stock' results where product.id is included in 'referencedIds' OR name/sku is mentioned
         let filteredProducts = currentUnifiedData.stock.filter((p: any) => {
           if (referencedIds.includes(p.id)) return true
 
           if (p.sku && p.sku.trim() !== '') {
-            const cleanSku = p.sku.toLowerCase().trim()
-            if (lowerResponse.includes(cleanSku)) return true
-          }
-
-          if (p.name && p.name.trim() !== '') {
-            const cleanName = p.name.toLowerCase().trim()
-            if (lowerResponse.includes(cleanName)) return true
-
-            const words = cleanName.split(' ').filter((w: string) => w.length >= 3)
-            if (words.length >= 2) {
-              const matchCount = words.filter((w: string) => lowerResponse.includes(w)).length
-              if (matchCount >= 2) return true
-            } else if (words.length === 1) {
-              if (lowerResponse.includes(words[0])) return true
+            try {
+              const cleanSku = p.sku.trim()
+              const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+              const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
+              if (skuRegex.test(finalMessage)) return true
+            } catch (e) {
+              const cleanSku = p.sku.toLowerCase().trim()
+              if (lowerResponse.includes(cleanSku)) {
+                const parts = lowerResponse.split(/[\s,.-]+/)
+                if (parts.includes(cleanSku)) return true
+              }
             }
           }
 

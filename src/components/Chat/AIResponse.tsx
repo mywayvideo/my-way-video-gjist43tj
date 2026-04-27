@@ -38,7 +38,6 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
   const lowerText = text ? text.toLowerCase() : ''
-  const ignoreWords = ['camera', 'cartao', 'monitor', 'cabo', 'video', 'audio', 'digital']
 
   const filtered = uniqueStock.filter((product) => {
     if (validRefs.includes(product.id)) {
@@ -56,31 +55,6 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
         if (lowerText.includes(cleanSku)) {
           const parts = lowerText.split(/[\s,.-]+/)
           if (parts.includes(cleanSku)) return true
-        }
-      }
-    }
-
-    if (product.name && product.name.trim() !== '') {
-      const cleanName = product.name.toLowerCase().trim()
-
-      if (lowerText.includes(cleanName)) {
-        return true
-      }
-
-      const words = cleanName
-        .split(/[\s,.-]+/)
-        .filter((w) => w.length > 3 && !ignoreWords.includes(w))
-      if (words.length >= 2) {
-        const matchedIndices = words.map((w) => lowerText.indexOf(w)).filter((idx) => idx !== -1)
-
-        const matchPercentage = matchedIndices.length / words.length
-        if (matchPercentage >= 0.7 && matchedIndices.length >= 2) {
-          const minIndex = Math.min(...matchedIndices)
-          const maxIndex = Math.max(...matchedIndices)
-
-          if (maxIndex - minIndex < 150) {
-            return true
-          }
         }
       }
     }
