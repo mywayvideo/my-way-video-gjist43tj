@@ -465,13 +465,13 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse?.content || ''
         finalConfidence = aiResponse?.confidence_level || 'high'
 
-        referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
-          ? aiResponse.referenced_internal_products
-          : []
-
-        if (referencedIds.length === 0 && Array.isArray(aiResponse?.related_product_ids)) {
-          referencedIds = aiResponse.related_product_ids
-        }
+        referencedIds =
+          Array.isArray(aiResponse?.related_product_ids) &&
+          aiResponse.related_product_ids.length > 0
+            ? aiResponse.related_product_ids
+            : Array.isArray(aiResponse?.referenced_internal_products)
+              ? aiResponse.referenced_internal_products
+              : []
 
         let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
           referencedIds.includes(p.id),
