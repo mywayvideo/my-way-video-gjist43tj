@@ -37,7 +37,7 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
 
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
-  const lowerText = text ? text.toLowerCase() : ''
+  const normalizedText = text ? text.toLowerCase().replace(/[-.\s]/g, '') : ''
 
   const filtered = uniqueStock.filter((product) => {
     if (validRefs.includes(product.id)) {
@@ -45,17 +45,9 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
     }
 
     if (product.sku && product.sku.trim() !== '') {
-      try {
-        const cleanSku = product.sku.trim()
-        const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-        const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
-        if (skuRegex.test(text)) return true
-      } catch (e) {
-        const cleanSku = product.sku.toLowerCase().trim()
-        if (lowerText.includes(cleanSku)) {
-          const parts = lowerText.split(/[\s,.-]+/)
-          if (parts.includes(cleanSku)) return true
-        }
+      const normalizedSku = product.sku.toLowerCase().replace(/[-.\s]/g, '')
+      if (normalizedSku && normalizedText.includes(normalizedSku)) {
+        return true
       }
     }
 
@@ -75,7 +67,7 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="max-h-96 overflow-y-auto border-b pb-4 pr-2 custom-scrollbar">
+      <div className="max-h-96 overflow-y-auto px-6 py-4 max-w-full bg-muted/30 border-b custom-scrollbar">
         <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
           {text}
         </ReactMarkdown>

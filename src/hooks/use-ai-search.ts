@@ -434,22 +434,14 @@ export function useUnifiedSearch() {
           ? aiResponse.referenced_internal_products
           : []
 
-        const lowerResponse = finalMessage.toLowerCase()
+        const normalizedResponse = finalMessage.toLowerCase().replace(/[-.\s]/g, '')
         let filteredProducts = currentUnifiedData.stock.filter((p: any) => {
           if (referencedIds.includes(p.id)) return true
 
           if (p.sku && p.sku.trim() !== '') {
-            try {
-              const cleanSku = p.sku.trim()
-              const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-              const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
-              if (skuRegex.test(finalMessage)) return true
-            } catch (e) {
-              const cleanSku = p.sku.toLowerCase().trim()
-              if (lowerResponse.includes(cleanSku)) {
-                const parts = lowerResponse.split(/[\s,.-]+/)
-                if (parts.includes(cleanSku)) return true
-              }
+            const normalizedSku = p.sku.toLowerCase().replace(/[-.\s]/g, '')
+            if (normalizedSku && normalizedResponse.includes(normalizedSku)) {
+              return true
             }
           }
 
