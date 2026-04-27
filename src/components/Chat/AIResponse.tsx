@@ -38,6 +38,7 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
   const lowerText = text ? text.toLowerCase() : ''
+  const ignoreWords = ['camera', 'cartao', 'monitor', 'cabo', 'video', 'audio', 'digital']
 
   const filtered = uniqueStock.filter((product) => {
     if (validRefs.includes(product.id)) {
@@ -51,24 +52,36 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
         const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
         if (skuRegex.test(text)) return true
       } catch (e) {
-        if (lowerText.includes(product.sku.toLowerCase().trim())) return true
+        const cleanSku = product.sku.toLowerCase().trim()
+        if (lowerText.includes(cleanSku)) {
+          const parts = lowerText.split(/[\s,.-]+/)
+          if (parts.includes(cleanSku)) return true
+        }
       }
     }
 
     if (product.name && product.name.trim() !== '') {
       const cleanName = product.name.toLowerCase().trim()
+
       if (lowerText.includes(cleanName)) {
         return true
       }
 
-      const words = cleanName.split(' ').filter((w) => w.length >= 3)
+      const words = cleanName
+        .split(/[\s,.-]+/)
+        .filter((w) => w.length > 3 && !ignoreWords.includes(w))
       if (words.length >= 2) {
-        const matchCount = words.filter((w) => lowerText.includes(w)).length
-        if (matchCount >= 2) {
-          return true
+        const matchedIndices = words.map((w) => lowerText.indexOf(w)).filter((idx) => idx !== -1)
+
+        const matchPercentage = matchedIndices.length / words.length
+        if (matchPercentage >= 0.7 && matchedIndices.length >= 2) {
+          const minIndex = Math.min(...matchedIndices)
+          const maxIndex = Math.max(...matchedIndices)
+
+          if (maxIndex - minIndex < 150) {
+            return true
+          }
         }
-      } else if (words.length === 1) {
-        if (lowerText.includes(words[0])) return true
       }
     }
 
@@ -88,7 +101,7 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="max-h-96 overflow-y-auto border-b pb-4 pr-2">
+      <div className="max-h-96 overflow-y-auto border-b pb-4 pr-2 custom-scrollbar">
         <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
           {text}
         </ReactMarkdown>
