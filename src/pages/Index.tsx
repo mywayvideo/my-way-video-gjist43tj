@@ -69,7 +69,10 @@ export default function Index() {
             especialistas em segundos.
           </p>
 
-          <div className="pt-8 w-full animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <div
+            className="pt-8 w-full animate-fade-in [&_textarea]:min-h-[160px]"
+            style={{ animationDelay: '200ms' }}
+          >
             <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
             {isSearchLoading && (
               <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-pulse">
@@ -85,7 +88,10 @@ export default function Index() {
           </div>
 
           {results && !isSearchLoading && !Array.isArray(results) && (
-            <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up">
+            <div
+              id="ai-response-container"
+              className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24"
+            >
               <ResponseFormatter
                 content={results.content || results.message || ''}
                 products={results.products}

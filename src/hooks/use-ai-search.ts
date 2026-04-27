@@ -139,7 +139,7 @@ export function useUnifiedSearch() {
         return b.length - a.length
       })
 
-      const topKeywords = sortedSearchWords.slice(0, 12)
+      const topKeywords = sortedSearchWords.slice(0, 10)
 
       // To treat the search as a specific entity, use the original keywords sequence or the most specific term
       // Incorporates the full expandedQuery from intent mapping without any truncation
@@ -467,6 +467,17 @@ export function useUnifiedSearch() {
       console.log('DATA_FOUND:', combinedResults.stock?.length || 0)
 
       setResults(combinedResults)
+
+      setTimeout(() => {
+        const container = document.getElementById('ai-response-container')
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          setTimeout(() => {
+            window.scrollBy(0, -80)
+          }, 300)
+        }
+      }, 100)
+
       return combinedResults
     } catch (err: any) {
       console.error('[useUnifiedSearch] error:', err)

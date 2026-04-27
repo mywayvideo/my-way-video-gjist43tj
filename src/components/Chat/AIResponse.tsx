@@ -40,12 +40,10 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
   const lowerText = text ? text.toLowerCase() : ''
 
   const filtered = uniqueStock.filter((product) => {
-    // 1. ID in referenced array
     if (validRefs.includes(product.id)) {
       return true
     }
 
-    // 2. Exact SKU mentioned in text (case-insensitive, safe regex)
     if (product.sku && product.sku.trim() !== '') {
       try {
         const cleanSku = product.sku.trim()
@@ -57,10 +55,18 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
       }
     }
 
-    // 3. Full name mentioned in text (case-insensitive)
     if (product.name && product.name.trim() !== '') {
-      if (lowerText.includes(product.name.toLowerCase().trim())) {
+      const cleanName = product.name.toLowerCase().trim()
+      if (lowerText.includes(cleanName)) {
         return true
+      }
+
+      const words = cleanName.split(' ').filter((w) => w.length > 3)
+      if (words.length > 0) {
+        const matchCount = words.filter((w) => lowerText.includes(w)).length
+        if (matchCount >= Math.min(3, words.length)) {
+          return true
+        }
       }
     }
 
