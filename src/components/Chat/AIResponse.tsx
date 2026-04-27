@@ -17,6 +17,7 @@ interface Product {
 interface SearchResults {
   stock?: Product[]
   referenced_internal_products?: string[]
+  related_product_ids?: string[]
   [key: string]: any
 }
 
@@ -24,6 +25,7 @@ interface Message {
   text?: string
   content?: string
   referenced_internal_products?: string[]
+  related_product_ids?: string[]
   [key: string]: any
 }
 
@@ -38,62 +40,26 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
   const uniqueStock = Array.from(new Map(stock.map((p) => [p.id, p])).values())
   const validRefs = (referencedIds || []).filter((ref) => typeof ref === 'string')
 
-  const filtered = uniqueStock.filter((product) => {
-    if (validRefs.includes(product.id)) {
-      return true
-    }
-
-    if (product.sku && product.sku.trim() !== '') {
-      const cleanSku = product.sku.trim()
-
-      try {
-        const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-        const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
-        if (skuRegex.test(text)) return true
-      } catch (e) {
-        if (text.toLowerCase().includes(cleanSku.toLowerCase())) return true
-      }
-
-      if (cleanSku.includes('-')) {
-        const parts = cleanSku
-          .split('-')
-          .map((p) => p.trim())
-          .filter((p) => p.length > 0)
-        if (parts.length >= 2) {
-          const escapedPart1 = parts[0].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-          const escapedPart2 = parts[1].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-          try {
-            const proximityRegex1 = new RegExp(escapedPart1 + '.{0,10}' + escapedPart2, 'i')
-            const proximityRegex2 = new RegExp(escapedPart2 + '.{0,10}' + escapedPart1, 'i')
-            if (proximityRegex1.test(text) || proximityRegex2.test(text)) {
-              return true
-            }
-          } catch {
-            /* intentionally ignored */
-          }
-        }
-      }
-    }
-
-    return false
-  })
-
-  return filtered
+  return uniqueStock.filter((product) => validRefs.includes(product.id))
 }
 
 export function AIResponse({ message, search_results }: AIResponseProps) {
   const stock = search_results?.stock || []
   const text = message?.text || message?.content || ''
   const referencedIds =
-    message?.referenced_internal_products || search_results?.referenced_internal_products || []
+    message?.referenced_internal_products ||
+    message?.related_product_ids ||
+    search_results?.referenced_internal_products ||
+    search_results?.related_product_ids ||
+    []
 
   const mentionedProducts = getMentionedProducts(text, stock, referencedIds)
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="max-h-96 overflow-y-auto overflow-x-auto max-w-full bg-muted/5 border rounded-lg mb-6 custom-scrollbar">
-        <div className="px-10 py-6 max-w-4xl mx-auto">
-          <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-table:w-full prose-table:border prose-th:border prose-th:p-3 prose-th:bg-muted/50 prose-td:border prose-td:p-3 prose-p:leading-relaxed prose-li:my-2">
+      <div className="max-h-96 overflow-y-auto overflow-x-auto px-10 py-8 border rounded-xl bg-muted/5 mb-6 custom-scrollbar">
+        <div className="max-w-4xl mx-auto">
+          <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-normal prose-table:w-full prose-table:border-collapse prose-table:my-4 prose-th:border prose-th:bg-muted/50 prose-th:p-3 prose-th:text-left prose-th:font-bold prose-td:border prose-td:p-3 prose-td:align-top prose-tr:even:bg-muted/20 prose-p:leading-relaxed prose-li:my-2">
             {text}
           </ReactMarkdown>
         </div>

@@ -469,43 +469,13 @@ export function useUnifiedSearch() {
           ? aiResponse.referenced_internal_products
           : []
 
-        let filteredProducts = currentUnifiedData.stock.filter((p: any) => {
-          if (referencedIds.includes(p.id)) return true
+        if (referencedIds.length === 0 && Array.isArray(aiResponse?.related_product_ids)) {
+          referencedIds = aiResponse.related_product_ids
+        }
 
-          if (p.sku && p.sku.trim() !== '') {
-            const cleanSku = p.sku.trim()
-
-            try {
-              const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-              const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
-              if (skuRegex.test(finalMessage)) return true
-            } catch (e) {
-              if (finalMessage.toLowerCase().includes(cleanSku.toLowerCase())) return true
-            }
-
-            if (cleanSku.includes('-')) {
-              const parts = cleanSku
-                .split('-')
-                .map((pt: string) => pt.trim())
-                .filter((pt: string) => pt.length > 0)
-              if (parts.length >= 2) {
-                const escapedPart1 = parts[0].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-                const escapedPart2 = parts[1].replace(/[.*+?^$()|[\]\\]/g, '\\$&')
-                try {
-                  const proximityRegex1 = new RegExp(escapedPart1 + '.{0,10}' + escapedPart2, 'i')
-                  const proximityRegex2 = new RegExp(escapedPart2 + '.{0,10}' + escapedPart1, 'i')
-                  if (proximityRegex1.test(finalMessage) || proximityRegex2.test(finalMessage)) {
-                    return true
-                  }
-                } catch {
-                  /* intentionally ignored */
-                }
-              }
-            }
-          }
-
-          return false
-        })
+        let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
+          referencedIds.includes(p.id),
+        )
 
         // Remove duplicates just in case
         finalProducts = filteredProducts.filter(
