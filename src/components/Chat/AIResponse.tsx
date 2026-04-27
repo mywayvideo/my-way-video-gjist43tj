@@ -61,12 +61,14 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
         return true
       }
 
-      const words = cleanName.split(' ').filter((w) => w.length > 3)
-      if (words.length > 0) {
+      const words = cleanName.split(' ').filter((w) => w.length >= 3)
+      if (words.length >= 2) {
         const matchCount = words.filter((w) => lowerText.includes(w)).length
-        if (matchCount >= Math.min(3, words.length)) {
+        if (matchCount >= 2) {
           return true
         }
+      } else if (words.length === 1) {
+        if (lowerText.includes(words[0])) return true
       }
     }
 
@@ -86,9 +88,11 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
 
   return (
     <div className="flex flex-col space-y-4">
-      <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-        {text}
-      </ReactMarkdown>
+      <div className="max-h-96 overflow-y-auto border-b pb-4 pr-2">
+        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+          {text}
+        </ReactMarkdown>
+      </div>
 
       {mentionedProducts.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">

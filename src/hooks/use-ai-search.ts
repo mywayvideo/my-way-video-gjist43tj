@@ -434,10 +434,31 @@ export function useUnifiedSearch() {
           ? aiResponse.referenced_internal_products
           : []
 
-        // 1. Priority: Filter 'stock' results where product.id is included in 'referencedIds'
-        let filteredProducts = currentUnifiedData.stock.filter((p: any) =>
-          referencedIds.includes(p.id),
-        )
+        const lowerResponse = finalMessage.toLowerCase()
+        // 1. Priority: Filter 'stock' results where product.id is included in 'referencedIds' OR name/sku is mentioned
+        let filteredProducts = currentUnifiedData.stock.filter((p: any) => {
+          if (referencedIds.includes(p.id)) return true
+
+          if (p.sku && p.sku.trim() !== '') {
+            const cleanSku = p.sku.toLowerCase().trim()
+            if (lowerResponse.includes(cleanSku)) return true
+          }
+
+          if (p.name && p.name.trim() !== '') {
+            const cleanName = p.name.toLowerCase().trim()
+            if (lowerResponse.includes(cleanName)) return true
+
+            const words = cleanName.split(' ').filter((w: string) => w.length >= 3)
+            if (words.length >= 2) {
+              const matchCount = words.filter((w: string) => lowerResponse.includes(w)).length
+              if (matchCount >= 2) return true
+            } else if (words.length === 1) {
+              if (lowerResponse.includes(words[0])) return true
+            }
+          }
+
+          return false
+        })
 
         // Remove duplicates just in case
         finalProducts = filteredProducts.filter(
