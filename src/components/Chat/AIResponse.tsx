@@ -32,10 +32,6 @@ interface AIResponseProps {
   search_results: SearchResults
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 export function getMentionedProducts(text: string, stock: Product[], referencedIds: string[] = []) {
   if (!stock || !Array.isArray(stock)) return []
 
@@ -48,42 +44,17 @@ export function getMentionedProducts(text: string, stock: Product[], referencedI
       return true
     }
 
-    if (product.sku && typeof product.sku === 'string' && product.sku.trim() !== '') {
-      const sku = product.sku.trim()
-      const lowerSku = sku.toLowerCase()
-
+    if (product.sku && product.sku.trim() !== '') {
       try {
-        const exactRegex = new RegExp(`\\b${escapeRegExp(lowerSku)}\\b`, 'i')
-        if (exactRegex.test(lowerText)) {
-          return true
-        }
+        const cleanSku = product.sku.trim()
+        const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+        const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
+        if (skuRegex.test(text)) return true
       } catch (e) {
-        if (lowerText.includes(lowerSku)) {
-          return true
-        }
-      }
-
-      if (sku.includes('-')) {
-        const parts = sku
-          .split('-')
-          .map((p) => p.trim())
-          .filter((p) => p.length > 0)
-        if (parts.length >= 2) {
-          const firstPart = parts[0].toLowerCase()
-          const lastPart = parts[parts.length - 1].toLowerCase()
-
-          if (firstPart && lastPart) {
-            const firstIndex = lowerText.indexOf(firstPart)
-            if (firstIndex !== -1) {
-              const substring = lowerText.substring(
-                firstIndex,
-                firstIndex + firstPart.length + lastPart.length + 10,
-              )
-              if (substring.includes(lastPart)) {
-                return true
-              }
-            }
-          }
+        const cleanSku = product.sku.toLowerCase().trim()
+        if (lowerText.includes(cleanSku)) {
+          const parts = lowerText.split(/[\s,.-]+/)
+          if (parts.includes(cleanSku)) return true
         }
       }
     }
@@ -104,12 +75,10 @@ export function AIResponse({ message, search_results }: AIResponseProps) {
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="max-h-96 overflow-y-auto border rounded-lg bg-muted/10 mb-6 custom-scrollbar">
-        <div className="px-10 py-6 max-w-4xl mx-auto">
-          <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-            {text}
-          </ReactMarkdown>
-        </div>
+      <div className="max-h-96 overflow-y-auto border-b pb-4 pr-2 custom-scrollbar">
+        <ReactMarkdown className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+          {text}
+        </ReactMarkdown>
       </div>
 
       {mentionedProducts.length > 0 && (

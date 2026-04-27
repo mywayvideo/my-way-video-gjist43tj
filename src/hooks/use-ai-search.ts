@@ -3,10 +3,6 @@ import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 const STOP_WORDS = new Set([
   'que',
   'qual',
@@ -442,38 +438,17 @@ export function useUnifiedSearch() {
         let filteredProducts = currentUnifiedData.stock.filter((p: any) => {
           if (referencedIds.includes(p.id)) return true
 
-          if (p.sku && typeof p.sku === 'string' && p.sku.trim() !== '') {
-            const sku = p.sku.trim()
-            const lowerSku = sku.toLowerCase()
-
+          if (p.sku && p.sku.trim() !== '') {
             try {
-              const exactRegex = new RegExp(`\\b${escapeRegExp(lowerSku)}\\b`, 'i')
-              if (exactRegex.test(lowerResponse)) return true
+              const cleanSku = p.sku.trim()
+              const escapedSku = cleanSku.replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+              const skuRegex = new RegExp('\\b' + escapedSku + '\\b', 'i')
+              if (skuRegex.test(finalMessage)) return true
             } catch (e) {
-              if (lowerResponse.includes(lowerSku)) return true
-            }
-
-            if (sku.includes('-')) {
-              const parts = sku
-                .split('-')
-                .map((pt: string) => pt.trim())
-                .filter((pt: string) => pt.length > 0)
-              if (parts.length >= 2) {
-                const firstPart = parts[0].toLowerCase()
-                const lastPart = parts[parts.length - 1].toLowerCase()
-
-                if (firstPart && lastPart) {
-                  const firstIndex = lowerResponse.indexOf(firstPart)
-                  if (firstIndex !== -1) {
-                    const substring = lowerResponse.substring(
-                      firstIndex,
-                      firstIndex + firstPart.length + lastPart.length + 10,
-                    )
-                    if (substring.includes(lastPart)) {
-                      return true
-                    }
-                  }
-                }
+              const cleanSku = p.sku.toLowerCase().trim()
+              if (lowerResponse.includes(cleanSku)) {
+                const parts = lowerResponse.split(/[\s,.-]+/)
+                if (parts.includes(cleanSku)) return true
               }
             }
           }
