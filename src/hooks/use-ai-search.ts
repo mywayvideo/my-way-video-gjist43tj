@@ -462,7 +462,7 @@ export function useUnifiedSearch() {
           }
         }
 
-        finalMessage = aiResponse?.content || ''
+        finalMessage = aiResponse?.message || aiResponse?.content || ''
         finalConfidence = aiResponse?.confidence_level || 'high'
 
         // 1. Extração de IDs com prioridade para a nova lógica de related_product_ids
