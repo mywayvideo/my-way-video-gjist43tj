@@ -34,6 +34,7 @@ import {
   Heart,
 } from 'lucide-react'
 import { performAISearch, AISearchResponse } from '@/services/ai-search'
+import { Helmet, HelmetProvider } from 'react-helmet-async'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { AISearchResults } from '@/components/AISearchResults'
@@ -556,8 +557,26 @@ export default function Product() {
       </div>
     )
 
+  const metaTitle = `${product.name} | My Way Video`
+  const metaDescription = product.description
+    ? product.description.substring(0, 160)
+    : 'Equipamento audiovisual profissional na My Way Video.'
+  const metaImage = product.image_url || 'https://www.mywayvideo.com/logo.png'
+  const metaUrl = typeof window !== 'undefined' ? window.location.href : ''
+
   return (
     <>
+      <HelmetProvider>
+        <Helmet>
+          <title>{metaTitle}</title>
+          <meta property="og:title" content={product.name} />
+          <meta property="og:description" content={metaDescription} />
+          <meta property="og:image" content={metaImage} />
+          <meta property="og:url" content={metaUrl} />
+          <meta property="og:type" content="product" />
+          <meta name="twitter:card" content="summary_large_image" />
+        </Helmet>
+      </HelmetProvider>
       <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
         <div className="text-sm text-muted-foreground mb-8 font-mono">
           <Link to="/" className="hover:text-primary transition-colors">

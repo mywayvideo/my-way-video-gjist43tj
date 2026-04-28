@@ -102,7 +102,6 @@ export default function AdminAIPage() {
 
   const tabs = [
     { name: 'Contexto Institucional', href: '/admin/ai' },
-    { name: 'System Prompt', href: '/admin/ai-system-prompt' },
     { name: 'Provedores', href: '/admin/ai-providers' },
     { name: 'Configurações Globais', href: '/admin/ai-settings' },
     { name: 'Cache de Produtos', href: '/admin/product-cache' },
