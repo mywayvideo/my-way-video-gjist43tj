@@ -571,29 +571,17 @@ REGRAS ADICIONAIS DE NEGÓCIO:
       reason = ''
     // 🔧 Auditoria Ninja: Unificação de Referências para Exibição de Cards
     let refs: string[] = []
-
-    // Coleta de todas as possíveis fontes de IDs mencionadas pela IA
-    const potentialRefs = [
-      ...(Array.isArray(result.referenced_internal_products)
-        ? result.referenced_internal_products
-        : []),
-      ...(Array.isArray(result.related_product_ids) ? result.related_product_ids : []),
-      ...(Array.isArray(result.products) ? result.products : []),
-    ]
-
-    if (potentialRefs.length > 0) {
-      refs = potentialRefs
-        .map((p: any) => {
-          // Se for objeto, pega o ID. Se for string, usa a string.
-          const id = typeof p === 'string' ? p : p?.id || p?.uuid
-          return id
-        })
-        .filter(
-          (id): id is string => typeof id === 'string' && id.length > 30, // Garante que é um UUID válido
-        )
-
-      // Remove duplicados para não carregar o mesmo card duas vezes
-      refs = [...new Set(refs)]
+    if (Array.isArray(result.related_product_ids) && result.related_product_ids.length > 0) {
+      refs = result.related_product_ids
+        .map((p: any) => (typeof p === 'string' ? p : p.id))
+        .filter(Boolean)
+    } else if (
+      Array.isArray(result.referenced_internal_products) &&
+      result.referenced_internal_products.length > 0
+    ) {
+      refs = result.referenced_internal_products
+    } else if (Array.isArray(result.products)) {
+      refs = result.products.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
     }
 
     if (result.confidence_level === settings.conf) {
