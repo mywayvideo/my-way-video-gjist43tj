@@ -305,7 +305,7 @@ Deno.serve(async (req: Request) => {
     const formattedInventory = productsCtx
       .map(
         (p: any) =>
-          `ID: ${p.id}\nProduct: ${p.name}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nPrice: ${p.price_usd || 0} USD\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`,
+          `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`,
       )
       .join('\n\n')
 
