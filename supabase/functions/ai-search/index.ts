@@ -74,9 +74,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const qL = actualQuery.toLowerCase()
-    const bypassCache = true // Forçar nova leitura para testes
+    const bypassCache = true // Forçar nova leitura (limpeza pontual solicitada)
 
-    // Limpeza pontual no cache
+    // Limpeza pontual no cache para forçar a nova leitura dos dados atualizados
     try {
       await supabase.from('product_search_cache').delete().eq('search_query', actualQuery)
     } catch (e) {
@@ -84,19 +84,30 @@ Deno.serve(async (req: Request) => {
     }
 
     let cachedResult: any = null
+    let expiredCachedResult: any = null
+
     if (!bypassCache) {
       try {
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+        const safeQuery = actualQuery.replace(/[%_]/g, '\\$&')
         const { data: cacheData } = await supabase
           .from('product_search_cache')
           .select('*')
-          .ilike('search_query', actualQuery.replace(/[%_]/g, '\$&'))
+          .ilike('search_query', safeQuery)
           .eq('source', 'ai_generated')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
-        if (cacheData && new Date(cacheData.created_at) > thirtyDaysAgo) {
-          cachedResult = cacheData
+        if (cacheData) {
+          const createdAtDate = cacheData.created_at ? new Date(cacheData.created_at) : new Date(0)
+          if (createdAtDate > thirtyDaysAgo) {
+            cachedResult = cacheData
+          } else {
+            expiredCachedResult = cacheData
+          }
         }
       } catch (e) {
         console.error('Cache lookup failed:', e)
@@ -104,39 +115,55 @@ Deno.serve(async (req: Request) => {
     }
 
     if (cachedResult && cachedResult.product_specs) {
+      console.log(`Cache hit for query: ${actualQuery}`)
       return new Response(JSON.stringify(cachedResult.product_specs), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const { data: set } = await supabase.from('ai_agent_settings').select('*').limit(1).maybeSingle()
-    const { data: aiSettings } = await supabase.from('ai_settings').select('*').limit(1).maybeSingle()
+    const { data: set } = await supabase
+      .from('ai_agent_settings')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    const { data: aiSettings } = await supabase
+      .from('ai_settings')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
 
-    // MAPEAMENTO CORRIGIDO E DINÂMICO
     const settings = {
-      price: aiSettings?.price_threshold_usd ?? 0,
+      price: aiSettings?.price_threshold_usd ?? 5000,
       kws: set?.whatsapp_trigger_keywords || [],
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
-      system_prompt: set?.system_prompt || '',
       systemPromptTemplate: aiSettings?.system_prompt_template || '',
-      response_format_json: aiSettings?.response_format_json || '',
-      logisticsRulesPrompt: (aiSettings?.logistics_rules_prompt || '') +
-        '\nIMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo), a disponibilidade é "Sob Consulta".',
+      logisticsRulesPrompt:
+        (aiSettings?.logistics_rules_prompt || '') +
+        '\nIMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta" e NUNCA presuma que é estoque exclusivo do Brasil.',
       ignore_stock_count: aiSettings?.ignore_stock_count ?? true,
-      proactivity_level: set?.proactivity_level ?? 8,
+      proactivity_level: set?.proactivity_level ?? 5,
       technical_bridge: aiSettings?.technical_bridge,
       intent_mapping: aiSettings?.intent_mapping,
       custom_stop_words: aiSettings?.custom_stop_words,
     }
 
+    // 2. EXPAND: Check 'intent_mapping' (Section H)
     let expandedQuery = actualQuery
     if (settings.intent_mapping) {
       try {
-        const intentMap = typeof settings.intent_mapping === 'string' ? JSON.parse(settings.intent_mapping) : settings.intent_mapping
+        const intentMap =
+          typeof settings.intent_mapping === 'string'
+            ? JSON.parse(settings.intent_mapping)
+            : settings.intent_mapping
         if (Array.isArray(intentMap)) {
           for (const intent of intentMap) {
-            if (intent.trigger && actualQuery.toLowerCase().includes(intent.trigger.toLowerCase())) {
+            if (
+              intent.trigger &&
+              actualQuery.toLowerCase().includes(intent.trigger.toLowerCase())
+            ) {
               expandedQuery += ' ' + (intent.expansion || '')
             }
           }
@@ -144,68 +171,201 @@ Deno.serve(async (req: Request) => {
       } catch (e) {}
     }
 
-    const safeQueryForOr = expandedQuery.replace(/[%_,()[\]{}"'\]/g, ' ')
-    const stopWords = new Set(['que', 'qual', 'como', 'para', 'por', 'com', 'um', 'uma', 'tem', 'sobre', 'preco', 'valor'])
-    
+    const safeQueryForOr = expandedQuery.replace(/[%_,()[\]{}"'\\]/g, ' ')
+
+    // 1. PRE-PROCESS: Use 'custom_stop_words' (Section J)
+    const stopWords = new Set([
+      'que',
+      'qual',
+      'como',
+      'para',
+      'por',
+      'com',
+      'uma',
+      'um',
+      'tem',
+      'temos',
+      'voces',
+      'voce',
+      'mostrar',
+      'mostre',
+      'quero',
+      'gostaria',
+      'saber',
+      'preco',
+      'valor',
+      'sobre',
+      'esse',
+      'essa',
+      'este',
+      'esta',
+      'aqui',
+      'ali',
+      'cabo',
+      'the',
+      'what',
+      'who',
+      'how',
+      'why',
+      'can',
+      'you',
+      'show',
+      'tell',
+      'about',
+      'price',
+      'cost',
+      'favor',
+      'poderia',
+      'quais',
+    ])
+
     if (settings.custom_stop_words) {
-      settings.custom_stop_words.split(',').map((w: string) => w.trim().toLowerCase()).forEach((w: string) => stopWords.add(w))
+      settings.custom_stop_words
+        .split(',')
+        .map((w: string) => w.trim().toLowerCase())
+        .forEach((w: string) => stopWords.add(w))
     }
 
-    const allTerms = safeQueryForOr.toLowerCase().split(/\s+/).filter((t: string) => t.length >= 2)
-    const relevantTerms = allTerms.filter((t: string) => !stopWords.has(t)).length > 0 
-      ? allTerms.filter((t: string) => !stopWords.has(t)) 
-      : allTerms
+    const allTerms = safeQueryForOr
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t: string) => t.length >= 2)
+    let qTerms = allTerms.filter((t: string) => !stopWords.has(t))
 
-    // BUSCA DE INTELIGÊNCIA
-    const orQuery = relevantTerms.map((t: string) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`).join(',')
-    const { data: intelligence } = await supabase.from('market_intelligence').select('title, raw_content, ai_summary').eq('status', 'published').or(orQuery).limit(10)
+    // REFINED LOGIC: Do NOT discard alphabetic terms.
+    // We use all non-stop-word terms (qTerms) if available, otherwise allTerms.
+    const relevantTerms = qTerms.length > 0 ? qTerms : allTerms
+
+    const orQuery =
+      relevantTerms.length > 0
+        ? relevantTerms
+            .map(
+              (t: string) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`,
+            )
+            .join(',')
+        : `title.ilike.%${safeQueryForOr}%,raw_content.ilike.%${safeQueryForOr}%,ai_summary.ilike.%${safeQueryForOr}%`
+
+    const { data: intelligence } = await supabase
+      .from('market_intelligence')
+      .select('title, raw_content, ai_summary')
+      .eq('status', 'published')
+      .or(orQuery)
+      .limit(10)
+
+    let hasNabIntelligence = false
+    let nabContext = ''
+    if (intelligence && intelligence.length > 0) {
+      hasNabIntelligence = true
+      nabContext =
+        'DADOS REAIS NAB 2026:\n' +
+        intelligence
+          .map((i: any) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
+          .join('\n\n')
+    }
 
     const { data: cData } = await supabase.from('company_info').select('content, type')
     const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
-    // BUSCA DE INVENTÁRIO
-    let productOrQuery = relevantTerms.length > 0
-      ? relevantTerms.map((t: string) => `name.ilike.%${t}%,description.ilike.%${t}%,sku.ilike.%${t}%`).join(',')
-      : `name.ilike.%${safeQueryForOr}%,description.ilike.%${safeQueryForOr}%,sku.ilike.%${safeQueryForOr}%`
+    // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
+    let productOrQuery = ''
+    if (relevantTerms.length > 0) {
+      const topTerms = [...relevantTerms]
+        .sort((a: string, b: string) => b.length - a.length)
+        .slice(0, 10)
+      productOrQuery = topTerms
+        .map(
+          (t: string) =>
+            'name.ilike.%' + t + '%,description.ilike.%' + t + '%,sku.ilike.%' + t + '%',
+        )
+        .join(',')
+    } else {
+      productOrQuery = `name.ilike.%${safeQueryForOr}%,description.ilike.%${safeQueryForOr}%,sku.ilike.%${safeQueryForOr}%`
+    }
 
-    const { data: allProducts } = await supabase.from('products').select('*').or(productOrQuery).limit(50)
+    const { data: allProducts } = await supabase
+      .from('products')
+      .select(
+        `id, name, sku, description, price_usd, price_cost, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, weight, category_id, manufacturer_id, technical_info, image_url, is_discontinued, stock, category`,
+      )
+      .or(productOrQuery)
+      .limit(50)
 
-    let productsCtx = (allProducts || []).sort((a, b) => (a.sku?.toLowerCase() === actualQuery.toLowerCase() ? -1 : 1))
+    let productsCtx = (allProducts || []).sort((a, b) => {
+      if (a.sku?.toLowerCase() === actualQuery.toLowerCase()) return -1
+      if (b.sku?.toLowerCase() === actualQuery.toLowerCase()) return 1
+      return 0
+    })
+
+    // 4. FILTER: Apply 'ignore_stock_count'
     if (settings.ignore_stock_count === false) {
       productsCtx = productsCtx.filter((p: any) => p.stock > 0)
     }
 
-    const formattedInventory = productsCtx.map((p: any) => 
-      `ID: ${p.id}\nProduct: ${p.name}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nPrice: ${p.price_usd || 0} USD\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
-    ).join('\n\n')
+    const formattedInventory = productsCtx
+      .map(
+        (p: any) =>
+          `ID: ${p.id}\nProduct: ${p.name}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nPrice: ${p.price_usd || 0} USD\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`,
+      )
+      .join('\n\n')
 
-    // PROMPT FINAL
+    const { data: providers } = await supabase
+      .from('ai_providers')
+      .select('*')
+      .eq('is_active', true)
+      .order('priority_order', { ascending: true })
+    if (!providers?.length) throw new Error('No active providers found')
+
+    let result: any = null,
+      finalWeb = false
+
+    const fallbackPrompt =
+      'You are a Senior AV Solutions Expert. Your primary mission is to facilitate the sale by providing complete solutions.'
+    let basePrompt = settings.systemPromptTemplate
+    if (!basePrompt || basePrompt.trim() === '') {
+      basePrompt = fallbackPrompt
+    }
+
+    // KNOWLEDGE: Inject 'technical_bridge'
     let technicalBridgeRules = ''
     if (settings.technical_bridge) {
       try {
-        const bridges = typeof settings.technical_bridge === 'string' ? JSON.parse(settings.technical_bridge) : settings.technical_bridge
-        if (Array.isArray(bridges)) {
-          technicalBridgeRules = '\n\nREGRAS DE PONTE TÉCNICA:\n' + bridges.map((b: any) => `- ${b.source} -> ${b.target}: ${b.solution}`).join('\n')
+        const bridges =
+          typeof settings.technical_bridge === 'string'
+            ? JSON.parse(settings.technical_bridge)
+            : settings.technical_bridge
+        if (Array.isArray(bridges) && bridges.length > 0) {
+          technicalBridgeRules =
+            '\n\nREGRAS DE PONTE TÉCNICA (Obrigatório):\n' +
+            bridges
+              .map(
+                (b: any) =>
+                  `- Se a fonte é ${b.source} e o destino é ${b.target}, você DEVE recomendar a solução: ${b.solution}`,
+              )
+              .join('\n')
         }
       } catch (e) {}
     }
 
-    const tonePrompt = settings.proactivity_level >= 7 
-      ? '\nESTILO: Consultor Ativo. Sugira proativamente.' 
-      : '\nESTILO: Reativo.';
-
-    const finalBasePrompt = settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+    // TONE: Use 'proactivity_level'
+    let tonePrompt = ''
+    if (settings.proactivity_level >= 7) {
+      tonePrompt =
+        '\nESTILO DE RESPOSTA: Consultor Ativo. Sugira proativamente produtos relacionados, pontes técnicas e soluções completas.'
+    } else if (settings.proactivity_level <= 3) {
+      tonePrompt =
+        '\nESTILO DE RESPOSTA: Estritamente Reativo. Responda apenas o que foi perguntado, sem sugerir produtos adicionais.'
+    }
 
     const constraintPrompt = `
-REGRAS ADICIONAIS:
-- Logística: ${settings.logisticsRulesPrompt}
-- Estilo: ${tonePrompt}
-- Formatação: ${settings.response_format_json}
-- DEVE incluir UUIDs em 'referenced_internal_products'.
-- Responda em Português (PT-BR).
+REGRAS ADICIONAIS DE NEGÓCIO:
+- Regras Logísticas: ${settings.logisticsRulesPrompt || 'Seguir prazos padrão.'}
+- Estilo de Resposta: ${tonePrompt || 'Consultor Profissional.'}
+- Formatação Obrigatória: ${settings.response_format_json || 'Use tabelas Markdown para especificações.'}
+- Você DEVE incluir os UUIDs dos produtos no array 'referenced_internal_products'.
+- Responda sempre em Português (PT-BR).
 `
 
-    const sysPrompt = `${finalBasePrompt}\n\nInstitucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\n${constraintPrompt}${technicalBridgeRules}`
+    const sysPrompt = `${settings.system_prompt || 'Você é um Especialista My Way.'}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\n${constraintPrompt}`
 
     const tools = [
       {
