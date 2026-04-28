@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -65,6 +65,7 @@ import {
   Plus,
   Network,
   Settings2,
+  ArrowLeft,
 } from 'lucide-react'
 
 const providerSchema = z
@@ -120,6 +121,8 @@ export default function AdminAIProviders() {
   const editForm = useForm<ProviderFormValues>({
     resolver: zodResolver(providerSchema),
   })
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (user) fetchData()
@@ -378,19 +381,25 @@ export default function AdminAIProviders() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in min-h-[70vh]">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/admin">Admin</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Gerenciar Provedores de IA</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        <Breadcrumb className="m-0">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/admin">Admin</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Gerenciar Provedores de IA</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-foreground">

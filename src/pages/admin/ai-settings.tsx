@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -19,7 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
-import { Loader2, Save, Trash2, Plus } from 'lucide-react'
+import { Loader2, Save, Trash2, Plus, ArrowLeft } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const formSchema = z.object({
@@ -72,6 +73,8 @@ export default function AdminAISettings() {
   const [isSaving, setIsSaving] = useState(false)
   const [aiSettingsId, setAiSettingsId] = useState<string | null>(null)
   const [aiAgentSettingsId, setAiAgentSettingsId] = useState<string | null>(null)
+
+  const navigate = useNavigate()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -287,6 +290,12 @@ export default function AdminAISettings() {
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+      </div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">

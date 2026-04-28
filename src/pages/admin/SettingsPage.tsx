@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Loader2, Settings, Building2, Shield, Wrench, Save } from 'lucide-react'
+import { Loader2, Settings, Building2, Shield, Wrench, Save, ArrowLeft } from 'lucide-react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 
 export default function SettingsPage() {
@@ -26,6 +26,8 @@ export default function SettingsPage() {
   const [companyWhatsapp, setCompanyWhatsapp] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     async function loadSettings() {
@@ -103,6 +105,12 @@ export default function SettingsPage() {
   return (
     <AdminLayout breadcrumb="Configurações Globais">
       <div className="max-w-4xl space-y-6 animate-fade-in">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+        </div>
         <div className="mb-6">
           <h1 className="text-3xl font-bold flex items-center gap-3 text-foreground">
             <div className="bg-primary/10 p-2 rounded-lg text-primary">

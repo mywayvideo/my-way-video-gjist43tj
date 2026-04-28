@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -14,7 +14,8 @@ import {
 } from '@/components/ui/breadcrumb'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Search, HardDrive } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, HardDrive, ArrowLeft } from 'lucide-react'
 import {
   Pagination,
   PaginationContent,
@@ -50,6 +51,8 @@ export default function AdminProductCache() {
 
   const [editingEntry, setEditingEntry] = useState<CacheEntry | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const navigate = useNavigate()
 
   const fetchData = async () => {
     setLoading(true)
@@ -149,19 +152,25 @@ export default function AdminProductCache() {
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in max-w-7xl min-h-[70vh]">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link to="/admin">Admin</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Product Cache</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        <Breadcrumb className="m-0">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/admin">Admin</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Product Cache</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-foreground">
