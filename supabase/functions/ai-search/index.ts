@@ -166,7 +166,7 @@ Deno.serve(async (req: Request) => {
               intent.trigger &&
               actualQuery.toLowerCase().includes(intent.trigger.toLowerCase())
             ) {
-              expandedQuery += ' ' + (intent.expansion || '')
+              expandedQuery += ' ' + (intent.expansion || intent.expansions || '')
             }
           }
         }

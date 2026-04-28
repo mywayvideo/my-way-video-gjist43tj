@@ -95,7 +95,7 @@ export function useUnifiedSearch() {
         if (Array.isArray(intentMap)) {
           for (const intent of intentMap) {
             if (intent.trigger && cleanQuery.toLowerCase().includes(intent.trigger.toLowerCase())) {
-              expandedQuery += ' ' + (intent.expansion || '')
+              expandedQuery += ' ' + (intent.expansion || intent.expansions || '')
             }
           }
         }

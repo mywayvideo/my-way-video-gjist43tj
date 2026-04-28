@@ -11,7 +11,6 @@ import Admin from './pages/Admin'
 import AdminAIProviders from './pages/AdminAIProviders'
 import AdminProductCache from './pages/AdminProductCache'
 import AdminAISettings from './pages/admin/ai-settings'
-import AdminAISystemPrompt from './pages/AdminAISystemPrompt'
 import AdminAIPage from './pages/admin/AdminAIPage'
 import AdminCatalogPage from './pages/admin/AdminCatalogPage'
 import AdminPricingPage from './pages/admin/AdminPricingPage'
@@ -166,14 +165,6 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <AdminAISettings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/ai-system-prompt"
-                  element={
-                    <ProtectedRoute>
-                      <AdminAISystemPrompt />
                     </ProtectedRoute>
                   }
                 />

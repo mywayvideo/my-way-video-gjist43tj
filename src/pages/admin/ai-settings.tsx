@@ -47,7 +47,7 @@ const formSchema = z.object({
     .array(
       z.object({
         trigger: z.string().min(1, 'Campo obrigatório'),
-        expansions: z.string().min(1, 'Campo obrigatório'),
+        expansion: z.string().min(1, 'Campo obrigatório'),
       }),
     )
     .default([]),
@@ -170,7 +170,10 @@ export default function AdminAISettings() {
           max_web_search_attempts: aiAgentSettingsData?.max_web_search_attempts ?? 2,
 
           intent_mapping: Array.isArray(aiSettingsData?.intent_mapping)
-            ? aiSettingsData.intent_mapping
+            ? aiSettingsData.intent_mapping.map((item: any) => ({
+                trigger: item.trigger || '',
+                expansion: item.expansion || item.expansions || '',
+              }))
             : [],
           technical_bridge: Array.isArray(aiSettingsData?.technical_bridge)
             ? aiSettingsData.technical_bridge
@@ -639,7 +642,7 @@ export default function AdminAISettings() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => appendIntent({ trigger: '', expansions: '' })}
+                    onClick={() => appendIntent({ trigger: '', expansion: '' })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Adicionar Mapeamento
@@ -664,7 +667,7 @@ export default function AdminAISettings() {
                       />
                       <FormField
                         control={form.control}
-                        name={`intent_mapping.${index}.expansions`}
+                        name={`intent_mapping.${index}.expansion`}
                         render={({ field }) => (
                           <FormItem className="flex-[2]">
                             <FormLabel className="sr-only">Palavras-chave de Expansão</FormLabel>
@@ -692,7 +695,7 @@ export default function AdminAISettings() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => appendIntent({ trigger: '', expansions: '' })}
+                    onClick={() => appendIntent({ trigger: '', expansion: '' })}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Adicionar Mapeamento
