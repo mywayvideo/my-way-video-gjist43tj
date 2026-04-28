@@ -1,6 +1,6 @@
 {
   "_versions": {
-    "ai-search": 122,
+    "ai-search": 123,
     "functions": 36,
     "validate-ai-provider": 42,
     "call-ai-agent": 73,

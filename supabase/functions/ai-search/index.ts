@@ -357,19 +357,33 @@ Deno.serve(async (req: Request) => {
         '\nESTILO DE RESPOSTA: Estritamente Reativo. Responda apenas o que foi perguntado, sem sugerir produtos adicionais.'
     }
 
-    const finalBasePrompt =
-      settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+    // 🔧 Auditoria Ninja: Preparação do Contexto de Soberania (Arquivo 987123)
 
-    const constraintPrompt = `
-REGRAS ADICIONAIS DE NEGÓCIO:
-- Regras Logísticas: ${settings.logisticsRulesPrompt || 'Seguir prazos padrão.'}
-- Estilo de Resposta: ${tonePrompt || 'Consultor Profissional.'}
-- Formatação Obrigatória: ${settings.response_format_json || 'Use tabelas Markdown para especificações.'}
-- Você DEVE incluir os UUIDs dos produtos no array 'referenced_internal_products'.
+    // 1. Definição das Bases (Alma e Máquina)
+    const finalBasePrompt = settings.system_prompt || 'Você é o Consultor Técnico Sênior da My Way.'
+    const templatePrompt = settings.system_prompt_template || '' // Importante: Definir a variável
+
+    // 2. Injeção de Regras Financeiras do Painel Pricing
+    const exchangeRate = settings.dollar_rate || 1
+    const markup = settings.markup_percentage || 0
+
+    const financialContext = `
+### REGRAS FINANCEIRAS ATUAIS (PAINEL ADMIN):
+- TAXA DE CÂMBIO (DÓLAR): R$ ${exchangeRate}
+- MARKUP APLICÁVEL: ${markup}%
+- REGRA DE CÁLCULO: Multiplique o valor base por (1 + ${markup}/100) e depois pela taxa de câmbio de R$ ${exchangeRate}.
+    `
+
+    // 3. Injeção de Regras de Negócio e Logística (Seção G)
+    const logisticsContext = `
+### REGRAS DE LOGÍSTICA E PREÇOS (SEÇÃO G):
+${settings.logisticsRulesPrompt || 'Consultar especialistas para prazos.'}
 - Responda sempre em Português (PT-BR).
-`
+- Você DEVE incluir os UUIDs dos produtos no array 'referenced_internal_products'.
+    `
 
-    const sysPrompt = `${finalBasePrompt}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\n${constraintPrompt}${technicalBridgeRules}`
+    // 4. Montagem do System Prompt Final (Unificando tudo sem deixar variáveis soltas)
+    const sysPrompt = `${finalBasePrompt}\n\n${templatePrompt}\n\n${financialContext}\n\n${logisticsContext}\n\nInventário Atualizado:\n${formattedInventory}`
 
     const tools = [
       {
