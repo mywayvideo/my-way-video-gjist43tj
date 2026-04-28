@@ -135,16 +135,18 @@ Deno.serve(async (req: Request) => {
       .maybeSingle()
 
     const settings = {
-      price: aiSettings?.price_threshold_usd ?? 5000,
+      price: aiSettings?.price_threshold_usd ?? 0,
       kws: set?.whatsapp_trigger_keywords || [],
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
+      system_prompt: set?.system_prompt || '',
       systemPromptTemplate: aiSettings?.system_prompt_template || '',
+      response_format_json: aiSettings?.response_format_json || '',
       logisticsRulesPrompt:
         (aiSettings?.logistics_rules_prompt || '') +
-        '\nIMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta" e NUNCA presuma que é estoque exclusivo do Brasil.',
+        '\nIMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo), a disponibilidade é "Sob Consulta".',
       ignore_stock_count: aiSettings?.ignore_stock_count ?? true,
-      proactivity_level: set?.proactivity_level ?? 5,
+      proactivity_level: set?.proactivity_level ?? 8,
       technical_bridge: aiSettings?.technical_bridge,
       intent_mapping: aiSettings?.intent_mapping,
       custom_stop_words: aiSettings?.custom_stop_words,
@@ -267,16 +269,15 @@ Deno.serve(async (req: Request) => {
     const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
     // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
+
+    // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
     let productOrQuery = ''
     if (relevantTerms.length > 0) {
       const topTerms = [...relevantTerms]
         .sort((a: string, b: string) => b.length - a.length)
         .slice(0, 10)
       productOrQuery = topTerms
-        .map(
-          (t: string) =>
-            'name.ilike.%' + t + '%,description.ilike.%' + t + '%,sku.ilike.%' + t + '%',
-        )
+        .map((t: string) => `name.ilike.%${t}%,description.ilike.%${t}%,sku.ilike.%${t}%`)
         .join(',')
     } else {
       productOrQuery = `name.ilike.%${safeQueryForOr}%,description.ilike.%${safeQueryForOr}%,sku.ilike.%${safeQueryForOr}%`
@@ -356,6 +357,9 @@ Deno.serve(async (req: Request) => {
         '\nESTILO DE RESPOSTA: Estritamente Reativo. Responda apenas o que foi perguntado, sem sugerir produtos adicionais.'
     }
 
+    const finalBasePrompt =
+      settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+
     const constraintPrompt = `
 REGRAS ADICIONAIS DE NEGÓCIO:
 - Regras Logísticas: ${settings.logisticsRulesPrompt || 'Seguir prazos padrão.'}
@@ -365,7 +369,7 @@ REGRAS ADICIONAIS DE NEGÓCIO:
 - Responda sempre em Português (PT-BR).
 `
 
-    const sysPrompt = `${settings.system_prompt || 'Você é um Especialista My Way.'}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\n${constraintPrompt}`
+    const sysPrompt = `${finalBasePrompt}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\n${constraintPrompt}${technicalBridgeRules}`
 
     const tools = [
       {
