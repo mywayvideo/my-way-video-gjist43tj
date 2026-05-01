@@ -58,18 +58,18 @@ export function AIConsultantModal({
             <MessageCircle className="w-5 h-5 text-primary" />
             Consultor de IA
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-zinc-400 text-lg">
             Tire suas dúvidas técnicas, sobre compatibilidade ou prazo de entrega.
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="flex-1 border border-zinc-800/50 rounded-lg p-4 bg-black/20">
           {results?.message ? (
-            <div className="prose prose-invert max-w-none text-sm sm:text-base leading-relaxed">
+            <div className="prose prose-invert max-w-none text-lg leading-relaxed">
               <ReactMarkdown>{results.message}</ReactMarkdown>
             </div>
           ) : (
-            <div className="text-zinc-500 text-sm h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
+            <div className="text-zinc-500 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
               <MessageCircle className="w-8 h-8 opacity-20" />
               <p>
                 Faça uma pergunta sobre o produto para iniciar a conversa com nosso especialista.

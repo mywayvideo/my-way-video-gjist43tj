@@ -335,7 +335,10 @@ export function useUnifiedSearch() {
       let chatHistory: any[] = []
       let userId = user?.id || null
       let userName =
-        user?.user_metadata?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário'
+        user?.user_metadata?.full_name?.split(' ')[0] ||
+        user?.user_metadata?.name?.split(' ')[0] ||
+        user?.email?.split('@')[0] ||
+        'Usuário'
 
       try {
         let queryDb = supabase
