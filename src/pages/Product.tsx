@@ -987,10 +987,10 @@ export default function Product() {
         </div>
 
         <Dialog open={isAiChatOpen} onOpenChange={setIsAiChatOpen}>
-          <DialogContent className="max-w-3xl h-[85vh] flex flex-col sm:rounded-xl p-0 gap-0 overflow-hidden bg-background">
-            <DialogHeader className="p-4 border-b border-border/50 bg-muted/20 shrink-0">
-              <DialogTitle className="flex items-center gap-2 text-lg">
-                <div className="bg-primary/10 p-1.5 rounded-full ring-1 ring-primary/20">
+          <DialogContent className="max-w-3xl h-[85vh] flex flex-col sm:rounded-xl overflow-hidden bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl shadow-black/50 p-6 md:p-10 gap-0">
+            <DialogHeader className="p-4 border-b border-zinc-800/50 bg-black/20 shrink-0 rounded-t-xl">
+              <DialogTitle className="flex items-center gap-2 text-lg text-white">
+                <div className="bg-primary/20 p-1.5 rounded-full ring-1 ring-primary/30">
                   <Sparkles className="w-4 h-4 text-primary animate-pulse" />
                 </div>
                 Engenharia IA - {product.name}
@@ -998,10 +998,10 @@ export default function Product() {
               <DialogDescription className="sr-only">Chat de IA</DialogDescription>
             </DialogHeader>
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 flex flex-col">
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 flex flex-col scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
               {messages.length === 0 && (
-                <div className="m-auto text-center max-w-sm text-muted-foreground opacity-70">
-                  <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <div className="m-auto text-center max-w-sm text-zinc-400 opacity-70">
+                  <Bot className="w-12 h-12 mx-auto mb-4 opacity-50 text-zinc-500" />
                   <p className="text-base">
                     Faça perguntas técnicas avançadas sobre as especificações do {product.name}
                   </p>
@@ -1019,24 +1019,33 @@ export default function Product() {
                   return (
                     <div key={msg.id} className="w-full flex flex-col items-start my-2">
                       {msg && (
-                        <AISearchResults
-                          isLoading={msg.isLoading || false}
-                          result={
-                            msg.aiData
-                              ? {
-                                  message: content,
-                                  confidence_level: msg.aiData.confidence_level,
-                                  referenced_internal_products: msg.aiData
-                                    .referenced_internal_products as any,
-                                  should_show_whatsapp_button: showWhatsApp,
-                                  whatsapp_reason: msg.aiData.whatsapp_reason,
-                                }
-                              : { message: content, should_show_whatsapp_button: showWhatsApp }
-                          }
-                          error={hasError ? content : null}
-                          className="w-full shadow-md"
-                          isAdmin={isAdmin}
-                        />
+                        <div className="w-full space-y-3">
+                          {!hasError && content && (
+                            <div className="prose prose-invert max-w-none w-full p-4 bg-zinc-800/40 rounded-2xl rounded-tl-none border border-zinc-700/50 shadow-sm text-sm">
+                              <ReactMarkdown components={markdownComponents}>
+                                {content}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                          <AISearchResults
+                            isLoading={msg.isLoading || false}
+                            result={
+                              msg.aiData
+                                ? {
+                                    message: '',
+                                    confidence_level: msg.aiData.confidence_level,
+                                    referenced_internal_products: msg.aiData
+                                      .referenced_internal_products as any,
+                                    should_show_whatsapp_button: showWhatsApp,
+                                    whatsapp_reason: msg.aiData.whatsapp_reason,
+                                  }
+                                : { message: '', should_show_whatsapp_button: showWhatsApp }
+                            }
+                            error={hasError ? content : null}
+                            className="w-full shadow-md"
+                            isAdmin={isAdmin}
+                          />
+                        </div>
                       )}
                     </div>
                   )
@@ -1056,17 +1065,17 @@ export default function Product() {
               })}
             </div>
 
-            <div className="p-4 border-t border-border/50 bg-muted/10 shrink-0">
+            <div className="p-4 border-t border-zinc-800/50 bg-black/20 shrink-0 rounded-b-xl">
               <form
                 onSubmit={handleAskAI}
-                className="relative group flex items-center shadow-sm rounded-lg overflow-hidden border border-border/50 bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-all"
+                className="relative group flex items-center shadow-sm rounded-lg overflow-hidden border border-zinc-700/50 bg-zinc-800/50 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-all"
               >
                 <Input
                   disabled={isAiLoading}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ex: Quais resoluções RAW suportadas?"
-                  className="flex-1 border-0 bg-transparent px-4 py-3 shadow-none focus-visible:ring-0 text-sm placeholder:text-muted-foreground/50 h-12"
+                  className="flex-1 border-0 bg-transparent px-4 py-3 shadow-none focus-visible:ring-0 text-lg placeholder:text-zinc-500 text-white h-12"
                 />
                 <Button
                   type="submit"

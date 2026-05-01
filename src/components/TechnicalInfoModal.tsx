@@ -63,15 +63,15 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col sm:rounded-xl">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col sm:rounded-xl bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl shadow-black/50 p-6 md:p-10">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Informações Técnicas</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-white">Informações Técnicas</DialogTitle>
           <DialogDescription className="sr-only">
             Especificações técnicas detalhadas do produto
           </DialogDescription>
         </DialogHeader>
         <div
-          className="mt-2 text-foreground/90 text-sm md:text-base leading-relaxed"
+          className="prose prose-invert max-w-none text-sm leading-tight"
           style={{
             maxHeight: '600px',
             overflowY: 'auto',
@@ -83,22 +83,6 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
           <ReactMarkdown
             components={markdownComponents}
             skipHtml={false}
-            allowedElements={[
-              'h1',
-              'h2',
-              'h3',
-              'h4',
-              'h5',
-              'h6',
-              'p',
-              'ul',
-              'ol',
-              'li',
-              'strong',
-              'em',
-              'code',
-              'br',
-            ]}
             disallowedElements={['script', 'img', 'a']}
             children={technicalInfo}
           />
