@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { Product, Manufacturer } from '@/types'
 import { supabase } from '@/lib/supabase/client'
@@ -58,6 +58,9 @@ import { AdminCSVUploader } from '@/components/AdminCSVUploader'
 import { ScrollToTopButton } from '@/components/ScrollToTopButton'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { cn } from '@/lib/utils'
+import { useDebounce } from '@/hooks/use-debounce'
+import { BulkReviewModal } from '@/components/admin/BulkReviewModal'
+import { productService } from '@/services/productService'
 
 const ALL_EXPORT_FIELDS = [
   'id',
@@ -92,7 +95,16 @@ export default function AdminCatalogPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([])
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 500)
   const [filterNoImage, setFilterNoImage] = useState(false)
+
+  const [isProcessingCSV, setIsProcessingCSV] = useState(false)
+  const [csvProgress, setCsvProgress] = useState({ current: 0, total: 0, currentName: '' })
+  const [showBulkReview, setShowBulkReview] = useState(false)
+  const [extractedProducts, setExtractedProducts] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
   const [isDeletingBulk, setIsDeletingBulk] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -131,6 +143,8 @@ export default function AdminCatalogPage() {
   const fetchOtherData = async () => {
     const { data: mData } = await supabase.from('manufacturers').select('*').order('name')
     if (mData) setManufacturers(mData)
+    const { data: cData } = await supabase.from('categories').select('*').order('name')
+    if (cData) setCategories(cData)
   }
 
   const fetchData = async () => {
@@ -173,8 +187,8 @@ export default function AdminCatalogPage() {
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
+      p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (p.sku && p.sku.toLowerCase().includes(debouncedSearch.toLowerCase()))
     const matchesNoImage = filterNoImage ? !p.image_url || p.image_url.trim() === '' : true
     return matchesSearch && matchesNoImage
   })
@@ -199,6 +213,58 @@ export default function AdminCatalogPage() {
   }
 
   const clearSelection = () => setSelectedProductIds([])
+
+  const handleAddManufacturer = async (name: string) => {
+    const { data, error } = await supabase.from('manufacturers').insert({ name }).select().single()
+    if (error) throw error
+    await fetchOtherData()
+    return data
+  }
+
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const text = await file.text()
+    const urls = text
+      .split(/[\r\n]+/)
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('http'))
+
+    if (urls.length === 0) {
+      toast({
+        title: 'Erro',
+        description: 'Nenhuma URL válida encontrada no arquivo',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsProcessingCSV(true)
+    const results = []
+
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i]
+      setCsvProgress({ current: i + 1, total: urls.length, currentName: url })
+      try {
+        const data = await productService.extractFromUrl(url)
+        if (data && !data.error) {
+          results.push({ ...data, _url: url })
+        }
+      } catch (err) {
+        console.error(`Erro ao extrair ${url}`, err)
+      }
+    }
+
+    setExtractedProducts(results)
+    setIsProcessingCSV(false)
+    if (results.length > 0) {
+      setShowBulkReview(true)
+    } else {
+      toast({ title: 'Aviso', description: 'Nenhum produto extraído com sucesso.' })
+    }
+
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   const handleBulkDelete = async () => {
     setIsDeletingBulk(true)
@@ -390,6 +456,21 @@ export default function AdminCatalogPage() {
             <h1 className="text-3xl font-bold text-foreground">Catálogo & Produtos</h1>
           </div>
           <div className="flex flex-wrap gap-3">
+            <input
+              type="file"
+              accept=".csv"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleCSVUpload}
+            />
+            <Button
+              variant="outline"
+              className="shadow-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessingCSV}
+            >
+              <Download className="w-4 h-4 mr-2" /> Importar B&H (CSV)
+            </Button>
             <AdminCSVUploader
               manufacturers={manufacturers}
               onSuccess={fetchData}
@@ -774,6 +855,36 @@ export default function AdminCatalogPage() {
         </AlertDialog>
 
         <ScrollToTopButton />
+
+        {isProcessingCSV && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="bg-card p-6 rounded-xl shadow-xl border border-border/50 max-w-sm w-full text-center">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Processando URLs...</h3>
+              <p
+                className="text-muted-foreground text-sm mb-4 truncate"
+                title={csvProgress.currentName}
+              >
+                Extraindo: {csvProgress.currentName}
+              </p>
+              <p className="font-medium text-primary">
+                {csvProgress.current} de {csvProgress.total} analisados
+              </p>
+            </div>
+          </div>
+        )}
+
+        {showBulkReview && (
+          <BulkReviewModal
+            isOpen={showBulkReview}
+            onClose={() => setShowBulkReview(false)}
+            products={extractedProducts}
+            categories={categories}
+            manufacturers={manufacturers}
+            onSuccess={fetchData}
+            onAddManufacturer={handleAddManufacturer}
+          />
+        )}
       </div>
     </AdminLayout>
   )

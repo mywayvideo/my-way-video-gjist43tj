@@ -240,13 +240,9 @@ export function useProductForm(props?: UseProductFormProps) {
 
       const w = Number(weight) || 0
 
-      if (effectiveCost > 0 && w > 0) {
-        try {
-          const brl = await productService.calculateBrl(effectiveCost, w)
-          form.setValue('price_brl', brl, { shouldDirty: true })
-        } catch (e) {
-          console.error('Failed to calculate BRL price', e)
-        }
+      if (effectiveCost > 0) {
+        // "MUST store the sum of (Price Cost + Shipping + Taxes) ALWAYS in USD."
+        form.setValue('price_brl', effectiveCost, { shouldDirty: true })
       }
     }
     const debounce = setTimeout(updateBrl, 800)
