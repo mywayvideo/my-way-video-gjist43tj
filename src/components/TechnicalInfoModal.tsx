@@ -14,7 +14,34 @@ import { cn } from '@/lib/utils'
 interface TechnicalInfoModalProps {
   isOpen: boolean
   onClose: () => void
-  technicalInfo: string
+  technicalInfo: string | any
+}
+
+function formatObjectToMarkdown(obj: any, depth = 0): string {
+  let md = ''
+  const indent = '  '.repeat(depth)
+
+  if (Array.isArray(obj)) {
+    obj.forEach((item) => {
+      if (typeof item === 'object' && item !== null) {
+        md += formatObjectToMarkdown(item, depth)
+      } else {
+        md += `${indent}- ${item}\n`
+      }
+    })
+    return md
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'object' && value !== null) {
+      md += `${indent}- **${key}**:\n`
+      md += formatObjectToMarkdown(value, depth + 1)
+    } else {
+      md += `${indent}- **${key}**: ${value}\n`
+    }
+  }
+
+  return md
 }
 
 const markdownComponents = {
@@ -61,6 +88,20 @@ const markdownComponents = {
 export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: TechnicalInfoModalProps) {
   if (!technicalInfo) return null
 
+  let formattedInfo = technicalInfo
+  if (typeof technicalInfo === 'string') {
+    try {
+      const parsed = JSON.parse(technicalInfo)
+      if (typeof parsed === 'object' && parsed !== null) {
+        formattedInfo = formatObjectToMarkdown(parsed)
+      }
+    } catch (e) {
+      // Not a JSON string, keep as is
+    }
+  } else if (typeof technicalInfo === 'object' && technicalInfo !== null) {
+    formattedInfo = formatObjectToMarkdown(technicalInfo)
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col sm:rounded-xl bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl shadow-black/50 p-6 md:p-10">
@@ -84,7 +125,7 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
             components={markdownComponents}
             skipHtml={false}
             disallowedElements={['script', 'img', 'a']}
-            children={technicalInfo}
+            children={String(formattedInfo)}
           />
         </div>
         <DialogFooter className="mt-6">
