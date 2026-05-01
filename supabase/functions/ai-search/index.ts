@@ -52,11 +52,17 @@ Deno.serve(async (req: Request) => {
     let query = ''
     let sessionId = undefined
     let history: any[] = []
+    let userName = 'Usuário'
+    let productName = 'Não informado'
+    let technicalInfo = 'Não informado'
     try {
       const parsed = JSON.parse(bodyText)
       query = parsed.query || bodyText
       sessionId = parsed.session_id
       history = parsed.history || parsed.context?.history || []
+      userName = parsed.userName || userName
+      productName = parsed.productName || productName
+      technicalInfo = parsed.technicalInfo || technicalInfo
     } catch {
       query = bodyText
     }
@@ -134,13 +140,22 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle()
 
+    // 1. Query the 'settings' table in Supabase to get global prompts and templates
+    const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
+
+    const globalSettingsMap: Record<string, string> = {}
+    globalSettingsData?.forEach((s: any) => {
+      if (s.value) globalSettingsMap[s.key] = s.value
+    })
+
     const settings = {
       price: aiSettings?.price_threshold_usd ?? 0,
       kws: set?.whatsapp_trigger_keywords || [],
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
-      system_prompt: set?.system_prompt || '',
-      systemPromptTemplate: aiSettings?.system_prompt_template || '',
+      system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
+      systemPromptTemplate:
+        globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
       response_format_json: aiSettings?.response_format_json || '',
       logisticsRulesPrompt:
         (aiSettings?.logistics_rules_prompt || '') +
@@ -319,60 +334,17 @@ Deno.serve(async (req: Request) => {
     let result: any = null,
       finalWeb = false
 
-    const fallbackPrompt =
-      'You are a Senior AV Solutions Expert. Your primary mission is to facilitate the sale by providing complete solutions.'
-    let basePrompt = settings.systemPromptTemplate
-    if (!basePrompt || basePrompt.trim() === '') {
-      basePrompt = fallbackPrompt
-    }
-
-    // KNOWLEDGE: Inject 'technical_bridge'
-    let technicalBridgeRules = ''
-    if (settings.technical_bridge) {
-      try {
-        const bridges =
-          typeof settings.technical_bridge === 'string'
-            ? JSON.parse(settings.technical_bridge)
-            : settings.technical_bridge
-        if (Array.isArray(bridges) && bridges.length > 0) {
-          technicalBridgeRules =
-            '\n\nREGRAS DE PONTE TÉCNICA (Obrigatório):\n' +
-            bridges
-              .map(
-                (b: any) =>
-                  `- Se a fonte é ${b.source} e o destino é ${b.target}, você DEVE recomendar a solução: ${b.solution}`,
-              )
-              .join('\n')
-        }
-      } catch (e) {}
-    }
-
-    // TONE: Use 'proactivity_level'
-    let tonePrompt = ''
-    if (settings.proactivity_level >= 7) {
-      tonePrompt =
-        '\nESTILO DE RESPOSTA: Consultor Ativo. Sugira proativamente produtos relacionados, pontes técnicas e soluções completas.'
-    } else if (settings.proactivity_level <= 3) {
-      tonePrompt =
-        '\nESTILO DE RESPOSTA: Estritamente Reativo. Responda apenas o que foi perguntado, sem sugerir produtos adicionais.'
-    }
-
-    // 🔧 Auditoria Ninja: Preparação do Contexto de Soberania (Arquivo 987123)
-
-    // 1. Definição das Bases (Alma e Máquina)
+    // 3. Use the Admin Panel settings as the primary instruction set.
     const finalBasePrompt =
       settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
 
-    const constraintPrompt = `
-REGRAS ADICIONAIS DE NEGÓCIO:
-- Regras Logísticas: ${settings.logisticsRulesPrompt || 'Seguir prazos padrão.'}
-- Estilo de Resposta: ${tonePrompt || 'Consultor Profissional.'}
-- Formatação Obrigatória: ${settings.response_format_json || 'Use tabelas Markdown para especificações.'}
-- Você DEVE incluir os UUIDs dos produtos no array 'referenced_internal_products'.
-- Responda sempre em Português (PT-BR).
-`
+    // 2. Prepend: "Usuário: (userName). Produto: (productName). Specs: (technicalInfo)."
+    const userContext = `Usuário: ${userName}\nProduto: ${productName}\nSpecs: ${technicalInfo}\n`
 
-    const sysPrompt = `${finalBasePrompt}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\n${constraintPrompt}${technicalBridgeRules}`
+    // Confidence Logic explicitly added to the prompt
+    const confidenceInstruction = `INSTRUÇÃO CRÍTICA: Você deve SEMPRE responder. Se os dados técnicos forem insuficientes, inicie a resposta com "Olá ${userName}, com base nos dados disponíveis..." e ofereça o contato via WhatsApp.`
+
+    const sysPrompt = `${userContext}\n${finalBasePrompt}\n\n${confidenceInstruction}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\nObrigatório: Responda em JSON com as chaves 'message' e 'referenced_internal_products'. A resposta principal deve estar na chave 'message'.`
 
     const tools = [
       {
@@ -509,65 +481,26 @@ REGRAS ADICIONAIS DE NEGÓCIO:
       throw new Error('All AI providers failed.')
     }
 
-    if (result.message) {
+    if (!result.message || result.message.trim() === '') {
+      result.message = `Olá ${userName}, com base nos dados disponíveis, não encontrei todas as informações. Recomendamos falar com um especialista no WhatsApp.`
+      result.confidence_level = 'low'
+    } else {
       const normalizedMsg = result.message
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-
-      const exactLowConfidencePhrases = [
-        'recomendo verificar',
-        'depende de',
-        'pode variar',
+      const lowConfidenceIndicators = [
+        'com base nos dados disponiveis',
+        'nao encontrei',
         'nao tenho informacao',
-        'consulte',
-        'entre em contato',
-        'fale com especialista',
-        'nao tenho confirmacao',
-        'nao posso confirmar',
-        'verifique',
-        'confira',
-        'consulte a documentacao',
+        'falar com um especialista',
+        'whatsapp',
       ]
 
-      let isLowConfidence = exactLowConfidencePhrases.some((phrase: string) =>
+      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) =>
         normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
       )
-
-      if (normalizedMsg.includes('depende do') && normalizedMsg.includes('recomendo verificar'))
-        isLowConfidence = true
-      if (normalizedMsg.includes('opcoes de frete') || normalizedMsg.includes('checkout'))
-        isLowConfidence = true
-      if (
-        normalizedMsg.includes('entre 7 a 15 dias') &&
-        normalizedMsg.includes('recomendo verificar')
-      )
-        isLowConfidence = true
-
-      const genericWords = ['depende', 'pode variar', 'recomendo']
-      const hasGenericWords = genericWords.some((w: string) =>
-        normalizedMsg.includes(w.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
-      )
-
-      const hasSpecificData =
-        /\d/.test(normalizedMsg) ||
-        /(fps|hz|khz|mbps|gbps|sdi|hdmi|usb|4k|8k|1080p)/i.test(normalizedMsg)
-
-      if (hasGenericWords && !hasSpecificData) {
-        isLowConfidence = true
-      }
-
-      if (
-        normalizedMsg.includes('suporte') ||
-        normalizedMsg.includes('especialista') ||
-        normalizedMsg.includes('equipe')
-      ) {
-        isLowConfidence = true
-      }
-
       result.confidence_level = isLowConfidence ? 'low' : 'high'
-    } else if (!hasNabIntelligence) {
-      result.confidence_level = 'low'
     }
 
     let show = false,

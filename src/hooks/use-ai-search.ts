@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
+import { useAuth } from '@/hooks/use-auth'
 
 const STOP_WORDS = new Set([
   'que',
@@ -52,6 +53,7 @@ export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const accumulatedContext = useRef<{ products: any[]; intel: any[]; nabData: any[] }>({
     products: [],
@@ -310,7 +312,11 @@ export function useUnifiedSearch() {
     return finalResultData
   }
 
-  const search = async (rawQuery: string, history: any[] = []) => {
+  const search = async (
+    rawQuery: string,
+    history: any[] = [],
+    extraContext?: { productName?: string; technicalInfo?: string },
+  ) => {
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
 
@@ -327,13 +333,11 @@ export function useUnifiedSearch() {
       }
 
       let chatHistory: any[] = []
-      let userId: string | null = null
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-        userId = user?.id || null
+      let userId = user?.id || null
+      let userName =
+        user?.user_metadata?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário'
 
+      try {
         let queryDb = supabase
           .from('chat_messages')
           .select('role, content')
@@ -447,11 +451,19 @@ export function useUnifiedSearch() {
 
         let aiResponse: any = null
         try {
-          aiResponse = await generateExpertResponse(
-            cleanQuery,
-            { ...currentUnifiedData, stringifiedContext: contextString, history: chatHistory },
-            activeAgent.id,
-          )
+          const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
+            body: {
+              query: cleanQuery,
+              session_id: sessionId,
+              history: chatHistory,
+              userName,
+              productName: extraContext?.productName,
+              technicalInfo: extraContext?.technicalInfo,
+              context: currentUnifiedData,
+            },
+          })
+          if (aiErrorReq) throw aiErrorReq
+          aiResponse = aiData
         } catch (aiError) {
           console.error('Error parsing AI response:', aiError)
           aiResponse = {
