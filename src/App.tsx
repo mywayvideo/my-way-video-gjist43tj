@@ -13,6 +13,7 @@ import AdminProductCache from './pages/AdminProductCache'
 import AdminAISettings from './pages/admin/ai-settings'
 import AdminAIPage from './pages/admin/AdminAIPage'
 import AdminCatalogPage from './pages/admin/AdminCatalogPage'
+import ProductsPage from './pages/admin/ProductsPage'
 import AdminPricingPage from './pages/admin/AdminPricingPage'
 import NewProductPage from './pages/admin/NewProductPage'
 import SettingsPage from './pages/admin/SettingsPage'
@@ -117,6 +118,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <AdminCatalogPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/products"
+                  element={
+                    <ProtectedRoute>
+                      <ProductsPage />
                     </ProtectedRoute>
                   }
                 />

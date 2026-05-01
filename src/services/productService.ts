@@ -27,13 +27,17 @@ export const productService = {
     return data
   },
 
-  async calculateBrl(price_usa: number, weight: number) {
+  async calculateBrl(price_cost: number, weight: number) {
     const { data, error } = await supabase.functions.invoke('calculate-price-brl', {
-      body: { price_usa, weight },
+      body: { price_cost, weight },
     })
     if (error) throw error
     if (data?.error) throw new Error(data.error)
     return data.price_brl
+  },
+
+  async extractProductFromUrl(url: string) {
+    return this.extractFromUrl(url)
   },
 
   async suggestNcm(description: string) {

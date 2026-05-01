@@ -217,32 +217,32 @@ export function useProductForm(props?: UseProductFormProps) {
     }
   }, [routeId, initialDataStr, form, navigate, toast])
 
-  const price_usa = form.watch('price_usa')
+  const price_cost = form.watch('price_cost')
   const weight = form.watch('weight')
-  const price_usa_rebate = form.watch('price_usa_rebate')
+  const price_cost_rebate = form.watch('price_cost_rebate')
   const date_rebate = form.watch('date_rebate')
 
   useEffect(() => {
     const updateBrl = async () => {
-      let effectivePrice = Number(price_usa) || 0
-      const rebatePrice = Number(price_usa_rebate) || 0
+      let effectiveCost = Number(price_cost) || 0
+      const rebateCost = Number(price_cost_rebate) || 0
 
-      if (rebatePrice > 0) {
+      if (rebateCost > 0) {
         if (!date_rebate) {
-          effectivePrice = rebatePrice
+          effectiveCost = rebateCost
         } else {
           const rebateDate = new Date(date_rebate)
           if (rebateDate >= new Date()) {
-            effectivePrice = rebatePrice
+            effectiveCost = rebateCost
           }
         }
       }
 
       const w = Number(weight) || 0
 
-      if (effectivePrice > 0 && w > 0) {
+      if (effectiveCost > 0 && w > 0) {
         try {
-          const brl = await productService.calculateBrl(effectivePrice, w)
+          const brl = await productService.calculateBrl(effectiveCost, w)
           form.setValue('price_brl', brl, { shouldDirty: true })
         } catch (e) {
           console.error('Failed to calculate BRL price', e)
@@ -251,7 +251,7 @@ export function useProductForm(props?: UseProductFormProps) {
     }
     const debounce = setTimeout(updateBrl, 800)
     return () => clearTimeout(debounce)
-  }, [price_usa, price_usa_rebate, date_rebate, weight, form])
+  }, [price_cost, price_cost_rebate, date_rebate, weight, form])
 
   const handleExtractUrl = async (url: string) => {
     if (!url || !url.startsWith('http'))
