@@ -33,12 +33,11 @@ import {
   ChevronLeft,
   Heart,
 } from 'lucide-react'
-import { performAISearch, AISearchResponse } from '@/services/ai-search'
 import { Helmet, HelmetProvider } from 'react-helmet-async'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
-import { AISearchResults } from '@/components/AISearchResults'
 import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
+import { AIConsultantModal } from '@/components/AIConsultantModal'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
 import { useProductDiscount } from '@/hooks/useProductDiscount'
@@ -47,14 +46,6 @@ import { useFavorites } from '@/hooks/useFavorites'
 import { useHeartAnimation } from '@/hooks/useHeartAnimation'
 import { useAuthState } from '@/hooks/useAuthState'
 import { ProductCard } from '@/components/ProductCard'
-
-type Message = {
-  id: string
-  role: 'user' | 'ai'
-  content: string
-  aiData?: AISearchResponse
-  isLoading?: boolean
-}
 
 const formatNCM = (ncm?: string | number | null) => {
   if (ncm === null || ncm === undefined) return ''
@@ -163,11 +154,7 @@ export default function Product() {
   )
 
   // Chat State
-  const [messages, setMessages] = useState<Message[]>([])
-  const [question, setQuestion] = useState('')
-  const [isAiLoading, setIsAiLoading] = useState(false)
   const [isAiChatOpen, setIsAiChatOpen] = useState(false)
-  const abortControllerRef = useRef<AbortController | null>(null)
 
   const [isMetric, setIsMetric] = useState(false)
   const [isTechnicalInfoOpen, setIsTechnicalInfoOpen] = useState(false)
@@ -411,9 +398,6 @@ export default function Product() {
 
     // Dynamic Chat Context Management: Reset state on product change (or URL change)
     setProduct(null)
-    setQuestion('')
-    setMessages([])
-    setIsAiLoading(false)
     setIsBrlModalOpen(false)
     setIsTechnicalInfoOpen(false)
     setIsAiChatOpen(false)
@@ -421,85 +405,13 @@ export default function Product() {
     setHasFetchedRelated(false)
     setIsLoadingRelated(false)
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-
     supabase
       .from('products')
       .select('*, manufacturer:manufacturers(*)')
       .eq('id', id)
       .single()
       .then(({ data }) => data && setProduct(data as any))
-
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
   }, [id, location.pathname, location.search])
-
-  const handleAskAI = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!question.trim() || !product || isAiLoading) return
-
-    const userQ = question.trim()
-    setQuestion('')
-    setIsAiLoading(true)
-
-    const newMessageId = Date.now().toString()
-    const aiMessageId = `ai-${newMessageId}`
-
-    setMessages((prev) => [
-      ...prev,
-      { id: `u-${newMessageId}`, role: 'user', content: userQ },
-      { id: aiMessageId, role: 'ai', content: '', isLoading: true },
-    ])
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    abortControllerRef.current = new AbortController()
-
-    try {
-      const { data, error } = await performAISearch(
-        `[Contexto do Produto Atual: ${product.name} - SKU: ${product.sku}] Pergunta: ${userQ}`,
-        abortControllerRef.current.signal,
-      )
-
-      if (error) throw error
-
-      if (data) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiMessageId
-              ? { ...m, content: data.message, aiData: data, isLoading: false }
-              : m,
-          ),
-        )
-      }
-    } catch (err: any) {
-      if (err.message === 'Aborted') return
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === aiMessageId
-            ? {
-                ...m,
-                content: 'Ocorreu um erro ao consultar o especialista. Tente novamente.',
-                isLoading: false,
-              }
-            : m,
-        ),
-      )
-      toast({
-        title: 'Erro',
-        description: 'Falha ao comunicar com o Assistente.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsAiLoading(false)
-    }
-  }
 
   const displayWeight = (w: number | null) => {
     if (w === null || w === undefined) return null
@@ -511,43 +423,6 @@ export default function Product() {
     if (!d) return null
     if (isMetric) return d.replace(/\d+(\.\d+)?/g, (m) => (parseFloat(m) * 2.54).toFixed(1)) + ' cm'
     return `${d} in`
-  }
-
-  const checkWhatsAppTrigger = (msg: Message, currentProduct: ProductType) => {
-    const content = msg?.content || (msg as any)?.text || ''
-    if (!content) return false
-
-    if (!msg.aiData) return false
-    const d = msg.aiData
-
-    if (d.should_show_whatsapp_button) return true
-    if (d.confidence_level === 'low') return true
-
-    if (
-      d.used_web_search &&
-      (!d.referenced_internal_products || d.referenced_internal_products.length === 0)
-    )
-      return true
-
-    const contentLower = content.toLowerCase()
-    if (
-      contentLower.includes('não encontrei') ||
-      contentLower.includes('consulte o fabricante') ||
-      contentLower.includes('não foi possível confirmar')
-    ) {
-      return true
-    }
-
-    const catLower = (currentProduct.category || '').toLowerCase()
-    if (
-      catLower.includes('cinema') ||
-      catLower.includes('broadcast') ||
-      catLower.includes('workflow')
-    ) {
-      return true
-    }
-
-    return false
   }
 
   if (!product)
@@ -986,109 +861,12 @@ export default function Product() {
           )}
         </div>
 
-        <Dialog open={isAiChatOpen} onOpenChange={setIsAiChatOpen}>
-          <DialogContent className="max-w-3xl h-[85vh] flex flex-col sm:rounded-xl overflow-hidden bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl shadow-black/50 p-6 md:p-10 gap-0">
-            <DialogHeader className="p-4 border-b border-zinc-800/50 bg-black/20 shrink-0 rounded-t-xl">
-              <DialogTitle className="flex items-center gap-2 text-lg text-white">
-                <div className="bg-primary/20 p-1.5 rounded-full ring-1 ring-primary/30">
-                  <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                </div>
-                Engenharia IA - {product.name}
-              </DialogTitle>
-              <DialogDescription className="sr-only">Chat de IA</DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 flex flex-col scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-              {messages.length === 0 && (
-                <div className="m-auto text-center max-w-sm text-zinc-400 opacity-70">
-                  <Bot className="w-12 h-12 mx-auto mb-4 opacity-50 text-zinc-500" />
-                  <p className="text-base">
-                    Faça perguntas técnicas avançadas sobre as especificações do {product.name}
-                  </p>
-                </div>
-              )}
-
-              {messages.map((msg, idx) => {
-                if (!msg) return null
-
-                if (msg.role === 'ai') {
-                  const content = msg?.content || (msg as any)?.text || ''
-                  const hasError =
-                    content === 'Ocorreu um erro ao consultar o especialista. Tente novamente.'
-                  const showWhatsApp = checkWhatsAppTrigger(msg, product)
-                  return (
-                    <div key={msg.id} className="w-full flex flex-col items-start my-2">
-                      {msg && (
-                        <div className="w-full space-y-3">
-                          {!hasError && content && (
-                            <div className="prose prose-invert max-w-none w-full p-4 bg-zinc-800/40 rounded-2xl rounded-tl-none border border-zinc-700/50 shadow-sm text-sm">
-                              <ReactMarkdown components={markdownComponents}>
-                                {content}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                          <AISearchResults
-                            isLoading={msg.isLoading || false}
-                            result={
-                              msg.aiData
-                                ? {
-                                    message: '',
-                                    confidence_level: msg.aiData.confidence_level,
-                                    referenced_internal_products: msg.aiData
-                                      .referenced_internal_products as any,
-                                    should_show_whatsapp_button: showWhatsApp,
-                                    whatsapp_reason: msg.aiData.whatsapp_reason,
-                                  }
-                                : { message: '', should_show_whatsapp_button: showWhatsApp }
-                            }
-                            error={hasError ? content : null}
-                            className="w-full shadow-md"
-                            isAdmin={isAdmin}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                }
-
-                return (
-                  <div key={msg.id} className="flex flex-col items-end gap-1 my-2">
-                    {msg && (
-                      <div className="p-3 bg-primary text-primary-foreground rounded-2xl rounded-tr-sm text-sm leading-[1.5] max-w-[90%] sm:max-w-[85%] shadow-sm">
-                        <p className="m-0 whitespace-pre-wrap">
-                          {msg?.content || (msg as any)?.text}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="p-4 border-t border-zinc-800/50 bg-black/20 shrink-0 rounded-b-xl">
-              <form
-                onSubmit={handleAskAI}
-                className="relative group flex items-center shadow-sm rounded-lg overflow-hidden border border-zinc-700/50 bg-zinc-800/50 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-all"
-              >
-                <Input
-                  disabled={isAiLoading}
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ex: Quais resoluções RAW suportadas?"
-                  className="flex-1 border-0 bg-transparent px-4 py-3 shadow-none focus-visible:ring-0 text-lg placeholder:text-zinc-500 text-white h-12"
-                />
-                <Button
-                  type="submit"
-                  disabled={isAiLoading || !question.trim()}
-                  size="icon"
-                  className="mr-2 h-8 w-8 rounded bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 transition-transform active:scale-95"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AIConsultantModal
+          isOpen={isAiChatOpen}
+          onClose={() => setIsAiChatOpen(false)}
+          productName={product.name}
+          technicalInfo={product.technical_info || ''}
+        />
 
         <TechnicalInfoModal
           isOpen={isTechnicalInfoOpen}

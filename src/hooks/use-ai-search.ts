@@ -482,6 +482,15 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse?.message || aiResponse?.content || ''
         finalConfidence = aiResponse?.confidence_level || 'high'
 
+        if (
+          !finalMessage.trim() ||
+          finalConfidence === 'low' ||
+          finalMessage.toLowerCase().includes('não encontrei')
+        ) {
+          finalMessage = `${userName}, com base nos dados disponíveis, analisei que as especificações não estão completas. Para detalhes exatos, fale com nossos engenheiros no WhatsApp.`
+          finalConfidence = 'low'
+        }
+
         // 1. Extração de IDs com prioridade para a nova lógica de related_product_ids
         referencedIds =
           Array.isArray(aiResponse?.related_product_ids) &&
@@ -497,7 +506,7 @@ export function useUnifiedSearch() {
             .from('products')
             .select(`
               *,
-              manufacturers (
+              manufacturer:manufacturers (
                 id,
                 name
               )

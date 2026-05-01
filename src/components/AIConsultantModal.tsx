@@ -50,15 +50,14 @@ export function AIConsultantModal({
         className={cn(
           'sm:max-w-4xl w-full h-full max-h-[85vh] sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl',
           'p-6 sm:p-10 flex flex-col gap-4',
-          'bg-zinc-900/95 backdrop-blur-md border-zinc-800 shadow-2xl shadow-black/50',
-          'top-auto bottom-0 translate-y-0 sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] fixed sm:left-[50%] sm:translate-x-[-50%]',
+          'bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl',
+          'fixed bottom-0 translate-y-0 sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:left-[50%] sm:translate-x-[-50%]',
         )}
-        style={{ top: 'auto' }}
       >
         <DialogHeader>
           <DialogTitle className="text-white text-xl flex items-center gap-2">
             <MessageCircle className="w-5 h-5 text-primary" />
-            Consultor de IA
+            Engenharia IA {productName ? `- ${productName}` : ''}
           </DialogTitle>
           <DialogDescription className="text-zinc-400 text-lg">
             Tire suas dúvidas técnicas, sobre compatibilidade ou prazo de entrega.
@@ -100,8 +99,7 @@ export function AIConsultantModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua dúvida..."
-            className="text-[16px] sm:text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
-            style={{ fontSize: '18px' }}
+            className="text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
           />
           <Button
             onClick={handleSearch}
