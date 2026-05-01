@@ -13,6 +13,7 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ProductCard } from '@/components/ProductCard'
 
 interface AIConsultantModalProps {
   isOpen: boolean
@@ -52,6 +53,7 @@ export function AIConsultantModal({
           'bg-zinc-900/95 backdrop-blur-md border-zinc-800 shadow-2xl shadow-black/50',
           'top-auto bottom-0 translate-y-0 sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] fixed sm:left-[50%] sm:translate-x-[-50%]',
         )}
+        style={{ top: 'auto' }}
       >
         <DialogHeader>
           <DialogTitle className="text-white text-xl flex items-center gap-2">
@@ -65,8 +67,17 @@ export function AIConsultantModal({
 
         <ScrollArea className="flex-1 border border-zinc-800/50 rounded-lg p-4 bg-black/20">
           {results?.message ? (
-            <div className="prose prose-invert max-w-none text-lg leading-relaxed">
-              <ReactMarkdown>{results.message}</ReactMarkdown>
+            <div className="flex flex-col gap-6">
+              <div className="prose prose-invert max-w-none text-lg leading-relaxed">
+                <ReactMarkdown>{results.message}</ReactMarkdown>
+              </div>
+              {results.products && results.products.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 pb-4">
+                  {results.products.map((product: any) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-zinc-500 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
@@ -89,7 +100,8 @@ export function AIConsultantModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua dúvida..."
-            className="text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
+            className="text-[16px] sm:text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
+            style={{ fontSize: '18px' }}
           />
           <Button
             onClick={handleSearch}

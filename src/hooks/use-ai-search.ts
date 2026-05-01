@@ -454,6 +454,7 @@ export function useUnifiedSearch() {
 
         let aiResponse: any = null
         try {
+          const assembledPrompt = `Olá ${userName}, você é o Especialista My Way. O produto atual é ${extraContext?.productName || 'não especificado'}.`
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
             body: {
               query: cleanQuery,
@@ -463,6 +464,7 @@ export function useUnifiedSearch() {
               productName: extraContext?.productName,
               technicalInfo: extraContext?.technicalInfo,
               context: currentUnifiedData,
+              assembledPrompt,
             },
           })
           if (aiErrorReq) throw aiErrorReq
@@ -489,9 +491,46 @@ export function useUnifiedSearch() {
               ? aiResponse.referenced_internal_products
               : []
 
-        // 2. Filtragem Direta: Se o ID está na lista da IA, ele VAI para a tela.
-        // Removemos qualquer dependência de busca por texto/SKU no frontend.
-        finalProducts = currentUnifiedData.stock.filter((p: any) => referencedIds.includes(p.id))
+        // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
+        if (referencedIds.length > 0) {
+          const { data: fetchedProducts } = await supabase
+            .from('products')
+            .select(`
+              *,
+              manufacturers (
+                id,
+                name
+              )
+            `)
+            .in('id', referencedIds)
+
+          if (fetchedProducts && fetchedProducts.length > 0) {
+            finalProducts = fetchedProducts.map((p: any) => {
+              let finalUsdPrice = Number(p.price_usd || p.price_usa || 0)
+              if (Number(p.price_usa_rebate) > 0) {
+                if (!p.date_rebate) {
+                  finalUsdPrice = Number(p.price_usa_rebate)
+                } else {
+                  const rebateDate = new Date(p.date_rebate)
+                  if (new Date() <= rebateDate) finalUsdPrice = Number(p.price_usa_rebate)
+                }
+              }
+              return {
+                ...p,
+                price_usa: finalUsdPrice,
+                price_usd: finalUsdPrice,
+                price_brl: Number(p.price_brl || 0),
+                stock: Number(p.stock || 0),
+              }
+            })
+          } else {
+            finalProducts = currentUnifiedData.stock.filter((p: any) =>
+              referencedIds.includes(p.id),
+            )
+          }
+        } else {
+          finalProducts = []
+        }
 
         // 3. Garantia de Unicidade (Evita cards duplicados)
         finalProducts = finalProducts.filter(
