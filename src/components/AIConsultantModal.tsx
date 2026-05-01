@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ProductCard } from '@/components/ProductCard'
+import { useAuth } from '@/hooks/use-auth'
 
 interface AIConsultantModalProps {
   isOpen: boolean
@@ -30,6 +31,12 @@ export function AIConsultantModal({
 }: AIConsultantModalProps) {
   const [query, setQuery] = useState('')
   const { search, isLoading, results } = useAiSearch()
+  const { user } = useAuth()
+
+  const userName =
+    user?.user_metadata?.full_name?.split(' ')[0] ||
+    user?.user_metadata?.name?.split(' ')[0] ||
+    'Usuário'
 
   const handleSearch = async () => {
     if (!query.trim()) return
@@ -48,10 +55,11 @@ export function AIConsultantModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          'sm:max-w-4xl w-full h-full max-h-[85vh] sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl',
+          'w-full h-[90vh] rounded-t-3xl fixed bottom-0 left-0 right-0 translate-y-0 border-t border-zinc-800',
+          'sm:max-w-4xl sm:h-full sm:max-h-[85vh] sm:rounded-2xl',
           'p-6 sm:p-10 flex flex-col gap-4',
-          'bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl',
-          'fixed bottom-0 translate-y-0 sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:left-[50%] sm:translate-x-[-50%]',
+          'bg-zinc-900/95 backdrop-blur-md shadow-2xl',
+          'sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:left-[50%] sm:translate-x-[-50%]',
         )}
       >
         <DialogHeader>
@@ -82,7 +90,7 @@ export function AIConsultantModal({
             <div className="text-zinc-500 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
               <MessageCircle className="w-8 h-8 opacity-20" />
               <p>
-                Faça uma pergunta sobre o produto para iniciar a conversa com nosso especialista.
+                Olá {userName}, como posso ajudar com o {productName || 'produto'} hoje?
               </p>
             </div>
           )}

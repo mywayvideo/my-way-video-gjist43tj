@@ -454,7 +454,7 @@ export function useUnifiedSearch() {
 
         let aiResponse: any = null
         try {
-          const assembledPrompt = `Olá ${userName}, você é o Especialista My Way. O produto atual é ${extraContext?.productName || 'não especificado'}.`
+          const assembledPrompt = `Você está conversando com ${userName}. O produto atual é ${extraContext?.productName || 'não especificado'}. ESPECIFICAÇÕES: ${extraContext?.technicalInfo || 'não especificado'}. Use o nome do usuário e priorize estas especificações sobre qualquer dado legado.`
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
             body: {
               query: cleanQuery,
@@ -501,6 +501,7 @@ export function useUnifiedSearch() {
               : []
 
         // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
+        // Retrieve FULL product object: id, name, manufacturer_id, price_usd, price_brl, image_url, and ncm
         if (referencedIds.length > 0) {
           const { data: fetchedProducts } = await supabase
             .from('products')
