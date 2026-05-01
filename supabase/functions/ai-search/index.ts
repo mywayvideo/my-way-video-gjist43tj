@@ -139,9 +139,11 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-
+    
     // 1. Query the 'settings' table in Supabase to get global prompts and templates
-    const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
+    const { data: globalSettingsData } = await supabase
+      .from('settings')
+      .select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
     globalSettingsData?.forEach((s: any) => {
@@ -154,8 +156,7 @@ Deno.serve(async (req: Request) => {
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
       system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate:
-        globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
+      systemPromptTemplate: globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
       response_format_json: aiSettings?.response_format_json || '',
       logisticsRulesPrompt:
         (aiSettings?.logistics_rules_prompt || '') +
@@ -335,8 +336,7 @@ Deno.serve(async (req: Request) => {
       finalWeb = false
 
     // 3. Use the Admin Panel settings as the primary instruction set.
-    const finalBasePrompt =
-      settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+    const finalBasePrompt = settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
 
     // 2. Prepend: "Olá (userName), você é o Especialista My Way. O produto atual é (productName)."
     const userContext = `Olá ${userName}, você é o Especialista My Way. O produto atual é ${productName}.\nSpecs: ${technicalInfo}\n`
@@ -485,10 +485,7 @@ Deno.serve(async (req: Request) => {
       result.message = `${userName}, com os dados que tenho, analisei que as especificações não estão completas. Para detalhes técnicos, fale com nossos engenheiros no WhatsApp.`
       result.confidence_level = 'low'
     } else {
-      const normalizedMsg = result.message
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
+      const normalizedMsg = result.message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       const lowConfidenceIndicators = [
         'com os dados que tenho, analisei que',
         'com base nos dados que tenho aqui',
@@ -498,12 +495,10 @@ Deno.serve(async (req: Request) => {
         'falar com nossos engenheiros',
         'whatsapp',
         'detalhes tecnicos',
-        'detalhes de engenharia',
+        'detalhes de engenharia'
       ]
-
-      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) =>
-        normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
-      )
+      
+      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) => normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
       result.confidence_level = isLowConfidence ? 'low' : 'high'
     }
 
