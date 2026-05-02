@@ -80,7 +80,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const qL = actualQuery.toLowerCase()
-    const hasProductContext = (productName && productName !== 'Não informado') || (technicalInfo && technicalInfo !== 'Não informado')
+    const hasProductContext =
+      (productName && productName !== 'Não informado') ||
+      (technicalInfo && technicalInfo !== 'Não informado')
     const bypassCache = hasProductContext // Bypass when productName or technicalInfo is provided
 
     // Limpeza pontual no cache para forçar a nova leitura dos dados atualizados
@@ -140,11 +142,9 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-    
+
     // 1. Query the 'settings' table in Supabase to get global prompts and templates
-    const { data: globalSettingsData } = await supabase
-      .from('settings')
-      .select('key, value')
+    const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
     globalSettingsData?.forEach((s: any) => {
@@ -157,7 +157,8 @@ Deno.serve(async (req: Request) => {
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
       system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate: globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
+      systemPromptTemplate:
+        globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
       response_format_json: aiSettings?.response_format_json || '',
       logisticsRulesPrompt:
         (aiSettings?.logistics_rules_prompt || '') +
@@ -287,16 +288,16 @@ Deno.serve(async (req: Request) => {
 
     // Step 1: Manufacturer Check
     const { data: manufacturers } = await supabase.from('manufacturers').select('id, name')
-    
+
     // Step 2 & 3: Query Parsing and Strict Filtering
-    let manufacturerId = null;
-    let matchedManufacturer = "";
+    let manufacturerId = null
+    let matchedManufacturer = ''
     if (manufacturers) {
       for (const m of manufacturers) {
         if (qL.includes(m.name.toLowerCase())) {
-          manufacturerId = m.id;
-          matchedManufacturer = m.name;
-          break;
+          manufacturerId = m.id
+          matchedManufacturer = m.name
+          break
         }
       }
     }
@@ -322,22 +323,22 @@ Deno.serve(async (req: Request) => {
       .or(productOrQuery)
 
     if (manufacturerId) {
-      productQuery = productQuery.eq('manufacturer_id', manufacturerId);
+      productQuery = productQuery.eq('manufacturer_id', manufacturerId)
     }
 
-    // Step 4: Increase context limit to 100 items
-    const { data: allProducts } = await productQuery.limit(100)
+    // Step 4: Context Thinning - Fetch up to 60 products
+    const { data: allProducts } = await productQuery.limit(60)
 
     let productsCtx = (allProducts || []).sort((a, b) => {
-      // Step 5: Priority Sorting - top 20 most relevant matches by 'name'
-      const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0;
-      const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0;
-      const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0;
-      const bSkuMatch = b.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0;
-      
-      if (aSkuMatch !== bSkuMatch) return bSkuMatch - aSkuMatch;
-      if (aNameMatch !== bNameMatch) return bNameMatch - aNameMatch;
-      return 0;
+      // Step 5: Priority Sorting
+      const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
+      const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
+      const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
+      const bSkuMatch = b.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
+
+      if (aSkuMatch !== bSkuMatch) return bSkuMatch - aSkuMatch
+      if (aNameMatch !== bNameMatch) return bNameMatch - aNameMatch
+      return 0
     })
 
     // 4. FILTER: Apply 'ignore_stock_count'
@@ -346,10 +347,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const formattedInventory = productsCtx
-      .map(
-        (p: any) =>
-          `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`,
-      )
+      .map((p: any, index: number) => {
+        if (index < 10) {
+          return `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
+        } else {
+          return `ID: ${p.id}\nProduct: ${p.name}\nManufacturer ID: ${p.manufacturer_id}`
+        }
+      })
       .join('\n\n')
 
     const { data: providers } = await supabase
@@ -363,15 +367,24 @@ Deno.serve(async (req: Request) => {
       finalWeb = false
 
     // 3. Use the Admin Panel settings as the primary instruction set.
-    const finalBasePrompt = settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+    const finalBasePrompt =
+      settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
 
-    // 2. Prepend: "Você está conversando com [userName]. O produto atual é [productName]. ESPECIFICAÇÕES: [technicalInfo]. Use o nome do usuário e priorize estas especificações sobre qualquer dado legado."
+    // 2. Prepend context
     const userContext = `Você está conversando com ${userName}. O produto atual é ${productName}. ESPECIFICAÇÕES: ${technicalInfo}. Use o nome do usuário e priorize estas especificações sobre qualquer dado legado.\n`
 
-    // Confidence Logic explicitly added to the prompt
-    const confidenceInstruction = `INSTRUÇÃO CRÍTICA: Você deve SEMPRE responder. You are looking at the product ${productName}. This product IS in our inventory. Use these specs as your primary source: ${technicalInfo}. Do NOT say the product is not found. Answer based on this context first. Se os dados técnicos forem insuficientes, inicie a resposta com "${userName}, com os dados que tenho, analisei que... Para detalhes técnicos, fale com nossos engenheiros no WhatsApp."\nAI Instruction: Você deve cruzar os INSIGHTS ESTRATÉGICOS com o catálogo de PRODUTOS. Se citar uma tendência ou item, procure o ID correspondente no catálogo para gerar o card. Priorize dados técnicos sobre textos genéricos. Nunca invente IDs. Se o produto não estiver nos 100 itens fornecidos, informe que não localizou no estoque imediato e acione o botão de WhatsApp. Se um fabricante do nosso banco for citado, foque 100% nos produtos dele. Com 100 itens de contexto, identifique o ID correto para gerar o card. Se não encontrar, acione o botão de especialista.`
+    // AI Directives
+    const aiDirectives = `
+DIRETRIZES DE IA:
+- Nunca use IDs de produtos no texto da resposta, use apenas os nomes.
+- Seja técnico e detalhado. Use o contexto de 'market_intelligence' para enriquecer a resposta.
+- Sempre trate o usuário pelo nome ${userName} se fornecido.
+`
 
-    const sysPrompt = `${userContext}\n${finalBasePrompt}\n\n${confidenceInstruction}\n\nBase Institucional:\n${compInfo}\n\n${nabContext}\n\nInventário:\n${formattedInventory}\n\nObrigatório: Responda em JSON com as chaves 'message' e 'referenced_internal_products'. A resposta principal deve estar na chave 'message'.`
+    // Confidence Logic explicitly added to the prompt
+    const confidenceInstruction = `INSTRUÇÃO CRÍTICA: Você deve SEMPRE responder com uma análise técnica detalhada. NÃO substitua a resposta técnica por mensagens genéricas de suporte. You are looking at the product ${productName}. This product IS in our inventory. Use these specs as your primary source: ${technicalInfo}. Do NOT say the product is not found. Answer based on this context first.\nAI Instruction: Você deve cruzar os INSIGHTS ESTRATÉGICOS com o catálogo de PRODUTOS. Se citar uma tendência ou item, procure o ID correspondente no catálogo para gerar o card. Priorize dados técnicos sobre textos genéricos. Nunca invente IDs. Se o produto não estiver na lista fornecida, forneça as informações técnicas possíveis e apenas no final acione o botão de WhatsApp. Se um fabricante do nosso banco for citado, foque 100% nos produtos dele. Com a lista de contexto, identifique o ID correto para gerar o card.`
+
+    const sysPrompt = `${userContext}\n${finalBasePrompt}\n\n${aiDirectives}\n\n${confidenceInstruction}\n\nBase Institucional:\n${compInfo}\n\n${nabContext}\n\nInventário:\n${formattedInventory}\n\nObrigatório: Responda em JSON com as chaves 'message', 'referenced_internal_products' e 'should_show_whatsapp_button' (boolean). A resposta principal deve estar na chave 'message'.`
 
     const tools = [
       {
@@ -509,23 +522,25 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!result.message || result.message.trim() === '') {
-      result.message = `${userName}, com os dados que tenho, analisei que as especificações não estão completas. Para detalhes técnicos, fale com nossos engenheiros no WhatsApp.`
+      result.message = `${userName}, analisei as informações disponíveis mas não encontrei detalhes exatos para essa especificação. Por favor, consulte nossos especialistas no WhatsApp.`
       result.confidence_level = 'low'
     } else {
-      const normalizedMsg = result.message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const normalizedMsg = result.message
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
       const lowConfidenceIndicators = [
-        'com os dados que tenho, analisei que',
-        'com base nos dados que tenho aqui',
+        'com os dados que tenho',
         'dados disponiveis',
         'nao encontrei',
         'nao tenho informacao',
-        'falar com nossos engenheiros',
         'whatsapp',
-        'detalhes tecnicos',
-        'detalhes de engenharia'
+        'especialista',
       ]
-      
-      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) => normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+
+      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) =>
+        normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
+      )
       result.confidence_level = isLowConfidence ? 'low' : 'high'
     }
 
@@ -559,9 +574,11 @@ Deno.serve(async (req: Request) => {
     // WhatsApp Button Contract
     // Set to TRUE if: products array is empty, confidence is low, or the AI mentions 'WhatsApp/Especialista'
     if (
-      resolvedRefs.length === 0 || 
-      result.confidence_level === 'low' || 
-      (result.message && (result.message.toLowerCase().includes('whatsapp') || result.message.toLowerCase().includes('especialista')))
+      resolvedRefs.length === 0 ||
+      result.confidence_level === 'low' ||
+      (result.message &&
+        (result.message.toLowerCase().includes('whatsapp') ||
+          result.message.toLowerCase().includes('especialista')))
     ) {
       show = true
       reason = 'Produto não encontrado ou necessidade de assistência técnica especializada.'
@@ -587,7 +604,9 @@ Deno.serve(async (req: Request) => {
       reason = 'Projeto complexo requer consultoria especializada.'
     } else if (
       resolvedRefs.length > 0 &&
-      productsCtx.some((p: any) => resolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price)
+      productsCtx.some(
+        (p: any) => resolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price,
+      )
     ) {
       show = true
       reason = 'Produto premium. Especialista pode oferecer condições especiais.'
