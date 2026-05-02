@@ -80,7 +80,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const qL = actualQuery.toLowerCase()
-    const hasProductContext = (productName && productName !== 'Não informado') || (technicalInfo && technicalInfo !== 'Não informado')
+    const hasProductContext =
+      (productName && productName !== 'Não informado') ||
+      (technicalInfo && technicalInfo !== 'Não informado')
     const bypassCache = hasProductContext // Bypass when productName or technicalInfo is provided
 
     // Limpeza pontual no cache para forçar a nova leitura dos dados atualizados
@@ -140,11 +142,9 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-    
+
     // 1. Query the 'settings' table in Supabase to get global prompts and templates
-    const { data: globalSettingsData } = await supabase
-      .from('settings')
-      .select('key, value')
+    const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
     globalSettingsData?.forEach((s: any) => {
@@ -157,7 +157,12 @@ Deno.serve(async (req: Request) => {
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
       system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate: globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '{{system_prompt}}',
+      systemPromptTemplate:
+        globalSettingsMap['prompt_template'] ||
+        aiSettings?.system_prompt_template ||
+        '{{system_prompt}}',
+      brand_guidelines: globalSettingsMap['brand_guidelines'] || '',
+      behavioral_rules: globalSettingsMap['behavioral_rules'] || '',
       response_format_json: aiSettings?.response_format_json || '',
       logisticsRulesPrompt: aiSettings?.logistics_rules_prompt || '',
       ignore_stock_count: aiSettings?.ignore_stock_count ?? true,
@@ -285,30 +290,30 @@ Deno.serve(async (req: Request) => {
 
     // Step 1: Manufacturer Check
     const { data: manufacturers } = await supabase.from('manufacturers').select('id, name')
-    
+
     // Step 2 & 3: Query Parsing and Strict Filtering
-    let manufacturerId = null;
-    let matchedManufacturer = "";
+    let manufacturerId = null
+    let matchedManufacturer = ''
     if (manufacturers) {
       for (const m of manufacturers) {
         if (qL.includes(m.name.toLowerCase())) {
-          manufacturerId = m.id;
-          matchedManufacturer = m.name;
-          break;
+          manufacturerId = m.id
+          matchedManufacturer = m.name
+          break
         }
       }
     }
 
-    let currentProductId = null;
+    let currentProductId = null
     if (productName && productName !== 'Não informado') {
       const { data: currentProductMatch } = await supabase
         .from('products')
         .select('id')
         .ilike('name', `%${productName}%`)
         .limit(1)
-        .maybeSingle();
+        .maybeSingle()
       if (currentProductMatch) {
-         currentProductId = currentProductMatch.id;
+        currentProductId = currentProductMatch.id
       }
     }
 
@@ -333,7 +338,7 @@ Deno.serve(async (req: Request) => {
       .or(productOrQuery)
 
     if (manufacturerId) {
-      productQuery = productQuery.eq('manufacturer_id', manufacturerId);
+      productQuery = productQuery.eq('manufacturer_id', manufacturerId)
     }
 
     // Step 4: Context Thinning - Fetch up to 30 products
@@ -341,14 +346,14 @@ Deno.serve(async (req: Request) => {
 
     let productsCtx = (allProducts || []).sort((a, b) => {
       // Step 5: Priority Sorting
-      const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0;
-      const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0;
-      const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0;
-      const bSkuMatch = b.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0;
-      
-      if (aSkuMatch !== bSkuMatch) return bSkuMatch - aSkuMatch;
-      if (aNameMatch !== bNameMatch) return bNameMatch - aNameMatch;
-      return 0;
+      const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
+      const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
+      const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
+      const bSkuMatch = b.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
+
+      if (aSkuMatch !== bSkuMatch) return bSkuMatch - aSkuMatch
+      if (aNameMatch !== bNameMatch) return bNameMatch - aNameMatch
+      return 0
     })
 
     // 4. FILTER: Apply 'ignore_stock_count'
@@ -381,46 +386,63 @@ Deno.serve(async (req: Request) => {
     const finalBasePrompt = template.replace('{{system_prompt}}', settings.system_prompt || '')
 
     // Step 3: Context Injection
-    const contextInjection = hasProductContext 
-      ? `Usuário: ${userName}, Produto Atual: ${productName}, Specs: ${technicalInfo}` 
-      : `Usuário: ${userName}`
+    const contextInjection = hasProductContext
+      ? `Você está atendendo ${userName}.\nProduto em foco: ${productName}. Especificações: ${technicalInfo}.`
+      : `Você está atendendo ${userName}.`
 
     // Multi-Section Integration
     const promptSections: string[] = []
-    
+
     if (finalBasePrompt.trim()) {
       promptSections.push(finalBasePrompt)
     }
-    
+
     promptSections.push(`Contexto da Sessão:\n${contextInjection}`)
-    
+
+    if (settings.brand_guidelines?.trim()) {
+      promptSections.push(`Brand Guidelines:\n${settings.brand_guidelines}`)
+    }
+
+    if (settings.behavioral_rules?.trim()) {
+      promptSections.push(`Behavioral Rules:\n${settings.behavioral_rules}`)
+    }
+
     if (settings.logisticsRulesPrompt?.trim()) {
       promptSections.push(`Regras de Logística:\n${settings.logisticsRulesPrompt}`)
     }
 
     if (settings.technical_bridge) {
       try {
-        const bridges = typeof settings.technical_bridge === 'string' ? JSON.parse(settings.technical_bridge) : settings.technical_bridge
+        const bridges =
+          typeof settings.technical_bridge === 'string'
+            ? JSON.parse(settings.technical_bridge)
+            : settings.technical_bridge
         if (Array.isArray(bridges) && bridges.length > 0) {
-          const bridgeRules = bridges.map((b: any) => `- Se a fonte é ${b.source} e o destino é ${b.target}, sugerir: ${b.solution}`).join('\n')
+          const bridgeRules = bridges
+            .map(
+              (b: any) =>
+                `- Se a fonte é ${b.source} e o destino é ${b.target}, sugerir: ${b.solution}`,
+            )
+            .join('\n')
           promptSections.push(`Regras de Ponte Técnica:\n${bridgeRules}`)
         }
       } catch (e) {}
     }
-    
+
     if (compInfo.trim()) {
       promptSections.push(`Base Institucional:\n${compInfo}`)
     }
-    
+
     if (nabContext.trim()) {
       promptSections.push(`${nabContext}`)
     }
-    
+
     if (formattedInventory.trim()) {
       promptSections.push(`Inventário (MÁXIMO 30, TOP 4 COM SPECS):\n${formattedInventory}`)
     }
-    
-    const jsonInstruction = "Obrigatório: Responda em JSON com as chaves 'message', 'product_ids' e 'should_show_whatsapp_button' (boolean). A resposta principal deve estar na chave 'message'. NUNCA escreva IDs no texto da mensagem, apenas no array 'product_ids'."
+
+    const jsonInstruction =
+      "Obrigatório: Responda em JSON com as chaves 'message', 'product_ids' (array de UUIDs) e 'should_show_whatsapp_button' (boolean). NUNCA escreva IDs no texto da resposta. Use apenas nomes de produtos. Coloque os IDs dos produtos mencionados APENAS no campo de metadados 'product_ids'."
     promptSections.push(jsonInstruction)
 
     const sysPrompt = promptSections.join('\n\n')
@@ -564,17 +586,22 @@ Deno.serve(async (req: Request) => {
       result.message = `${userName}, analisei as informações disponíveis mas não encontrei detalhes exatos para essa especificação. Por favor, consulte nossos especialistas no WhatsApp.`
       result.confidence_level = 'low'
     } else {
-      const normalizedMsg = result.message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const normalizedMsg = result.message
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
       const lowConfidenceIndicators = [
         'com os dados que tenho',
         'dados disponiveis',
         'nao encontrei',
         'nao tenho informacao',
         'whatsapp',
-        'especialista'
+        'especialista',
       ]
-      
-      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) => normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+
+      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) =>
+        normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
+      )
       result.confidence_level = isLowConfidence ? 'low' : 'high'
     }
 
@@ -583,9 +610,7 @@ Deno.serve(async (req: Request) => {
     // 🔧 Auditoria Ninja: Unificação de Referências para Exibição de Cards
     let refs: string[] = []
     if (Array.isArray(result.product_ids) && result.product_ids.length > 0) {
-      refs = result.product_ids
-        .map((p: any) => (typeof p === 'string' ? p : p.id))
-        .filter(Boolean)
+      refs = result.product_ids.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
     } else if (Array.isArray(result.related_product_ids) && result.related_product_ids.length > 0) {
       refs = result.related_product_ids
         .map((p: any) => (typeof p === 'string' ? p : p.id))
@@ -613,9 +638,11 @@ Deno.serve(async (req: Request) => {
     // WhatsApp Button Contract
     // Set to TRUE if: no products found, technical confidence is low, or AI mentions 'WhatsApp/Especialista'
     if (
-      resolvedRefs.length === 0 || 
-      result.confidence_level === 'low' || 
-      (result.message && (result.message.toLowerCase().includes('whatsapp') || result.message.toLowerCase().includes('especialista')))
+      resolvedRefs.length === 0 ||
+      result.confidence_level === 'low' ||
+      (result.message &&
+        (result.message.toLowerCase().includes('whatsapp') ||
+          result.message.toLowerCase().includes('especialista')))
     ) {
       show = true
       reason = 'Produto não encontrado ou necessidade de assistência técnica especializada.'
@@ -641,7 +668,9 @@ Deno.serve(async (req: Request) => {
       reason = 'Projeto complexo requer consultoria especializada.'
     } else if (
       resolvedRefs.length > 0 &&
-      productsCtx.some((p: any) => resolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price)
+      productsCtx.some(
+        (p: any) => resolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price,
+      )
     ) {
       show = true
       reason = 'Produto premium. Especialista pode oferecer condições especiais.'
