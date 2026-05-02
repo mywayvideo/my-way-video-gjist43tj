@@ -464,7 +464,7 @@ export function useUnifiedSearch() {
 
         let aiResponse: any = null
         try {
-          const assembledPrompt = `Você está conversando com ${userName}. O produto atual é ${extraContext?.productName || 'não especificado'}. ESPECIFICAÇÕES: ${extraContext?.technicalInfo || 'não especificado'}. Use o nome do usuário e priorize estas especificações sobre qualquer dado legado.`
+          const assembledPrompt = `Você é um consultor na My Way. O usuário já está vendo o produto ${extraContext?.productName || 'não especificado'}. Use as especificações dele para embasar sua resposta, mas foque em sugerir COMPLEMENTOS ou ALTERNATIVAS. Nunca retorne o ID do produto atual no array de resultados, apenas de outros produtos citados.\nEspecificações: ${extraContext?.technicalInfo || 'não especificado'}`
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
             body: {
               query: cleanQuery,
@@ -509,13 +509,6 @@ export function useUnifiedSearch() {
             : Array.isArray(aiResponse?.referenced_internal_products)
               ? aiResponse.referenced_internal_products
               : []
-
-        if (
-          extraContext?.currentProductId &&
-          !referencedIds.includes(extraContext.currentProductId)
-        ) {
-          referencedIds.unshift(extraContext.currentProductId)
-        }
 
         // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
         // Retrieve FULL product object: id, name, manufacturer_id, price_usd, price_brl, image_url, and ncm
@@ -563,6 +556,10 @@ export function useUnifiedSearch() {
         finalProducts = finalProducts.filter(
           (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
         )
+
+        if (extraContext?.currentProductId) {
+          finalProducts = finalProducts.filter((p: any) => p.id !== extraContext.currentProductId)
+        }
 
         shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
       }

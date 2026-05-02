@@ -104,8 +104,7 @@ export function AIConsultantModal({
             <div className="text-zinc-500 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
               <MessageCircle className="w-8 h-8 opacity-20" />
               <p>
-                Olá {userName}, sou o consultor My Way. Como posso ajudar com o{' '}
-                {productName || 'produto'}?
+                Olá {userName}, como posso ajudar com sua dúvida sobre o {productName || 'produto'}?
               </p>
             </div>
           )}
