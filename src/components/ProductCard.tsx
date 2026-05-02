@@ -18,14 +18,14 @@ export function ProductCard({ product }: { product: any }) {
   const [favLoading, setFavLoading] = useState(false)
 
   const { secondaryPrice, isLoading: pricingLoading } = usePricing(product)
-  const {
-    originalPrice,
-    discountedPrice,
-    originalPriceNat,
-    discountedPriceNat,
-    discountPercentage,
-    isRebateActive,
-  } = useProductDiscount(product)
+  const productDiscount = useProductDiscount(product)
+
+  const originalPrice = product.originalPrice ?? productDiscount.originalPrice
+  const discountedPrice = product.discountedPrice ?? productDiscount.discountedPrice
+  const originalPriceNat = product.originalPriceNat ?? productDiscount.originalPriceNat
+  const discountedPriceNat = product.discountedPriceNat ?? productDiscount.discountedPriceNat
+  const discountPercentage = product.discountPercentage ?? productDiscount.discountPercentage
+  const isRebateActive = product.isRebateActive ?? productDiscount.isRebateActive
 
   const triggerFavoriteEffects = (e: React.MouseEvent) => {
     try {

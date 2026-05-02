@@ -92,12 +92,24 @@ export function AIConsultantModal({
               <div className="prose prose-invert max-w-none text-lg leading-relaxed">
                 <ReactMarkdown>{results.message}</ReactMarkdown>
               </div>
-              {results.products && results.products.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 pb-4">
-                  {results.products.map((product: any) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
+              {results.products &&
+                results.products.filter((p: any) => p.id !== currentProductId).length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
+                    {results.products
+                      .filter((p: any) => p.id !== currentProductId)
+                      .map((product: any) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                  </div>
+                )}
+              {results?.should_show_whatsapp_button && (
+                <Button
+                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-6 flex items-center justify-center gap-3 shadow-lg"
+                  onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                >
+                  <MessageCircle className="w-6 h-6" />
+                  Falar com Especialista no WhatsApp
+                </Button>
               )}
             </div>
           ) : (
@@ -107,15 +119,6 @@ export function AIConsultantModal({
                 Olá {userName}, como posso ajudar com sua dúvida sobre o {productName || 'produto'}?
               </p>
             </div>
-          )}
-          {results?.should_show_whatsapp_button && (
-            <Button
-              className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-4 flex items-center justify-center gap-3 shadow-lg"
-              onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
-            >
-              <MessageCircle className="w-6 h-6" />
-              Falar com Especialista no WhatsApp
-            </Button>
           )}
           {isLoading && (
             <div className="flex justify-center py-8">

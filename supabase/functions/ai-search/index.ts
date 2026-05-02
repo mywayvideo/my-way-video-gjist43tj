@@ -137,10 +137,48 @@ Deno.serve(async (req: Request) => {
     const safeQueryForOr = expandedQuery.replace(/[%_,()[\]{}"'\\]/g, ' ')
 
     const stopWords = new Set([
-      'que','qual','como','para','por','com','uma','um','tem','temos','voces','voce',
-      'mostrar','mostre','quero','gostaria','saber','preco','valor','sobre','esse',
-      'essa','este','esta','aqui','ali','cabo','the','what','who','how','why','can',
-      'you','show','tell','about','price','cost','favor','poderia','quais',
+      'que',
+      'qual',
+      'como',
+      'para',
+      'por',
+      'com',
+      'uma',
+      'um',
+      'tem',
+      'temos',
+      'voces',
+      'voce',
+      'mostrar',
+      'mostre',
+      'quero',
+      'gostaria',
+      'saber',
+      'preco',
+      'valor',
+      'sobre',
+      'esse',
+      'essa',
+      'este',
+      'esta',
+      'aqui',
+      'ali',
+      'cabo',
+      'the',
+      'what',
+      'who',
+      'how',
+      'why',
+      'can',
+      'you',
+      'show',
+      'tell',
+      'about',
+      'price',
+      'cost',
+      'favor',
+      'poderia',
+      'quais',
     ])
 
     if (settings.custom_stop_words) {
@@ -161,7 +199,9 @@ Deno.serve(async (req: Request) => {
     const orQuery =
       relevantTerms.length > 0
         ? relevantTerms
-            .map((t: string) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`)
+            .map(
+              (t: string) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`,
+            )
             .join(',')
         : `title.ilike.%${safeQueryForOr}%,raw_content.ilike.%${safeQueryForOr}%,ai_summary.ilike.%${safeQueryForOr}%`
 
@@ -209,7 +249,7 @@ Deno.serve(async (req: Request) => {
     let productQuery = supabase
       .from('products')
       .select(
-        `id, name, sku, description, price_usd, price_cost, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, weight, category_id, manufacturer_id, technical_info, image_url, is_discontinued, stock, category`,
+        `id, name, sku, description, price_usd, price_cost, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, weight, category_id, manufacturer_id, technical_info, image_url, is_discontinued, stock, category, date_rebate, price_usa_rebate`,
       )
       .or(productOrQuery)
 
@@ -238,7 +278,9 @@ Deno.serve(async (req: Request) => {
     let highConfCache: any[] = []
     try {
       const cacheTerms = [...relevantTerms].slice(0, 5)
-      let cacheOr = cacheTerms.map((t: string) => `product_name.ilike.%${t}%,search_query.ilike.%${t}%`).join(',')
+      let cacheOr = cacheTerms
+        .map((t: string) => `product_name.ilike.%${t}%,search_query.ilike.%${t}%`)
+        .join(',')
       if (!cacheOr) cacheOr = `search_query.ilike.%${safeQueryForOr}%`
 
       const { data: cacheDataList } = await supabase
@@ -249,7 +291,9 @@ Deno.serve(async (req: Request) => {
         .order('created_at', { ascending: false })
         .limit(20)
 
-      highConfCache = (cacheDataList || []).filter((c: any) => c.product_specs?.confidence_level === 'high')
+      highConfCache = (cacheDataList || []).filter(
+        (c: any) => c.product_specs?.confidence_level === 'high',
+      )
     } catch (e) {
       console.error('Cache lookup failed:', e)
     }
@@ -259,13 +303,15 @@ Deno.serve(async (req: Request) => {
       .map((p: any, index: number) => {
         if (index < 4) {
           let techInfo = p.technical_info || ''
-          const cacheMatch = highConfCache.find((c: any) => 
-            c.product_name === p.name || 
-            c.product_name === p.sku ||
-            (c.product_specs?.referenced_internal_products || []).includes(p.id)
+          const cacheMatch = highConfCache.find(
+            (c: any) =>
+              c.product_name === p.name ||
+              c.product_name === p.sku ||
+              (c.product_specs?.referenced_internal_products || []).includes(p.id),
           )
           if (cacheMatch) {
-            techInfo = cacheMatch.product_description || cacheMatch.product_specs?.message || techInfo
+            techInfo =
+              cacheMatch.product_description || cacheMatch.product_specs?.message || techInfo
           }
           return `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${techInfo}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
         } else {
@@ -304,12 +350,15 @@ Deno.serve(async (req: Request) => {
     let result: any = null,
       finalWeb = false
 
-    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}';
-    let finalBasePrompt = sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || 'Você é um Especialista My Way.');
+    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}'
+    let finalBasePrompt = sysPromptTemplate.replace(
+      '{{system_prompt}}',
+      settings.system_prompt || 'Você é um Especialista My Way.',
+    )
 
-    let productPageContext = '';
+    let productPageContext = ''
     if (hasProductContext) {
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`;
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`
     }
 
     const sysPrompt = `${finalBasePrompt}${productPageContext}
@@ -330,7 +379,7 @@ MANDATORY RULES:
 - NUNCA escreva IDs no texto da mensagem, apenas no array 'product_ids'.
 - Formato obrigatório JSON: chaves 'message', 'product_ids' e 'should_show_whatsapp_button' (boolean).
 - Priorize dados técnicos. Se a resposta ficar muito longa, resuma e acione o botão do WhatsApp.
-`;
+`
 
     const tools = [
       {
@@ -486,7 +535,7 @@ MANDATORY RULES:
 
     let show = false,
       reason = ''
-      
+
     let refs: string[] = []
     if (Array.isArray(result.product_ids) && result.product_ids.length > 0) {
       refs = result.product_ids.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
@@ -514,8 +563,61 @@ MANDATORY RULES:
       .filter(Boolean)
       .filter((refId: string) => refId !== currentProductId)
 
+    const aiMessage = result.message || ''
+    const mentionedIds = new Set<string>(resolvedRefs)
+
+    if (aiMessage) {
+      const lowerMsg = aiMessage.toLowerCase()
+      for (const p of productsCtx) {
+        if (!mentionedIds.has(p.id)) {
+          const hasName = p.name && lowerMsg.includes(p.name.toLowerCase())
+          const hasSku = p.sku && lowerMsg.includes(p.sku.toLowerCase())
+          if (hasName || hasSku) {
+            mentionedIds.add(p.id)
+          }
+        }
+      }
+    }
+
+    const finalResolvedRefs = Array.from(mentionedIds).filter(
+      (id: string) => id !== currentProductId,
+    )
+
+    const finalProducts = finalResolvedRefs
+      .map((refId: string) => {
+        const p = productsCtx.find((prod: any) => prod.id === refId)
+        if (p) {
+          let isRebateActive = false
+          let originalPrice = p.price_usd || 0
+          let discountedPrice = originalPrice
+
+          if (p.price_usa_rebate > 0 && p.date_rebate) {
+            const rebateDate = new Date(p.date_rebate)
+            if (rebateDate >= new Date()) {
+              isRebateActive = true
+              discountedPrice = p.price_usa_rebate
+            }
+          }
+
+          let discountPercentage = 0
+          if (originalPrice > 0 && discountedPrice < originalPrice) {
+            discountPercentage = ((originalPrice - discountedPrice) / originalPrice) * 100
+          }
+
+          return {
+            ...p,
+            originalPrice,
+            discountedPrice,
+            discountPercentage,
+            isRebateActive,
+          }
+        }
+        return null
+      })
+      .filter(Boolean)
+
     if (
-      resolvedRefs.length === 0 ||
+      finalResolvedRefs.length === 0 ||
       result.confidence_level === 'low' ||
       (result.message &&
         (result.message.toLowerCase().includes('whatsapp') ||
@@ -544,14 +646,14 @@ MANDATORY RULES:
       show = true
       reason = 'Projeto complexo requer consultoria especializada.'
     } else if (
-      resolvedRefs.length > 0 &&
+      finalResolvedRefs.length > 0 &&
       productsCtx.some(
-        (p: any) => resolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price,
+        (p: any) => finalResolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price,
       )
     ) {
       show = true
       reason = 'Produto premium. Especialista pode oferecer condições especiais.'
-    } else if (resolvedRefs.length >= 3) {
+    } else if (finalResolvedRefs.length >= 3) {
       show = true
       reason = 'Múltiplos produtos. Especialista pode montar solução integrada.'
     }
@@ -560,17 +662,18 @@ MANDATORY RULES:
     result.whatsapp_reason = show ? reason : result.whatsapp_reason || ''
     result.used_web_search = finalWeb
     result.price_context = 'fob_miami'
-    result.referenced_internal_products = resolvedRefs
+    result.referenced_internal_products = finalResolvedRefs
+    result.products = finalProducts
     result.has_nab_intelligence = hasNabIntelligence
 
     // Accurate Cache Storage
-    if (result.confidence_level === 'high' && resolvedRefs.length > 0) {
+    if (result.confidence_level === 'high' && finalResolvedRefs.length > 0) {
       console.log(`Saving new entry to product_search_cache for query: ${actualQuery}`)
-      
-      let cacheProductName = actualQuery;
-      const firstRefProd = productsCtx.find((p: any) => p.id === resolvedRefs[0]);
+
+      let cacheProductName = actualQuery
+      const firstRefProd = productsCtx.find((p: any) => p.id === finalResolvedRefs[0])
       if (firstRefProd) {
-        cacheProductName = firstRefProd.sku || firstRefProd.name;
+        cacheProductName = firstRefProd.sku || firstRefProd.name
       }
 
       supabase
@@ -584,7 +687,9 @@ MANDATORY RULES:
         })
         .then()
     } else {
-      console.log(`Results not saved to cache (Low confidence or empty refs) for query: ${actualQuery}`)
+      console.log(
+        `Results not saved to cache (Low confidence or empty refs) for query: ${actualQuery}`,
+      )
     }
 
     return new Response(JSON.stringify(result), {
