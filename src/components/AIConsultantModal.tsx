@@ -21,6 +21,7 @@ interface AIConsultantModalProps {
   onClose: () => void
   productName?: string
   technicalInfo?: string
+  currentProductId?: string
 }
 
 export function AIConsultantModal({
@@ -28,10 +29,18 @@ export function AIConsultantModal({
   onClose,
   productName,
   technicalInfo,
+  currentProductId,
 }: AIConsultantModalProps) {
   const [query, setQuery] = useState('')
   const { search, isLoading, results, clearResults } = useAiSearch()
   const { user } = useAuth()
+
+  useEffect(() => {
+    if (!isOpen) {
+      clearResults()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   useEffect(() => {
     clearResults()
@@ -45,7 +54,7 @@ export function AIConsultantModal({
 
   const handleSearch = async () => {
     if (!query.trim()) return
-    await search(query, [], { productName, technicalInfo })
+    await search(query, [], { productName, technicalInfo, currentProductId })
     setQuery('')
   }
 
@@ -95,13 +104,14 @@ export function AIConsultantModal({
             <div className="text-zinc-500 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
               <MessageCircle className="w-8 h-8 opacity-20" />
               <p>
-                Olá {userName}, como posso ajudar com o {productName || 'produto'} hoje?
+                Olá {userName}, sou o consultor My Way. Como posso ajudar com o{' '}
+                {productName || 'produto'}?
               </p>
             </div>
           )}
-          {results?.should_show_whatsapp_button && !isLoading && (
+          {results?.should_show_whatsapp_button && (
             <Button
-              className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-4 transition-all flex items-center justify-center gap-3 shadow-lg"
+              className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-4 flex items-center justify-center gap-3 shadow-lg"
               onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
             >
               <MessageCircle className="w-6 h-6" />

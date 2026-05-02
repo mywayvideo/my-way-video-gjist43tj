@@ -301,6 +301,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    let currentProductId = null;
+    if (productName && productName !== 'Não informado') {
+      const { data: currentProductMatch } = await supabase
+        .from('products')
+        .select('id')
+        .ilike('name', `%${productName}%`)
+        .limit(1)
+        .maybeSingle();
+      if (currentProductMatch) {
+         currentProductId = currentProductMatch.id;
+      }
+    }
+
     // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
     let productOrQuery = ''
     if (relevantTerms.length > 0) {
@@ -325,8 +338,8 @@ Deno.serve(async (req: Request) => {
       productQuery = productQuery.eq('manufacturer_id', manufacturerId);
     }
 
-    // Step 4: Context Thinning - Fetch up to 40 products
-    const { data: allProducts } = await productQuery.limit(40)
+    // Step 4: Context Thinning - Fetch up to 35 products
+    const { data: allProducts } = await productQuery.limit(35)
 
     let productsCtx = (allProducts || []).sort((a, b) => {
       // Step 5: Priority Sorting
@@ -374,9 +387,8 @@ Deno.serve(async (req: Request) => {
     // AI Directives
     const aiDirectives = `
 DIRETRIZES DE IA:
-- Nunca use IDs de produtos no texto da resposta, use apenas os nomes.
+- Você deve fornecer uma resposta técnica e cordial para ${userName}. IMPORTANTE: Nunca escreva IDs no texto, mas você deve garantir que os produtos mencionados apareçam no array de metadados da resposta.
 - Seja técnico e detalhado. Use o contexto de 'market_intelligence' para enriquecer a resposta.
-- Sempre trate o usuário pelo nome ${userName} se fornecido.
 - Priorize terminar a explicação sobre listar muitos itens. Se a resposta for interrompida por limite de espaço, você deve resumir e o botão de WhatsApp deve ser a última coisa renderizada pelo componente.
 `
 
@@ -564,6 +576,10 @@ DIRETRIZES DE IA:
         return refId
       })
       .filter(Boolean)
+
+    if (currentProductId && !resolvedRefs.includes(currentProductId)) {
+       resolvedRefs.unshift(currentProductId);
+    }
 
     // WhatsApp Button Contract
     // Set to TRUE if: no products found, technical confidence is low, or AI mentions 'WhatsApp/Especialista'

@@ -324,7 +324,7 @@ export function useUnifiedSearch() {
   const search = async (
     rawQuery: string,
     history: any[] = [],
-    extraContext?: { productName?: string; technicalInfo?: string },
+    extraContext?: { productName?: string; technicalInfo?: string; currentProductId?: string },
   ) => {
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
@@ -332,7 +332,8 @@ export function useUnifiedSearch() {
     console.log('CURRENT_TURN_SEARCH:', cleanQuery)
     console.log('NEW SEARCH FOR:', cleanQuery)
     setIsLoading(true)
-    setResults(null) // Explicitly clear the previous results state to avoid data overlap
+    // Refine 'clearResults' to only trigger when the user explicitly closes the modal or navigates to a completely different route, preventing accidental wipes during the AI stream.
+    // Removed setResults(null) here to avoid wiping previous products while loading
 
     try {
       let sessionId = sessionStorage.getItem('ai_chat_session_id')
@@ -508,6 +509,13 @@ export function useUnifiedSearch() {
             : Array.isArray(aiResponse?.referenced_internal_products)
               ? aiResponse.referenced_internal_products
               : []
+
+        if (
+          extraContext?.currentProductId &&
+          !referencedIds.includes(extraContext.currentProductId)
+        ) {
+          referencedIds.unshift(extraContext.currentProductId)
+        }
 
         // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
         // Retrieve FULL product object: id, name, manufacturer_id, price_usd, price_brl, image_url, and ncm
