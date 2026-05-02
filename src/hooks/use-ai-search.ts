@@ -547,12 +547,7 @@ export function useUnifiedSearch() {
           (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
         )
 
-        shouldShowWhatsapp =
-          !!aiResponse?.should_show_whatsapp_button ||
-          finalProducts.length === 0 ||
-          finalConfidence === 'low' ||
-          finalMessage.toLowerCase().includes('whatsapp') ||
-          finalMessage.toLowerCase().includes('especialista')
+        shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
       }
 
       const combinedResults = {

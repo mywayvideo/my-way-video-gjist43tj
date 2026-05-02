@@ -96,7 +96,7 @@ export function AIConsultantModal({
           )}
           {results?.should_show_whatsapp_button && !isLoading && (
             <Button
-              className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-4 mb-4 transition-all flex items-center justify-center gap-3 shadow-lg"
+              className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-4 transition-all flex items-center justify-center gap-3 shadow-lg"
               onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
             >
               <MessageCircle className="w-6 h-6" />
@@ -116,7 +116,7 @@ export function AIConsultantModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua dúvida..."
-            className="text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
+            className="text-lg text-white placeholder:text-lg placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
           />
           <Button
             onClick={handleSearch}
