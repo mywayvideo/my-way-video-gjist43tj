@@ -464,7 +464,6 @@ export function useUnifiedSearch() {
 
         let aiResponse: any = null
         try {
-          const assembledPrompt = `Você é um consultor na My Way. O usuário já está vendo o produto ${extraContext?.productName || 'não especificado'}. Use as especificações dele para embasar sua resposta, mas foque em sugerir COMPLEMENTOS ou ALTERNATIVAS. Nunca retorne o ID do produto atual no array de resultados, apenas de outros produtos citados.\nEspecificações: ${extraContext?.technicalInfo || 'não especificado'}`
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
             body: {
               query: cleanQuery,
@@ -473,8 +472,8 @@ export function useUnifiedSearch() {
               userName,
               productName: extraContext?.productName,
               technicalInfo: extraContext?.technicalInfo,
+              currentProductId: extraContext?.currentProductId,
               context: currentUnifiedData,
-              assembledPrompt,
             },
           })
           if (aiErrorReq) throw aiErrorReq

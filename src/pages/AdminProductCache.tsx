@@ -59,7 +59,7 @@ export default function AdminProductCache() {
     try {
       let q = supabase.from('product_search_cache').select('*', { count: 'exact' })
       if (debouncedSearch) {
-        q = q.or(`search_query.ilike.%${debouncedSearch}%,product_name.ilike.%${debouncedSearch}%`)
+        q = q.or(`product_name.ilike.%${debouncedSearch}%,search_query.ilike.%${debouncedSearch}%`)
       }
       const from = (page - 1) * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
@@ -197,7 +197,7 @@ export default function AdminProductCache() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-10 bg-card border-border/50 shadow-sm h-11"
-              placeholder="Buscar por query ou nome de produto..."
+              placeholder="Buscar por nome do produto ou query..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

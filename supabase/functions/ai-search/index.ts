@@ -55,6 +55,7 @@ Deno.serve(async (req: Request) => {
     let userName = 'Usuário'
     let productName = 'Não informado'
     let technicalInfo = 'Não informado'
+    let currentProductId = null
     try {
       const parsed = JSON.parse(bodyText)
       query = parsed.query || bodyText
@@ -63,6 +64,7 @@ Deno.serve(async (req: Request) => {
       userName = parsed.userName || userName
       productName = parsed.productName || productName
       technicalInfo = parsed.technicalInfo || technicalInfo
+      currentProductId = parsed.currentProductId || null
     } catch {
       query = bodyText
     }
@@ -168,6 +170,7 @@ Deno.serve(async (req: Request) => {
       technical_bridge: aiSettings?.technical_bridge,
       intent_mapping: aiSettings?.intent_mapping,
       custom_stop_words: aiSettings?.custom_stop_words,
+      product_page_prompt: aiSettings?.product_page_prompt || '',
     }
 
     // 2. EXPAND: Check 'intent_mapping' (Section H)
@@ -302,8 +305,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    let currentProductId = null
-    if (productName && productName !== 'Não informado') {
+    if (!currentProductId && productName && productName !== 'Não informado') {
       const { data: currentProductMatch } = await supabase
         .from('products')
         .select('id')
@@ -379,25 +381,36 @@ Deno.serve(async (req: Request) => {
     let result: any = null,
       finalWeb = false
 
-    // 3. Use the Admin Panel settings as the primary instruction set.
-    const finalBasePrompt =
-      settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}'
+    let finalBasePrompt = sysPromptTemplate.replace(
+      '{{system_prompt}}',
+      settings.system_prompt || 'Você é um Especialista My Way.',
+    )
 
-    // 2. Prepend context
-    const userContext = `Você é um consultor na My Way. O usuário já está vendo o produto ${productName}. Use as especificações dele para embasar sua resposta, mas foque em sugerir COMPLEMENTOS ou ALTERNATIVAS. Nunca retorne o ID do produto atual no array de resultados, apenas de outros produtos citados.\nEspecificações do produto atual: ${technicalInfo}\n`
+    let productPageContext = ''
+    if (hasProductContext) {
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`
+    }
 
-    // AI Directives
-    const aiDirectives = `
-DIRETRIZES DE IA:
-- Você deve fornecer uma resposta técnica e cordial para ${userName}. IMPORTANTE: Nunca escreva IDs no texto, mas você deve garantir que os produtos mencionados apareçam no array de metadados da resposta.
-- Seja técnico e detalhado. Use o contexto de 'market_intelligence' para enriquecer a resposta.
-- Priorize terminar a explicação sobre listar muitos itens. Se a resposta for interrompida por limite de espaço, você deve resumir e o botão de WhatsApp deve ser a última coisa renderizada pelo componente.
+    const sysPrompt = `${finalBasePrompt}${productPageContext}
+
+DIRETRIZES INSTITUCIONAIS E OPERACIONAIS:
+- O nome do cliente é ${userName}.
+- ${settings.logisticsRulesPrompt}
+
+Base Institucional:
+${compInfo}
+
+${nabContext}
+
+Inventário:
+${formattedInventory}
+
+MANDATORY RULES:
+- NUNCA escreva IDs no texto da mensagem, apenas no array 'product_ids'.
+- Formato obrigatório JSON: chaves 'message', 'product_ids' e 'should_show_whatsapp_button' (boolean).
+- Priorize dados técnicos. Se a resposta ficar muito longa, resuma e acione o botão do WhatsApp.
 `
-
-    // Confidence Logic explicitly added to the prompt
-    const confidenceInstruction = `INSTRUÇÃO CRÍTICA: Você deve SEMPRE responder com uma análise técnica detalhada. NÃO substitua a resposta técnica por mensagens genéricas de suporte. You are looking at the product ${productName}. This product IS in our inventory. Use these specs as your primary source: ${technicalInfo}. Do NOT say the product is not found. Answer based on this context first.\nAI Instruction: Você deve cruzar os INSIGHTS ESTRATÉGICOS com o catálogo de PRODUTOS. Se citar uma tendência ou item, procure o ID correspondente no catálogo para gerar o card. Priorize dados técnicos sobre textos genéricos. Nunca invente IDs. Se o produto não estiver na lista fornecida, forneça as informações técnicas possíveis e apenas no final acione o botão de WhatsApp. Se um fabricante do nosso banco for citado, foque 100% nos produtos dele. Com a lista de contexto, identifique o ID correto para gerar o card. Se a resposta ficar muito longa, resuma e mostre o botão do WhatsApp.`
-
-    const sysPrompt = `${userContext}\n${finalBasePrompt}\n\n${aiDirectives}\n\n${confidenceInstruction}\n\nBase Institucional:\n${compInfo}\n\n${nabContext}\n\nInventário:\n${formattedInventory}\n\nObrigatório: Responda em JSON com as chaves 'message', 'product_ids' e 'should_show_whatsapp_button' (boolean). A resposta principal deve estar na chave 'message'. NUNCA escreva IDs no texto da mensagem, apenas no array 'product_ids'.`
 
     const tools = [
       {
@@ -640,11 +653,20 @@ DIRETRIZES DE IA:
 
     if (result.referenced_internal_products?.length > 0 || result.has_nab_intelligence) {
       console.log(`Cache miss, saved new entry for query: ${actualQuery}`)
+
+      let cacheProductName = actualQuery
+      if (resolvedRefs.length > 0) {
+        const firstRefProd = productsCtx.find((p: any) => p.id === resolvedRefs[0])
+        if (firstRefProd && firstRefProd.name) {
+          cacheProductName = firstRefProd.name
+        }
+      }
+
       supabase
         .from('product_search_cache')
         .insert({
           search_query: actualQuery,
-          product_name: 'AI Match',
+          product_name: cacheProductName,
           source: 'ai_generated',
           product_description: result.message,
           product_specs: result,
