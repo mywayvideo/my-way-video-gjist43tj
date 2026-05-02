@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,8 +30,13 @@ export function AIConsultantModal({
   technicalInfo,
 }: AIConsultantModalProps) {
   const [query, setQuery] = useState('')
-  const { search, isLoading, results } = useAiSearch()
+  const { search, isLoading, results, clearResults } = useAiSearch()
   const { user } = useAuth()
+
+  useEffect(() => {
+    clearResults()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productName])
 
   const userName =
     user?.user_metadata?.full_name?.split(' ')[0] ||

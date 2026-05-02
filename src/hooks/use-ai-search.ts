@@ -312,6 +312,15 @@ export function useUnifiedSearch() {
     return finalResultData
   }
 
+  const clearResults = () => {
+    setResults(null)
+    accumulatedContext.current = {
+      products: [],
+      intel: [],
+      nabData: [],
+    }
+  }
+
   const search = async (
     rawQuery: string,
     history: any[] = [],
@@ -626,7 +635,7 @@ export function useUnifiedSearch() {
     }
   }
 
-  return { search, isLoading, results }
+  return { search, isLoading, results, clearResults }
 }
 
 export const useAiSearch = useUnifiedSearch

@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
     ) {
       return new Response(JSON.stringify({ error: 'Dados invalidos para pagamento.' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -32,7 +32,7 @@ Deno.serve(async (req: Request) => {
     if (!stripeKey) {
       return new Response(JSON.stringify({ error: 'Chave Stripe nao configurada.' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     params.append('payment_method_types[]', 'card')
     params.append('receipt_email', customer_email)
     params.append('description', `Order #${order_id}`)
-    
+
     if (metadata && typeof metadata === 'object') {
       for (const [key, value] of Object.entries(metadata)) {
         if (value !== undefined && value !== null) {
@@ -54,52 +54,66 @@ Deno.serve(async (req: Request) => {
     const stripeRes = await fetch('https://api.stripe.com/v1/payment_intents', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${stripeKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
+        Authorization: `Bearer ${stripeKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: params.toString()
+      body: params.toString(),
     })
 
     if (!stripeRes.ok) {
       const errorData = await stripeRes.json().catch(() => ({}))
       console.error('Stripe API Error:', stripeRes.status, errorData)
-      
+
       if (stripeRes.status === 429) {
-        return new Response(JSON.stringify({ error: 'Limite de requisicoes. Tente novamente em alguns minutos.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        return new Response(
+          JSON.stringify({ error: 'Limite de requisicoes. Tente novamente em alguns minutos.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
       }
-      
+
       if (stripeRes.status === 401) {
-        return new Response(JSON.stringify({ error: 'Autenticacao Stripe falhou. Contate suporte.' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        return new Response(
+          JSON.stringify({ error: 'Autenticacao Stripe falhou. Contate suporte.' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
       }
-      
-      return new Response(JSON.stringify({ error: 'Erro ao processar pagamento com o provedor.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+
+      return new Response(
+        JSON.stringify({ error: 'Erro ao processar pagamento com o provedor.' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
     const data = await stripeRes.json()
-    
-    return new Response(JSON.stringify({
-      client_secret: data.client_secret,
-      payment_intent_id: data.id,
-      status: data.status
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
 
+    return new Response(
+      JSON.stringify({
+        client_secret: data.client_secret,
+        payment_intent_id: data.id,
+        status: data.status,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   } catch (error: any) {
     console.error('Server error processing payment intent:', error.message)
-    return new Response(JSON.stringify({ error: 'Erro interno no servidor ao processar pagamento.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    return new Response(
+      JSON.stringify({ error: 'Erro interno no servidor ao processar pagamento.' }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    )
   }
 })
