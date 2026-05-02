@@ -220,6 +220,25 @@ export function useUnifiedSearch() {
         }
       }
 
+      // 4. Hook Context Refinement: Prioritize SKU matches
+      if (products.length > 0 && topKeywords.length > 0) {
+        products.sort((a, b) => {
+          const aSkuExact = topKeywords.some((kw) => a.sku?.toLowerCase() === kw.toLowerCase())
+            ? 2
+            : topKeywords.some((kw) => a.sku?.toLowerCase().includes(kw.toLowerCase()))
+              ? 1
+              : 0
+          const bSkuExact = topKeywords.some((kw) => b.sku?.toLowerCase() === kw.toLowerCase())
+            ? 2
+            : topKeywords.some((kw) => b.sku?.toLowerCase().includes(kw.toLowerCase()))
+              ? 1
+              : 0
+
+          if (aSkuExact !== bSkuExact) return bSkuExact - aSkuExact
+          return 0
+        })
+      }
+
       // Augment products with full_specs if not present
       if (products.length > 0) {
         const productIdsToFetch = products

@@ -15,25 +15,8 @@ Deno.serve(async (req: Request) => {
   console.log('FUNCTION_START: Received request')
 
   try {
-    const fallbackRes = {
-      message:
-        'Neste momento o sistema está indisponível para pesquisas automáticas. Por favor, contate nossos especialistas via WhatsApp.',
-      referenced_internal_products: [],
-      should_show_whatsapp_button: true,
-      whatsapp_reason: 'Sistema de IA temporariamente indisponível.',
-      price_context: 'fob_miami',
-      used_web_search: false,
-      confidence_level: 'low',
-      has_nab_intelligence: false,
-    }
-
     const supUrl = Deno.env.get('SUPABASE_URL') || ''
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-
-    console.log('Env vars present:', {
-      SUPABASE_URL: !!supUrl,
-      SUPABASE_SERVICE_ROLE_KEY: !!serviceRoleKey,
-    })
 
     const supabase = createClient(supUrl, serviceRoleKey)
 
@@ -85,52 +68,11 @@ Deno.serve(async (req: Request) => {
     const hasProductContext =
       (productName && productName !== 'Não informado') ||
       (technicalInfo && technicalInfo !== 'Não informado')
-    const bypassCache = hasProductContext // Bypass when productName or technicalInfo is provided
 
-    // Limpeza pontual no cache para forçar a nova leitura dos dados atualizados
+    // Clean exact cache miss if needed, though we rely on identity now
     try {
       await supabase.from('product_search_cache').delete().eq('search_query', actualQuery)
-    } catch (e) {
-      console.error('Erro ao limpar cache:', e)
-    }
-
-    let cachedResult: any = null
-    let expiredCachedResult: any = null
-
-    if (!bypassCache) {
-      try {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-        const safeQuery = actualQuery.replace(/[%_]/g, '\\$&')
-        const { data: cacheData } = await supabase
-          .from('product_search_cache')
-          .select('*')
-          .ilike('search_query', safeQuery)
-          .eq('source', 'ai_generated')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (cacheData) {
-          const createdAtDate = cacheData.created_at ? new Date(cacheData.created_at) : new Date(0)
-          if (createdAtDate > thirtyDaysAgo) {
-            cachedResult = cacheData
-          } else {
-            expiredCachedResult = cacheData
-          }
-        }
-      } catch (e) {
-        console.error('Cache lookup failed:', e)
-      }
-    }
-
-    if (cachedResult && cachedResult.product_specs) {
-      console.log(`Cache hit for query: ${actualQuery}`)
-      return new Response(JSON.stringify(cachedResult.product_specs), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    } catch (e) {}
 
     const { data: set } = await supabase
       .from('ai_agent_settings')
@@ -145,7 +87,6 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle()
 
-    // 1. Query the 'settings' table in Supabase to get global prompts and templates
     const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
@@ -173,7 +114,6 @@ Deno.serve(async (req: Request) => {
       product_page_prompt: aiSettings?.product_page_prompt || '',
     }
 
-    // 2. EXPAND: Check 'intent_mapping' (Section H)
     let expandedQuery = actualQuery
     if (settings.intent_mapping) {
       try {
@@ -196,7 +136,6 @@ Deno.serve(async (req: Request) => {
 
     const safeQueryForOr = expandedQuery.replace(/[%_,()[\]{}"'\\]/g, ' ')
 
-    // 1. PRE-PROCESS: Use 'custom_stop_words' (Section J)
     const stopWords = new Set([
       'que',
       'qual',
@@ -255,8 +194,6 @@ Deno.serve(async (req: Request) => {
       .filter((t: string) => t.length >= 2)
     let qTerms = allTerms.filter((t: string) => !stopWords.has(t))
 
-    // REFINED LOGIC: Do NOT discard alphabetic terms.
-    // We use all non-stop-word terms (qTerms) if available, otherwise allTerms.
     const relevantTerms = qTerms.length > 0 ? qTerms : allTerms
 
     const orQuery =
@@ -268,31 +205,11 @@ Deno.serve(async (req: Request) => {
             .join(',')
         : `title.ilike.%${safeQueryForOr}%,raw_content.ilike.%${safeQueryForOr}%,ai_summary.ilike.%${safeQueryForOr}%`
 
-    const { data: intelligence } = await supabase
-      .from('market_intelligence')
-      .select('title, raw_content, ai_summary')
-      .eq('status', 'published')
-      .or(orQuery)
-      .limit(10)
-
-    let hasNabIntelligence = false
-    let nabContext = ''
-    if (intelligence && intelligence.length > 0) {
-      hasNabIntelligence = true
-      nabContext =
-        'INSIGHTS ESTRATÉGICOS:\n' +
-        intelligence
-          .map((i: any) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
-          .join('\n\n')
-    }
-
     const { data: cData } = await supabase.from('company_info').select('content, type')
     const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
-    // Step 1: Manufacturer Check
     const { data: manufacturers } = await supabase.from('manufacturers').select('id, name')
 
-    // Step 2 & 3: Query Parsing and Strict Filtering
     let manufacturerId = null
     let matchedManufacturer = ''
     if (manufacturers) {
@@ -317,7 +234,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
     let productOrQuery = ''
     if (relevantTerms.length > 0) {
       const topTerms = [...relevantTerms]
@@ -341,11 +257,9 @@ Deno.serve(async (req: Request) => {
       productQuery = productQuery.eq('manufacturer_id', manufacturerId)
     }
 
-    // Step 4: Context Thinning - Fetch up to 30 products
     const { data: allProducts } = await productQuery.limit(30)
 
     let productsCtx = (allProducts || []).sort((a, b) => {
-      // Step 5: Priority Sorting
       const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
       const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
       const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
@@ -356,20 +270,75 @@ Deno.serve(async (req: Request) => {
       return 0
     })
 
-    // 4. FILTER: Apply 'ignore_stock_count'
     if (settings.ignore_stock_count === false) {
       productsCtx = productsCtx.filter((p: any) => p.stock > 0)
     }
 
+    // --- Entity-Based Cache Lookup ---
+    let highConfCache: any[] = []
+    try {
+      const cacheTerms = [...relevantTerms].slice(0, 5)
+      let cacheOr = cacheTerms
+        .map((t: string) => `product_name.ilike.%${t}%,search_query.ilike.%${t}%`)
+        .join(',')
+      if (!cacheOr) cacheOr = `search_query.ilike.%${safeQueryForOr}%`
+
+      const { data: cacheDataList } = await supabase
+        .from('product_search_cache')
+        .select('*')
+        .or(cacheOr)
+        .eq('source', 'ai_generated')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      highConfCache = (cacheDataList || []).filter(
+        (c: any) => c.product_specs?.confidence_level === 'high',
+      )
+    } catch (e) {
+      console.error('Cache lookup failed:', e)
+    }
+
+    // --- Format Inventory with Merged Cache Specs ---
     const formattedInventory = productsCtx
       .map((p: any, index: number) => {
         if (index < 4) {
-          return `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
+          let techInfo = p.technical_info || ''
+          const cacheMatch = highConfCache.find(
+            (c: any) =>
+              c.product_name === p.name ||
+              c.product_name === p.sku ||
+              (c.product_specs?.referenced_internal_products || []).includes(p.id),
+          )
+          if (cacheMatch) {
+            techInfo =
+              cacheMatch.product_description || cacheMatch.product_specs?.message || techInfo
+          }
+          return `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${techInfo}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
         } else {
           return `ID: ${p.id}\nProduct: ${p.name}`
         }
       })
       .join('\n\n')
+
+    // --- Market Intelligence Enrichment ---
+    const { data: intelligence } = await supabase
+      .from('market_intelligence')
+      .select('title, raw_content, ai_summary')
+      .eq('status', 'published')
+      .or(orQuery)
+      .limit(10)
+
+    let hasNabIntelligence = false
+    let nabContext = ''
+    if (intelligence && intelligence.length > 0) {
+      hasNabIntelligence = true
+      nabContext =
+        'INSIGHTS ESTRATÉGICOS:\n' +
+        intelligence
+          .map((i: any) => `Title: ${i.title}\nSummary: ${i.ai_summary}\nContent: ${i.raw_content}`)
+          .join('\n\n') +
+        '\n\nUse os INSIGHTS ESTRATÉGICOS para adicionar valor comercial e tendências de mercado à sua explicação técnica sobre os produtos encontrados.'
+    }
 
     const { data: providers } = await supabase
       .from('ai_providers')
@@ -381,12 +350,15 @@ Deno.serve(async (req: Request) => {
     let result: any = null,
       finalWeb = false
 
-    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}';
-    let finalBasePrompt = sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || 'Você é um Especialista My Way.');
+    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}'
+    let finalBasePrompt = sysPromptTemplate.replace(
+      '{{system_prompt}}',
+      settings.system_prompt || 'Você é um Especialista My Way.',
+    )
 
-    let productPageContext = '';
+    let productPageContext = ''
     if (hasProductContext) {
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`;
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`
     }
 
     const sysPrompt = `${finalBasePrompt}${productPageContext}
@@ -398,16 +370,16 @@ DIRETRIZES INSTITUCIONAIS E OPERACIONAIS:
 Base Institucional:
 ${compInfo}
 
-${nabContext}
-
 Inventário:
 ${formattedInventory}
+
+${nabContext}
 
 MANDATORY RULES:
 - NUNCA escreva IDs no texto da mensagem, apenas no array 'product_ids'.
 - Formato obrigatório JSON: chaves 'message', 'product_ids' e 'should_show_whatsapp_button' (boolean).
 - Priorize dados técnicos. Se a resposta ficar muito longa, resuma e acione o botão do WhatsApp.
-`;
+`
 
     const tools = [
       {
@@ -535,12 +507,6 @@ MANDATORY RULES:
     }
 
     if (!result) {
-      if (expiredCachedResult && expiredCachedResult.product_specs) {
-        console.log(`Fallback to expired cache for query: ${actualQuery}`)
-        return new Response(JSON.stringify(expiredCachedResult.product_specs), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
       throw new Error('All AI providers failed.')
     }
 
@@ -569,7 +535,7 @@ MANDATORY RULES:
 
     let show = false,
       reason = ''
-    // 🔧 Auditoria Ninja: Unificação de Referências para Exibição de Cards
+
     let refs: string[] = []
     if (Array.isArray(result.product_ids) && result.product_ids.length > 0) {
       refs = result.product_ids.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
@@ -597,8 +563,6 @@ MANDATORY RULES:
       .filter(Boolean)
       .filter((refId: string) => refId !== currentProductId)
 
-    // WhatsApp Button Contract
-    // Set to TRUE if: no products found, technical confidence is low, or AI mentions 'WhatsApp/Especialista'
     if (
       resolvedRefs.length === 0 ||
       result.confidence_level === 'low' ||
@@ -648,15 +612,14 @@ MANDATORY RULES:
     result.referenced_internal_products = resolvedRefs
     result.has_nab_intelligence = hasNabIntelligence
 
-    if (result.referenced_internal_products?.length > 0 || result.has_nab_intelligence) {
-      console.log(`Cache miss, saved new entry for query: ${actualQuery}`)
-      
-      let cacheProductName = actualQuery;
-      if (resolvedRefs.length > 0) {
-        const firstRefProd = productsCtx.find((p: any) => p.id === resolvedRefs[0]);
-        if (firstRefProd && firstRefProd.name) {
-          cacheProductName = firstRefProd.name;
-        }
+    // Accurate Cache Storage
+    if (result.confidence_level === 'high' && resolvedRefs.length > 0) {
+      console.log(`Saving new entry to product_search_cache for query: ${actualQuery}`)
+
+      let cacheProductName = actualQuery
+      const firstRefProd = productsCtx.find((p: any) => p.id === resolvedRefs[0])
+      if (firstRefProd) {
+        cacheProductName = firstRefProd.sku || firstRefProd.name
       }
 
       supabase
@@ -670,7 +633,9 @@ MANDATORY RULES:
         })
         .then()
     } else {
-      console.log(`Results not saved to cache (empty stock/intelligence) for query: ${actualQuery}`)
+      console.log(
+        `Results not saved to cache (Low confidence or empty refs) for query: ${actualQuery}`,
+      )
     }
 
     return new Response(JSON.stringify(result), {
