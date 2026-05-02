@@ -548,8 +548,8 @@ export function useUnifiedSearch() {
         )
 
         shouldShowWhatsapp =
-          finalProducts.length === 0 ||
           !!aiResponse?.should_show_whatsapp_button ||
+          finalProducts.length === 0 ||
           finalConfidence === 'low' ||
           finalMessage.toLowerCase().includes('whatsapp') ||
           finalMessage.toLowerCase().includes('especialista')

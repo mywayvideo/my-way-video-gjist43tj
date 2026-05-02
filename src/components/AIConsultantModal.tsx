@@ -55,7 +55,7 @@ export function AIConsultantModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          'w-full h-[90vh] rounded-t-3xl fixed bottom-0 left-0 right-0 translate-y-0 border-t border-zinc-800',
+          'fixed bottom-0 w-full h-[90vh] rounded-t-3xl left-0 right-0 translate-y-0 border-t border-zinc-800',
           'sm:max-w-4xl sm:h-full sm:max-h-[85vh] sm:rounded-2xl',
           'p-6 sm:p-10 flex flex-col gap-4',
           'bg-zinc-900/95 backdrop-blur-md shadow-2xl',
@@ -117,7 +117,7 @@ export function AIConsultantModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua dúvida..."
-            className="text-lg placeholder:text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
+            className="text-lg text-[18px] placeholder:text-[18px] placeholder:text-lg text-white placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
           />
           <Button
             onClick={handleSearch}
