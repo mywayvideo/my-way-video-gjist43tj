@@ -501,14 +501,16 @@ export function useUnifiedSearch() {
           finalConfidence = 'low'
         }
 
-        // 1. Extração de IDs com prioridade para a nova lógica de related_product_ids
+        // 1. Extração de IDs com prioridade para a nova lógica de product_ids e related_product_ids
         referencedIds =
-          Array.isArray(aiResponse?.related_product_ids) &&
-          aiResponse.related_product_ids.length > 0
-            ? aiResponse.related_product_ids
-            : Array.isArray(aiResponse?.referenced_internal_products)
-              ? aiResponse.referenced_internal_products
-              : []
+          Array.isArray(aiResponse?.product_ids) && aiResponse.product_ids.length > 0
+            ? aiResponse.product_ids
+            : Array.isArray(aiResponse?.related_product_ids) &&
+                aiResponse.related_product_ids.length > 0
+              ? aiResponse.related_product_ids
+              : Array.isArray(aiResponse?.referenced_internal_products)
+                ? aiResponse.referenced_internal_products
+                : []
 
         // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
         // Retrieve FULL product object: id, name, manufacturer_id, price_usd, price_brl, image_url, and ncm

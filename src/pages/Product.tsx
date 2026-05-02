@@ -866,6 +866,7 @@ export default function Product() {
           onClose={() => setIsAiChatOpen(false)}
           productName={product.name}
           technicalInfo={product.technical_info || ''}
+          currentProductId={product.id}
         />
 
         <TechnicalInfoModal

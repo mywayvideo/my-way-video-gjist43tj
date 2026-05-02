@@ -45,7 +45,7 @@ export function AIConsultantModal({
   useEffect(() => {
     clearResults()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productName])
+  }, [currentProductId])
 
   const userName =
     user?.user_metadata?.full_name?.split(' ')[0] ||
