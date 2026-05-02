@@ -80,7 +80,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const qL = actualQuery.toLowerCase()
-    const hasProductContext = (productName && productName !== 'Não informado') || (technicalInfo && technicalInfo !== 'Não informado')
+    const hasProductContext =
+      (productName && productName !== 'Não informado') ||
+      (technicalInfo && technicalInfo !== 'Não informado')
     const bypassCache = hasProductContext // Bypass when productName or technicalInfo is provided
 
     // Limpeza pontual no cache para forçar a nova leitura dos dados atualizados
@@ -140,11 +142,9 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-    
+
     // 1. Query the 'settings' table in Supabase to get global prompts and templates
-    const { data: globalSettingsData } = await supabase
-      .from('settings')
-      .select('key, value')
+    const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
     globalSettingsData?.forEach((s: any) => {
@@ -157,7 +157,8 @@ Deno.serve(async (req: Request) => {
       maxWeb: set?.max_web_search_attempts ?? 2,
       conf: set?.confidence_threshold_for_whatsapp ?? 'low',
       system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate: globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
+      systemPromptTemplate:
+        globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
       response_format_json: aiSettings?.response_format_json || '',
       logisticsRulesPrompt:
         (aiSettings?.logistics_rules_prompt || '') +
@@ -285,7 +286,21 @@ Deno.serve(async (req: Request) => {
     const { data: cData } = await supabase.from('company_info').select('content, type')
     const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
-    // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
+    // Step 1: Manufacturer Check
+    const { data: manufacturers } = await supabase.from('manufacturers').select('id, name')
+
+    // Step 2 & 3: Query Parsing and Strict Filtering
+    let manufacturerId = null
+    let matchedManufacturer = ''
+    if (manufacturers) {
+      for (const m of manufacturers) {
+        if (qL.includes(m.name.toLowerCase())) {
+          manufacturerId = m.id
+          matchedManufacturer = m.name
+          break
+        }
+      }
+    }
 
     // Build the productOrQuery using the top 10 most specific (longest) terms found in the query.
     let productOrQuery = ''
@@ -300,17 +315,29 @@ Deno.serve(async (req: Request) => {
       productOrQuery = `name.ilike.%${safeQueryForOr}%,description.ilike.%${safeQueryForOr}%,sku.ilike.%${safeQueryForOr}%`
     }
 
-    const { data: allProducts } = await supabase
+    let productQuery = supabase
       .from('products')
       .select(
         `id, name, sku, description, price_usd, price_cost, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, weight, category_id, manufacturer_id, technical_info, image_url, is_discontinued, stock, category`,
       )
       .or(productOrQuery)
-      .limit(50)
+
+    if (manufacturerId) {
+      productQuery = productQuery.eq('manufacturer_id', manufacturerId)
+    }
+
+    // Step 4: Increase context limit to 100 items
+    const { data: allProducts } = await productQuery.limit(100)
 
     let productsCtx = (allProducts || []).sort((a, b) => {
-      if (a.sku?.toLowerCase() === actualQuery.toLowerCase()) return -1
-      if (b.sku?.toLowerCase() === actualQuery.toLowerCase()) return 1
+      // Step 5: Priority Sorting - top 20 most relevant matches by 'name'
+      const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
+      const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
+      const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
+      const bSkuMatch = b.sku?.toLowerCase() === actualQuery.toLowerCase() ? 2 : 0
+
+      if (aSkuMatch !== bSkuMatch) return bSkuMatch - aSkuMatch
+      if (aNameMatch !== bNameMatch) return bNameMatch - aNameMatch
       return 0
     })
 
@@ -337,13 +364,14 @@ Deno.serve(async (req: Request) => {
       finalWeb = false
 
     // 3. Use the Admin Panel settings as the primary instruction set.
-    const finalBasePrompt = settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
+    const finalBasePrompt =
+      settings.system_prompt || settings.systemPromptTemplate || 'Você é um Especialista My Way.'
 
     // 2. Prepend: "Você está conversando com [userName]. O produto atual é [productName]. ESPECIFICAÇÕES: [technicalInfo]. Use o nome do usuário e priorize estas especificações sobre qualquer dado legado."
     const userContext = `Você está conversando com ${userName}. O produto atual é ${productName}. ESPECIFICAÇÕES: ${technicalInfo}. Use o nome do usuário e priorize estas especificações sobre qualquer dado legado.\n`
 
     // Confidence Logic explicitly added to the prompt
-    const confidenceInstruction = `INSTRUÇÃO CRÍTICA: Você deve SEMPRE responder. You are looking at the product ${productName}. This product IS in our inventory. Use these specs as your primary source: ${technicalInfo}. Do NOT say the product is not found. Answer based on this context first. Se os dados técnicos forem insuficientes, inicie a resposta com "${userName}, com os dados que tenho, analisei que... Para detalhes técnicos, fale com nossos engenheiros no WhatsApp."`
+    const confidenceInstruction = `INSTRUÇÃO CRÍTICA: Você deve SEMPRE responder. You are looking at the product ${productName}. This product IS in our inventory. Use these specs as your primary source: ${technicalInfo}. Do NOT say the product is not found. Answer based on this context first. Se os dados técnicos forem insuficientes, inicie a resposta com "${userName}, com os dados que tenho, analisei que... Para detalhes técnicos, fale com nossos engenheiros no WhatsApp."\nAI Instruction: Se um fabricante do nosso banco for citado, foque 100% nos produtos dele. Com 100 itens de contexto, identifique o ID correto para gerar o card. Se não encontrar, acione o botão de especialista.`
 
     const sysPrompt = `${userContext}\n${finalBasePrompt}\n\n${confidenceInstruction}\n\nBase Institucional:\n${compInfo}\n\nInventário:\n${formattedInventory}\n\nObrigatório: Responda em JSON com as chaves 'message' e 'referenced_internal_products'. A resposta principal deve estar na chave 'message'.`
 
@@ -486,7 +514,10 @@ Deno.serve(async (req: Request) => {
       result.message = `${userName}, com os dados que tenho, analisei que as especificações não estão completas. Para detalhes técnicos, fale com nossos engenheiros no WhatsApp.`
       result.confidence_level = 'low'
     } else {
-      const normalizedMsg = result.message.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const normalizedMsg = result.message
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
       const lowConfidenceIndicators = [
         'com os dados que tenho, analisei que',
         'com base nos dados que tenho aqui',
@@ -496,10 +527,12 @@ Deno.serve(async (req: Request) => {
         'falar com nossos engenheiros',
         'whatsapp',
         'detalhes tecnicos',
-        'detalhes de engenharia'
+        'detalhes de engenharia',
       ]
-      
-      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) => normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+
+      let isLowConfidence = lowConfidenceIndicators.some((phrase: string) =>
+        normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
+      )
       result.confidence_level = isLowConfidence ? 'low' : 'high'
     }
 
@@ -520,7 +553,28 @@ Deno.serve(async (req: Request) => {
       refs = result.products.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
     }
 
-    if (result.confidence_level === settings.conf) {
+    const resolvedRefs = refs
+      .map((refId: string) => {
+        const p = productsCtx.find((prod: any) => prod.id === refId)
+        if (p) {
+          return p.id
+        }
+        return refId
+      })
+      .filter(Boolean)
+
+    // WhatsApp Button Contract
+    // Set to TRUE if: products array is empty, confidence is low, or the AI mentions 'WhatsApp/Especialista'
+    if (
+      resolvedRefs.length === 0 ||
+      result.confidence_level === 'low' ||
+      (result.message &&
+        (result.message.toLowerCase().includes('whatsapp') ||
+          result.message.toLowerCase().includes('especialista')))
+    ) {
+      show = true
+      reason = 'Produto não encontrado ou necessidade de assistência técnica especializada.'
+    } else if (result.confidence_level === settings.conf) {
       show = true
       reason = 'Necessidade de assistência técnica especializada.'
     } else if (settings.kws.some((k: string) => qL.includes(k.toLowerCase()))) {
@@ -541,25 +595,17 @@ Deno.serve(async (req: Request) => {
       show = true
       reason = 'Projeto complexo requer consultoria especializada.'
     } else if (
-      refs.length > 0 &&
-      productsCtx.some((p: any) => refs.includes(p.id) && (p.price_usd || 0) > settings.price)
+      resolvedRefs.length > 0 &&
+      productsCtx.some(
+        (p: any) => resolvedRefs.includes(p.id) && (p.price_usd || 0) > settings.price,
+      )
     ) {
       show = true
       reason = 'Produto premium. Especialista pode oferecer condições especiais.'
-    } else if (refs.length >= 3) {
+    } else if (resolvedRefs.length >= 3) {
       show = true
       reason = 'Múltiplos produtos. Especialista pode montar solução integrada.'
     }
-
-    const resolvedRefs = refs
-      .map((refId: string) => {
-        const p = productsCtx.find((prod: any) => prod.id === refId)
-        if (p) {
-          return p.id
-        }
-        return refId
-      })
-      .filter(Boolean)
 
     result.should_show_whatsapp_button = show || !!result.should_show_whatsapp_button
     result.whatsapp_reason = show ? reason : result.whatsapp_reason || ''
