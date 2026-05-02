@@ -381,15 +381,12 @@ Deno.serve(async (req: Request) => {
     let result: any = null,
       finalWeb = false
 
-    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}'
-    let finalBasePrompt = sysPromptTemplate.replace(
-      '{{system_prompt}}',
-      settings.system_prompt || 'Você é um Especialista My Way.',
-    )
+    let sysPromptTemplate = settings.systemPromptTemplate || '{{system_prompt}}';
+    let finalBasePrompt = sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || 'Você é um Especialista My Way.');
 
-    let productPageContext = ''
+    let productPageContext = '';
     if (hasProductContext) {
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${settings.product_page_prompt}`;
     }
 
     const sysPrompt = `${finalBasePrompt}${productPageContext}
@@ -410,7 +407,7 @@ MANDATORY RULES:
 - NUNCA escreva IDs no texto da mensagem, apenas no array 'product_ids'.
 - Formato obrigatório JSON: chaves 'message', 'product_ids' e 'should_show_whatsapp_button' (boolean).
 - Priorize dados técnicos. Se a resposta ficar muito longa, resuma e acione o botão do WhatsApp.
-`
+`;
 
     const tools = [
       {
@@ -653,12 +650,12 @@ MANDATORY RULES:
 
     if (result.referenced_internal_products?.length > 0 || result.has_nab_intelligence) {
       console.log(`Cache miss, saved new entry for query: ${actualQuery}`)
-
-      let cacheProductName = actualQuery
+      
+      let cacheProductName = actualQuery;
       if (resolvedRefs.length > 0) {
-        const firstRefProd = productsCtx.find((p: any) => p.id === resolvedRefs[0])
+        const firstRefProd = productsCtx.find((p: any) => p.id === resolvedRefs[0]);
         if (firstRefProd && firstRefProd.name) {
-          cacheProductName = firstRefProd.name
+          cacheProductName = firstRefProd.name;
         }
       }
 
