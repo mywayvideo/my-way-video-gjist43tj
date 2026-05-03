@@ -497,9 +497,9 @@ export function useUnifiedSearch() {
               userName,
               productName: extraContext?.productName,
               technicalInfo: extraContext?.technicalInfo,
-              currentProductId: extraContext?.currentProductId,
+              currentProductId: extraContext?.currentProductId || null,
               context: currentUnifiedData,
-              isAdmin,
+              isAdmin: !!isAdmin,
             },
           })
           if (aiErrorReq) throw aiErrorReq
