@@ -510,25 +510,10 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse?.message || aiResponse?.content || ''
         finalConfidence = aiResponse?.confidence_level || 'high'
 
-        if (
-          !finalMessage.trim() ||
-          finalConfidence === 'low' ||
-          finalMessage.toLowerCase().includes('não encontrei')
-        ) {
-          finalMessage = `${userName}, com base nos dados disponíveis, analisei que as especificações não estão completas. Para detalhes exatos, fale com nossos engenheiros no WhatsApp.`
-          finalConfidence = 'low'
-        }
-
-        // 1. Extração de IDs com prioridade para a nova lógica de product_ids e related_product_ids
-        referencedIds =
-          Array.isArray(aiResponse?.product_ids) && aiResponse.product_ids.length > 0
-            ? aiResponse.product_ids
-            : Array.isArray(aiResponse?.related_product_ids) &&
-                aiResponse.related_product_ids.length > 0
-              ? aiResponse.related_product_ids
-              : Array.isArray(aiResponse?.referenced_internal_products)
-                ? aiResponse.referenced_internal_products
-                : []
+        // 1. Extração de IDs estrita pela chave referenced_internal_products
+        referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
+          ? aiResponse.referenced_internal_products
+          : []
 
         // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
         // Retrieve FULL product object: id, name, manufacturer_id, price_usd, price_brl, image_url, and ncm
@@ -577,12 +562,12 @@ export function useUnifiedSearch() {
           (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
         )
 
+        shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
+
         if (extraContext?.currentProductId) {
           finalProducts = finalProducts.filter((p: any) => p.id !== extraContext.currentProductId)
           referencedIds = referencedIds.filter((id: string) => id !== extraContext.currentProductId)
         }
-
-        shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
       }
 
       const combinedResults = {
