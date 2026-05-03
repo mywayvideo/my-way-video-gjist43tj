@@ -128,8 +128,18 @@ export default function AdminAISettings() {
           { data: aiSettingsData, error: aiSettingsError },
           { data: aiAgentSettingsData, error: aiAgentSettingsError },
         ] = await Promise.all([
-          supabase.from('ai_settings').select('*').limit(1).maybeSingle(),
-          supabase.from('ai_agent_settings').select('*').limit(1).maybeSingle(),
+          supabase
+            .from('ai_settings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single(),
+          supabase
+            .from('ai_agent_settings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single(),
         ])
 
         if (aiSettingsError) throw aiSettingsError
@@ -235,10 +245,6 @@ export default function AdminAISettings() {
         updated_at: new Date().toISOString(),
       }
 
-      if (aiSettingsId) {
-        aiSettingsPayload.id = aiSettingsId
-      }
-
       const aiAgentSettingsPayload: any = {
         whatsapp_trigger_low_confidence: values.whatsapp_trigger_low_confidence,
         whatsapp_trigger_purchase_keywords: values.whatsapp_trigger_purchase_keywords,
@@ -252,28 +258,35 @@ export default function AdminAISettings() {
         updated_at: new Date().toISOString(),
       }
 
-      if (aiAgentSettingsId) {
-        aiAgentSettingsPayload.id = aiAgentSettingsId
+      if (!aiSettingsId || !aiAgentSettingsId) {
+        throw new Error('IDs de configuração não encontrados. Recarregue a página.')
       }
 
       const [res1, res2] = await Promise.all([
-        supabase.from('ai_settings').upsert(aiSettingsPayload).select().single(),
-        supabase.from('ai_agent_settings').upsert(aiAgentSettingsPayload).select().single(),
+        supabase
+          .from('ai_settings')
+          .update(aiSettingsPayload)
+          .eq('id', aiSettingsId)
+          .select()
+          .single(),
+        supabase
+          .from('ai_agent_settings')
+          .update(aiAgentSettingsPayload)
+          .eq('id', aiAgentSettingsId)
+          .select()
+          .single(),
       ])
 
       if (res1.error) throw res1.error
       if (res2.error) throw res2.error
 
-      if (!aiSettingsId && res1.data) setAiSettingsId(res1.data.id)
-      if (!aiAgentSettingsId && res2.data) setAiAgentSettingsId(res2.data.id)
-
       toast({
         title: 'Sucesso',
-        description: 'Configurações de Inteligência atualizadas!',
+        description: 'Configurações salvas com sucesso!',
       })
     } catch (error: any) {
       toast({
-        title: 'Erro ao salvar',
+        title: 'Erro ao salvar configurações.',
         description: error.message,
         variant: 'destructive',
       })

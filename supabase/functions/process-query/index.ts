@@ -36,15 +36,15 @@ Deno.serve(async (req: Request) => {
     const { data: aiSettings } = await supabase
       .from('ai_settings')
       .select('*')
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .single()
     const { data: aiAgentSettings } = await supabase
       .from('ai_agent_settings')
       .select('*')
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .single()
 
     let systemPrompt = aiAgentSettings?.system_prompt || ''
     let systemPromptTemplate = aiSettings?.system_prompt_template || ''

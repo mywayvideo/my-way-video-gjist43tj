@@ -1,6 +1,6 @@
 {
   "_versions": {
-    "ai-search": 151,
+    "ai-search": 152,
     "functions": 36,
     "validate-ai-provider": 44,
     "call-ai-agent": 76,
@@ -41,7 +41,7 @@
     "generate-related-products": 10,
     "square-payment": 9,
     "process-knowledge": 5,
-    "process-query": 31,
+    "process-query": 32,
     "notify-admin-payment": 2
   }
 }
