@@ -1,53 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import { getActiveAgent, generateExpertResponse, getAISettings } from '@/services/intelligence'
+import { getActiveAgent } from '@/services/intelligence'
 import { useAuth } from '@/hooks/use-auth'
-
-const STOP_WORDS = new Set([
-  'que',
-  'qual',
-  'como',
-  'para',
-  'por',
-  'com',
-  'uma',
-  'um',
-  'tem',
-  'temos',
-  'voces',
-  'voce',
-  'mostrar',
-  'mostre',
-  'quero',
-  'gostaria',
-  'saber',
-  'preco',
-  'valor',
-  'sobre',
-  'esse',
-  'essa',
-  'este',
-  'esta',
-  'aqui',
-  'ali',
-  'cabo',
-  'the',
-  'what',
-  'who',
-  'how',
-  'why',
-  'can',
-  'you',
-  'show',
-  'tell',
-  'about',
-  'price',
-  'cost',
-  'favor',
-  'poderia',
-  'quais',
-])
 
 export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
@@ -61,179 +16,8 @@ export function useUnifiedSearch() {
     user?.user_metadata?.role === 'admin' ||
     false
 
-  const accumulatedContext = useRef<{ products: any[]; intel: any[]; nabData: any[] }>({
-    products: [],
-    intel: [],
-    nabData: [],
-  })
-
-  const fetchUnifiedData = async (query: string) => {
-    const cleanQuery = query.trim()
-    const settings = await getAISettings()
-
-    const { data: aiSettingsData } = await supabase
-      .from('ai_settings')
-      .select('ignore_stock_count, custom_stop_words, intent_mapping')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-
-    const ignoreStockCount =
-      aiSettingsData?.ignore_stock_count ?? settings?.ignore_stock_count ?? true
-
-    // Apply custom stop words
-    if (aiSettingsData?.custom_stop_words) {
-      aiSettingsData.custom_stop_words.split(',').forEach((w: string) => {
-        const cleanW = w.trim().toLowerCase()
-        if (cleanW) {
-          STOP_WORDS.add(cleanW)
-        }
-      })
-    }
-
-    // EXPAND: Intent Mapping
-    let expandedQuery = cleanQuery
-    if (aiSettingsData?.intent_mapping) {
-      try {
-        const intentMap =
-          typeof aiSettingsData.intent_mapping === 'string'
-            ? JSON.parse(aiSettingsData.intent_mapping)
-            : aiSettingsData.intent_mapping
-
-        if (Array.isArray(intentMap)) {
-          for (const intent of intentMap) {
-            if (intent.trigger && cleanQuery.toLowerCase().includes(intent.trigger.toLowerCase())) {
-              expandedQuery += ' ' + (intent.expansion || intent.expansions || '')
-            }
-          }
-        }
-      } catch {
-        /* intentionally ignored */
-      }
-    }
-
-    let products: any[] = []
-    let cache: any[] = []
-    let nab: any[] = []
-
-    try {
-      const optimizedSearchTerm = expandedQuery
-
-      console.log('SEARCH_STATE:', { term: optimizedSearchTerm, ignoreStock: ignoreStockCount })
-
-      // 1. Busca via RPC com a lógica exata e otimizada (Soberania do Banco de Dados)
-      const { data: searchData, error: searchError } = await supabase.rpc('execute_ai_search', {
-        search_term: optimizedSearchTerm,
-      })
-
-      if (searchError) {
-        console.error('Error calling execute_ai_search:', searchError)
-      } else if (searchData) {
-        const responseObj = searchData as any
-        products = Array.isArray(responseObj?.stock) ? responseObj.stock : []
-        cache = Array.isArray(responseObj?.intel) ? responseObj.intel : []
-        nab = Array.isArray(responseObj?.nab_data) ? responseObj.nab_data : []
-      }
-
-      // Augment products with full_specs if not present
-      if (products.length > 0) {
-        const productIdsToFetch = products
-          .filter((p) => !p.full_specs && !p.technical_info)
-          .map((p) => p.id)
-        if (productIdsToFetch.length > 0) {
-          const { data: fullProducts } = await supabase
-            .from('products')
-            .select('*')
-            .in('id', productIdsToFetch)
-          if (fullProducts) {
-            products = products.map((p: any) => {
-              const fullP = fullProducts.find((fp) => fp.id === p.id)
-              return fullP ? { ...p, ...fullP, full_specs: fullP.technical_info } : p
-            })
-          }
-        }
-      }
-
-      // Augment nab_data with content if not present
-      if (nab.length > 0 && !nab[0].content) {
-        const nabIds = nab.map((n: any) => n.id)
-        const { data: fullNab } = await supabase.from('nab_market').select('*').in('id', nabIds)
-        if (fullNab) {
-          nab = nab.map((n: any) => {
-            const fullN = fullNab.find((fn) => fn.id === n.id)
-            return fullN ? { ...n, ...fullN } : n
-          })
-        }
-      }
-    } catch (e) {
-      console.error('RPC execute_ai_search failed', e)
-    }
-
-    let finalProducts = products.length > 0 ? products : []
-
-    // Respect stock visibility settings (removed stock > 0 filter to ensure catalog sovereignty)
-    console.log('IGNORE_STOCK_SETTING:', ignoreStockCount)
-
-    const priceThreshold = Number(settings?.price_threshold_usd) || 5000
-    finalProducts = finalProducts.map((p: any) => {
-      let finalUsdPrice = Number(p.price_usd || p.price_usa || 0)
-
-      if (Number(p.price_usa_rebate) > 0) {
-        if (!p.date_rebate) {
-          finalUsdPrice = Number(p.price_usa_rebate)
-        } else {
-          const rebateDate = new Date(p.date_rebate)
-          const currentDate = new Date()
-          if (currentDate <= rebateDate) {
-            finalUsdPrice = Number(p.price_usa_rebate)
-          }
-        }
-      }
-
-      return {
-        ...p,
-        is_expensive: finalUsdPrice > priceThreshold,
-        model: p.sku || p.model,
-        price_usa: finalUsdPrice,
-        price_usd: finalUsdPrice,
-        price_brl: Number(p.price_brl || 0),
-        stock: Number(p.stock || 0),
-      }
-    })
-
-    const finalResultData = {
-      stock: finalProducts,
-      products: finalProducts,
-      intel: cache,
-      nabData: nab,
-      web: [],
-      settings: settings || {},
-      isNewlyCached: false,
-    }
-
-    console.log(
-      'MATCHED_PRODUCTS:',
-      finalResultData.stock.map((p: any) => `${p.name} - $${p.price_usd}`),
-    )
-
-    console.log('RAW_DB_RESULTS:', finalResultData)
-    console.log(
-      'INTELLIGENCE_FOUND:',
-      finalResultData.nabData.length + finalResultData.intel.length,
-    )
-    console.log('NAB_DATA_FETCHED:', finalResultData.nabData)
-    console.log('INTEL_DATA_FOUND:', finalResultData.intel)
-
-    return finalResultData
-  }
-
   const clearResults = () => {
     setResults(null)
-    accumulatedContext.current = {
-      products: [],
-      intel: [],
-      nabData: [],
-    }
   }
 
   const search = async (
@@ -244,11 +28,8 @@ export function useUnifiedSearch() {
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
 
-    console.log('CURRENT_TURN_SEARCH:', cleanQuery)
     console.log('NEW SEARCH FOR:', cleanQuery)
     setIsLoading(true)
-    // Refine 'clearResults' to only trigger when the user explicitly closes the modal or navigates to a completely different route, preventing accidental wipes during the AI stream.
-    // Removed setResults(null) here to avoid wiping previous products while loading
 
     try {
       let sessionId = sessionStorage.getItem('ai_chat_session_id')
@@ -294,89 +75,31 @@ export function useUnifiedSearch() {
       let shouldShowWhatsapp = false
 
       const activeAgent = await getActiveAgent()
-      const unifiedData = await fetchUnifiedData(cleanQuery)
 
-      // Accumulate context
-      const newProducts = unifiedData.stock || []
-      const newIntel = unifiedData.intel || []
-      const newNab = unifiedData.nabData || []
-
-      console.log('NEW RESULTS:', newProducts.length)
-
-      const isComparison =
-        cleanQuery.toLowerCase().includes('vs') ||
-        cleanQuery.toLowerCase().includes('versus') ||
-        cleanQuery.toLowerCase().includes('comparar') ||
-        cleanQuery.toLowerCase().includes('compare') ||
-        cleanQuery.toLowerCase().includes('diferença')
-
-      let combinedProducts = newProducts
-      if (isComparison && accumulatedContext.current.products.length > 0) {
-        combinedProducts = [...accumulatedContext.current.products, ...newProducts].filter(
-          (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
-        )
-      } else if (!isComparison && newProducts.length > 0) {
-        combinedProducts = [...newProducts, ...accumulatedContext.current.products]
-          .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-          .slice(0, 50)
-      } else if (newProducts.length === 0) {
-        combinedProducts = accumulatedContext.current.products
-      }
-
-      const sortedCombinedProducts = combinedProducts.sort((a, b) => {
-        if (a.sku?.toLowerCase() === cleanQuery.toLowerCase()) return -1
-        if (b.sku?.toLowerCase() === cleanQuery.toLowerCase()) return 1
-        return 0
-      })
-
-      accumulatedContext.current = {
-        products: sortedCombinedProducts,
-        intel: newIntel,
-        nabData: newNab,
-      }
-
-      const currentUnifiedData = {
-        ...unifiedData,
-        stock: sortedCombinedProducts,
-        products: sortedCombinedProducts,
-        intel: newIntel,
-        nabData: newNab,
-      }
-
-      // Emit intermediate results so UI can render loading state
       const intermediateResults = {
-        message: 'Sincronizando inteligência audiovisual...',
-        content: 'Sincronizando inteligência audiovisual...',
+        message: 'Consultando especialistas, fabricantes e estoque especializado...',
+        content: 'Consultando especialistas, fabricantes e estoque especializado...',
         confidence_level: 'high',
-        stock: currentUnifiedData.stock,
-        products: [], // Do not render products until AI confirms relevance
+        stock: [],
+        products: [],
         referenced_internal_products: [],
-        intel: currentUnifiedData.intel,
-        nabData: currentUnifiedData.nabData,
-        web: currentUnifiedData.web,
-        settings: currentUnifiedData.settings,
+        intel: [],
+        nabData: [],
+        web: [],
+        settings: {},
         agent_name: 'Especialista My Way',
         should_show_whatsapp_button: false,
         is_intermediate: true,
       }
       setResults(intermediateResults)
 
-      finalProducts = currentUnifiedData.products
-
       if (!activeAgent) {
-        finalMessage = 'Nenhum agente de IA configurado. Exibindo resultados da base unificada.'
+        finalMessage = 'Nenhum agente de IA configurado.'
         toast({
           title: 'Aviso',
-          description: 'Nenhum agente configurado. Exibindo busca básica.',
+          description: 'Nenhum agente configurado. Configure em Admin > Agentes AI.',
         })
       } else {
-        const contextString = JSON.stringify({
-          stock: currentUnifiedData.stock,
-          intel: currentUnifiedData.intel,
-          nab_data: currentUnifiedData.nabData,
-        })
-        console.log('KNOWLEDGE_BASE_SENT_TO_AI:', contextString)
-
         let aiResponse: any = null
         try {
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
@@ -388,7 +111,6 @@ export function useUnifiedSearch() {
               productName: extraContext?.productName,
               technicalInfo: extraContext?.technicalInfo,
               currentProductId: extraContext?.currentProductId || null,
-              context: currentUnifiedData,
               isAdmin: !!isAdmin,
             },
           })
@@ -407,12 +129,10 @@ export function useUnifiedSearch() {
         finalMessage = aiResponse?.message || aiResponse?.content || ''
         finalConfidence = aiResponse?.confidence_level || 'high'
 
-        // 1. Extração de IDs estrita pela chave referenced_internal_products
         referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
           ? aiResponse.referenced_internal_products
           : []
 
-        // 2. Fetch Secundário: Buscar objeto completo no banco de dados.
         if (referencedIds.length > 0) {
           const { data: fetchedProducts } = await supabase
             .from('products')
@@ -445,16 +165,9 @@ export function useUnifiedSearch() {
                 stock: Number(p.stock || 0),
               }
             })
-          } else {
-            finalProducts = currentUnifiedData.stock.filter((p: any) =>
-              referencedIds.includes(p.id),
-            )
           }
-        } else {
-          finalProducts = []
         }
 
-        // 3. Garantia de Unicidade (Evita cards duplicados)
         finalProducts = finalProducts.filter(
           (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
         )
@@ -471,20 +184,19 @@ export function useUnifiedSearch() {
         message: finalMessage,
         content: finalMessage,
         confidence_level: finalConfidence,
-        stock: currentUnifiedData.stock,
+        stock: finalProducts,
         products: finalProducts,
         referenced_internal_products: referencedIds,
-        intel: currentUnifiedData.intel,
-        nabData: currentUnifiedData.nabData,
-        web: currentUnifiedData.web,
-        settings: currentUnifiedData.settings,
+        intel: [],
+        nabData: [],
+        web: [],
+        settings: {},
         agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
         is_intermediate: false,
       }
 
       console.log('SEARCH_RESULTS:', combinedResults)
-      console.log('DATA_FOUND:', combinedResults.stock?.length || 0)
 
       try {
         await supabase.from('chat_messages').insert([
@@ -528,8 +240,6 @@ export function useUnifiedSearch() {
         should_show_whatsapp_button: true,
         is_intermediate: false,
       }
-
-      console.log('SEARCH_RESULTS:', fallbackResults)
 
       setResults(fallbackResults)
       toast({
