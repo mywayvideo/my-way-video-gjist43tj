@@ -53,7 +53,13 @@ export function useUnifiedSearch() {
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
   const { toast } = useToast()
-  const { user } = useAuth()
+  const auth = useAuth() as any
+  const user = auth.user
+  const isAdmin =
+    auth.isAdmin ||
+    user?.app_metadata?.role === 'admin' ||
+    user?.user_metadata?.role === 'admin' ||
+    false
 
   const accumulatedContext = useRef<{ products: any[]; intel: any[]; nabData: any[] }>({
     products: [],
@@ -493,6 +499,7 @@ export function useUnifiedSearch() {
               technicalInfo: extraContext?.technicalInfo,
               currentProductId: extraContext?.currentProductId,
               context: currentUnifiedData,
+              isAdmin,
             },
           })
           if (aiErrorReq) throw aiErrorReq
