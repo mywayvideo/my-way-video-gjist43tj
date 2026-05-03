@@ -63,6 +63,7 @@ const formSchema = z.object({
     .default([]),
   custom_stop_words: z.string().optional(),
   proactivity_level: z.coerce.number().min(1).max(10).default(5),
+  product_page_prompt: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -98,6 +99,7 @@ export default function AdminAISettings() {
       technical_bridge: [],
       custom_stop_words: '',
       proactivity_level: 5,
+      product_page_prompt: '',
     },
   })
 
@@ -183,6 +185,7 @@ export default function AdminAISettings() {
             : [],
           custom_stop_words: aiSettingsData?.custom_stop_words || '',
           proactivity_level: aiAgentSettingsData?.proactivity_level ?? 5,
+          product_page_prompt: aiSettingsData?.product_page_prompt || '',
         })
       } catch (error: any) {
         toast({
@@ -228,6 +231,7 @@ export default function AdminAISettings() {
         intent_mapping: values.intent_mapping,
         technical_bridge: values.technical_bridge,
         custom_stop_words: values.custom_stop_words,
+        product_page_prompt: values.product_page_prompt,
         updated_at: new Date().toISOString(),
       }
 
@@ -859,6 +863,36 @@ export default function AdminAISettings() {
                         {...field}
                         className="font-mono text-sm min-h-[100px]"
                         placeholder="Palavras a ignorar..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Seção K */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Seção K (Prompt da Página de Produto)</CardTitle>
+              <CardDescription>
+                Define as instruções específicas quando o usuário está interagindo a partir da
+                página de um produto.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="product_page_prompt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Instruções Complementares</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        className="font-mono text-sm min-h-[150px]"
+                        placeholder="Ex: Foque nos diferenciais deste produto e sugira acessórios compatíveis..."
                       />
                     </FormControl>
                     <FormMessage />

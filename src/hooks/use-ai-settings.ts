@@ -11,6 +11,7 @@ export interface AIGlobalSettings {
   system_prompt_template: string
   logistics_rules_prompt: string
   ignore_stock_count: boolean
+  product_page_prompt?: string
 }
 
 export function useAISettings() {
@@ -51,6 +52,7 @@ export function useAISettings() {
           system_prompt_template: data.system_prompt_template || '',
           logistics_rules_prompt: data.logistics_rules_prompt || '',
           ignore_stock_count: data.ignore_stock_count ?? false,
+          product_page_prompt: data.product_page_prompt || '',
         })
       } else {
         setSettings({
@@ -63,6 +65,7 @@ export function useAISettings() {
           logistics_rules_prompt:
             'Se price_usd > 0: Miami e Brasil. Se apenas price_nationalized_sales > 0: Somente Brasil.\nIMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta" e NUNCA presuma que é estoque exclusivo do Brasil.',
           ignore_stock_count: false,
+          product_page_prompt: '',
         })
       }
 
@@ -111,6 +114,7 @@ export function useAISettings() {
             system_prompt_template: newSettings.system_prompt_template,
             logistics_rules_prompt: newSettings.logistics_rules_prompt,
             ignore_stock_count: newSettings.ignore_stock_count,
+            product_page_prompt: newSettings.product_page_prompt,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'id' },
