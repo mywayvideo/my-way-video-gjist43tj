@@ -579,6 +579,7 @@ export function useUnifiedSearch() {
 
         if (extraContext?.currentProductId) {
           finalProducts = finalProducts.filter((p: any) => p.id !== extraContext.currentProductId)
+          referencedIds = referencedIds.filter((id: string) => id !== extraContext.currentProductId)
         }
 
         shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
