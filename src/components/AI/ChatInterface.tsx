@@ -326,72 +326,9 @@ export function ChatInterface() {
                       theme === 'professional-dark' ? 'text-slate-400' : 'text-muted-foreground',
                     )}
                   >
-                    Analisando base de dados e conhecimentos...
+                    Analisando base de dados...
                   </span>
                 </div>
-
-                {results?.is_intermediate &&
-                  results?.stock &&
-                  results.stock.length > 0 &&
-                  forceRenderCards && (
-                    <div
-                      className={cn(
-                        'w-full grid gap-4 opacity-70 animate-pulse',
-                        colsDesktop === 4
-                          ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-                          : colsDesktop === 2
-                            ? 'grid-cols-1 md:grid-cols-2'
-                            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
-                      )}
-                    >
-                      {results.stock.slice(0, 3).map((product: any) => (
-                        <Card
-                          key={`loading-${product.id}`}
-                          className={cn(
-                            'overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col',
-                            theme === 'professional-dark'
-                              ? 'bg-slate-800 border-slate-700'
-                              : 'bg-card border-border/50',
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              'aspect-square p-4 flex items-center justify-center relative overflow-hidden transition-colors',
-                              theme === 'professional-dark'
-                                ? 'bg-slate-900 group-hover:bg-slate-800'
-                                : 'bg-white group-hover:bg-gray-50',
-                            )}
-                          >
-                            {product.image_url ? (
-                              <img
-                                src={resolveImageUrl(product.image_url) || ''}
-                                alt={product.name}
-                                className="object-contain w-full h-full mix-blend-multiply"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-primary font-bold text-xs">
-                                  {product.name.substring(0, 2).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <CardContent className="p-4 flex-1 flex flex-col">
-                            <h4
-                              className={cn(
-                                'font-semibold text-sm line-clamp-2 mb-2 transition-colors flex-1',
-                                theme === 'professional-dark'
-                                  ? 'text-slate-200'
-                                  : 'text-foreground',
-                              )}
-                            >
-                              {product.name}
-                            </h4>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
               </div>
             )}
             <div ref={messagesEndRef} />
