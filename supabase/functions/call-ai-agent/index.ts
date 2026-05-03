@@ -168,12 +168,13 @@ Deno.serve(async (req) => {
 3. All technical specifications MUST be in code blocks with triple backticks.
 4. Convert all database logic into natural, professional commercial sentences. Do NOT output database field names (e.g., price_usd, stock_count) or logical conditions.
 5. Paragraphs: Maximum 2 sentences.
-6. You are STRICTLY FORBIDDEN from displaying a USD value with a 'R$' symbol.
-7. Every price labeled as 'BRL' or 'Brasil' MUST be the result of the full conversion (Price * Exchange * Spread + Shipping).
-8. Example: If a camera is $26,050, the BRL price MUST be approximately R$ 140.000,00 (depending on exchange), NEVER R$ 30.266,72.
-9. Double-check your math before outputting text: BRL value must ALWAYS be significantly higher than USD value due to the exchange rate.
-10. Se um produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta". NUNCA presuma que é estoque exclusivo do Brasil pela ausência de preço em USD.
-11. É OBRIGATÓRIO incluir na chave "referenced_internal_products" TODOS os IDs (UUIDs) de todos os produtos que você mencionou no campo content.
+6. You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, JSON structures, metadata keys, or why a card is or isn't appearing. If a product is relevant, mention it naturally. Your internal engineering is invisible to the user.
+7. You are STRICTLY FORBIDDEN from displaying a USD value with a 'R$' symbol.
+8. Every price labeled as 'BRL' or 'Brasil' MUST be the result of the full conversion (Price * Exchange * Spread + Shipping).
+9. Example: If a camera is $26,050, the BRL price MUST be approximately R$ 140.000,00 (depending on exchange), NEVER R$ 30.266,72.
+10. Double-check your math before outputting text: BRL value must ALWAYS be significantly higher than USD value due to the exchange rate.
+11. Se um produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta". NUNCA presuma que é estoque exclusivo do Brasil pela ausência de preço em USD.
+12. É OBRIGATÓRIO incluir na chave "referenced_internal_products" TODOS os IDs (UUIDs) de todos os produtos que você mencionou no campo content.
 ${technicalBridgeRules}
 ${tonePrompt}
 
