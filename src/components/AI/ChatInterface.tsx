@@ -242,6 +242,7 @@ export function ChatInterface() {
               messages.map((msg, i) => (
                 <div
                   key={i}
+                  id={msg.role === 'assistant' ? 'ai-response-container' : undefined}
                   className={cn('flex flex-col', msg.role === 'user' ? 'items-end' : 'items-start')}
                 >
                   <div

@@ -20,6 +20,19 @@ export function useUnifiedSearch() {
     setResults(null)
   }
 
+  const calculateFinalPrice = (p: any) => {
+    let finalUsdPrice = Number(p.price_usd || p.price_usa || 0)
+    if (Number(p.price_usa_rebate) > 0) {
+      if (!p.date_rebate) {
+        finalUsdPrice = Number(p.price_usa_rebate)
+      } else {
+        const rebateDate = new Date(p.date_rebate)
+        if (new Date() <= rebateDate) finalUsdPrice = Number(p.price_usa_rebate)
+      }
+    }
+    return finalUsdPrice
+  }
+
   const search = async (
     rawQuery: string,
     history: any[] = [],
@@ -78,16 +91,8 @@ export function useUnifiedSearch() {
 
       const intermediateResults = {
         message: 'Consultando especialistas, fabricantes e estoque especializado...',
-        content: 'Consultando especialistas, fabricantes e estoque especializado...',
         confidence_level: 'high',
-        stock: [],
-        products: [],
         referenced_internal_products: [],
-        intel: [],
-        nabData: [],
-        web: [],
-        settings: {},
-        agent_name: 'Especialista My Way',
         should_show_whatsapp_button: false,
         is_intermediate: true,
       }
@@ -102,11 +107,19 @@ export function useUnifiedSearch() {
       } else {
         let aiResponse: any = null
         try {
+          const sanitizedHistory = chatHistory.filter((msg: any) => {
+            const content = msg.content || ''
+            return (
+              !content.includes('Desculpe, ocorreu um erro técnico') &&
+              !content.includes("I'm sorry, a technical error")
+            )
+          })
+
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
             body: {
               query: cleanQuery,
               session_id: sessionId,
-              history: chatHistory,
+              history: sanitizedHistory,
               userName,
               productName: extraContext?.productName,
               technicalInfo: extraContext?.technicalInfo,
@@ -148,15 +161,7 @@ export function useUnifiedSearch() {
 
           if (fetchedProducts && fetchedProducts.length > 0) {
             finalProducts = fetchedProducts.map((p: any) => {
-              let finalUsdPrice = Number(p.price_usd || p.price_usa || 0)
-              if (Number(p.price_usa_rebate) > 0) {
-                if (!p.date_rebate) {
-                  finalUsdPrice = Number(p.price_usa_rebate)
-                } else {
-                  const rebateDate = new Date(p.date_rebate)
-                  if (new Date() <= rebateDate) finalUsdPrice = Number(p.price_usa_rebate)
-                }
-              }
+              const finalUsdPrice = calculateFinalPrice(p)
               return {
                 ...p,
                 price_usa: finalUsdPrice,
@@ -210,12 +215,10 @@ export function useUnifiedSearch() {
       setResults(combinedResults)
 
       setTimeout(() => {
-        const container = document.getElementById('ai-response-container')
+        const containers = document.querySelectorAll('#ai-response-container')
+        const container = containers[containers.length - 1]
         if (container) {
           container.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          setTimeout(() => {
-            window.scrollBy(0, -80)
-          }, 300)
         }
       }, 100)
 
