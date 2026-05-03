@@ -40,6 +40,7 @@ Deno.serve(async (req: Request) => {
     let technicalInfo = 'Não informado'
     let currentProductId = null
     let isAdmin = false
+
     try {
       const parsed = JSON.parse(bodyText)
       query = parsed.query || bodyText
@@ -71,7 +72,6 @@ Deno.serve(async (req: Request) => {
       (productName && productName !== 'Não informado') ||
       (technicalInfo && technicalInfo !== 'Não informado')
 
-    // Clean exact cache miss if needed, though we rely on identity now
     try {
       await supabase.from('product_search_cache').delete().eq('search_query', actualQuery)
     } catch (e) {}
@@ -88,7 +88,6 @@ Deno.serve(async (req: Request) => {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
-
     const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
@@ -136,185 +135,36 @@ Deno.serve(async (req: Request) => {
       } catch (e) {}
     }
 
-    const safeQueryForOr = expandedQuery.replace(/[%_,()[\]{}"'\\]/g, ' ')
-
-    const stopWords = new Set([
-      'que','qual','como','para','por','com','uma','um','tem','temos','voces','voce',
-      'mostrar','mostre','quero','gostaria','saber','preco','valor','sobre','esse',
-      'essa','este','esta','aqui','ali','cabo','the','what','who','how','why','can',
-      'you','show','tell','about','price','cost','favor','poderia','quais',
-    ])
-
-    if (settings.custom_stop_words) {
-      settings.custom_stop_words
-        .split(',')
-        .map((w: string) => w.trim().toLowerCase())
-        .forEach((w: string) => stopWords.add(w))
-    }
-
-    const isTechnicalAnchor = (t: string) => {
-      const anchors = ['sfp', 'ndi', 'sdi', 'fiber', '12g', '4k', '8k', '6k', '3g', 'hdmi', 'usb', 'xlr'];
-      if (anchors.includes(t.toLowerCase())) return true;
-      if (/\d/.test(t)) return true;
-      return false;
-    }
-
-    const allTerms = safeQueryForOr
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((t: string) => t.length >= 2 || isTechnicalAnchor(t))
-    let qTerms = allTerms.filter((t: string) => !stopWords.has(t) || isTechnicalAnchor(t))
-
-    const relevantTerms = qTerms.length > 0 ? qTerms : allTerms
-
-    const orQuery =
-      relevantTerms.length > 0
-        ? relevantTerms
-            .map((t: string) => `title.ilike.%${t}%,raw_content.ilike.%${t}%,ai_summary.ilike.%${t}%`)
-            .join(',')
-        : `title.ilike.%${safeQueryForOr}%,raw_content.ilike.%${safeQueryForOr}%,ai_summary.ilike.%${safeQueryForOr}%`
-
-    const { data: cData } = await supabase.from('company_info').select('content, type')
-    const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
-
-    const { data: manufacturers } = await supabase.from('manufacturers').select('id, name')
-
-    let manufacturerId = null
-    let matchedManufacturer = ''
-    if (manufacturers) {
-      for (const m of manufacturers) {
-        if (qL.includes(m.name.toLowerCase())) {
-          manufacturerId = m.id
-          matchedManufacturer = m.name
-          break
-        }
-      }
-    }
-
-    if (!currentProductId && productName && productName !== 'Não informado') {
-      const { data: currentProductMatch } = await supabase
-        .from('products')
-        .select('id')
-        .ilike('name', `%${productName}%`)
-        .limit(1)
-        .maybeSingle()
-      if (currentProductMatch) {
-        currentProductId = currentProductMatch.id
-      }
-    }
-
-    let productOrQuery = ''
-    if (relevantTerms.length > 0) {
-      const topTerms = [...relevantTerms]
-        .sort((a: string, b: string) => b.length - a.length)
-        .slice(0, 10)
-      productOrQuery = topTerms
-        .map((t: string) => `name.ilike.%${t}%,description.ilike.%${t}%,sku.ilike.%${t}%`)
-        .join(',')
-    } else {
-      productOrQuery = `name.ilike.%${safeQueryForOr}%,description.ilike.%${safeQueryForOr}%,sku.ilike.%${safeQueryForOr}%`
-    }
-
-    let productQuery = supabase
-      .from('products')
-      .select(
-        `id, name, sku, description, price_usd, price_cost, price_nationalized_sales, price_nationalized_cost, price_nationalized_currency, weight, category_id, manufacturer_id, technical_info, image_url, is_discontinued, stock, category, date_rebate, price_usa_rebate`,
-      )
-      .or(productOrQuery)
-
-    if (manufacturerId) {
-      productQuery = productQuery.eq('manufacturer_id', manufacturerId)
-    }
-
-    const { data: allProducts } = await productQuery.limit(30)
-
-    const commonAttributes = ['pl', 'ef', 'full frame', 'mount', 'e-mount', 'rf', 'b-mount', 'mft']
-    const matchedAttributes = commonAttributes.filter(attr => qL.includes(attr))
-
-    let productsCtx = (allProducts || []).sort((a, b) => {
-      const aSkuMatch = a.sku?.toLowerCase() === actualQuery.toLowerCase() ? 100 : 0
-      const bSkuMatch = b.sku?.toLowerCase() === actualQuery.toLowerCase() ? 100 : 0
-      
-      const aMfgMatch = manufacturerId && a.manufacturer_id === manufacturerId ? 10000 : 0
-      const bMfgMatch = manufacturerId && b.manufacturer_id === manufacturerId ? 10000 : 0
-
-      const aAttrMatch = matchedAttributes.some(attr => a.name?.toLowerCase().includes(attr) || a.description?.toLowerCase().includes(attr) || a.technical_info?.toLowerCase().includes(attr)) ? 5 : 0
-      const bAttrMatch = matchedAttributes.some(attr => b.name?.toLowerCase().includes(attr) || b.description?.toLowerCase().includes(attr) || b.technical_info?.toLowerCase().includes(attr)) ? 5 : 0
-
-      let aPrioMatch = 0;
-      if (aMfgMatch > 0 && aAttrMatch > 0) aPrioMatch = 50;
-      else if (aMfgMatch > 0) aPrioMatch = 20;
-
-      let bPrioMatch = 0;
-      if (bMfgMatch > 0 && bAttrMatch > 0) bPrioMatch = 50;
-      else if (bMfgMatch > 0) bPrioMatch = 20;
-
-      const aScore = aSkuMatch + aPrioMatch + aAttrMatch
-      const bScore = bSkuMatch + bPrioMatch + bAttrMatch
-
-      if (aScore !== bScore) return bScore - aScore
-
-      const aNameMatch = a.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
-      const bNameMatch = b.name?.toLowerCase().includes(actualQuery.toLowerCase()) ? 1 : 0
-      return bNameMatch - aNameMatch
+    const { data: rpcData, error: rpcError } = await supabase.rpc('execute_ai_search', {
+      search_term: expandedQuery,
     })
+    if (rpcError) {
+      console.error('RPC Error:', rpcError)
+      throw new Error(`Database search failed: ${rpcError.message}`)
+    }
 
+    let productsCtx = rpcData?.stock || []
     if (settings.ignore_stock_count === false) {
       productsCtx = productsCtx.filter((p: any) => p.stock > 0)
     }
 
-    // --- Entity-Based Cache Lookup ---
-    let highConfCache: any[] = []
-    try {
-      const cacheTerms = [...relevantTerms].slice(0, 5)
-      let cacheOr = cacheTerms.map((t: string) => `product_name.ilike.%${t}%,search_query.ilike.%${t}%`).join(',')
-      if (!cacheOr) cacheOr = `search_query.ilike.%${safeQueryForOr}%`
+    const { data: cData } = await supabase.from('company_info').select('content, type')
+    const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n')
 
-      const { data: cacheDataList } = await supabase
-        .from('product_search_cache')
-        .select('*')
-        .or(cacheOr)
-        .eq('source', 'ai_generated')
-        .neq('product_name', 'AI Match')
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      highConfCache = (cacheDataList || []).filter((c: any) => c.product_specs?.confidence_level === 'high')
-    } catch (e) {
-      console.error('Cache lookup failed:', e)
-    }
-
-    // --- Format Inventory with Merged Cache Specs ---
     const formattedInventory = productsCtx
       .map((p: any, index: number) => {
         if (index < 10) {
-          let techInfo = p.technical_info || ''
-          const cacheMatch = highConfCache.find((c: any) => 
-            c.product_name === p.name || 
-            c.product_name === p.sku ||
-            (c.product_specs?.referenced_internal_products || []).includes(p.id)
-          )
-          if (cacheMatch) {
-            techInfo = cacheMatch.product_description || cacheMatch.product_specs?.message || techInfo
-          }
-          return `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${techInfo}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
+          return `ID: ${p.id}\nProduct: ${p.name}\nSKU: ${p.sku}\nPrice USD: ${p.price_usd || 0}\nPrice BRL: ${p.price_nationalized_sales || 0}\nDescription: ${p.description || ''}\nTechnical Specifications: ${p.technical_info || ''}\nDiscontinued: ${p.is_discontinued ? 'Yes' : 'No'}`
         } else {
           return `ID: ${p.id}\nProduct: ${p.name}`
         }
       })
       .join('\n\n')
 
-    // --- Market Intelligence Enrichment ---
-    const { data: intelligence } = await supabase
-      .from('market_intelligence')
-      .select('title, raw_content, ai_summary')
-      .eq('status', 'published')
-      .or(orQuery)
-      .limit(10)
-
+    const intelligence = rpcData?.intel || []
     let hasNabIntelligence = false
     let nabContext = ''
-    if (intelligence && intelligence.length > 0) {
+    if (intelligence.length > 0) {
       hasNabIntelligence = true
       nabContext =
         'INSIGHTS ESTRATÉGICOS:\n' +
@@ -324,31 +174,46 @@ Deno.serve(async (req: Request) => {
         '\n\nUse os INSIGHTS ESTRATÉGICOS para adicionar valor comercial e tendências de mercado à sua explicação técnica sobre os produtos encontrados.'
     }
 
+    const nabData = rpcData?.nab_data || []
+    if (nabData.length > 0) {
+      nabContext +=
+        '\n\nNAB DATA:\n' +
+        nabData.map((n: any) => `Title: ${n.title}\nContent: ${n.content}`).join('\n\n')
+    }
+
     const { data: providers } = await supabase
       .from('ai_providers')
       .select('*')
       .eq('is_active', true)
       .order('priority_order', { ascending: true })
+
     if (!providers?.length) throw new Error('No active providers found')
 
-    let result: any = null,
-      finalWeb = false
+    let sysPromptTemplate = settings.systemPromptTemplate || ''
+    let finalBasePrompt = sysPromptTemplate.trim()
+      ? sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || '')
+      : settings.system_prompt || 'Você é um Especialista My Way.'
 
-    let sysPromptTemplate = settings.systemPromptTemplate || '';
-    let finalBasePrompt = sysPromptTemplate.trim() ? sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || '') : (settings.system_prompt || 'Você é um Especialista My Way.');
-
-    let productPageContext = '';
+    let productPageContext = ''
     if (hasProductContext) {
-      let parsedProductPagePrompt = settings.product_page_prompt || '';
-      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll('{{productName}}', productName || '');
-      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll('{{currentProductId}}', currentProductId || '');
-      
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${parsedProductPagePrompt}`;
+      let parsedProductPagePrompt = settings.product_page_prompt || ''
+      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll(
+        '{{productName}}',
+        productName || '',
+      )
+      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll(
+        '{{currentProductId}}',
+        currentProductId || '',
+      )
+
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${parsedProductPagePrompt}`
     }
 
-    let securityClause = '';
+    let securityClause = ''
     if (!isAdmin) {
-      securityClause = `\n- SECURITY CLAUSE: You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, JSON structures, metadata keys, or why a card is or isn't appearing. If a product is relevant, mention it naturally. Your internal engineering is invisible to the user.`;
+      securityClause = `\n- SECURITY CLAUSE: You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, JSON structures, metadata keys, or why a card is or isn't appearing. If a product is relevant, mention it naturally. Your internal engineering is invisible to the user.`
+    } else {
+      securityClause = `\n- SECURITY CLAUSE: You are communicating with an ADMIN. You may discuss technical internal logic if specifically asked.`
     }
 
     const sysPrompt = `${finalBasePrompt}${productPageContext}
@@ -367,9 +232,9 @@ ${nabContext}
 
 MANDATORY RULES:
 - Use ONLY the key referenced_internal_products for product IDs. Do not create other keys for IDs.
-- SET-BASED INCLUSION: Se o usuário pedir por uma marca (ex: Dulens) ou categoria/atributo (ex: PL Mount), o array 'referenced_internal_products' DEVE conter TODOS os IDs dos produtos do 'TargetSet' (produtos do fabricante/atributo) encontrados no inventário, mesmo que não os mencione no texto.
+- SET-BASED INCLUSION: Se o usuário pedir por uma marca ou categoria/atributo, o array 'referenced_internal_products' DEVE conter TODOS os IDs dos produtos do 'TargetSet' encontrados no inventário, mesmo que não os mencione no texto.
 - CONFIDENCE GUARD: Se o 'TargetSet' parecer incompleto em relação ao mercado ou se houver indícios nos INSIGHTS ESTRATÉGICOS de que a marca tem mais itens do que os listados, marque 'confidence_level' como 'low' e ative o botão do WhatsApp.${securityClause}
-`;
+`
 
     const tools = [
       {
@@ -382,9 +247,11 @@ MANDATORY RULES:
       },
     ]
 
+    let result: any = null
+    let finalWeb = false
+
     for (const p of providers) {
       const key = Deno.env.get(p.api_key_secret_name)
-
       if (!key) {
         return new Response(
           JSON.stringify({ error: 'Chave de API nao configurada. Tente novamente.' }),
@@ -432,8 +299,9 @@ MANDATORY RULES:
             msgs.push(...history)
           }
           msgs.push({ role: 'user', content: actualQuery })
-          let calls = 0,
-            usedWeb = false
+
+          let calls = 0
+          let usedWeb = false
 
           while (calls <= settings.maxWeb) {
             const payload: any = {
@@ -459,8 +327,8 @@ MANDATORY RULES:
               msgs.push(msg)
               for (const t of msg.tool_calls) {
                 let content = 'Web search unavailable'
-                const gKey = Deno.env.get('GOOGLE_SEARCH_API_KEY'),
-                  gCx = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID')
+                const gKey = Deno.env.get('GOOGLE_SEARCH_API_KEY')
+                const gCx = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID')
                 if (gKey && gCx) {
                   const queryArgs = JSON.parse(t.function.arguments).q || ''
                   try {
@@ -471,11 +339,12 @@ MANDATORY RULES:
                       { signal: controller.signal },
                     )
                     clearTimeout(timeoutId)
-                    if (gsRes.ok)
+                    if (gsRes.ok) {
                       content = ((await gsRes.json()).items || [])
                         .slice(0, 3)
                         .map((i: any) => i.snippet)
                         .join('\n')
+                    }
                   } catch (e) {
                     content = 'Web search timeout exceeded (7 seconds).'
                   }
@@ -501,10 +370,10 @@ MANDATORY RULES:
     }
 
     if (!result.message && !result.content) {
-      result.message = '';
-      result.confidence_level = result.confidence_level || 'high';
+      result.message = ''
+      result.confidence_level = result.confidence_level || 'high'
     } else {
-      const msgToCheck = result.message || result.content || '';
+      const msgToCheck = result.message || result.content || ''
       const normalizedMsg = msgToCheck
         .toLowerCase()
         .normalize('NFD')
@@ -521,77 +390,118 @@ MANDATORY RULES:
       let isLowConfidence = lowConfidenceIndicators.some((phrase: string) =>
         normalizedMsg.includes(phrase.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
       )
-      result.confidence_level = isLowConfidence ? 'low' : (result.confidence_level || 'high')
+      result.confidence_level = isLowConfidence ? 'low' : result.confidence_level || 'high'
     }
 
-    let show = false,
-      reason = ''
-      
+    let show = false
+    let reason = ''
+
     let refs: string[] = []
     if (Array.isArray(result.referenced_internal_products)) {
-      refs = result.referenced_internal_products.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
+      refs = result.referenced_internal_products
+        .map((p: any) => (typeof p === 'string' ? p : p.id))
+        .filter(Boolean)
     }
 
     const resolvedRefs = refs
-      .map((refId: string) => {
-        const p = productsCtx.find((prod: any) => prod.id === refId)
-        if (p) {
-          return p.id
-        }
-        return refId
-      })
+      .map((refId: string) => (productsCtx.find((prod: any) => prod.id === refId) ? refId : null))
       .filter(Boolean)
 
-    const aiMessage = result.message || ''
+    const aiMessage = result.message || result.content || ''
     const mentionedIds = new Set<string>(resolvedRefs)
 
     if (aiMessage) {
       const lowerMsg = aiMessage.toLowerCase()
 
       const genericWords = new Set([
-        'blackmagic', 'design', 'sony', 'canon', 'panasonic', 'dji', 'arri', 'red', 'jvc', 'ptzoptics', 'marshall', 
-        'zoom', 'lens', 'cable', 'mount', 'sensor', 'digital', 'optical', 'camera', 'video', 'audio', 'switch', 'switcher', 
-        'converter', 'adapter', 'professional', 'studio', 'live', 'production', 'the', 'of', 'and', 'for', 'with', 'a', 'an',
-        'pro', 'mini', 'max', 'plus', 'ultra', 'micro', 'smart'
+        'blackmagic',
+        'design',
+        'sony',
+        'canon',
+        'panasonic',
+        'dji',
+        'arri',
+        'red',
+        'jvc',
+        'ptzoptics',
+        'marshall',
+        'zoom',
+        'lens',
+        'cable',
+        'mount',
+        'sensor',
+        'digital',
+        'optical',
+        'camera',
+        'video',
+        'audio',
+        'switch',
+        'switcher',
+        'converter',
+        'adapter',
+        'professional',
+        'studio',
+        'live',
+        'production',
+        'the',
+        'of',
+        'and',
+        'for',
+        'with',
+        'a',
+        'an',
+        'pro',
+        'mini',
+        'max',
+        'plus',
+        'ultra',
+        'micro',
+        'smart',
       ])
 
       for (const p of productsCtx) {
         if (!mentionedIds.has(p.id)) {
-          const nameTerms = (p.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/);
-          const skuTerms = (p.sku || '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/);
-          
-          const coreIdentifiers = new Set<string>();
-          
-          [...nameTerms, ...skuTerms].forEach((term: string) => {
-            if (term.length > 1 && !genericWords.has(term)) {
-               coreIdentifiers.add(term);
-            }
-          });
+          const nameTerms = (p.name || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, ' ')
+            .split(/\s+/)
+          const skuTerms = (p.sku || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, ' ')
+            .split(/\s+/)
 
-          let matchCount = 0;
+          const coreIdentifiers = new Set<string>()
+
+          ;[...nameTerms, ...skuTerms].forEach((term: string) => {
+            if (term.length > 1 && !genericWords.has(term)) {
+              coreIdentifiers.add(term)
+            }
+          })
+
+          let matchCount = 0
           for (const term of coreIdentifiers) {
-             const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-             const regex = new RegExp(`\\b${escapedTerm}\\b`, 'i');
-             if (regex.test(lowerMsg)) {
-                matchCount++;
-             }
+            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const regex = new RegExp(`\\b${escapedTerm}\\b`, 'i')
+            if (regex.test(lowerMsg)) {
+              matchCount++
+            }
           }
 
           if (coreIdentifiers.size > 0) {
-             const requiredMatches = Math.min(2, coreIdentifiers.size);
-             if (matchCount >= requiredMatches) {
-                 if (requiredMatches === 1) {
-                     const singleMatch = Array.from(coreIdentifiers).find((term: string) => {
-                         const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                         return new RegExp(`\\b${escaped}\\b`, 'i').test(lowerMsg);
-                     });
-                     if (singleMatch && singleMatch.length > 2) {
-                         mentionedIds.add(p.id);
-                     }
-                 } else {
-                     mentionedIds.add(p.id);
-                 }
-             }
+            const requiredMatches = Math.min(2, coreIdentifiers.size)
+            if (matchCount >= requiredMatches) {
+              if (requiredMatches === 1) {
+                const singleMatch = Array.from(coreIdentifiers).find((term: string) => {
+                  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                  return new RegExp(`\\b${escaped}\\b`, 'i').test(lowerMsg)
+                })
+                if (singleMatch && singleMatch.length > 2) {
+                  mentionedIds.add(p.id)
+                }
+              } else {
+                mentionedIds.add(p.id)
+              }
+            }
           }
         }
       }
@@ -682,16 +592,18 @@ MANDATORY RULES:
     result.products = finalProducts
     result.has_nab_intelligence = hasNabIntelligence
 
-    // Accurate Cache Storage
-    const targetSetIncomplete = result.message?.toLowerCase().includes('incompleto') || result.confidence_level === 'low';
-    
-    if (result.confidence_level === 'high' && finalResolvedRefs.length > 0 && !targetSetIncomplete) {
-      console.log(`Saving new entry to product_search_cache for query: ${actualQuery}`)
-      
-      let cacheProductName = actualQuery;
-      const firstRefProd = productsCtx.find((p: any) => p.id === finalResolvedRefs[0]);
+    const targetSetIncomplete =
+      result.message?.toLowerCase().includes('incompleto') || result.confidence_level === 'low'
+
+    if (
+      result.confidence_level === 'high' &&
+      finalResolvedRefs.length > 0 &&
+      !targetSetIncomplete
+    ) {
+      let cacheProductName = actualQuery
+      const firstRefProd = productsCtx.find((p: any) => p.id === finalResolvedRefs[0])
       if (firstRefProd) {
-        cacheProductName = firstRefProd.sku || firstRefProd.name;
+        cacheProductName = firstRefProd.sku || firstRefProd.name
       }
 
       supabase
@@ -704,8 +616,6 @@ MANDATORY RULES:
           product_specs: result,
         })
         .then()
-    } else {
-      console.log(`Results not saved to cache (Low confidence, incomplete TargetSet, or empty refs) for query: ${actualQuery}`)
     }
 
     return new Response(JSON.stringify(result), {
