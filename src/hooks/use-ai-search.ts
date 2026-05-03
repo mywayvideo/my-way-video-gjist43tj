@@ -166,7 +166,7 @@ export function useUnifiedSearch() {
         }
       }
     } catch (e) {
-      console.error('RPC unified_search failed', e)
+      console.error('RPC execute_ai_search failed', e)
     }
 
     let finalProducts = products.length > 0 ? products : []
@@ -412,8 +412,7 @@ export function useUnifiedSearch() {
           ? aiResponse.referenced_internal_products
           : []
 
-        // 2. Filtragem Direta e Fetch Secundário: Buscar objeto completo no banco de dados.
-        // Retrieve FULL product object: id, name, manufacturer_id, price_usd, price_brl, image_url, and ncm
+        // 2. Fetch Secundário: Buscar objeto completo no banco de dados.
         if (referencedIds.length > 0) {
           const { data: fetchedProducts } = await supabase
             .from('products')
@@ -425,6 +424,7 @@ export function useUnifiedSearch() {
               )
             `)
             .in('id', referencedIds)
+            .eq('is_discontinued', false)
 
           if (fetchedProducts && fetchedProducts.length > 0) {
             finalProducts = fetchedProducts.map((p: any) => {
