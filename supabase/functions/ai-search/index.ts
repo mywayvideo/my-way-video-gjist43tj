@@ -67,29 +67,16 @@ Deno.serve(async (req: Request) => {
 
     const hasProductContext = productName && productName !== 'Não informado'
 
-    const { data: set } = await supabase
-      .from('ai_agent_settings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-    const { data: aiSettings } = await supabase
-      .from('ai_settings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
+    const { data: set } = await supabase.from('ai_agent_settings').select('*').order('created_at', { ascending: false }).limit(1).single()
+    const { data: aiSettings } = await supabase.from('ai_settings').select('*').order('created_at', { ascending: false }).limit(1).single()
     const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
-    globalSettingsData?.forEach((s: any) => {
-      if (s.value) globalSettingsMap[s.key] = s.value
-    })
+    globalSettingsData?.forEach((s: any) => { if (s.value) globalSettingsMap[s.key] = s.value })
 
     const settings = {
       system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate:
-        globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
+      systemPromptTemplate: globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
       product_page_prompt: aiSettings?.product_page_prompt || '',
     }
 
@@ -105,34 +92,26 @@ Deno.serve(async (req: Request) => {
       .select('*')
       .eq('is_active', true)
       .order('priority_order', { ascending: true })
-
+    
     if (!providers?.length) throw new Error('No active providers found')
 
-    let sysPromptTemplate = settings.systemPromptTemplate || ''
-    let finalBasePrompt = sysPromptTemplate.trim()
-      ? sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || '')
-      : settings.system_prompt || 'Você é um Consultor My Way Business.'
+    let sysPromptTemplate = settings.systemPromptTemplate || '';
+    let finalBasePrompt = sysPromptTemplate.trim() ? sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || '') : (settings.system_prompt || 'Você é um Consultor My Way Business.');
 
-    let productPageContext = ''
+    let productPageContext = '';
     if (hasProductContext) {
-      let parsedProductPagePrompt = settings.product_page_prompt || ''
-      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll(
-        '{{productName}}',
-        productName || '',
-      )
-      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll(
-        '{{currentProductId}}',
-        currentProductId || '',
-      )
-
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${parsedProductPagePrompt}`
+      let parsedProductPagePrompt = settings.product_page_prompt || '';
+      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll('{{productName}}', productName || '');
+      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll('{{currentProductId}}', currentProductId || '');
+      
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${parsedProductPagePrompt}`;
     }
 
-    let securityClause = ''
+    let securityClause = '';
     if (!isAdmin) {
-      securityClause = `\n- SECURITY CLAUSE: You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, tools, JSON structures, or UUIDs with the user. Your internal engineering is invisible.`
+      securityClause = `\n- SECURITY CLAUSE: You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, tools, JSON structures, or UUIDs with the user. Your internal engineering is invisible.`;
     } else {
-      securityClause = `\n- SECURITY CLAUSE: You are communicating with an ADMIN. You may discuss technical internal logic if specifically asked.`
+      securityClause = `\n- SECURITY CLAUSE: You are communicating with an ADMIN. You may discuss technical internal logic if specifically asked.`;
     }
 
     const sysPrompt = `${finalBasePrompt}${productPageContext}
@@ -157,7 +136,7 @@ MANDATORY RULES:
 - Ensure exactly TWO line breaks (\\n\\n) before the Transparency Note in the 'message' field (if any).
 - The AI is the SOLE authority for cards. You must populate 'referenced_internal_products' ONLY with UUIDs returned by the 'search_products' tool that you explicitly recommend.
 - If a product is mentioned in text but was not returned by the tool, it MUST NOT be added to the metadata.${securityClause}
-`
+`;
 
     const tools = [
       {
@@ -165,15 +144,12 @@ MANDATORY RULES:
         function: {
           name: 'search_products',
           description: 'Search for products, inventory, and market intelligence in the database.',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Search terms based on manufacturers and user request',
-              },
-            },
-            required: ['query'],
+          parameters: { 
+            type: 'object', 
+            properties: { 
+              query: { type: 'string', description: 'Search terms based on manufacturers and user request' } 
+            }, 
+            required: ['query'] 
           },
         },
       },
@@ -186,13 +162,13 @@ MANDATORY RULES:
       if (!key) continue
 
       try {
-        let url = 'https://api.openai.com/v1/chat/completions'
-        let headers: any = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+        let url = 'https://api.openai.com/v1/chat/completions';
+        let headers: any = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
 
         if (p.provider_name === 'deepseek') {
-          url = 'https://api.deepseek.com/chat/completions'
+          url = 'https://api.deepseek.com/chat/completions';
         } else if (p.provider_name === 'gemini') {
-          url = `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
+          url = `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`;
         }
 
         let msgs: any[] = [{ role: 'system', content: sysPrompt }]
@@ -200,7 +176,7 @@ MANDATORY RULES:
           msgs.push(...history)
         }
         msgs.push({ role: 'user', content: actualQuery })
-
+        
         let calls = 0
         let finalResponseObtained = false
 
@@ -209,7 +185,7 @@ MANDATORY RULES:
             model: p.model_id,
             messages: msgs,
           }
-
+          
           if (calls === 0) {
             payload.tools = tools
             payload.tool_choice = 'auto'
@@ -222,7 +198,7 @@ MANDATORY RULES:
             headers,
             body: JSON.stringify(payload),
           })
-
+          
           if (!res.ok) throw new Error(await res.text())
 
           const resData = await res.json()
@@ -232,27 +208,20 @@ MANDATORY RULES:
             msgs.push(msg)
             for (const t of msg.tool_calls) {
               if (t.function.name === 'search_products') {
-                const args = JSON.parse(t.function.arguments || '{}')
-                const { data: rpcData } = await supabase.rpc('execute_ai_search', {
-                  search_term: args.query || actualQuery,
-                })
-
+                const args = JSON.parse(t.function.arguments || '{}');
+                const { data: rpcData } = await supabase.rpc('execute_ai_search', { search_term: args.query || actualQuery });
+                
                 let content = JSON.stringify({
-                  stock:
-                    rpcData?.stock?.map((prod: any) => ({
-                      id: prod.id,
-                      name: prod.name,
-                      sku: prod.sku,
-                      description: prod.description,
+                   stock: rpcData?.stock?.map((prod: any) => ({
+                      id: prod.id, name: prod.name, sku: prod.sku, description: prod.description,
                       price_usd: prod.price_usd,
-                      technical_info: prod.technical_info,
-                      is_discontinued: prod.is_discontinued,
-                      manufacturer_name: prod.manufacturer_name,
-                    })) || [],
-                  intel: rpcData?.intel || [],
-                  nab_data: rpcData?.nab_data || [],
-                })
-
+                      technical_info: prod.technical_info, is_discontinued: prod.is_discontinued,
+                      manufacturer_name: prod.manufacturer_name
+                   })) || [],
+                   intel: rpcData?.intel || [],
+                   nab_data: rpcData?.nab_data || []
+                });
+                
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
@@ -274,21 +243,19 @@ MANDATORY RULES:
     }
 
     if (!result.message && !result.content) {
-      result.message = ''
-      result.confidence_level = result.confidence_level || 'high'
+      result.message = '';
+      result.confidence_level = result.confidence_level || 'high';
     }
 
     let refs: string[] = []
     if (Array.isArray(result.referenced_internal_products)) {
-      refs = result.referenced_internal_products
-        .map((p: any) => (typeof p === 'string' ? p : p.id))
-        .filter(Boolean)
+      refs = result.referenced_internal_products.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
     }
 
     result.referenced_internal_products = Array.from(new Set(refs))
-
+    
     if (result.confidence_level === 'high' && result.referenced_internal_products.length > 0) {
-      supabase
+       supabase
         .from('product_search_cache')
         .insert({
           search_query: actualQuery,
