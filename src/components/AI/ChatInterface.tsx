@@ -118,6 +118,7 @@ export function ChatInterface() {
       products?: any[]
       showWhatsapp?: boolean
       confidence?: string
+      is_intermediate?: boolean
     }>
   >([])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -139,7 +140,7 @@ export function ChatInterface() {
     scrollToBottom()
     const timeout = setTimeout(scrollToBottom, 150)
     return () => clearTimeout(timeout)
-  }, [messages, isLoading])
+  }, [messages, isLoading, results?.message])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -150,22 +151,63 @@ export function ChatInterface() {
     setMessages((prev) => [...prev, { role: 'user', content: userQuery }])
 
     const res = await search(userQuery, messages)
-    if (res && !res.is_intermediate) {
+    if (res) {
       // Use products filtered by relevance from the AI response
       const productsToRender = res.products || []
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: res.message || res.content,
-          products: productsToRender,
-          showWhatsapp: res.should_show_whatsapp_button,
-          confidence: res.confidence_level,
-        },
-      ])
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1]
+        if (lastMsg && lastMsg.role === 'assistant' && lastMsg.is_intermediate) {
+          const newMessages = [...prev]
+          newMessages[newMessages.length - 1] = {
+            role: 'assistant',
+            content: res.message || res.content,
+            products: productsToRender,
+            showWhatsapp: res.should_show_whatsapp_button,
+            confidence: res.confidence_level,
+            is_intermediate: false,
+          }
+          return newMessages
+        }
+        return [
+          ...prev,
+          {
+            role: 'assistant',
+            content: res.message || res.content,
+            products: productsToRender,
+            showWhatsapp: res.should_show_whatsapp_button,
+            confidence: res.confidence_level,
+            is_intermediate: false,
+          },
+        ]
+      })
     }
   }
+
+  useEffect(() => {
+    if (results?.is_intermediate && results?.message) {
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1]
+        if (lastMsg && lastMsg.role === 'assistant' && lastMsg.is_intermediate) {
+          if (lastMsg.content === results.message) return prev
+          const newMessages = [...prev]
+          newMessages[newMessages.length - 1] = {
+            ...lastMsg,
+            content: results.message,
+          }
+          return newMessages
+        }
+        return [
+          ...prev,
+          {
+            role: 'assistant',
+            content: results.message,
+            is_intermediate: true,
+          },
+        ]
+      })
+    }
+  }, [results?.is_intermediate, results?.message])
 
   return (
     <Card
@@ -322,12 +364,13 @@ export function ChatInterface() {
                     />
                   </div>
                   <span
+                    key={results?.message || 'loading'}
                     className={cn(
-                      'font-medium',
+                      'font-medium animate-in fade-in duration-500',
                       theme === 'professional-dark' ? 'text-slate-400' : 'text-muted-foreground',
                     )}
                   >
-                    Analisando base de dados...
+                    {results?.message || 'Analisando base de dados...'}
                   </span>
                 </div>
               </div>

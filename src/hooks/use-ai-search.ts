@@ -90,7 +90,7 @@ export function useUnifiedSearch() {
       const activeAgent = await getActiveAgent()
 
       const intermediateResults = {
-        message: 'Consultando especialistas, fabricantes e estoque especializado...',
+        message: 'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
         confidence_level: 'high',
         referenced_internal_products: [],
         should_show_whatsapp_button: false,
@@ -146,7 +146,21 @@ export function useUnifiedSearch() {
           ? aiResponse.referenced_internal_products
           : []
 
-        if (referencedIds.length > 0) {
+        const aiStock = Array.isArray(aiResponse?.stock) ? aiResponse.stock : []
+
+        if (aiStock.length > 0) {
+          finalProducts = aiStock.map((p: any) => {
+            const finalUsdPrice =
+              p.price_usd !== undefined ? Number(p.price_usd) : calculateFinalPrice(p)
+            return {
+              ...p,
+              price_usa: finalUsdPrice,
+              price_usd: finalUsdPrice,
+              price_brl: Number(p.price_brl || 0),
+              stock: Number(p.stock || 0),
+            }
+          })
+        } else if (referencedIds.length > 0) {
           const { data: fetchedProducts } = await supabase
             .from('products')
             .select(`
