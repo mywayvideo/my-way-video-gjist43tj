@@ -6,7 +6,6 @@
     "call-ai-agent": 76,
     "update-exchange-rate": 39,
     "validate-image-url": 30,
-    "change-admin-password": 30,
     "toggle-2fa": 30,
     "change-customer-password": 30,
     "send-confirmation-email": 30,
