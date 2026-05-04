@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import Layout from './components/Layout'
 import Index from './pages/Index'
 import Search from './pages/Search'
+import SearchResults from './pages/SearchResults'
 import Product from './pages/Product'
 import Admin from './pages/Admin'
 import AdminAIProviders from './pages/AdminAIProviders'
@@ -88,6 +89,7 @@ const App = () => {
               <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/search-results" element={<SearchResults />} />
                 <Route path="/product/:id" element={<Product />} />
                 <Route
                   path="/admin"
