@@ -46,33 +46,75 @@ const renderMarkdown = (text: string, theme: string = 'light') => {
           .trim()
           .split('\n')
           .map((r) => r.split('|').filter((c) => c.trim() !== ''))
-        const dataRows = rows.filter((r) => !r.every((c) => c.trim().match(/^[-:]+$/)))
+
+        if (rows.length < 2) return null
+
+        const headerRow = rows[0]
+        const dataRows = rows.slice(1).filter((r) => !r.every((c) => c.trim().match(/^[-:]+$/)))
 
         return (
           <div
             key={`table-${i}-${bpIdx}`}
             className={cn(
-              'my-4 p-6 rounded-xl border-l-4 border-primary shadow-sm overflow-hidden',
+              'my-4 rounded-xl border-l-4 border-primary shadow-md overflow-x-auto animate-fade-in',
               theme === 'professional-dark'
                 ? 'bg-slate-900/80 border-slate-800'
                 : 'bg-gray-50 border-gray-200',
             )}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {dataRows.map((row, rIdx) => {
-                if (row.length < 2) return null
-                const label = row[0].trim()
-                const value = row.slice(1).join(' | ').trim()
-                return (
-                  <div key={rIdx} className="flex flex-col space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {label}
-                    </span>
-                    <span className="text-sm font-mono text-primary font-medium">{value}</span>
-                  </div>
-                )
-              })}
-            </div>
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead
+                className={cn(
+                  'text-xs uppercase font-semibold tracking-wider border-b border-border/50',
+                  theme === 'professional-dark'
+                    ? 'bg-slate-800/50 text-slate-400'
+                    : 'bg-gray-100/50 text-gray-500',
+                )}
+              >
+                <tr>
+                  {headerRow.map((cell, cIdx) => {
+                    if (!cell.trim() && cIdx === 0) return null
+                    if (!cell.trim() && cIdx === headerRow.length - 1) return null
+                    return (
+                      <th key={cIdx} className="px-6 py-4">
+                        {cell.trim()}
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {dataRows.map((row, rIdx) => (
+                  <tr
+                    key={rIdx}
+                    className={cn(
+                      'transition-colors',
+                      theme === 'professional-dark'
+                        ? 'text-slate-200 hover:bg-slate-800/50'
+                        : 'text-foreground hover:bg-black/5',
+                    )}
+                  >
+                    {row.map((cell, cIdx) => {
+                      if (!cell.trim() && cIdx === 0 && row.length > 2) return null
+                      if (!cell.trim() && cIdx === row.length - 1 && row.length > 2) return null
+                      return (
+                        <td
+                          key={cIdx}
+                          className={cn(
+                            'px-6 py-3',
+                            cIdx <= 1
+                              ? 'font-medium text-primary'
+                              : 'font-mono text-primary/90 font-medium',
+                          )}
+                        >
+                          {cell.trim()}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )
       }
@@ -382,27 +424,38 @@ export function ChatInterface() {
                   >
                     <div className="leading-relaxed space-y-2 break-words">
                       {msg.role === 'assistant' && msg.is_intermediate ? (
-                        <div className="flex items-center space-x-3">
-                          <div className="flex space-x-1.5 px-2 py-1">
-                            <div
-                              className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
-                              style={{ animationDelay: '0ms' }}
-                            />
-                            <div
-                              className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
-                              style={{ animationDelay: '150ms' }}
-                            />
-                            <div
-                              className="w-2 h-2 bg-primary/80 rounded-full animate-bounce"
-                              style={{ animationDelay: '300ms' }}
-                            />
+                        <div className="flex flex-col space-y-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex space-x-1.5 px-2 py-1">
+                              <div
+                                className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
+                                style={{ animationDelay: '0ms' }}
+                              />
+                              <div
+                                className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
+                                style={{ animationDelay: '150ms' }}
+                              />
+                              <div
+                                className="w-2 h-2 bg-primary/80 rounded-full animate-bounce"
+                                style={{ animationDelay: '300ms' }}
+                              />
+                            </div>
+                            <span className="animate-pulse font-medium">
+                              {msg.content.includes('|')
+                                ? 'PROCESSANDO DADOS TÉCNICOS MY WAY...'
+                                : msg.content.replace(/my way/gi, 'MY WAY')}
+                            </span>
                           </div>
-                          <span className="animate-pulse font-medium">{msg.content}</span>
+                          {msg.content.includes('|') && (
+                            <div className="mt-2">
+                              {renderMarkdown(msg.content.replace(/my way/gi, 'MY WAY'), theme)}
+                            </div>
+                          )}
                         </div>
                       ) : msg.role === 'assistant' ? (
-                        renderMarkdown(msg.content, theme)
+                        renderMarkdown(msg.content.replace(/my way/gi, 'MY WAY'), theme)
                       ) : (
-                        msg.content
+                        msg.content.replace(/my way/gi, 'MY WAY')
                       )}
                     </div>
                   </div>
