@@ -264,7 +264,7 @@ export function Header() {
     e.preventDefault()
     if (mobileDbQuery.trim()) {
       saveSearchState(mobileDbQuery.trim(), null, [], 'database')
-      navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery.trim())}`)
+      navigate(`/search-results?q=${encodeURIComponent(mobileDbQuery.trim())}`)
       setShowMobileSearch(false)
       setMobileDbQuery('')
     }
@@ -377,7 +377,7 @@ export function Header() {
                 <button
                   onClick={() => {
                     setShowMobileSearch(false)
-                    navigate(`/search?type=database&q=${encodeURIComponent(mobileDbQuery)}`)
+                    navigate(`/search-results?q=${encodeURIComponent(mobileDbQuery)}`)
                   }}
                   className="w-full p-4 text-sm text-center text-white bg-blue-500 font-medium hover:bg-blue-600 transition-colors rounded-xl shadow-sm"
                 >
@@ -408,7 +408,7 @@ export function Header() {
                     Início
                   </Link>
                   <Link
-                    to="/search"
+                    to="/search-results"
                     onClick={() => setIsSheetOpen(false)}
                     className="text-lg font-medium hover:text-primary transition-colors"
                   >

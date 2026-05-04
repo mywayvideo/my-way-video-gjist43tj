@@ -81,8 +81,8 @@ export default function SearchResults() {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-2xl md:text-3xl font-bold">
-          Resultados da Busca para <span className="text-primary font-bold">"{query}"</span>
+        <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-wide flex items-center gap-3">
+          RESULTADOS DA BUSCA PARA <span className="text-primary font-bold">"{query}"</span>
         </h1>
       </div>
 
@@ -96,21 +96,21 @@ export default function SearchResults() {
 
       {!loading && error && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-          <p className="text-destructive font-medium text-lg">
-            Erro ao buscar resultados na base MY WAY.
+          <p className="text-destructive font-medium text-lg uppercase tracking-wide">
+            ERRO AO BUSCAR RESULTADOS NA BASE MY WAY.
           </p>
-          <p className="text-muted-foreground">{error}</p>
-          <Button onClick={fetchResults} className="gap-2 mt-4">
-            <RefreshCcw className="w-4 h-4" /> Tentar Novamente
+          <p className="text-muted-foreground uppercase">{error}</p>
+          <Button onClick={fetchResults} className="gap-2 mt-4 uppercase font-bold tracking-wide">
+            <RefreshCcw className="w-4 h-4" /> TENTAR NOVAMENTE
           </Button>
         </div>
       )}
 
       {!loading && !error && products.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 max-w-lg mx-auto border border-dashed border-border rounded-xl p-8">
-          <p className="text-muted-foreground text-lg">
-            Nenhum produto encontrado para <strong className="text-foreground">"{query}"</strong> em
-            nossa base MY WAY. Tente outro termo ou consulte nossa IA.
+          <p className="text-muted-foreground text-lg uppercase tracking-wide">
+            NENHUM PRODUTO ENCONTRADO PARA <strong className="text-foreground">"{query}"</strong> EM
+            NOSSA BASE MY WAY. USE NOSSA IA PARA UMA BUSCA CONSULTIVA.
           </p>
         </div>
       )}

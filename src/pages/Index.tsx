@@ -70,35 +70,33 @@ export default function Index() {
           </p>
 
           <div
-            className="pt-8 w-full animate-fade-in [&_textarea]:min-h-[160px]"
+            className="pt-8 w-full flex flex-col items-center animate-fade-in [&_textarea]:min-h-[160px] relative"
             style={{ animationDelay: '200ms' }}
           >
-            <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
+            <div className="w-full z-20">
+              <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
+            </div>
 
             {isSearchLoading && (
-              <div className="mt-4 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 shadow-lg transition-all duration-300">
-                <div className="flex items-center space-x-3 mb-6 justify-center">
+              <div className="w-[95%] -mt-2 pt-6 pb-4 px-6 text-left bg-background/80 backdrop-blur-xl border border-white/10 rounded-b-2xl shadow-2xl transition-all duration-500 z-10 animate-fade-in-down">
+                <div className="flex items-center space-x-3 justify-center">
                   <div className="flex space-x-1.5 px-2 py-1">
                     <div
-                      className="w-2 h-2 bg-orange-400/60 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-orange-500/60 rounded-full animate-bounce"
                       style={{ animationDelay: '0ms' }}
                     />
                     <div
-                      className="w-2 h-2 bg-orange-400/80 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-orange-500/80 rounded-full animate-bounce"
                       style={{ animationDelay: '150ms' }}
                     />
                     <div
-                      className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                      className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"
                       style={{ animationDelay: '300ms' }}
                     />
                   </div>
-                  <p className="text-center text-muted-foreground text-lg font-medium text-orange-400 animate-pulse">
-                    {results?.message || 'Iniciando busca profunda MY WAY...'}
+                  <p className="text-center text-muted-foreground text-sm md:text-base font-medium text-orange-500 animate-pulse">
+                    {results?.message || 'INICIANDO BUSCA PROFUNDA MY WAY...'}
                   </p>
-                </div>
-                <div className="space-y-4 opacity-50">
-                  <Skeleton className="h-16 w-full bg-white/5 rounded-xl border-l-4 border-orange-500/50" />
-                  <Skeleton className="h-16 w-3/4 bg-white/5 rounded-xl border-l-4 border-blue-500/50" />
                 </div>
               </div>
             )}
