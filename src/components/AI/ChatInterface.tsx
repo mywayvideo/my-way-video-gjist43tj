@@ -148,7 +148,15 @@ export function ChatInterface() {
 
     const userQuery = query.trim()
     setQuery('')
-    setMessages((prev) => [...prev, { role: 'user', content: userQuery }])
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', content: userQuery },
+      {
+        role: 'assistant',
+        content: 'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
+        is_intermediate: true,
+      },
+    ])
 
     const res = await search(userQuery, messages)
     if (res) {
@@ -340,16 +348,16 @@ export function ChatInterface() {
             )}
 
             {isLoading && (
-              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300 w-full">
+              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300 w-full mt-4">
                 <div
                   className={cn(
-                    'rounded-2xl rounded-tl-sm px-5 py-4 text-sm border flex items-center space-x-3 shadow-sm mb-4',
+                    'rounded-2xl rounded-tl-sm px-5 py-3 text-sm border flex items-center space-x-3 shadow-sm mb-4',
                     theme === 'professional-dark'
                       ? 'bg-slate-800 border-slate-700'
                       : 'bg-muted/50 border-border/50',
                   )}
                 >
-                  <div className="flex space-x-1.5">
+                  <div className="flex space-x-1.5 px-2 py-1">
                     <div
                       className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
                       style={{ animationDelay: '0ms' }}
@@ -363,15 +371,6 @@ export function ChatInterface() {
                       style={{ animationDelay: '300ms' }}
                     />
                   </div>
-                  <span
-                    key={results?.message || 'loading'}
-                    className={cn(
-                      'font-medium animate-in fade-in duration-500',
-                      theme === 'professional-dark' ? 'text-slate-400' : 'text-muted-foreground',
-                    )}
-                  >
-                    {results?.message || 'Analisando base de dados...'}
-                  </span>
                 </div>
               </div>
             )}

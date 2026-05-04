@@ -98,6 +98,8 @@ export function useUnifiedSearch() {
       }
       setResults(intermediateResults)
 
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
       if (!activeAgent) {
         finalMessage = 'Nenhum agente de IA configurado.'
         toast({
