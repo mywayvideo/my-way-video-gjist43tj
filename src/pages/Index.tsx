@@ -76,11 +76,27 @@ export default function Index() {
             <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
 
             {isSearchLoading && (
-              <div className="mt-4 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-pulse shadow-lg">
-                <p className="text-center text-muted-foreground text-lg mb-6 font-medium text-orange-400">
-                  {results?.message || 'Sincronizando inteligência audiovisual...'}
-                </p>
-                <div className="space-y-4">
+              <div className="mt-4 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 shadow-lg transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-6 justify-center">
+                  <div className="flex space-x-1.5 px-2 py-1">
+                    <div
+                      className="w-2 h-2 bg-orange-400/60 rounded-full animate-bounce"
+                      style={{ animationDelay: '0ms' }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-orange-400/80 rounded-full animate-bounce"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                      style={{ animationDelay: '300ms' }}
+                    />
+                  </div>
+                  <p className="text-center text-muted-foreground text-lg font-medium text-orange-400 animate-pulse">
+                    {results?.message || 'Iniciando busca profunda MY WAY...'}
+                  </p>
+                </div>
+                <div className="space-y-4 opacity-50">
                   <Skeleton className="h-16 w-full bg-white/5 rounded-xl border-l-4 border-orange-500/50" />
                   <Skeleton className="h-16 w-3/4 bg-white/5 rounded-xl border-l-4 border-blue-500/50" />
                 </div>

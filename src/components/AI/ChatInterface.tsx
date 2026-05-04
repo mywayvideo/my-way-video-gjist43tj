@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
-import { resolveImageUrl } from '@/hooks/use-image-fallback'
 import { ProductCard } from '@/components/ProductCard'
 
 const renderMarkdown = (text: string, theme: string = 'light') => {
@@ -38,72 +37,138 @@ const renderMarkdown = (text: string, theme: string = 'light') => {
       )
     }
 
-    const paragraphs = part.split('\n\n')
-    return paragraphs.map((p, j) => {
-      if (!p.trim()) return null
+    const tableRegex = /(\n(?:\|.*\|\n)+)/g
+    const textBlocks = part.split(tableRegex)
 
-      const lines = p.split('\n')
-      return (
-        <div key={`${i}-${j}`} className={j > 0 ? 'mt-3' : ''}>
-          {lines.map((line, k) => {
-            let content = line
-            let isHeading = false
-            let headingLevel = 0
+    return textBlocks.map((block, bpIdx) => {
+      if (block.trim().startsWith('|') && block.trim().endsWith('|')) {
+        const rows = block
+          .trim()
+          .split('\n')
+          .map((r) => r.split('|').filter((c) => c.trim() !== ''))
+        const dataRows = rows.filter((r) => !r.every((c) => c.trim().match(/^[-:]+$/)))
 
-            if (content.startsWith('### ')) {
-              content = content.replace('### ', '')
-              isHeading = true
-              headingLevel = 3
-            } else if (content.startsWith('## ')) {
-              content = content.replace('## ', '')
-              isHeading = true
-              headingLevel = 2
-            } else if (content.startsWith('# ')) {
-              content = content.replace('# ', '')
-              isHeading = true
-              headingLevel = 1
-            }
-
-            const tokens = content.split(/(\*\*.*?\*\*)/g)
-            const renderedLine: React.ReactNode[] = tokens.map((token, tIdx) => {
-              if (token.startsWith('**') && token.endsWith('**')) {
+        return (
+          <div
+            key={`table-${i}-${bpIdx}`}
+            className={cn(
+              'my-4 p-6 rounded-xl border-l-4 border-primary shadow-sm overflow-hidden',
+              theme === 'professional-dark'
+                ? 'bg-slate-900/80 border-slate-800'
+                : 'bg-gray-50 border-gray-200',
+            )}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {dataRows.map((row, rIdx) => {
+                if (row.length < 2) return null
+                const label = row[0].trim()
+                const value = row.slice(1).join(' | ').trim()
                 return (
-                  <strong key={tIdx} className="font-semibold text-foreground">
-                    {token.slice(2, -2)}
-                  </strong>
+                  <div key={rIdx} className="flex flex-col space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {label}
+                    </span>
+                    <span className="text-sm font-mono text-primary font-medium">{value}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      }
+
+      const paragraphs = block.split('\n\n')
+      return paragraphs.map((p, j) => {
+        if (!p.trim()) return null
+
+        const lines = p.split('\n')
+        return (
+          <div key={`${i}-${bpIdx}-${j}`} className={j > 0 ? 'mt-3' : ''}>
+            {lines.map((line, k) => {
+              let content = line
+              let isHeading = false
+              let headingLevel = 0
+
+              if (content.startsWith('### ')) {
+                content = content.replace('### ', '')
+                isHeading = true
+                headingLevel = 3
+              } else if (content.startsWith('## ')) {
+                content = content.replace('## ', '')
+                isHeading = true
+                headingLevel = 2
+              } else if (content.startsWith('# ')) {
+                content = content.replace('# ', '')
+                isHeading = true
+                headingLevel = 1
+              }
+
+              const tokens = content.split(/(\*\*.*?\*\*)/g)
+              const renderedLine: React.ReactNode[] = tokens.map((token, tIdx) => {
+                if (token.startsWith('**') && token.endsWith('**')) {
+                  return (
+                    <strong key={tIdx} className="font-semibold text-foreground">
+                      {token.slice(2, -2)}
+                    </strong>
+                  )
+                }
+
+                const words = token.split(
+                  /(\b\d+(?:[.,]\d+)?\s*(?:MP|fps|kg|Hz|mm|cm|lb|lbs| polegadas|K|p)\b)/gi,
+                )
+                if (words.length > 1) {
+                  return (
+                    <span key={tIdx}>
+                      {words.map((w, wIdx) => {
+                        if (
+                          w.match(
+                            /\b\d+(?:[.,]\d+)?\s*(?:MP|fps|kg|Hz|mm|cm|lb|lbs| polegadas|K|p)\b/i,
+                          )
+                        ) {
+                          return (
+                            <span key={wIdx} className="font-mono text-primary font-medium">
+                              {w}
+                            </span>
+                          )
+                        }
+                        return w
+                      })}
+                    </span>
+                  )
+                }
+
+                return <span key={tIdx}>{token}</span>
+              })
+
+              if (isHeading) {
+                const Element = `h${headingLevel}` as any
+                return (
+                  <Element key={k} className="font-bold text-foreground mt-4 mb-2">
+                    {renderedLine}
+                  </Element>
                 )
               }
-              return <span key={tIdx}>{token}</span>
-            })
 
-            if (isHeading) {
-              const Element = `h${headingLevel}` as any
+              const isListItem = line.trim().startsWith('- ') || /^\d+\.\s/.test(line.trim())
               return (
-                <Element key={k} className="font-bold text-foreground mt-4 mb-2">
-                  {renderedLine}
-                </Element>
+                <div
+                  key={k}
+                  className={isListItem ? 'ml-4 mb-1 flex items-start' : 'mb-1 leading-relaxed'}
+                >
+                  {isListItem && line.trim().startsWith('- ') && (
+                    <span className="mr-2 mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                  )}
+                  <span className="flex-1">
+                    {isListItem && line.trim().startsWith('- ')
+                      ? renderedLine.slice(1)
+                      : renderedLine}
+                  </span>
+                </div>
               )
-            }
-
-            const isListItem = line.trim().startsWith('- ') || /^\d+\.\s/.test(line.trim())
-            return (
-              <div
-                key={k}
-                className={isListItem ? 'ml-4 mb-1 flex items-start' : 'mb-1 leading-relaxed'}
-              >
-                {isListItem && line.trim().startsWith('- ') && (
-                  <span className="mr-2 mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                )}
-                <span className="flex-1">
-                  {isListItem && line.trim().startsWith('- ')
-                    ? renderedLine.slice(1)
-                    : renderedLine}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )
+            })}
+          </div>
+        )
+      })
     })
   })
 }
@@ -124,7 +189,6 @@ export function ChatInterface() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Extrair config
   const displayConfig = results?.settings?.result_component_config || {}
   const theme = displayConfig.theme || 'light'
   const colsDesktop = displayConfig.columns_desktop || 3
@@ -153,16 +217,13 @@ export function ChatInterface() {
       { role: 'user', content: userQuery },
       {
         role: 'assistant',
-        content:
-          results?.message ||
-          'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
+        content: 'Iniciando busca profunda MY WAY... Analisando modelos e disponibilidade...',
         is_intermediate: true,
       },
     ])
 
     const res = await search(userQuery, messages)
     if (res) {
-      // Use products filtered by relevance from the AI response
       const productsToRender = res.products || []
 
       setMessages((prev) => {
@@ -205,6 +266,15 @@ export function ChatInterface() {
             ...lastMsg,
             content: results.message,
           }
+
+          setTimeout(() => {
+            const containers = document.querySelectorAll('#ai-response-container')
+            const container = containers[containers.length - 1]
+            if (container) {
+              container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          }, 50)
+
           return newMessages
         }
         return [
@@ -245,7 +315,7 @@ export function ChatInterface() {
                 variant="outline"
                 className="font-bold text-xs tracking-wider text-primary border-primary/20 bg-primary/5 relative z-50"
               >
-                IA My Way Business
+                IA MY WAY Business
               </Badge>
             </div>
             <CardDescription>Tire suas dúvidas sobre equipamentos audiovisuais</CardDescription>
@@ -295,7 +365,10 @@ export function ChatInterface() {
                 <div
                   key={i}
                   id={msg.role === 'assistant' ? 'ai-response-container' : undefined}
-                  className={cn('flex flex-col', msg.role === 'user' ? 'items-end' : 'items-start')}
+                  className={cn(
+                    'flex flex-col w-full',
+                    msg.role === 'user' ? 'items-end' : 'items-start',
+                  )}
                 >
                   <div
                     className={cn(
@@ -308,11 +381,34 @@ export function ChatInterface() {
                     )}
                   >
                     <div className="leading-relaxed space-y-2 break-words">
-                      {msg.role === 'assistant' ? renderMarkdown(msg.content, theme) : msg.content}
+                      {msg.role === 'assistant' && msg.is_intermediate ? (
+                        <div className="flex items-center space-x-3">
+                          <div className="flex space-x-1.5 px-2 py-1">
+                            <div
+                              className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
+                              style={{ animationDelay: '0ms' }}
+                            />
+                            <div
+                              className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
+                              style={{ animationDelay: '150ms' }}
+                            />
+                            <div
+                              className="w-2 h-2 bg-primary/80 rounded-full animate-bounce"
+                              style={{ animationDelay: '300ms' }}
+                            />
+                          </div>
+                          <span className="animate-pulse font-medium">{msg.content}</span>
+                        </div>
+                      ) : msg.role === 'assistant' ? (
+                        renderMarkdown(msg.content, theme)
+                      ) : (
+                        msg.content
+                      )}
                     </div>
                   </div>
 
                   {msg.role === 'assistant' &&
+                    !msg.is_intermediate &&
                     msg.products &&
                     msg.products.length > 0 &&
                     forceRenderCards && (
@@ -334,47 +430,21 @@ export function ChatInterface() {
                       </div>
                     )}
 
-                  {msg.role === 'assistant' && (msg.showWhatsapp || msg.confidence === 'low') && (
-                    <div className="mt-4 max-w-[85%]">
-                      <Button
-                        onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
-                        className="bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md border border-green-600/20 group transition-all duration-300"
-                      >
-                        <Phone className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
-                        Falar com Especialista no WhatsApp
-                      </Button>
-                    </div>
-                  )}
+                  {msg.role === 'assistant' &&
+                    !msg.is_intermediate &&
+                    (msg.showWhatsapp || msg.confidence === 'low') && (
+                      <div className="mt-4 max-w-[85%]">
+                        <Button
+                          onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                          className="bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md border border-green-600/20 group transition-all duration-300"
+                        >
+                          <Phone className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+                          Falar com Especialista no WhatsApp
+                        </Button>
+                      </div>
+                    )}
                 </div>
               ))
-            )}
-
-            {isLoading && (
-              <div className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-300 w-full mt-4">
-                <div
-                  className={cn(
-                    'rounded-2xl rounded-tl-sm px-5 py-3 text-sm border flex items-center space-x-3 shadow-sm mb-4',
-                    theme === 'professional-dark'
-                      ? 'bg-slate-800 border-slate-700'
-                      : 'bg-muted/50 border-border/50',
-                  )}
-                >
-                  <div className="flex space-x-1.5 px-2 py-1">
-                    <div
-                      className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
-                      style={{ animationDelay: '0ms' }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
-                      style={{ animationDelay: '150ms' }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-primary/80 rounded-full animate-bounce"
-                      style={{ animationDelay: '300ms' }}
-                    />
-                  </div>
-                </div>
-              </div>
             )}
             <div ref={messagesEndRef} />
           </div>

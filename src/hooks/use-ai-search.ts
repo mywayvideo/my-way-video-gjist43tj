@@ -44,7 +44,7 @@ export function useUnifiedSearch() {
     console.log('NEW SEARCH FOR:', cleanQuery)
 
     const intermediateResults = {
-      message: 'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
+      message: 'Iniciando busca profunda MY WAY... Analisando modelos e disponibilidade...',
       confidence_level: 'high',
       referenced_internal_products: [],
       should_show_whatsapp_button: false,
@@ -52,6 +52,25 @@ export function useUnifiedSearch() {
     }
     setResults(intermediateResults)
     setIsLoading(true)
+
+    const phases = [
+      'Iniciando busca profunda MY WAY... Analisando modelos e disponibilidade...',
+      'Tier 1: Analisando termo completo em nossa base...',
+      'Tier 2-4: Refinando por modelo e variações técnicas...',
+      'Soberania de Dados: Sintetizando proposta técnica MY WAY...',
+    ]
+
+    let phaseIndex = 0
+    const heartbeatInterval = setInterval(() => {
+      phaseIndex = Math.min(phaseIndex + 1, phases.length - 1)
+      setResults((prev: any) => {
+        if (!prev || !prev.is_intermediate) {
+          clearInterval(heartbeatInterval)
+          return prev
+        }
+        return { ...prev, message: phases[phaseIndex], content: phases[phaseIndex] }
+      })
+    }, 2500)
 
     try {
       let sessionId = sessionStorage.getItem('ai_chat_session_id')
@@ -212,7 +231,7 @@ export function useUnifiedSearch() {
         nabData: [],
         web: [],
         settings: {},
-        agent_name: activeAgent?.provider_name ? 'Especialista My Way' : 'Busca Básica',
+        agent_name: activeAgent?.provider_name ? 'Especialista MY WAY' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
         is_intermediate: false,
       }
@@ -268,6 +287,7 @@ export function useUnifiedSearch() {
       })
       return fallbackResults
     } finally {
+      clearInterval(heartbeatInterval)
       setIsLoading(false)
     }
   }
