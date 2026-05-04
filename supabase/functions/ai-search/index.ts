@@ -1,45 +1,48 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 
-function extractJson(text: string, fallbackMessage: string = "Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista."): any {
+function extractJson(
+  text: string,
+  fallbackMessage: string = 'Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.',
+): any {
   if (!text || !text.trim()) {
     return {
       message: fallbackMessage,
-      confidence_level: "low",
+      confidence_level: 'low',
       should_show_whatsapp_button: true,
-      referenced_internal_products: []
-    };
+      referenced_internal_products: [],
+    }
   }
   try {
-    const match = text.match(/\{[\s\S]*\}/);
+    const match = text.match(/\{[\s\S]*\}/)
     if (match) {
-      return JSON.parse(match[0]);
+      return JSON.parse(match[0])
     }
-    throw new Error("No JSON object found");
+    throw new Error('No JSON object found')
   } catch (e: any) {
-    console.error('Failed to parse JSON:', e.stack || e);
-    console.log("FAILED TO PARSE CONTENT:", text);
+    console.error('Failed to parse JSON:', e.stack || e)
+    console.log('FAILED TO PARSE CONTENT:', text)
     return {
       message: fallbackMessage,
-      confidence_level: "low",
+      confidence_level: 'low',
       should_show_whatsapp_button: true,
-      referenced_internal_products: []
-    };
+      referenced_internal_products: [],
+    }
   }
 }
 
 function getFallbackMessage(query: string): string {
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.toLowerCase()
   if (lowerQuery.match(/\b(the|is|what|how|why|where|can|you|please|help)\b/)) {
-    return "I'm sorry, a technical error occurred while processing the data. Please contact a specialist.";
+    return "I'm sorry, a technical error occurred while processing the data. Please contact a specialist."
   }
   if (lowerQuery.match(/\b(el|la|qué|como|por qué|donde|puedes|por favor|ayuda)\b/)) {
-    return "Lo siento, ocurrió un error técnico al procesar los datos. Por favor, contacte a un especialista.";
+    return 'Lo siento, ocurrió un error técnico al procesar los datos. Por favor, contacte a un especialista.'
   }
   if (lowerQuery.match(/\b(le|la|les|quoi|comment|pourquoi|où|pouvez|s'il vous plaît|aide)\b/)) {
-    return "Désolé, une erreur technique s'est produite lors du traitement des données. Veuillez contacter un spécialiste.";
+    return "Désolé, une erreur technique s'est produite lors du traitement des données. Veuillez contacter un spécialiste."
   }
-  return "Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.";
+  return 'Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.'
 }
 
 const corsHeaders = {
@@ -106,7 +109,7 @@ Deno.serve(async (req: Request) => {
       actualQuery = userQueryMatch[1]
     }
 
-    const fallbackMessage = getFallbackMessage(actualQuery);
+    const fallbackMessage = getFallbackMessage(actualQuery)
 
     const hasProductContext = productName && productName !== 'Não informado'
 
@@ -118,33 +121,53 @@ Deno.serve(async (req: Request) => {
           .eq('search_query', actualQuery)
           .order('created_at', { ascending: false })
           .limit(1)
-          .maybeSingle();
-          
+          .maybeSingle()
+
         if (!cacheError && cacheData && cacheData.product_specs) {
-          const specs = typeof cacheData.product_specs === 'string' ? JSON.parse(cacheData.product_specs) : cacheData.product_specs;
-          if (specs && Array.isArray(specs.referenced_internal_products) && specs.referenced_internal_products.length > 0) {
-            console.log('FUNCTION_END: Returning cached result');
+          const specs =
+            typeof cacheData.product_specs === 'string'
+              ? JSON.parse(cacheData.product_specs)
+              : cacheData.product_specs
+          if (
+            specs &&
+            Array.isArray(specs.referenced_internal_products) &&
+            specs.referenced_internal_products.length > 0
+          ) {
+            console.log('FUNCTION_END: Returning cached result')
             return new Response(JSON.stringify(specs), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 200,
-            });
+            })
           }
         }
       } catch (e) {
-        console.error('Cache read error:', e);
+        console.error('Cache read error:', e)
       }
     }
 
-    const { data: set } = await supabase.from('ai_agent_settings').select('*').order('created_at', { ascending: false }).limit(1).single()
-    const { data: aiSettings } = await supabase.from('ai_settings').select('*').order('created_at', { ascending: false }).limit(1).single()
+    const { data: set } = await supabase
+      .from('ai_agent_settings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    const { data: aiSettings } = await supabase
+      .from('ai_settings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
     const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
 
     const globalSettingsMap: Record<string, string> = {}
-    globalSettingsData?.forEach((s: any) => { if (s.value) globalSettingsMap[s.key] = s.value })
+    globalSettingsData?.forEach((s: any) => {
+      if (s.value) globalSettingsMap[s.key] = s.value
+    })
 
     const settings = {
       system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate: globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
+      systemPromptTemplate:
+        globalSettingsMap['prompt_template'] || aiSettings?.system_prompt_template || '',
       product_page_prompt: aiSettings?.product_page_prompt || '',
       institutional_context: ((aiSettings as any)?.institutional_context || '').substring(0, 2000),
       cache_expiration_days: aiSettings?.cache_expiration_days ?? 30,
@@ -164,40 +187,53 @@ Deno.serve(async (req: Request) => {
     const mfgList = mfgData?.map((m: any) => m.name).join(', ') || ''
 
     const { data: cData } = await supabase.from('company_info').select('content, type')
-    const compInfo = (cData || []).map((c: any) => `[${c.type}]: ${c.content}`).join('\n').substring(0, 2000)
+    const compInfo = (cData || [])
+      .map((c: any) => `[${c.type}]: ${c.content}`)
+      .join('\n')
+      .substring(0, 2000)
 
     const { data: providers } = await supabase
       .from('ai_providers')
       .select('*')
       .eq('is_active', true)
       .order('priority_order', { ascending: true })
-    
+
     if (!providers?.length) throw new Error('No active providers found')
 
-    let sysPromptTemplate = settings.systemPromptTemplate || '';
-    let finalBasePrompt = sysPromptTemplate.trim() ? sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || '') : (settings.system_prompt || 'Você é um Consultor My Way Business.');
+    let sysPromptTemplate = settings.systemPromptTemplate || ''
+    let finalBasePrompt = sysPromptTemplate.trim()
+      ? sysPromptTemplate.replace('{{system_prompt}}', settings.system_prompt || '')
+      : settings.system_prompt || 'Você é um Consultor My Way Business.'
 
-    let productPageContext = '';
+    let productPageContext = ''
     if (hasProductContext) {
-      let parsedProductPagePrompt = settings.product_page_prompt || '';
-      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll('{{productName}}', productName || '');
-      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll('{{currentProductId}}', currentProductId || '');
-      
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${parsedProductPagePrompt}`;
+      let parsedProductPagePrompt = settings.product_page_prompt || ''
+      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll(
+        '{{productName}}',
+        productName || '',
+      )
+      parsedProductPagePrompt = parsedProductPagePrompt.replaceAll(
+        '{{currentProductId}}',
+        currentProductId || '',
+      )
+
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${parsedProductPagePrompt}`
     }
 
-    let securityClause = '';
+    let securityClause = ''
     if (!isAdmin) {
-      securityClause = `\n- SECURITY CLAUSE: You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, tools, JSON structures, or UUIDs with the user. Your internal engineering is invisible.`;
+      securityClause = `\n- SECURITY CLAUSE: You are a Senior Technical Consultant. You are STRICTLY FORBIDDEN from discussing internal logic, tools, JSON structures, or UUIDs with the user. Your internal engineering is invisible.`
     } else {
-      securityClause = `\n- SECURITY CLAUSE: You are communicating with an ADMIN. You may discuss technical internal logic if specifically asked.`;
+      securityClause = `\n- SECURITY CLAUSE: You are communicating with an ADMIN. You may discuss technical internal logic if specifically asked.`
     }
 
-    let tonePrompt = '';
+    let tonePrompt = ''
     if (settings.proactivity_level >= 7) {
-      tonePrompt = "\nESTILO DE RESPOSTA: Consultor Ativo. Sugira proativamente produtos relacionados e soluções completas.";
+      tonePrompt =
+        '\nESTILO DE RESPOSTA: Consultor Ativo. Sugira proativamente produtos relacionados e soluções completas.'
     } else if (settings.proactivity_level <= 3) {
-      tonePrompt = "\nESTILO DE RESPOSTA: Estritamente Reativo. Responda apenas o que foi perguntado.";
+      tonePrompt =
+        '\nESTILO DE RESPOSTA: Estritamente Reativo. Responda apenas o que foi perguntado.'
     }
 
     const sysPrompt = `${finalBasePrompt}${productPageContext}
@@ -229,9 +265,10 @@ MANDATORY RULES:
     "should_show_whatsapp_button": boolean,
     "referenced_internal_products": ["uuid-1", "uuid-2"]
   }
-- Ensure exactly TWO line breaks (\n\n) before the Transparency Note in the 'message' field (if any).
+- You MUST include a Transparency Note at the end of EVERY response, regardless of finding the product or not. Ensure exactly TWO line breaks (\n\n) before the Transparency Note.
 - The AI is the SOLE authority for cards. You must populate 'referenced_internal_products' ONLY with UUIDs returned by the 'search_products' tool that you explicitly recommend and discuss in the text. Do NOT populate this array until the tool returns data.
 - Only if 'search_products' returns ZERO results after a valid search, you are authorized to use your internal knowledge. In this case, set 'confidence_level' to 'low' and state the product is 'sob consulta ao fabricante'.
+- MANDATORY RULE: You are FORBIDDEN from saying "não temos informações" if it is a professional product. If 'search_products' returns ZERO results, you MUST say: "No momento não localizei o item [NOME] com este termo exato em nosso catálogo imediato, mas como especialistas My Way, podemos viabilizar este projeto sob consulta."
 - Set 'should_show_whatsapp_button' to true for any product not found in the database.
 - If a product is mentioned in text but was not returned by the tool, it MUST NOT be added to the metadata.
 - You MUST add exactly TWO line breaks (\n\n) between different product models in the message.
@@ -241,23 +278,28 @@ MANDATORY RULES:
 - Display 'NCM: [value]' ONLY if it exists in the database. If null, do NOT render the line.
 - STRICT RULE: Do NOT mention internal tool names, database fields, or JSON keys to the user.
 - When calling 'search_products', your 'query' parameter MUST be concise. Use ONLY model names or keywords (e.g., 'CR-N300', 'FX3'). NEVER include conversational filler like 'câmeras PTZ' in the tool query.
+- When calling 'search_products', if the first attempt with the full name fails, you MUST try a second time with only the main model name (e.g., instead of 'Sony Burano 8K', search only for 'Burano').
 - If 'search_products' returns ANY products (Count > 0), you are FORBIDDEN from saying 'não temos' or 'sob consulta'. You MUST use the database prices and SKUs as the absolute truth.
 - You are STRICTLY FORBIDDEN from mentioning product names in the message that were not returned by the search_products tool, unless you explicitly state they are 'sob consulta ao fabricante'. If the tool returns data, you MUST use the provided prices and SKUs as the absolute truth.${securityClause}
 IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in markdown code blocks or add any text before or after the JSON.
-`;
+`
 
     const tools = [
       {
         type: 'function',
         function: {
           name: 'search_products',
-          description: 'Search for products AND Market Intelligence (benchmarks, trends, event news, and comparisons). Use this tool for ANY technical or strategic query.',
-          parameters: { 
-            type: 'object', 
-            properties: { 
-              query: { type: 'string', description: 'Search terms based on manufacturers and user request' } 
-            }, 
-            required: ['query'] 
+          description:
+            'Search for products AND Market Intelligence (benchmarks, trends, event news, and comparisons). Use this tool for ANY technical or strategic query.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Search terms based on manufacturers and user request',
+              },
+            },
+            required: ['query'],
           },
         },
       },
@@ -272,32 +314,35 @@ IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in mark
       if (!key) continue
 
       try {
-        console.log("--- START PROVIDER ATTEMPT: " + p.provider_name + " ---")
-        
-        let url = 'https://api.openai.com/v1/chat/completions';
-        let headers: any = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
+        console.log('--- START PROVIDER ATTEMPT: ' + p.provider_name + ' ---')
 
-        const providerLower = (p.provider_name || '').toLowerCase();
+        let url = 'https://api.openai.com/v1/chat/completions'
+        let headers: any = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+
+        const providerLower = (p.provider_name || '').toLowerCase()
         if (providerLower.includes('claude') || providerLower.includes('anthropic')) {
-          url = 'https://api.anthropic.com/v1/messages';
+          url = 'https://api.anthropic.com/v1/messages'
           headers = {
             'x-api-key': key,
             'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json'
-          };
+            'Content-Type': 'application/json',
+          }
         } else if (p.provider_name === 'deepseek') {
-          url = 'https://api.deepseek.com/chat/completions';
+          url = 'https://api.deepseek.com/chat/completions'
         } else if (p.provider_name === 'gemini') {
-          url = `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`;
+          url = `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
         }
 
         let msgs: any[] = [{ role: 'system', content: sysPrompt }]
         if (Array.isArray(history) && history.length > 0) {
-          const cleanHistory = history.filter(h => typeof h.content === 'string' && !h.content.toLowerCase().includes("erro técnico"));
+          const cleanHistory = history.filter(
+            (h) =>
+              typeof h.content === 'string' && !h.content.toLowerCase().includes('erro técnico'),
+          )
           msgs.push(...cleanHistory.slice(-6))
         }
         msgs.push({ role: 'user', content: actualQuery })
-        
+
         let calls = 0
         let finalResponseObtained = false
 
@@ -305,9 +350,9 @@ IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in mark
           const payload: any = {
             model: p.model_id,
             messages: msgs,
-            response_format: { type: 'json_object' }
+            response_format: { type: 'json_object' },
           }
-          
+
           if (calls === 0) {
             payload.tools = tools
             payload.tool_choice = 'auto'
@@ -315,23 +360,25 @@ IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in mark
             payload.tools = tools
           }
 
-          console.log("Attempting provider: " + p.provider_name)
+          console.log('Attempting provider: ' + p.provider_name)
           const res = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload),
           })
-          
+
           if (res.status === 401 || res.status === 403) {
-            console.error(`Provider ${p.provider_name} returned ${res.status}. Moving to next provider.`);
-            break;
+            console.error(
+              `Provider ${p.provider_name} returned ${res.status}. Moving to next provider.`,
+            )
+            break
           }
 
           if (!res.ok) throw new Error(await res.text())
 
           const resData = await res.json()
           if (calls === 0) {
-            console.log("RAW AI RESPONSE (Turn 1):", JSON.stringify(resData))
+            console.log('RAW AI RESPONSE (Turn 1):', JSON.stringify(resData))
           }
           const msg = resData.choices?.[0]?.message
           const finishReason = resData.choices?.[0]?.finish_reason
@@ -340,76 +387,98 @@ IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in mark
             msgs.push(msg)
             for (const t of msg.tool_calls) {
               if (t.function.name === 'search_products') {
-                console.log("TOOL CALL ARGS:", t.function.arguments);
-                const args = JSON.parse(t.function.arguments || '{}');
-                
-                let rpcData: any = { stock: [], intel: [], nab_data: [] };
+                console.log('TOOL CALL ARGS:', t.function.arguments)
+                const args = JSON.parse(t.function.arguments || '{}')
+
+                let rpcData: any = { stock: [], intel: [], nab_data: [] }
                 try {
-                  const { data, error } = await supabase.rpc('execute_ai_search', { search_term: args.query || actualQuery });
+                  const { data, error } = await supabase.rpc('execute_ai_search', {
+                    search_term: args.query || actualQuery,
+                  })
                   if (!error && data) {
-                    rpcData = data;
+                    rpcData = data
                   }
                 } catch (dbErr: any) {
-                  console.error('Database search error:', dbErr.stack || dbErr);
+                  console.error('Database search error:', dbErr.stack || dbErr)
                 }
-                
-                console.log("DATABASE RPC RESULT (Count):", rpcData?.stock?.length || 0);
 
-                let filteredStock = (rpcData?.stock || []).slice(0, 15);
+                console.log('DATABASE RPC RESULT (Count):', rpcData?.stock?.length || 0)
 
-                filteredStock.forEach((p: any) => { 
+                let filteredStock = (rpcData?.stock || []).slice(0, 15)
+
+                filteredStock.forEach((p: any) => {
                   if (p.id) {
                     allowedProductIds.add(p.id)
                     allReturnedProducts.push(p)
                   }
                   if (p.price_usd && p.price_usd > settings.price_limit_usd) {
-                    hasExpensiveProduct = true;
+                    hasExpensiveProduct = true
                   }
-                });
+                })
 
                 let content = JSON.stringify({
-                   stock: filteredStock.map((prod: any) => ({
-                      id: prod.id, name: prod.name, sku: prod.sku, price_usd: prod.price_usd, manufacturer_name: prod.manufacturer_name, ncm: prod.ncm
-                   })),
-                   intel: (rpcData?.intel || []).slice(0, 2),
-                   nab_data: (rpcData?.nab_data || []).slice(0, 2)
-                });
-                
+                  stock: filteredStock.map((prod: any) => ({
+                    id: prod.id,
+                    name: prod.name,
+                    sku: prod.sku,
+                    price_usd: prod.price_usd,
+                    manufacturer_name: prod.manufacturer_name,
+                    ncm: prod.ncm,
+                  })),
+                  intel: (rpcData?.intel || []).slice(0, 2),
+                  nab_data: (rpcData?.nab_data || []).slice(0, 2),
+                })
+
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            msgs.push({ role: 'system', content: "Data received. Now, synthesize a strategic response in the user's language, integrating technical specs with market intelligence insights. Return ONLY the JSON object." })
+            msgs.push({
+              role: 'system',
+              content:
+                "Data received. Now, synthesize a strategic response in the user's language, integrating technical specs with market intelligence insights. Return ONLY the JSON object.",
+            })
             calls++
           } else {
             const extracted = extractJson(msg?.content || '', fallbackMessage)
-            
+
             if (calls === 0) {
-              const contentLower = (msg?.content || '').toLowerCase();
-              const hasSemanticViolations = contentLower.includes('especifica') || 
-                                            contentLower.includes('estoque') || 
-                                            contentLower.includes('não encontrado') || 
-                                            contentLower.includes('out of stock') ||
-                                            contentLower.includes('disponív') ||
-                                            contentLower.includes('resolução') ||
-                                            contentLower.includes('sensor') ||
-                                            contentLower.includes('peso') ||
-                                            contentLower.includes('dimensões') ||
-                                            contentLower.includes('preço') ||
-                                            contentLower.includes('$') ||
-                                            contentLower.includes('r$') ||
-                                            contentLower.includes('modelo');
-              
-              const providedIds = Array.isArray(extracted.referenced_internal_products) ? extracted.referenced_internal_products : [];
-              
+              const contentLower = (msg?.content || '').toLowerCase()
+              const hasSemanticViolations =
+                contentLower.includes('especifica') ||
+                contentLower.includes('estoque') ||
+                contentLower.includes('não encontrado') ||
+                contentLower.includes('out of stock') ||
+                contentLower.includes('disponív') ||
+                contentLower.includes('resolução') ||
+                contentLower.includes('sensor') ||
+                contentLower.includes('peso') ||
+                contentLower.includes('dimensões') ||
+                contentLower.includes('preço') ||
+                contentLower.includes('$') ||
+                contentLower.includes('r$') ||
+                contentLower.includes('modelo')
+
+              const providedIds = Array.isArray(extracted.referenced_internal_products)
+                ? extracted.referenced_internal_products
+                : []
+
               if (hasSemanticViolations || providedIds.length > 0) {
                 msgs.push(msg)
-                msgs.push({ role: 'system', content: "SECURITY VIOLATION: You are attempting to respond using internal knowledge. You are FORBIDDEN from providing ANY technical info, model names, or prices in Turn 1 without calling 'search_products' first. Execute the tool now to fetch real UUIDs and stock data." })
+                msgs.push({
+                  role: 'system',
+                  content:
+                    "SECURITY VIOLATION: You are attempting to respond using internal knowledge. You are FORBIDDEN from providing ANY technical info, model names, or prices in Turn 1 without calling 'search_products' first. Execute the tool now to fetch real UUIDs and stock data.",
+                })
                 calls++
                 continue
               }
             }
 
-            if (finishReason === 'stop' && extracted.message === fallbackMessage && !(msg?.content || '').includes('{')) {
+            if (
+              finishReason === 'stop' &&
+              extracted.message === fallbackMessage &&
+              !(msg?.content || '').includes('{')
+            ) {
               finalResponseObtained = false
               break
             }
@@ -429,104 +498,125 @@ IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in mark
         message: fallbackMessage,
         confidence_level: 'low',
         should_show_whatsapp_button: true,
-        referenced_internal_products: []
+        referenced_internal_products: [],
       }
     } else {
       if (result.content && !result.message) {
-        result.message = result.content;
+        result.message = result.content
       }
       if (!result.message || typeof result.message !== 'string' || !result.message.trim()) {
-        result.message = fallbackMessage;
-        result.confidence_level = 'low';
-        result.should_show_whatsapp_button = true;
+        result.message = fallbackMessage
+        result.confidence_level = 'low'
+        result.should_show_whatsapp_button = true
       }
     }
 
     // Remove unsupported properties to enforce strict JSON structure
-    if (result.products) delete result.products;
-    if (result.content) delete result.content;
+    if (result.products) delete result.products
+    if (result.content) delete result.content
 
     if (allReturnedProducts.length === 0) {
-      result.confidence_level = 'low';
-      result.should_show_whatsapp_button = true;
+      result.confidence_level = 'low'
+      result.should_show_whatsapp_button = true
     } else {
-      result.confidence_level = 'high';
+      result.confidence_level = 'high'
     }
 
-    let forceWhatsApp = false;
-    const lowerQuery = actualQuery.toLowerCase();
-    const hasTriggerKeyword = Array.isArray(settings.trigger_keywords) && settings.trigger_keywords.some((kw: string) => lowerQuery.includes(kw.toLowerCase()));
-    
+    let forceWhatsApp = false
+    const lowerQuery = actualQuery.toLowerCase()
+    const hasTriggerKeyword =
+      Array.isArray(settings.trigger_keywords) &&
+      settings.trigger_keywords.some((kw: string) => lowerQuery.includes(kw.toLowerCase()))
+
     if (settings.whatsapp_trigger_expensive && hasExpensiveProduct) {
-      forceWhatsApp = true;
+      forceWhatsApp = true
     }
-    if (settings.whatsapp_trigger_low_confidence && result.confidence_level === settings.confidence_threshold) {
-      forceWhatsApp = true;
+    if (
+      settings.whatsapp_trigger_low_confidence &&
+      result.confidence_level === settings.confidence_threshold
+    ) {
+      forceWhatsApp = true
     }
     if (result.confidence_level === 'low') {
-      forceWhatsApp = true;
+      forceWhatsApp = true
     }
     if (hasTriggerKeyword) {
-      forceWhatsApp = true;
+      forceWhatsApp = true
     }
     if (allowedProductIds.size === 0) {
-      forceWhatsApp = true;
+      forceWhatsApp = true
     }
 
-    result.should_show_whatsapp_button = forceWhatsApp || !!result.should_show_whatsapp_button;
+    result.should_show_whatsapp_button = forceWhatsApp || !!result.should_show_whatsapp_button
 
     let refs: string[] = []
     if (Array.isArray(result.referenced_internal_products)) {
-      refs = result.referenced_internal_products.map((p: any) => (typeof p === 'string' ? p : p.id)).filter(Boolean)
+      refs = result.referenced_internal_products
+        .map((p: any) => (typeof p === 'string' ? p : p.id))
+        .filter(Boolean)
     }
 
-    const messageContentLower = (result.message || '').toLowerCase();
+    const messageContentLower = (result.message || '').toLowerCase()
 
     function isProductRelevant(product: any, messageLower: string): boolean {
       if (product.sku && messageLower.includes(product.sku.toLowerCase())) {
-        return true;
+        return true
       }
       if (product.name) {
-        const commonTerms = ['camera', 'câmera', 'canon', 'sony', 'ptz', 'blackmagic', 'mount'];
-        const nameWords = product.name.toLowerCase().split(/\s+/).map((w: string) => w.replace(/[^a-z0-9]/g, '')).filter((w: string) => w.length > 2 && !commonTerms.includes(w));
-        let matchCount = 0;
+        const lowerName = product.name.toLowerCase()
+        if (messageLower.includes(lowerName)) {
+          return true
+        }
+
+        const commonTerms = ['camera', 'câmera', 'canon', 'sony', 'ptz', 'blackmagic', 'mount']
+        const nameWords = lowerName
+          .split(/\s+/)
+          .map((w: string) => w.replace(/[^a-z0-9]/g, ''))
+          .filter((w: string) => w.length > 2 && !commonTerms.includes(w))
+        let matchCount = 0
         for (const word of nameWords) {
           if (messageLower.includes(word)) {
-            matchCount++;
+            matchCount++
           }
         }
-        if (matchCount >= 2) return true;
+        if (matchCount >= 2) return true
       }
-      return false;
+      return false
     }
 
-    const validatedRefs: string[] = [];
-    
-    refs.forEach(id => {
-      const prod = allReturnedProducts.find(p => p.id === id);
-      if (prod && isProductRelevant(prod, messageContentLower)) {
-        validatedRefs.push(id);
-      }
-    });
+    const validatedRefs: string[] = []
 
-    allReturnedProducts.forEach(p => {
-      if (isProductRelevant(p, messageContentLower) && !validatedRefs.includes(p.id)) {
-        validatedRefs.push(p.id);
+    refs.forEach((id) => {
+      const prod = allReturnedProducts.find((p) => p.id === id)
+      if (prod && isProductRelevant(prod, messageContentLower)) {
+        validatedRefs.push(id)
       }
-    });
+    })
+
+    allReturnedProducts.forEach((p) => {
+      if (isProductRelevant(p, messageContentLower) && !validatedRefs.includes(p.id)) {
+        validatedRefs.push(p.id)
+      }
+    })
 
     if (validatedRefs.length === 0) {
-      const hasSpecsOrModels = messageContentLower.match(/\b(resolução|sensor|peso|dimensões|hz|kg|lbs|mm|cm|polegadas|4k|8k|1080p|hdmi|sdi)\b/);
+      const hasSpecsOrModels = messageContentLower.match(
+        /\b(resolução|sensor|peso|dimensões|hz|kg|lbs|mm|cm|polegadas|4k|8k|1080p|hdmi|sdi)\b/,
+      )
       if (hasSpecsOrModels) {
-        result.confidence_level = 'low';
-        result.should_show_whatsapp_button = true;
+        result.confidence_level = 'low'
+        result.should_show_whatsapp_button = true
       }
     }
 
-    result.referenced_internal_products = Array.from(new Set(validatedRefs));
-    
-    if (result.confidence_level === 'high' && Array.isArray(result.referenced_internal_products) && result.referenced_internal_products.length > 0) {
-       supabase
+    result.referenced_internal_products = Array.from(new Set(validatedRefs))
+
+    if (
+      result.confidence_level === 'high' &&
+      Array.isArray(result.referenced_internal_products) &&
+      result.referenced_internal_products.length > 0
+    ) {
+      supabase
         .from('product_search_cache')
         .insert({
           search_query: actualQuery,
@@ -536,16 +626,16 @@ IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in mark
           product_specs: result,
         })
         .then(({ error }) => {
-          if (error) console.error('Cache insertion error:', error);
+          if (error) console.error('Cache insertion error:', error)
         })
-        .catch(console.error);
+        .catch(console.error)
     }
 
-    console.log("FINAL JSON OBJECT TO CLIENT:", JSON.stringify(result));
+    console.log('FINAL JSON OBJECT TO CLIENT:', JSON.stringify(result))
 
-    const responseHeaders: any = { ...corsHeaders, 'Content-Type': 'application/json' };
+    const responseHeaders: any = { ...corsHeaders, 'Content-Type': 'application/json' }
     if (isAdmin) {
-      responseHeaders['Cache-Control'] = 'no-cache';
+      responseHeaders['Cache-Control'] = 'no-cache'
     }
 
     return new Response(JSON.stringify(result), {
