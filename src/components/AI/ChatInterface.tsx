@@ -153,7 +153,9 @@ export function ChatInterface() {
       { role: 'user', content: userQuery },
       {
         role: 'assistant',
-        content: 'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
+        content:
+          results?.message ||
+          'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
         is_intermediate: true,
       },
     ])

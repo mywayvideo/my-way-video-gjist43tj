@@ -74,14 +74,15 @@ export default function Index() {
             style={{ animationDelay: '200ms' }}
           >
             <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
+
             {isSearchLoading && (
-              <div className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-pulse">
-                <p className="text-center text-muted-foreground text-lg mb-6">
-                  Sincronizando inteligência audiovisual...
+              <div className="mt-4 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-pulse shadow-lg">
+                <p className="text-center text-muted-foreground text-lg mb-6 font-medium text-orange-400">
+                  {results?.message || 'Sincronizando inteligência audiovisual...'}
                 </p>
                 <div className="space-y-4">
-                  <Skeleton className="h-24 w-full bg-white/5 rounded-xl border-l-4 border-orange-500/50" />
-                  <Skeleton className="h-24 w-full bg-white/5 rounded-xl border-l-4 border-blue-500/50" />
+                  <Skeleton className="h-16 w-full bg-white/5 rounded-xl border-l-4 border-orange-500/50" />
+                  <Skeleton className="h-16 w-3/4 bg-white/5 rounded-xl border-l-4 border-blue-500/50" />
                 </div>
               </div>
             )}

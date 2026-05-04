@@ -42,6 +42,15 @@ export function useUnifiedSearch() {
     if (!cleanQuery) return
 
     console.log('NEW SEARCH FOR:', cleanQuery)
+
+    const intermediateResults = {
+      message: 'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
+      confidence_level: 'high',
+      referenced_internal_products: [],
+      should_show_whatsapp_button: false,
+      is_intermediate: true,
+    }
+    setResults(intermediateResults)
     setIsLoading(true)
 
     try {
@@ -88,15 +97,6 @@ export function useUnifiedSearch() {
       let shouldShowWhatsapp = false
 
       const activeAgent = await getActiveAgent()
-
-      const intermediateResults = {
-        message: 'Iniciando busca profunda My Way... Analisando modelos e disponibilidade...',
-        confidence_level: 'high',
-        referenced_internal_products: [],
-        should_show_whatsapp_button: false,
-        is_intermediate: true,
-      }
-      setResults(intermediateResults)
 
       await new Promise((resolve) => setTimeout(resolve, 50))
 
