@@ -49,7 +49,25 @@ export function ResponseFormatter({
   return (
     <div className="space-y-6">
       {content && (
-        <ReactMarkdown className="prose prose-invert max-w-none whitespace-pre-wrap text-white/90">
+        <ReactMarkdown
+          className="prose prose-invert max-w-none whitespace-pre-wrap text-white/90"
+          components={{
+            table: ({ node, ...props }) => (
+              <div className="overflow-x-auto w-full my-6 rounded-lg border border-white/10 bg-white/5">
+                <table className="w-full text-sm text-left whitespace-nowrap" {...props} />
+              </div>
+            ),
+            th: ({ node, ...props }) => (
+              <th
+                className="px-6 py-4 bg-white/5 font-semibold border-b border-white/10"
+                {...props}
+              />
+            ),
+            td: ({ node, ...props }) => (
+              <td className="px-6 py-3 border-b border-white/5 last:border-0" {...props} />
+            ),
+          }}
+        >
           {content}
         </ReactMarkdown>
       )}

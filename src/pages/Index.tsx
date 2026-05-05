@@ -46,7 +46,7 @@ export default function Index() {
 
   return (
     <div className="flex flex-col gap-16 pb-24">
-      <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
+      <section className="relative pt-32 pb-16 px-4 flex flex-col items-center overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
         <div className="text-center space-y-6 z-10 w-full max-w-2xl mx-auto animate-fade-in-up">
@@ -70,7 +70,7 @@ export default function Index() {
           </p>
 
           <div
-            className="pt-8 w-full flex flex-col items-center animate-fade-in [&_textarea]:min-h-[160px] relative"
+            className="pt-8 w-full flex flex-col items-center animate-fade-in [&_textarea]:min-h-[160px]"
             style={{ animationDelay: '200ms' }}
           >
             <div className="w-full z-20">
@@ -78,7 +78,7 @@ export default function Index() {
             </div>
 
             {isSearchLoading && (
-              <div className="w-[95%] -mt-2 pt-6 pb-4 px-6 text-left bg-background/80 backdrop-blur-xl border border-white/10 rounded-b-2xl shadow-2xl transition-all duration-500 z-10 animate-fade-in-down">
+              <div className="w-full mt-4 pt-4 pb-4 px-6 text-left bg-background/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl transition-all duration-500 z-10 animate-fade-in-down">
                 <div className="flex items-center space-x-3 justify-center">
                   <div className="flex space-x-1.5 px-2 py-1">
                     <div
