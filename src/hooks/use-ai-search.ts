@@ -47,7 +47,7 @@ export function useUnifiedSearch() {
       'Iniciando busca profunda MY WAY... Analisando termo técnico.',
       'Tier 1: Consultando base de dados e estoque imediato...',
       'Tier 2-4: Refinando busca por modelos e variações técnicas...',
-      'Soberania de Dados: Validando preços e SKUs oficiais...',
+      'Soberania de Dados: Validando preços e SKUs oficiais MY WAY...',
     ]
 
     const intermediateResults = {
@@ -69,7 +69,8 @@ export function useUnifiedSearch() {
           clearInterval(heartbeatInterval)
           return prev
         }
-        return { ...prev, message: phases[phaseIndex], content: phases[phaseIndex] }
+        const phaseMsg = phases[phaseIndex].replace(/my way/gi, 'MY WAY')
+        return { ...prev, message: phaseMsg, content: phaseMsg }
       })
     }, 1500)
 
