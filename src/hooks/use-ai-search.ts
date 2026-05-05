@@ -50,9 +50,10 @@ export function useUnifiedSearch() {
       'Soberania de Dados: Validando preços e SKUs oficiais MY WAY...',
     ]
 
+    const initialMsg = phases[0].replace(/my way/gi, 'MY WAY')
     const intermediateResults = {
-      message: phases[0],
-      content: phases[0],
+      message: initialMsg,
+      content: initialMsg,
       confidence_level: 'high',
       referenced_internal_products: [],
       should_show_whatsapp_button: false,
