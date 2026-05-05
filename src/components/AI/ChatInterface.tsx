@@ -206,7 +206,7 @@ export function ChatInterface() {
                               />
                             </div>
                           </div>
-                          {results?.is_intermediate && results.message && (
+                          {results?.message && (
                             <div className="text-primary/80 font-medium animate-pulse text-sm">
                               {results.message.replace(/my way/gi, 'MY WAY')}
                             </div>
