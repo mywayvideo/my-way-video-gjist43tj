@@ -58,7 +58,7 @@ export function ChatInterface() {
       { role: 'user', content: userQuery },
       {
         role: 'assistant',
-        content: 'INICIANDO BUSCA PROFUNDA MY WAY...',
+        content: 'Iniciando busca profunda MY WAY... Analisando termo técnico.',
         is_intermediate: true,
       },
     ])
@@ -239,11 +239,11 @@ export function ChatInterface() {
                                 style={{ animationDelay: '300ms' }}
                               />
                             </div>
-                            <span className="animate-pulse font-medium uppercase">
-                              {(msg.content || 'INICIANDO BUSCA PROFUNDA MY WAY...').replace(
-                                /my way/gi,
-                                'MY WAY',
-                              )}
+                            <span className="animate-pulse font-medium">
+                              {(
+                                msg.content ||
+                                'Iniciando busca profunda MY WAY... Analisando termo técnico.'
+                              ).replace(/my way/gi, 'MY WAY')}
                             </span>
                           </div>
                         </div>

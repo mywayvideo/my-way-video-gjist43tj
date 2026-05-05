@@ -79,10 +79,15 @@ export default function Index() {
                 isExternalLoading={isSearchLoading}
                 className="w-full"
               />
+              {isSearchLoading && results?.is_intermediate && (
+                <div className="mt-4 text-center font-medium animate-pulse text-primary/80">
+                  {results.message}
+                </div>
+              )}
             </div>
           </div>
 
-          {results && !isSearchLoading && !Array.isArray(results) && (
+          {results && !results.is_intermediate && !isSearchLoading && !Array.isArray(results) && (
             <div
               id="ai-response-container"
               className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24"

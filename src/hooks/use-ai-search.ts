@@ -43,8 +43,16 @@ export function useUnifiedSearch() {
 
     console.log('NEW SEARCH FOR:', cleanQuery)
 
+    const phases = [
+      'Iniciando busca profunda MY WAY... Analisando termo técnico.',
+      'Tier 1: Consultando base de dados e estoque imediato...',
+      'Tier 2-4: Refinando busca por modelos e variações técnicas...',
+      'Soberania de Dados: Validando preços e SKUs oficiais...',
+    ]
+
     const intermediateResults = {
-      message: 'Iniciando busca profunda MY WAY... Analisando modelos e disponibilidade...',
+      message: phases[0],
+      content: phases[0],
       confidence_level: 'high',
       referenced_internal_products: [],
       should_show_whatsapp_button: false,
@@ -52,13 +60,6 @@ export function useUnifiedSearch() {
     }
     setResults(intermediateResults)
     setIsLoading(true)
-
-    const phases = [
-      'Iniciando busca profunda MY WAY... Analisando modelos e disponibilidade...',
-      'Tier 1: Analisando termo completo em nossa base...',
-      'Tier 2-4: Refinando por modelo e variações técnicas...',
-      'Soberania de Dados: Sintetizando proposta técnica MY WAY...',
-    ]
 
     let phaseIndex = 0
     const heartbeatInterval = setInterval(() => {
@@ -70,7 +71,7 @@ export function useUnifiedSearch() {
         }
         return { ...prev, message: phases[phaseIndex], content: phases[phaseIndex] }
       })
-    }, 2500)
+    }, 1500)
 
     try {
       let sessionId = sessionStorage.getItem('ai_chat_session_id')
