@@ -81,7 +81,7 @@ export default function Index() {
               />
               {isSearchLoading && results?.is_intermediate && (
                 <div className="mt-4 text-center font-medium animate-pulse text-primary/80">
-                  {results.message}
+                  {(results.message || '').replace(/my way/gi, 'MY WAY')}
                 </div>
               )}
             </div>

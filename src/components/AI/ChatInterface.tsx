@@ -58,7 +58,7 @@ export function ChatInterface() {
       { role: 'user', content: userQuery },
       {
         role: 'assistant',
-        content: 'Iniciando busca profunda MY WAY... Analisando termo técnico.',
+        content: '',
         is_intermediate: true,
       },
     ])
@@ -95,40 +95,6 @@ export function ChatInterface() {
       })
     }
   }
-
-  useEffect(() => {
-    if (results?.is_intermediate && results?.message) {
-      setMessages((prev) => {
-        const lastMsg = prev[prev.length - 1]
-        if (lastMsg && lastMsg.role === 'assistant' && lastMsg.is_intermediate) {
-          if (lastMsg.content === results.message) return prev
-          const newMessages = [...prev]
-          newMessages[newMessages.length - 1] = {
-            ...lastMsg,
-            content: results.message,
-          }
-
-          setTimeout(() => {
-            const containers = document.querySelectorAll('#ai-response-container')
-            const container = containers[containers.length - 1]
-            if (container) {
-              container.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-          }, 50)
-
-          return newMessages
-        }
-        return [
-          ...prev,
-          {
-            role: 'assistant',
-            content: results.message,
-            is_intermediate: true,
-          },
-        ]
-      })
-    }
-  }, [results?.is_intermediate, results?.message])
 
   return (
     <Card
@@ -239,12 +205,6 @@ export function ChatInterface() {
                                 style={{ animationDelay: '300ms' }}
                               />
                             </div>
-                            <span className="animate-pulse font-medium">
-                              {(
-                                msg.content ||
-                                'Iniciando busca profunda MY WAY... Analisando termo técnico.'
-                              ).replace(/my way/gi, 'MY WAY')}
-                            </span>
                           </div>
                         </div>
                       ) : msg.role === 'assistant' ? (
@@ -282,45 +242,52 @@ export function ChatInterface() {
           theme === 'professional-dark' ? 'bg-slate-900 border-slate-800' : 'bg-card/50',
         )}
       >
-        <form onSubmit={handleSubmit} className="flex w-full space-x-2">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquise por câmeras, lentes, iluminação..."
-            disabled={isLoading}
-            className={cn(
-              'flex-1 focus-visible:ring-primary/30 h-12 px-4 rounded-xl shadow-sm',
-              theme === 'professional-dark'
-                ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-400'
-                : 'bg-background border-muted-foreground/20',
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={!query.trim() || isLoading}
-            size="icon"
-            className={cn(
-              'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
-              'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6]',
-              'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
-              isLoading && 'animate-pulse',
-            )}
-            style={{ backgroundImage: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-white" color="white" />
-            ) : (
-              <>
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <Search
-                  className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform text-white"
-                  color="white"
-                  strokeWidth={2.5}
-                />
-              </>
-            )}
-          </Button>
-        </form>
+        <div className="flex flex-col w-full space-y-3">
+          <form onSubmit={handleSubmit} className="flex w-full space-x-2">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Pesquise por câmeras, lentes, iluminação..."
+              disabled={isLoading}
+              className={cn(
+                'flex-1 focus-visible:ring-primary/30 h-12 px-4 rounded-xl shadow-sm',
+                theme === 'professional-dark'
+                  ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-400'
+                  : 'bg-background border-muted-foreground/20',
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={!query.trim() || isLoading}
+              size="icon"
+              className={cn(
+                'h-12 w-12 rounded-xl transition-all duration-500 shadow-md flex-shrink-0 relative overflow-hidden group',
+                'bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6]',
+                'text-white hover:shadow-lg hover:scale-105 border-0 disabled:opacity-90',
+                isLoading && 'animate-pulse',
+              )}
+              style={{ backgroundImage: 'linear-gradient(to right, #3b82f6, #8b5cf6)' }}
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin text-white" color="white" />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                  <Search
+                    className="w-5 h-5 relative z-10 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform text-white"
+                    color="white"
+                    strokeWidth={2.5}
+                  />
+                </>
+              )}
+            </Button>
+          </form>
+          {isLoading && results?.is_intermediate && (
+            <div className="text-center font-medium animate-pulse text-primary/80 text-sm">
+              {(results.message || '').replace(/my way/gi, 'MY WAY')}
+            </div>
+          )}
+        </div>
       </CardFooter>
     </Card>
   )
