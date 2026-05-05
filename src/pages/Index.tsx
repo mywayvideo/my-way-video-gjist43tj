@@ -81,7 +81,7 @@ export default function Index() {
               />
 
               {isSearchLoading && (
-                <div className="absolute top-[80px] sm:top-[88px] w-[95%] max-w-3xl pt-8 pb-4 px-6 bg-background/95 backdrop-blur-xl border border-white/10 rounded-b-3xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
+                <div className="relative -mt-6 pt-10 pb-4 w-[95%] max-w-3xl px-6 bg-background/95 backdrop-blur-xl border border-white/10 rounded-b-3xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
                   <div className="flex items-center justify-center gap-3">
                     <div className="flex space-x-1.5">
                       <div
