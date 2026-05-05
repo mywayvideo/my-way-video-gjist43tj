@@ -16,19 +16,13 @@ export function ResponseFormatter({
   products,
   stock,
   referenced_internal_products,
-  nabData,
-  intel,
 }: ResponseFormatterProps) {
   let finalProducts = products || []
 
-  // Ensure double-layer filtering is strictly applied here as a final fallback safety net
   if (finalProducts.length === 0 && stock && stock.length > 0) {
     const refs = referenced_internal_products || []
-
-    // Layer 1: Filter by ID
     let filtered = stock.filter((p: any) => refs.includes(p.id))
 
-    // Layer 2: Fallback to text matching
     if (filtered.length === 0 && content) {
       const lowerContent = content.toLowerCase()
       filtered = stock.filter((p: any) => {
@@ -37,46 +31,144 @@ export function ResponseFormatter({
         return nameMatch || modelMatch
       })
     }
-
     finalProducts = filtered
   }
 
-  // Deduplicate
   finalProducts = finalProducts.filter(
     (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
   )
 
-  return (
-    <div className="space-y-6">
-      {content && (
-        <div className="w-full overflow-x-auto">
+  const renderContentWithTables = (text: string) => {
+    if (!text) return null
+
+    const lines = text.split('\n')
+    const blocks: React.ReactNode[] = []
+    let currentText: string[] = []
+    let inCodeBlock = false
+    let inTable = false
+    let tableLines: string[] = []
+
+    const flushText = () => {
+      if (currentText.length > 0) {
+        blocks.push(
           <ReactMarkdown
+            key={`text-${blocks.length}`}
             className="prose prose-invert max-w-none text-white/90 [&_p]:whitespace-pre-wrap [&_li]:whitespace-normal"
-            components={{
-              table: ({ node: _node, ...props }: any) => (
-                <div className="w-full max-w-full overflow-x-auto my-6 border border-white/10 rounded-lg shadow-sm bg-black/20">
-                  <table
-                    className="w-full text-sm text-left border-collapse"
-                    style={{ minWidth: 'max-content' }}
-                    {...props}
-                  />
-                </div>
-              ),
-              th: ({ node: _node, ...props }: any) => (
-                <th
-                  className="px-6 py-4 bg-white/5 font-semibold text-white border-b border-white/10 whitespace-nowrap"
-                  {...props}
-                />
-              ),
-              td: ({ node: _node, ...props }: any) => (
-                <td className="px-6 py-4 border-b border-white/10 text-white/80" {...props} />
-              ),
-            }}
           >
-            {content}
-          </ReactMarkdown>
+            {currentText.join('\n')}
+          </ReactMarkdown>,
+        )
+        currentText = []
+      }
+    }
+
+    const renderTable = (tLines: string[], key: number) => {
+      if (tLines.length < 2) return null
+
+      const parseRow = (row: string) => {
+        const clean = row.trim()
+        const inner = clean.replace(/^\|/, '').replace(/\|$/, '')
+        return inner.split('|').map((c) => c.trim())
+      }
+
+      const headers = parseRow(tLines[0])
+      // tLines[1] is the separator
+      const rows = tLines.slice(2).map(parseRow)
+
+      return (
+        <div
+          key={`table-${key}`}
+          className="w-full max-w-full overflow-x-auto my-6 border border-white/10 rounded-xl shadow-lg bg-black/40 backdrop-blur-sm"
+        >
+          <table
+            className="w-full text-sm text-left border-collapse"
+            style={{ minWidth: 'max-content' }}
+          >
+            <thead>
+              <tr className="bg-white/5">
+                {headers.map((h, i) => (
+                  <th
+                    key={i}
+                    className="px-6 py-4 font-semibold text-primary border-b border-white/10 whitespace-nowrap"
+                  >
+                    <ReactMarkdown components={{ p: ({ children }) => <>{children}</> }}>
+                      {h}
+                    </ReactMarkdown>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rIdx) => (
+                <tr
+                  key={rIdx}
+                  className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                >
+                  {row.map((cell, cIdx) => (
+                    <td key={cIdx} className="px-6 py-4 text-white/80 whitespace-nowrap">
+                      <ReactMarkdown components={{ p: ({ children }) => <>{children}</> }}>
+                        {cell}
+                      </ReactMarkdown>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      )
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+
+      if (line.trim().startsWith('```')) {
+        inCodeBlock = !inCodeBlock
+        currentText.push(line)
+        continue
+      }
+
+      if (inCodeBlock) {
+        currentText.push(line)
+        continue
+      }
+
+      const isTableLine = line.trim().startsWith('|') && line.trim().split('|').length > 2
+
+      if (isTableLine) {
+        if (!inTable) {
+          const nextLine = lines[i + 1]
+          if (nextLine && nextLine.trim().startsWith('|') && nextLine.includes('---')) {
+            flushText()
+            inTable = true
+            tableLines.push(line)
+          } else {
+            currentText.push(line)
+          }
+        } else {
+          tableLines.push(line)
+        }
+      } else {
+        if (inTable) {
+          blocks.push(renderTable(tableLines, blocks.length))
+          tableLines = []
+          inTable = false
+        }
+        currentText.push(line)
+      }
+    }
+
+    if (inTable) {
+      blocks.push(renderTable(tableLines, blocks.length))
+    }
+    flushText()
+
+    return <div className="space-y-4">{blocks}</div>
+  }
+
+  return (
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
+      {content && <div className="w-full max-w-full">{renderContentWithTables(content)}</div>}
 
       {finalProducts && finalProducts.length > 0 && (
         <div className="mt-8 animate-fade-in-up">

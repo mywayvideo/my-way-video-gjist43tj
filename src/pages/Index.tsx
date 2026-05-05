@@ -49,7 +49,7 @@ export default function Index() {
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
-        <div className="text-center space-y-6 z-10 w-full max-w-2xl mx-auto animate-fade-in-up">
+        <div className="text-center space-y-6 z-10 w-full max-w-5xl mx-auto animate-fade-in-up">
           {results?.has_nab_intelligence && (
             <Badge
               variant="destructive"
@@ -73,7 +73,7 @@ export default function Index() {
             className="pt-8 w-full flex flex-col items-center animate-fade-in relative"
             style={{ animationDelay: '200ms' }}
           >
-            <div className="w-full max-w-3xl z-20 flex flex-col items-center relative">
+            <div className="w-full max-w-4xl z-20 flex flex-col items-center relative">
               <AIPrompt
                 onSearch={handleSearch}
                 isExternalLoading={isSearchLoading}
@@ -81,7 +81,7 @@ export default function Index() {
               />
 
               {isSearchLoading && (
-                <div className="absolute top-[72px] sm:top-[80px] w-[95%] max-w-[700px] pt-8 pb-4 px-6 bg-background/95 backdrop-blur-xl border border-white/10 rounded-b-3xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
+                <div className="absolute top-[80px] sm:top-[88px] w-[95%] max-w-3xl pt-8 pb-4 px-6 bg-background/95 backdrop-blur-xl border border-white/10 rounded-b-3xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
                   <div className="flex items-center justify-center gap-3">
                     <div className="flex space-x-1.5">
                       <div
