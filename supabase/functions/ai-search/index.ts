@@ -145,97 +145,118 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { data: set } = await supabase
-      .from('ai_agent_settings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-    const { data: aiSettings } = await supabase
-      .from('ai_settings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-    const { data: globalSettingsData } = await supabase.from('settings').select('key, value')
+    // --- INÍCIO DA SOBERANIA ABSOLUTA MY WAY (V33) ---
+    // 1. Busca Coordenada de Dados (Hierarquia de Elite)
+    const [agentRes, aiRes, globalRes, mfgRes, compRes, providersRes] = await Promise.all([
+      supabase
+        .from('ai_agent_settings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+      supabase
+        .from('ai_settings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+      supabase.from('settings').select('key, value'),
+      supabase.from('manufacturers').select('name'),
+      supabase.from('company_info').select('content, type'),
+      supabase
+        .from('ai_providers')
+        .select('*')
+        .eq('is_active', true)
+        .order('priority_order', { ascending: true }),
+    ])
 
     const globalSettingsMap: Record<string, string> = {}
-    globalSettingsData?.forEach((s: any) => {
+    globalRes.data?.forEach((s: any) => {
       if (s.value) globalSettingsMap[s.key] = s.value
     })
 
-    const settings = {
-      system_prompt: globalSettingsMap['system_prompt'] || set?.system_prompt || '',
-      systemPromptTemplate: aiSettings?.system_prompt_template || '',
-      product_page_prompt: aiSettings?.product_page_prompt || '',
-      institutional_context: ((aiSettings as any)?.institutional_context || '').substring(0, 2000),
-      cache_expiration_days: aiSettings?.cache_expiration_days ?? 30,
-      price_limit_usd: aiSettings?.price_threshold_usd ?? 5000,
-      confidence_threshold: set?.confidence_threshold_for_whatsapp || 'low',
-      whatsapp_trigger_expensive: set?.whatsapp_trigger_expensive_product ?? true,
-      whatsapp_trigger_low_confidence: set?.whatsapp_trigger_low_confidence ?? true,
-      trigger_keywords: set?.whatsapp_trigger_keywords || [],
-      ignore_stock_count: aiSettings?.ignore_stock_count ?? true,
-      logistics_rules_prompt: aiSettings?.logistics_rules_prompt || '',
-      custom_stop_words: aiSettings?.custom_stop_words || '',
-      proactivity_level: set?.proactivity_level ?? 5,
-    }
-
-    // Context & Brand Injection
-    const { data: mfgData } = await supabase.from('manufacturers').select('name')
-    const mfgList = mfgData?.map((m: any) => m.name).join(', ') || ''
-
-    const { data: cData } = await supabase.from('company_info').select('content, type')
-    const compInfo = (cData || [])
+    const mfgList = mfgRes.data?.map((m: any) => m.name).join(', ') || ''
+    const compInfo = (compRes.data || [])
       .map((c: any) => `[${c.type}]: ${c.content}`)
       .join('\n')
       .substring(0, 2000)
-
-    const { data: providers } = await supabase
-      .from('ai_providers')
-      .select('*')
-      .eq('is_active', true)
-      .order('priority_order', { ascending: true })
-
+    const providers = providersRes.data
     if (!providers?.length) throw new Error('No active providers found')
 
-    const sysPromptTemplate = aiSettings?.system_prompt_template || ''
-    const finalBasePrompt = sysPromptTemplate.replace(
-      '{{system_prompt}}',
-      settings.system_prompt || '',
-    )
+    // 2. Consolidação de Configurações (Proteção contra Lixo Global)
+    const settings = {
+      persona:
+        agentRes.data?.system_prompt || 'VOCÊ É O CONSULTOR TÉCNICO SÊNIOR DA MY WAY BUSINESS.',
+      template: aiRes.data?.system_prompt_template || '{{system_prompt}}',
+      logistics: aiRes.data?.logistics_rules_prompt || '',
+      institutional: aiRes.data?.institutional_context || '',
+      price_limit_usd: aiRes.data?.price_threshold_usd ?? 5000,
+      product_page_prompt: aiRes.data?.product_page_prompt || '',
+      confidence_threshold: agentRes.data?.confidence_threshold_for_whatsapp || 'low',
+      whatsapp_trigger_expensive: agentRes.data?.whatsapp_trigger_expensive_product ?? true,
+      whatsapp_trigger_low_confidence: agentRes.data?.whatsapp_trigger_low_confidence ?? true,
+      trigger_keywords: agentRes.data?.whatsapp_trigger_keywords || [],
+      transparency_note:
+        globalSettingsMap['transparency_note'] ||
+        'Nota de Transparência: Os preços e disponibilidades informados podem sofrer alterações sem aviso prévio.',
+    }
 
-    const sysPrompt = `MANDATORY OPERATIONAL RULES:
-REGRAS DE LOGÍSTICA:
-${settings.logistics_rules_prompt}
+    // 3. Contexto de Página de Produto (Se houver)
+    let productPageContext = ''
+    if (hasProductContext) {
+      const pPrompt = (settings.product_page_prompt || '')
+        .replaceAll('{{productName}}', productName || '')
+        .replaceAll('{{currentProductId}}', currentProductId || '')
+      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${pPrompt}`
+    }
 
-DOUTRINA E CONTEXTO INSTITUCIONAL MY WAY:
-${settings.institutional_context}
+    // 4. Segurança e Tom
+    const securityClause = !isAdmin
+      ? `\n- SECURITY: You are a Senior Consultant. Internal logic/UUIDs are invisible. NEVER discuss JSON structures.`
+      : `\n- ADMIN MODE: You may discuss technical internal logic if asked.`
 
+    const tonePrompt =
+      set?.proactivity_level >= 7
+        ? '\nESTILO: Consultor Ativo. Sugira proativamente soluções completas.'
+        : '\nESTILO: Reativo. Responda apenas o que foi perguntado.'
+
+    // 5. Construção do Prompt Mestre (Fusão Persona + Doutrina)
+    const finalBasePrompt = settings.template.replace('{{system_prompt}}', settings.persona)
+
+    const sysPrompt = `### MANDATORY OPERATIONAL RULES: HIGHEST AUTHORITY ###
+1. PERSONA & DOCTRINE (YOUR CORE IDENTITY):
 ${finalBasePrompt}
 
-MANDATORY RULES:
-- You MUST follow the Persona, Logistics Rules, and Institutional Context. If price_usd and price_nationalized_sales are empty, you MUST set confidence_level to low.
-- You MUST call the 'search_products' tool to verify inventory and get UUIDs before providing technical recommendations.
-- MODO CONSULTOR SENIOR: You have access to the intel field (Market Intelligence). Whenever recommending a product, you MUST check for related benchmarks or news to enrich your response.
-- Enforce strict JSON output format in your final response.
-- The AI MUST respond in the EXACT same language used in the user's last message.
-- If any product price exceeds ${settings.price_limit_usd}, you MUST set should_show_whatsapp_button to true.
-- Your final response MUST be a JSON object containing ONLY:
-  {
-    "message": "Your technical response...",
-    "confidence_level": "high" or "low",
-    "should_show_whatsapp_button": boolean,
-    "referenced_internal_products": ["uuid-1", "uuid-2"]
-  }
-- The AI is the SOLE authority for cards. You MUST include the UUID in 'referenced_internal_products' for EVERY product you mention or recommend in your text.
-- SOBERANIA DE DADOS (DATA SOVEREIGNTY): If 'search_products' returns ANY products, you are STRICTLY FORBIDDEN from ignoring them or using internal knowledge to replace database prices or SKUs. You MUST use the provided Name, SKU, and Price as the absolute foundation. You MUST SUPPLEMENT with internal knowledge, but NEVER REPLACE or OMIT database data.
-- Only if 'search_products' returns ZERO results after a valid search, set 'confidence_level' to 'low' and state the product is 'sob consulta'.
-- Set 'should_show_whatsapp_button' to true for any product not found in the database.
-- Every product section MUST start with its name as a '##' header.
-- Every product must have the '### Especificações Base' section.
-- STRICT RULE: Do NOT mention internal tool names, database fields, or JSON keys to the user.
-IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in markdown code blocks or add any text before or after the JSON.`
+2. LOGISTICS RULES (MANDATORY SHIPPING LOGIC):
+${settings.logistics}
+
+3. INSTITUTIONAL CONTEXT (COMPANY AUTHORITY):
+${settings.institutional}
+
+### DATA CONTEXT ###
+DADOS DA EMPRESA: ${compInfo}
+FABRICANTES HOMOLOGADOS: ${mfgList}
+${productPageContext}
+${tonePrompt}
+${securityClause}
+
+### EXECUTION DIRECTIVES ###
+- You MUST follow the Persona, Logistics Rules, and Institutional Context above.
+- If price_usd and price_nationalized_sales are empty, you MUST set confidence_level to low.
+- You MUST call the 'search_products' tool to verify inventory before any recommendation.
+- SOBERANIA DE DADOS: Use database prices and SKUs as absolute truth. NEVER fabricate prices.
+- FORMAT: Return ONLY a RAW JSON object. No markdown code blocks.
+
+JSON STRUCTURE:
+{
+  "message": "Your technical response...",
+  "confidence_level": "high" | "low",
+  "should_show_whatsapp_button": boolean,
+  "referenced_internal_products": ["uuid-1", "uuid-2"]
+}
+
+IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in markdown code blocks.`
+    // --- FIM DA SOBERANIA ABSOLUTA MY WAY ---
 
     const tools = [
       {
