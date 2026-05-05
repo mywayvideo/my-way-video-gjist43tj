@@ -51,24 +51,25 @@ export function ResponseFormatter({
       {content && (
         <div className="w-full overflow-x-auto">
           <ReactMarkdown
-            className="prose prose-invert max-w-none whitespace-pre-wrap text-white/90"
+            className="prose prose-invert max-w-none text-white/90 [&_p]:whitespace-pre-wrap [&_li]:whitespace-normal"
             components={{
               table: ({ node: _node, ...props }: any) => (
-                <div className="w-full overflow-x-auto my-6 border border-white/10 rounded-lg">
+                <div className="w-full max-w-full overflow-x-auto my-6 border border-white/10 rounded-lg shadow-sm bg-black/20">
                   <table
-                    className="w-full min-w-full text-sm text-left border-collapse"
+                    className="w-full text-sm text-left border-collapse"
+                    style={{ minWidth: 'max-content' }}
                     {...props}
                   />
                 </div>
               ),
               th: ({ node: _node, ...props }: any) => (
                 <th
-                  className="px-4 py-3 bg-white/5 font-semibold text-white/90 border-b border-white/10 whitespace-nowrap"
+                  className="px-6 py-4 bg-white/5 font-semibold text-white border-b border-white/10 whitespace-nowrap"
                   {...props}
                 />
               ),
               td: ({ node: _node, ...props }: any) => (
-                <td className="px-4 py-3 border-b border-white/10 whitespace-nowrap" {...props} />
+                <td className="px-6 py-4 border-b border-white/10 text-white/80" {...props} />
               ),
             }}
           >

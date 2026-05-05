@@ -234,7 +234,7 @@ export function AIPrompt({
 
   return (
     <div className={cn('w-full flex flex-col items-center justify-center', className)}>
-      <form onSubmit={handleFormSubmit} className="w-full max-w-3xl relative group">
+      <form onSubmit={handleFormSubmit} className="w-full max-w-3xl relative group z-20">
         <div className="absolute -inset-1 bg-gradient-to-r from-white/10 to-white/5 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-500"></div>
         <div className="relative flex flex-col sm:flex-row items-center bg-black/60 border border-white/20 rounded-[2rem] shadow-[0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-2 sm:p-3 overflow-hidden focus-within:border-white/50 focus-within:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-300">
           <div className="hidden sm:flex items-center justify-center pl-4 pr-2 text-white/50">
@@ -307,7 +307,7 @@ export function AIPrompt({
       </form>
 
       {(isLoading || isExternalLoading || isSettingsLoading) && query && (
-        <div className="w-full max-w-3xl mt-8 flex flex-col gap-6 animate-fade-in-up">
+        <div className="w-full max-w-3xl mt-24 sm:mt-28 flex flex-col gap-6 animate-fade-in-up relative z-0">
           <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
               <Skeleton className="w-10 h-10 rounded-full" />

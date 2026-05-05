@@ -70,36 +70,40 @@ export default function Index() {
           </p>
 
           <div
-            className="pt-8 w-full flex flex-col items-center animate-fade-in [&_textarea]:min-h-[160px] relative"
+            className="pt-8 w-full flex flex-col items-center animate-fade-in relative"
             style={{ animationDelay: '200ms' }}
           >
-            <div className="w-full z-20">
-              <AIPrompt onSearch={handleSearch} isExternalLoading={isSearchLoading} />
-            </div>
+            <div className="w-full max-w-3xl z-20 flex flex-col items-center relative">
+              <AIPrompt
+                onSearch={handleSearch}
+                isExternalLoading={isSearchLoading}
+                className="w-full"
+              />
 
-            {isSearchLoading && (
-              <div className="w-[95%] mx-auto -mt-2 pt-6 pb-4 px-6 bg-background/80 backdrop-blur-xl border border-white/10 rounded-b-2xl shadow-2xl z-10 animate-fade-in-down">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="flex space-x-1.5">
-                    <div
-                      className="w-2 h-2 bg-orange-500/60 rounded-full animate-bounce"
-                      style={{ animationDelay: '0ms' }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-orange-500/80 rounded-full animate-bounce"
-                      style={{ animationDelay: '150ms' }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"
-                      style={{ animationDelay: '300ms' }}
-                    />
+              {isSearchLoading && (
+                <div className="absolute top-[72px] sm:top-[80px] w-[95%] max-w-[700px] pt-8 pb-4 px-6 bg-background/95 backdrop-blur-xl border border-white/10 rounded-b-3xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="flex space-x-1.5">
+                      <div
+                        className="w-2 h-2 bg-orange-500/60 rounded-full animate-bounce"
+                        style={{ animationDelay: '0ms' }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-orange-500/80 rounded-full animate-bounce"
+                        style={{ animationDelay: '150ms' }}
+                      />
+                      <div
+                        className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"
+                        style={{ animationDelay: '300ms' }}
+                      />
+                    </div>
+                    <p className="text-center text-orange-500 text-sm md:text-base font-medium animate-pulse">
+                      PROCESSANDO BUSCA PROFUNDA MY WAY...
+                    </p>
                   </div>
-                  <p className="text-center text-orange-500 text-sm md:text-base font-medium animate-pulse">
-                    PROCESSANDO BUSCA PROFUNDA MY WAY...
-                  </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {results && !isSearchLoading && !Array.isArray(results) && (
