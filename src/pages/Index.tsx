@@ -82,48 +82,30 @@ export default function Index() {
             </div>
           </div>
 
-          {results && (!results.is_intermediate || isSearchLoading) && !Array.isArray(results) && (
+          {results && !results.is_intermediate && !Array.isArray(results) && (
             <div
               id="ai-response-container"
               className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24"
             >
-              {isSearchLoading && results.is_intermediate ? (
-                <div className="flex flex-col space-y-4">
-                  <div className="flex space-x-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce"></div>
-                  </div>
-                  <div className="text-primary/80 font-medium animate-pulse">
-                    {(results.message || '').replace(/my way/gi, 'MY WAY')}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <ResponseFormatter
-                    content={(results.content || results.message || '').replace(
-                      /my way/gi,
-                      'MY WAY',
-                    )}
-                    products={results.products}
-                    stock={results.stock}
-                    referenced_internal_products={results.referenced_internal_products}
-                    nabData={results.nabData || results.nab_data}
-                    intel={results.intel}
-                  />
+              <ResponseFormatter
+                content={(results.content || results.message || '').replace(/my way/gi, 'MY WAY')}
+                products={results.products}
+                stock={results.stock}
+                referenced_internal_products={results.referenced_internal_products}
+                nabData={results.nabData || results.nab_data}
+                intel={results.intel}
+              />
 
-                  {results.should_show_whatsapp_button && (
-                    <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4 animate-fade-in-up delay-200">
-                      <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
-                      <Button
-                        className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg shadow-green-900/20"
-                        onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
-                      >
-                        Falar com Especialista
-                      </Button>
-                    </div>
-                  )}
-                </>
+              {results.should_show_whatsapp_button && (
+                <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4 animate-fade-in-up delay-200">
+                  <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg shadow-green-900/20"
+                    onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                  >
+                    Falar com Especialista
+                  </Button>
+                </div>
               )}
             </div>
           )}

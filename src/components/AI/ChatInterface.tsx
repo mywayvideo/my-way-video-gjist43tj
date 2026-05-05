@@ -190,7 +190,7 @@ export function ChatInterface() {
                     <div className="leading-relaxed space-y-2 break-words w-full">
                       {msg.role === 'assistant' && msg.is_intermediate ? (
                         <div className="flex flex-col space-y-4 w-full">
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 mb-2">
                             <div className="flex space-x-1.5 px-2 py-1">
                               <div
                                 className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
@@ -206,6 +206,11 @@ export function ChatInterface() {
                               />
                             </div>
                           </div>
+                          {results?.is_intermediate && results.message && (
+                            <div className="text-primary/80 font-medium animate-pulse text-sm">
+                              {results.message.replace(/my way/gi, 'MY WAY')}
+                            </div>
+                          )}
                         </div>
                       ) : msg.role === 'assistant' ? (
                         <ResponseFormatter content={msg.content} products={msg.products} />
@@ -282,11 +287,6 @@ export function ChatInterface() {
               )}
             </Button>
           </form>
-          {isLoading && results?.is_intermediate && (
-            <div className="text-center font-medium animate-pulse text-primary/80 text-sm">
-              {(results.message || '').replace(/my way/gi, 'MY WAY')}
-            </div>
-          )}
         </div>
       </CardFooter>
     </Card>
