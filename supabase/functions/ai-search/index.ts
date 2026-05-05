@@ -145,8 +145,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // --- INÍCIO DA SOBERANIA ABSOLUTA MY WAY (V33) ---
-    // 1. Busca Coordenada de Dados (Hierarquia de Elite)
+    // --- INÍCIO DA SOBERANIA ABSOLUTA MY WAY (V35) ---
+    // 1. Busca Coordenada de Dados (Hierarquia de Elite - Sem Fallbacks Hardcoded)
     const [agentRes, aiRes, globalRes, mfgRes, compRes, providersRes] = await Promise.all([
       supabase
         .from('ai_agent_settings')
@@ -183,45 +183,47 @@ Deno.serve(async (req: Request) => {
     const providers = providersRes.data
     if (!providers?.length) throw new Error('No active providers found')
 
-    // 2. Consolidação de Configurações (Proteção contra Lixo Global)
+    // 2. Consolidação de Configurações (Fidelidade Total ao Painel Admin)
     const settings = {
-      persona:
-        agentRes.data?.system_prompt || 'VOCÊ É O CONSULTOR TÉCNICO SÊNIOR DA MY WAY BUSINESS.',
-      template: aiRes.data?.system_prompt_template || '{{system_prompt}}',
-      logistics: aiRes.data?.logistics_rules_prompt || '',
-      institutional: aiRes.data?.institutional_context || '',
-      price_limit_usd: aiRes.data?.price_threshold_usd ?? 5000,
-      product_page_prompt: aiRes.data?.product_page_prompt || '',
-      confidence_threshold: agentRes.data?.confidence_threshold_for_whatsapp || 'low',
-      whatsapp_trigger_expensive: agentRes.data?.whatsapp_trigger_expensive_product ?? true,
-      whatsapp_trigger_low_confidence: agentRes.data?.whatsapp_trigger_low_confidence ?? true,
-      trigger_keywords: agentRes.data?.whatsapp_trigger_keywords || [],
-      transparency_note:
-        globalSettingsMap['transparency_note'] ||
-        'Nota de Transparência: Os preços e disponibilidades informados podem sofrer alterações sem aviso prévio.',
+      persona: agentRes.data?.system_prompt,
+      template: aiRes.data?.system_prompt_template,
+      logistics: aiRes.data?.logistics_rules_prompt,
+      institutional: aiRes.data?.institutional_context,
+      priceLimit: aiRes.data?.price_threshold_usd,
+      productPagePrompt: aiRes.data?.product_page_prompt,
+      proactivity: agentRes.data?.proactivity_level,
+      stopWords: aiRes.data?.custom_stop_words,
+      confidenceThreshold: agentRes.data?.confidence_threshold_for_whatsapp,
+      triggerExpensive: agentRes.data?.whatsapp_trigger_expensive_product,
+      triggerLowConf: agentRes.data?.whatsapp_trigger_low_confidence,
+      triggerKeywords: agentRes.data?.whatsapp_trigger_keywords || [],
+      transparencyNote: globalSettingsMap['transparency_note'],
     }
 
-    // 3. Contexto de Página de Produto (Se houver)
+    // 3. Contexto de Página de Produto
     let productPageContext = ''
     if (hasProductContext) {
-      const pPrompt = (settings.product_page_prompt || '')
+      const pPrompt = (settings.productPagePrompt || '')
         .replaceAll('{{productName}}', productName || '')
         .replaceAll('{{currentProductId}}', currentProductId || '')
       productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${pPrompt}`
     }
 
-    // 4. Segurança e Tom
+    // 4. Segurança e Tom (Baseado na Seção J do Admin)
     const securityClause = !isAdmin
-      ? `\n- SECURITY: You are a Senior Consultant. Internal logic/UUIDs are invisible. NEVER discuss JSON structures.`
+      ? `\n- SECURITY: You are a Senior Consultant. Internal logic/UUIDs/JSON keys are INVISIBLE. NEVER discuss them.`
       : `\n- ADMIN MODE: You may discuss technical internal logic if asked.`
 
     const tonePrompt =
-      set?.proactivity_level >= 7
-        ? '\nESTILO: Consultor Ativo. Sugira proativamente soluções completas.'
-        : '\nESTILO: Reativo. Responda apenas o que foi perguntado.'
+      settings.proactivity >= 7
+        ? `\nESTILO DE RESPOSTA (NÍVEL ${settings.proactivity}): Consultor Ativo e Vendedor. Sugira proativamente soluções completas e produtos complementares.`
+        : `\nESTILO DE RESPOSTA (NÍVEL ${settings.proactivity}): Consultor Reativo. Responda estritamente o que foi perguntado.`
 
     // 5. Construção do Prompt Mestre (Fusão Persona + Doutrina)
-    const finalBasePrompt = settings.template.replace('{{system_prompt}}', settings.persona)
+    // Se a tag {{system_prompt}} não existir, a Persona é colocada no topo por segurança.
+    const finalBasePrompt = settings.template?.includes('{{system_prompt}}')
+      ? settings.template.replace('{{system_prompt}}', settings.persona || '')
+      : `${settings.persona}\n\n${settings.template}`
 
     const sysPrompt = `### MANDATORY OPERATIONAL RULES: HIGHEST AUTHORITY ###
 1. PERSONA & DOCTRINE (YOUR CORE IDENTITY):
@@ -233,9 +235,10 @@ ${settings.logistics}
 3. INSTITUTIONAL CONTEXT (COMPANY AUTHORITY):
 ${settings.institutional}
 
-### DATA CONTEXT ###
+### DATA & BEHAVIOR CONTEXT ###
 DADOS DA EMPRESA: ${compInfo}
 FABRICANTES HOMOLOGADOS: ${mfgList}
+PALAVRAS A IGNORAR: ${settings.stopWords}
 ${productPageContext}
 ${tonePrompt}
 ${securityClause}
@@ -245,6 +248,7 @@ ${securityClause}
 - If price_usd and price_nationalized_sales are empty, you MUST set confidence_level to low.
 - You MUST call the 'search_products' tool to verify inventory before any recommendation.
 - SOBERANIA DE DADOS: Use database prices and SKUs as absolute truth. NEVER fabricate prices.
+- If a product price exceeds ${settings.priceLimit}, set should_show_whatsapp_button to true.
 - FORMAT: Return ONLY a RAW JSON object. No markdown code blocks.
 
 JSON STRUCTURE:
