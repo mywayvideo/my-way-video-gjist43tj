@@ -14,206 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
-import { ProductCard } from '@/components/ProductCard'
-
-const renderMarkdown = (text: string, theme: string = 'light') => {
-  if (!text) return null
-  const parts = text.split(/(```[\s\S]*?```)/g)
-  return parts.map((part, i) => {
-    if (part.startsWith('```') && part.endsWith('```')) {
-      const code = part.slice(3, -3).replace(/^[a-z]+\n/, '')
-      return (
-        <div
-          key={i}
-          className={cn(
-            'my-3 p-4 rounded-xl overflow-x-auto font-mono text-[13px] whitespace-pre-wrap border shadow-inner',
-            theme === 'professional-dark'
-              ? 'bg-slate-900/50 text-slate-200 border-slate-700'
-              : 'bg-black/5 text-foreground/90 border-black/10',
-          )}
-        >
-          {code}
-        </div>
-      )
-    }
-
-    const tableRegex = /(\n(?:\|.*\|\n)+)/g
-    const textBlocks = part.split(tableRegex)
-
-    return textBlocks.map((block, bpIdx) => {
-      if (block.trim().startsWith('|') && block.trim().endsWith('|')) {
-        const rows = block
-          .trim()
-          .split('\n')
-          .map((r) => r.split('|').filter((c) => c.trim() !== ''))
-
-        if (rows.length < 2) return null
-
-        const headerRow = rows[0]
-        const dataRows = rows.slice(1).filter((r) => !r.every((c) => c.trim().match(/^[-:]+$/)))
-
-        return (
-          <div
-            key={`table-${i}-${bpIdx}`}
-            className={cn(
-              'my-4 rounded-xl border-l-4 border-primary shadow-md overflow-x-auto animate-fade-in',
-              theme === 'professional-dark'
-                ? 'bg-slate-900/80 border-slate-800'
-                : 'bg-gray-50 border-gray-200',
-            )}
-          >
-            <table className="w-full text-sm text-left whitespace-nowrap">
-              <thead
-                className={cn(
-                  'text-xs uppercase font-semibold tracking-wider border-b border-border/50',
-                  theme === 'professional-dark'
-                    ? 'bg-slate-800/50 text-slate-400'
-                    : 'bg-gray-100/50 text-gray-500',
-                )}
-              >
-                <tr>
-                  {headerRow.map((cell, cIdx) => {
-                    if (!cell.trim() && cIdx === 0) return null
-                    if (!cell.trim() && cIdx === headerRow.length - 1) return null
-                    return (
-                      <th key={cIdx} className="px-6 py-4">
-                        {cell.trim()}
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {dataRows.map((row, rIdx) => (
-                  <tr
-                    key={rIdx}
-                    className={cn(
-                      'transition-colors',
-                      theme === 'professional-dark'
-                        ? 'text-slate-200 hover:bg-slate-800/50'
-                        : 'text-foreground hover:bg-black/5',
-                    )}
-                  >
-                    {row.map((cell, cIdx) => {
-                      if (!cell.trim() && cIdx === 0 && row.length > 2) return null
-                      if (!cell.trim() && cIdx === row.length - 1 && row.length > 2) return null
-                      return (
-                        <td
-                          key={cIdx}
-                          className={cn(
-                            'px-6 py-3',
-                            cIdx <= 1
-                              ? 'font-medium text-primary'
-                              : 'font-mono text-primary/90 font-medium',
-                          )}
-                        >
-                          {cell.trim()}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      }
-
-      const paragraphs = block.split('\n\n')
-      return paragraphs.map((p, j) => {
-        if (!p.trim()) return null
-
-        const lines = p.split('\n')
-        return (
-          <div key={`${i}-${bpIdx}-${j}`} className={j > 0 ? 'mt-3' : ''}>
-            {lines.map((line, k) => {
-              let content = line
-              let isHeading = false
-              let headingLevel = 0
-
-              if (content.startsWith('### ')) {
-                content = content.replace('### ', '')
-                isHeading = true
-                headingLevel = 3
-              } else if (content.startsWith('## ')) {
-                content = content.replace('## ', '')
-                isHeading = true
-                headingLevel = 2
-              } else if (content.startsWith('# ')) {
-                content = content.replace('# ', '')
-                isHeading = true
-                headingLevel = 1
-              }
-
-              const tokens = content.split(/(\*\*.*?\*\*)/g)
-              const renderedLine: React.ReactNode[] = tokens.map((token, tIdx) => {
-                if (token.startsWith('**') && token.endsWith('**')) {
-                  return (
-                    <strong key={tIdx} className="font-semibold text-foreground">
-                      {token.slice(2, -2)}
-                    </strong>
-                  )
-                }
-
-                const words = token.split(
-                  /(\b\d+(?:[.,]\d+)?\s*(?:MP|fps|kg|Hz|mm|cm|lb|lbs| polegadas|K|p)\b)/gi,
-                )
-                if (words.length > 1) {
-                  return (
-                    <span key={tIdx}>
-                      {words.map((w, wIdx) => {
-                        if (
-                          w.match(
-                            /\b\d+(?:[.,]\d+)?\s*(?:MP|fps|kg|Hz|mm|cm|lb|lbs| polegadas|K|p)\b/i,
-                          )
-                        ) {
-                          return (
-                            <span key={wIdx} className="font-mono text-primary font-medium">
-                              {w}
-                            </span>
-                          )
-                        }
-                        return w
-                      })}
-                    </span>
-                  )
-                }
-
-                return <span key={tIdx}>{token}</span>
-              })
-
-              if (isHeading) {
-                const Element = `h${headingLevel}` as any
-                return (
-                  <Element key={k} className="font-bold text-foreground mt-4 mb-2">
-                    {renderedLine}
-                  </Element>
-                )
-              }
-
-              const isListItem = line.trim().startsWith('- ') || /^\d+\.\s/.test(line.trim())
-              return (
-                <div
-                  key={k}
-                  className={isListItem ? 'ml-4 mb-1 flex items-start' : 'mb-1 leading-relaxed'}
-                >
-                  {isListItem && line.trim().startsWith('- ') && (
-                    <span className="mr-2 mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                  )}
-                  <span className="flex-1">
-                    {isListItem && line.trim().startsWith('- ')
-                      ? renderedLine.slice(1)
-                      : renderedLine}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )
-      })
-    })
-  })
-}
+import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export function ChatInterface() {
   const { search, isLoading, results } = useAiSearch()
@@ -233,8 +34,6 @@ export function ChatInterface() {
 
   const displayConfig = results?.settings?.result_component_config || {}
   const theme = displayConfig.theme || 'light'
-  const colsDesktop = displayConfig.columns_desktop || 3
-  const forceRenderCards = displayConfig.force_render_cards !== false
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -259,7 +58,7 @@ export function ChatInterface() {
       { role: 'user', content: userQuery },
       {
         role: 'assistant',
-        content: 'Iniciando busca profunda MY WAY... Analisando modelos e disponibilidade...',
+        content: 'INICIANDO BUSCA PROFUNDA MY WAY...',
         is_intermediate: true,
       },
     ])
@@ -422,9 +221,9 @@ export function ChatInterface() {
                           : 'bg-muted/50 text-foreground rounded-tl-sm border border-border/50',
                     )}
                   >
-                    <div className="leading-relaxed space-y-2 break-words">
+                    <div className="leading-relaxed space-y-2 break-words w-full">
                       {msg.role === 'assistant' && msg.is_intermediate ? (
-                        <div className="flex flex-col space-y-4">
+                        <div className="flex flex-col space-y-4 w-full">
                           <div className="flex items-center space-x-3">
                             <div className="flex space-x-1.5 px-2 py-1">
                               <div
@@ -440,48 +239,21 @@ export function ChatInterface() {
                                 style={{ animationDelay: '300ms' }}
                               />
                             </div>
-                            <span className="animate-pulse font-medium">
-                              {msg.content.includes('|')
-                                ? 'PROCESSANDO DADOS TÉCNICOS MY WAY...'
-                                : msg.content.replace(/my way/gi, 'MY WAY')}
+                            <span className="animate-pulse font-medium uppercase">
+                              {(msg.content || 'INICIANDO BUSCA PROFUNDA MY WAY...').replace(
+                                /my way/gi,
+                                'MY WAY',
+                              )}
                             </span>
                           </div>
-                          {msg.content.includes('|') && (
-                            <div className="mt-2">
-                              {renderMarkdown(msg.content.replace(/my way/gi, 'MY WAY'), theme)}
-                            </div>
-                          )}
                         </div>
                       ) : msg.role === 'assistant' ? (
-                        renderMarkdown(msg.content.replace(/my way/gi, 'MY WAY'), theme)
+                        <ResponseFormatter content={msg.content} products={msg.products} />
                       ) : (
                         msg.content.replace(/my way/gi, 'MY WAY')
                       )}
                     </div>
                   </div>
-
-                  {msg.role === 'assistant' &&
-                    !msg.is_intermediate &&
-                    msg.products &&
-                    msg.products.length > 0 &&
-                    forceRenderCards && (
-                      <div
-                        className={cn(
-                          'mt-4 w-full grid gap-4',
-                          colsDesktop === 4
-                            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-                            : colsDesktop === 2
-                              ? 'grid-cols-1 md:grid-cols-2'
-                              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
-                        )}
-                      >
-                        {msg.products.map((product: any) => (
-                          <div key={product.id} className="h-full">
-                            <ProductCard product={product} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
                   {msg.role === 'assistant' &&
                     !msg.is_intermediate &&

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { AIPrompt } from '@/components/AI/AIPrompt'
-import { ResponseFormatter } from '@/components/AI/ResponseFormatter'
+import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
@@ -94,8 +94,11 @@ export default function Index() {
                       style={{ animationDelay: '300ms' }}
                     />
                   </div>
-                  <p className="text-center text-muted-foreground text-sm md:text-base font-medium text-orange-500 animate-pulse">
-                    {results?.message || 'INICIANDO BUSCA PROFUNDA MY WAY...'}
+                  <p className="text-center text-muted-foreground text-sm md:text-base font-medium text-orange-500 animate-pulse uppercase">
+                    {(results?.message || 'INICIANDO BUSCA PROFUNDA MY WAY...').replace(
+                      /my way/gi,
+                      'MY WAY',
+                    )}
                   </p>
                 </div>
               </div>
