@@ -79,30 +79,6 @@ export default function Index() {
                 isExternalLoading={isSearchLoading}
                 className="w-full"
               />
-
-              {isSearchLoading && (
-                <div className="w-[95%] max-w-3xl px-6 py-4 mt-4 bg-background/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="flex space-x-1.5">
-                      <div
-                        className="w-2 h-2 bg-orange-500/60 rounded-full animate-bounce"
-                        style={{ animationDelay: '0ms' }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-orange-500/80 rounded-full animate-bounce"
-                        style={{ animationDelay: '150ms' }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"
-                        style={{ animationDelay: '300ms' }}
-                      />
-                    </div>
-                    <p className="text-center text-orange-500 text-sm md:text-base font-medium animate-pulse">
-                      PROCESSANDO BUSCA PROFUNDA MY WAY...
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
