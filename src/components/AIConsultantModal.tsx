@@ -79,13 +79,25 @@ export function AIConsultantModal({
     : ''
 
   const handleWhatsAppClick = async () => {
-    const { data: settings } = await supabase
-      .from('app_settings')
-      .select('setting_value')
-      .eq('setting_key', 'company_whatsapp')
-      .single()
+    let whatsappNumber = '17867161170'
+    try {
+      const fetchSettings = supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'company_whatsapp')
+        .single()
 
-    const whatsappNumber = settings?.setting_value || '17867161170'
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 1500),
+      )
+
+      const response = (await Promise.race([fetchSettings, timeout])) as any
+      if (response && !response.error && response.data?.setting_value) {
+        whatsappNumber = response.data.setting_value
+      }
+    } catch (e) {
+      // Use fallback
+    }
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
@@ -123,10 +135,15 @@ export function AIConsultantModal({
                 <ReactMarkdown>{formattedMessage}</ReactMarkdown>
               </div>
               {results.products &&
-                results.products.filter((p: any) => p.id !== currentProductId).length > 0 && (
+                results.products.filter(
+                  (p: any) => String(p?.id || '').trim() !== String(currentProductId || '').trim(),
+                ).length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
                     {results.products
-                      .filter((p: any) => p.id !== currentProductId)
+                      .filter(
+                        (p: any) =>
+                          String(p?.id || '').trim() !== String(currentProductId || '').trim(),
+                      )
                       .map((product: any) => (
                         <ProductCard key={product.id} product={product} />
                       ))}
