@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import { ProductCard } from '@/components/ProductCard'
+import { cn } from '@/lib/utils'
 
 interface ResponseFormatterProps {
   content: string
@@ -17,166 +18,49 @@ export function ResponseFormatter({
   stock,
   referenced_internal_products,
 }: ResponseFormatterProps) {
+  // SOBERANIA DE DADOS: Só exibimos o que a IA validou explicitamente por ID
   let finalProducts = products || []
 
-  if (finalProducts.length === 0 && stock && stock.length > 0) {
-    const refs = referenced_internal_products || []
-    let filtered = stock.filter((p: any) => refs.includes(p.id))
-
-    if (filtered.length === 0 && content) {
-      const lowerContent = content.toLowerCase()
-      filtered = stock.filter((p: any) => {
-        const nameMatch = p.name && lowerContent.includes(p.name.toLowerCase())
-        const modelMatch = p.sku && lowerContent.includes(p.sku.toLowerCase())
-        return nameMatch || modelMatch
-      })
-    }
-    finalProducts = filtered
+  if (finalProducts.length === 0 && stock && stock.length > 0 && referenced_internal_products) {
+    const refs = referenced_internal_products
+    finalProducts = stock.filter((p: any) => refs.includes(p.id))
   }
 
+  // Remove duplicatas
   finalProducts = finalProducts.filter(
     (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
   )
 
-  const renderContentWithTables = (text: string) => {
-    if (!text) return null
-
-    const lines = text.split('\n')
-    const blocks: React.ReactNode[] = []
-    let currentText: string[] = []
-    let inCodeBlock = false
-    let inTable = false
-    let tableLines: string[] = []
-
-    const flushText = () => {
-      if (currentText.length > 0) {
-        blocks.push(
-          <ReactMarkdown
-            key={`text-${blocks.length}`}
-            className="prose prose-invert max-w-none text-white/90 [&_p]:whitespace-pre-wrap [&_li]:whitespace-normal"
-          >
-            {currentText.join('\n')}
-          </ReactMarkdown>,
-        )
-        currentText = []
-      }
-    }
-
-    const renderTable = (tLines: string[], key: number) => {
-      if (tLines.length < 2) return null
-
-      const parseRow = (row: string) => {
-        const clean = row.trim()
-        const inner = clean.replace(/^\|/, '').replace(/\|$/, '')
-        return inner.split('|').map((c) => c.trim())
-      }
-
-      const headers = parseRow(tLines[0])
-      // tLines[1] is the separator
-      const rows = tLines.slice(2).map(parseRow)
-
-      return (
-        <div
-          key={`table-${key}`}
-          className="w-full max-w-full overflow-x-auto my-6 border border-white/10 rounded-xl shadow-lg bg-black/40 backdrop-blur-sm"
-        >
-          <table
-            className="w-full text-sm text-left border-collapse"
-            style={{ minWidth: 'max-content' }}
-          >
-            <thead>
-              <tr className="bg-white/5">
-                {headers.map((h, i) => (
-                  <th
-                    key={i}
-                    className="px-6 py-4 font-semibold text-primary border-b border-white/10 whitespace-nowrap"
-                  >
-                    <ReactMarkdown components={{ p: ({ children }) => <>{children}</> }}>
-                      {h}
-                    </ReactMarkdown>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, rIdx) => (
-                <tr
-                  key={rIdx}
-                  className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
-                >
-                  {row.map((cell, cIdx) => (
-                    <td key={cIdx} className="px-6 py-4 text-white/80 whitespace-nowrap">
-                      <ReactMarkdown components={{ p: ({ children }) => <>{children}</> }}>
-                        {cell}
-                      </ReactMarkdown>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-
-      if (line.trim().startsWith('```')) {
-        inCodeBlock = !inCodeBlock
-        currentText.push(line)
-        continue
-      }
-
-      if (inCodeBlock) {
-        currentText.push(line)
-        continue
-      }
-
-      const isTableLine = line.trim().startsWith('|') && line.trim().split('|').length > 2
-
-      if (isTableLine) {
-        if (!inTable) {
-          const nextLine = lines[i + 1]
-          if (nextLine && nextLine.trim().startsWith('|') && nextLine.includes('---')) {
-            flushText()
-            inTable = true
-            tableLines.push(line)
-          } else {
-            currentText.push(line)
-          }
-        } else {
-          tableLines.push(line)
-        }
-      } else {
-        if (inTable) {
-          blocks.push(renderTable(tableLines, blocks.length))
-          tableLines = []
-          inTable = false
-        }
-        currentText.push(line)
-      }
-    }
-
-    if (inTable) {
-      blocks.push(renderTable(tableLines, blocks.length))
-    }
-    flushText()
-
-    return <div className="space-y-4">{blocks}</div>
-  }
-
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
-      {content && <div className="w-full max-w-full">{renderContentWithTables(content)}</div>}
+    <div className="space-y-8 w-full max-w-full overflow-hidden">
+      {/* RENDERIZAÇÃO SHOW: Estilo unificado com o Modal */}
+      {content && (
+        <div className="prose prose-invert max-w-none text-lg leading-relaxed text-white/90">
+          <ReactMarkdown
+            components={{
+              // Ajuste fino para bullets: remove margens excessivas que causam o pulo de linha
+              li: ({ children }) => <li className="mb-1 leading-normal">{children}</li>,
+              ul: ({ children }) => <ul className="list-disc ml-6 space-y-2 my-4">{children}</ul>,
+              h2: ({ children }) => (
+                <h2 className="text-2xl font-bold mt-8 mb-4 text-white">{children}</h2>
+              ),
+              p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      )}
 
+      {/* GRID DE PRODUTOS: Apenas produtos de elite validados */}
       {finalProducts && finalProducts.length > 0 && (
-        <div className="mt-8 animate-fade-in-up">
+        <div className="mt-12 animate-fade-in-up border-t border-white/5 pt-8">
+          <h3 className="text-sm font-bold tracking-widest text-zinc-500 uppercase mb-6">
+            Produtos Relacionados MY WAY
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {finalProducts.map((product: any, index: number) => (
-              <React.Fragment key={product.id || index}>
-                <ProductCard product={product} />
-              </React.Fragment>
+            {finalProducts.map((product: any) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>

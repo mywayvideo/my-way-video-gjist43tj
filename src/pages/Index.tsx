@@ -97,8 +97,9 @@ export default function Index() {
               id="ai-response-container"
               className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24"
             >
+              {/* Entrega direta: O componente agora cuida da estética e do conteúdo */}
               <ResponseFormatter
-                content={(results.content || results.message || '').replace(/my way/gi, 'MY WAY')}
+                content={results.message || ''}
                 products={results.products}
                 stock={results.stock}
                 referenced_internal_products={results.referenced_internal_products}

@@ -460,19 +460,20 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA NINJA (V45)
+            // REFORÇO DE DOUTRINA NINJA (V46 - ANTI-SURTO)
             msgs.push({
               role: 'system',
               content: `Data received. You are the My Way Senior Technical Consultant. 
               Synthesize the final response in Portuguese (PT-BR).
               
-              MANDATORY FORMATTING:
+              MANDATORY RULES:
               1. Use '## ' for each product model name.
               2. Insert EXACTLY two line breaks (\\n\\n) BEFORE each '## ' header.
               3. Use bullet points for technical specs.
-              4. DO NOT write any "Transparency Note" yourself. The system will handle it.
-              5. If currentProductId (${currentProductId}) is provided, do NOT recommend it as a 'related product' in the text synthesis.
-              6. Keep paragraphs short and professional.`,
+              4. DO NOT write any "Transparency Note".
+              5. If currentProductId (${currentProductId}) is provided, do NOT recommend it.
+              6. STRICT ID MATCHING: ONLY use a UUID in 'referenced_internal_products' if the product name in the database matches the product you are describing. 
+              7. If the database returns accessories but you are talking about cameras, do NOT include those IDs. Set confidence_level to 'low' and offer a specialist.`,
             })
             calls++
           } else {
@@ -650,13 +651,14 @@ ${tonePrompt}
     }
 
     // Este Regex força quebras de linha duplas antes de títulos e bullets, resolvendo o texto embolado.
-    // 3. Faxina Estética Ninja (Garante o espaçamento 4K em toda a aplicação)
+    // 3. Faxina Estética Ninja (Garante o espaçamento 4K e bullets perfeitos)
     result.message = result.message
       .replace(/\n*## /g, '\n\n## ') // Espaço antes de títulos
-      .replace(/\n+([-*])\s+/g, '\n$1 ') // CORRIGIDO: Apenas uma quebra antes do bullet para mantê-lo na mesma linha do texto
+      .replace(/\n+([-*])[\s\n]+/g, '\n$1 ') // FIX SUPREMO: Cola o texto no bullet e remove quebras extras
       .replace(/\n?(\d+\.)/g, '\n\n$1') // Espaço antes de listas numeradas
       .replace(/\n?(\*\*.*?\*\*:)/g, '\n\n$1') // Espaço antes de labels em negrito
       .replace(/\s{3,}/g, '\n\n') // Remove excesso de quebras acidentais
+      .replace(/Nota de Transparência:/gi, '\n\nNota de Transparência:')
       .trim()
 
     if (
