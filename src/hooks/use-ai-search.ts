@@ -66,18 +66,25 @@ export function useUnifiedSearch() {
     // 3. Batida do Coração (Heartbeat) - Sincronização de Visão
     let phaseIndex = 0
     const heartbeatInterval = setInterval(() => {
-      if (phaseIndex < phases.length - 1) {
-        phaseIndex++
-        setResults((prev: any) => ({
-          ...prev,
-          message: phases[phaseIndex],
-          content: phases[phaseIndex],
-          is_intermediate: true,
-        }))
-      } else {
-        clearInterval(heartbeatInterval)
-      }
-    }, 1000) // Frequência de 1s para maior fluidez
+      setResults((prev: any) => {
+        // Se a busca já terminou (is_intermediate agora é false), mata o intervalo
+        if (!prev || !prev.is_intermediate) {
+          clearInterval(heartbeatInterval)
+          return prev
+        }
+
+        if (phaseIndex < phases.length - 1) {
+          phaseIndex++
+          return {
+            ...prev,
+            message: phases[phaseIndex],
+            content: phases[phaseIndex],
+            is_intermediate: true,
+          }
+        }
+        return prev
+      })
+    }, 1000)
 
     try {
       let sessionId = sessionStorage.getItem('ai_chat_session_id')
@@ -123,110 +130,86 @@ export function useUnifiedSearch() {
       let shouldShowWhatsapp = false
 
       const activeAgent = await getActiveAgent()
-
       await new Promise((resolve) => setTimeout(resolve, 50))
 
+      // 1. Verificação de Agente (Apenas aviso, não bloqueia o fluxo)
       if (!activeAgent) {
-        finalMessage = 'Nenhum agente de IA configurado.'
         toast({
           title: 'Aviso',
-          description: 'Nenhum agente configurado. Configure em Admin > Agentes AI.',
+          description: 'Nenhum agente configurado. Usando busca padrão.',
         })
-      } else {
-        let aiResponse: any = null
-        try {
-          const sanitizedHistory = chatHistory.filter((msg: any) => {
-            const content = msg.content || ''
-            return (
-              !content.includes('Desculpe, ocorreu um erro técnico') &&
-              !content.includes("I'm sorry, a technical error")
-            )
-          })
+      }
 
-          const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
-            body: {
-              query: cleanQuery,
-              session_id: sessionId,
-              history: sanitizedHistory,
-              userName,
-              productName: extraContext?.productName,
-              technicalInfo: extraContext?.technicalInfo,
-              currentProductId: extraContext?.currentProductId || null,
-              isAdmin: !!isAdmin,
-            },
-          })
-          if (aiErrorReq) throw aiErrorReq
-          aiResponse = aiData
-        } catch (aiError) {
-          console.error('Error parsing AI response:', aiError)
-          aiResponse = {
-            content:
-              'Desculpe, ocorreu um erro ao processar a resposta da IA. Por favor, tente novamente.',
-            confidence_level: 'low',
-            referenced_internal_products: [],
-          }
-        }
+      // 2. Declaração de Escopo Seguro
+      let aiResponse: any = null
 
-        finalMessage = aiResponse?.message || aiResponse?.content || ''
-        finalConfidence = aiResponse?.confidence_level || 'high'
+      try {
+        const sanitizedHistory = chatHistory.filter((msg: any) => {
+          const content = msg.content || ''
+          return !content.includes('erro técnico')
+        })
 
-        referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
-          ? aiResponse.referenced_internal_products
-          : []
-
-        const aiStock = Array.isArray(aiResponse?.stock) ? aiResponse.stock : []
-
-        if (aiStock.length > 0) {
-          finalProducts = aiStock.map((p: any) => {
-            const finalUsdPrice =
-              p.price_usd !== undefined ? Number(p.price_usd) : calculateFinalPrice(p)
-            return {
-              ...p,
-              price_usa: finalUsdPrice,
-              price_usd: finalUsdPrice,
-              price_brl: Number(p.price_brl || 0),
-              stock: Number(p.stock || 0),
-            }
-          })
-        } else if (referencedIds.length > 0) {
-          const { data: fetchedProducts } = await supabase
-            .from('products')
-            .select(`
-              *,
-              manufacturer:manufacturers (
-                id,
-                name
-              )
-            `)
-            .in('id', referencedIds)
-            .eq('is_discontinued', false)
-
-          if (fetchedProducts && fetchedProducts.length > 0) {
-            finalProducts = fetchedProducts.map((p: any) => {
-              const finalUsdPrice = calculateFinalPrice(p)
-              return {
-                ...p,
-                price_usa: finalUsdPrice,
-                price_usd: finalUsdPrice,
-                price_brl: Number(p.price_brl || 0),
-                stock: Number(p.stock || 0),
-              }
-            })
-          }
-        }
-
-        finalProducts = finalProducts.filter(
-          (v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i,
-        )
-
-        shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
-
-        if (extraContext?.currentProductId) {
-          finalProducts = finalProducts.filter((p: any) => p.id !== extraContext.currentProductId)
-          referencedIds = referencedIds.filter((id: string) => id !== extraContext.currentProductId)
+        const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
+          body: {
+            query: cleanQuery,
+            session_id: sessionId,
+            history: sanitizedHistory,
+            userName,
+            productName: extraContext?.productName,
+            technicalInfo: extraContext?.technicalInfo,
+            currentProductId: extraContext?.currentProductId || null,
+            isAdmin: !!isAdmin,
+          },
+        })
+        if (aiErrorReq) throw aiErrorReq
+        aiResponse = aiData
+      } catch (aiError) {
+        console.error('Error calling AI:', aiError)
+        aiResponse = {
+          message: 'Desculpe, ocorreu um erro ao processar a resposta.',
+          confidence_level: 'low',
+          referenced_internal_products: [],
         }
       }
 
+      // 3. Processamento de Dados (Fora de qualquer IF restritivo)
+      finalMessage = aiResponse?.message || aiResponse?.content || ''
+      finalConfidence = aiResponse?.confidence_level || 'high'
+      referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
+        ? aiResponse.referenced_internal_products
+        : []
+      const aiStock = Array.isArray(aiResponse?.stock) ? aiResponse.stock : []
+
+      if (aiStock.length > 0) {
+        finalProducts = aiStock.map((p: any) => ({
+          ...p,
+          price_usa: p.price_usd !== undefined ? Number(p.price_usd) : calculateFinalPrice(p),
+          price_usd: p.price_usd !== undefined ? Number(p.price_usd) : calculateFinalPrice(p),
+          price_brl: Number(p.price_brl || 0),
+          stock: Number(p.stock || 0),
+        }))
+      } else if (referencedIds.length > 0) {
+        const { data: fetchedProducts } = await supabase
+          .from('products')
+          .select('*, manufacturer:manufacturers(id, name)')
+          .in('id', referencedIds)
+          .eq('is_discontinued', false)
+
+        if (fetchedProducts) {
+          finalProducts = fetchedProducts.map((p: any) => ({
+            ...p,
+            price_usa: calculateFinalPrice(p),
+            price_usd: calculateFinalPrice(p),
+            price_brl: Number(p.price_brl || 0),
+            stock: Number(p.stock || 0),
+          }))
+        }
+      }
+
+      finalProducts = finalProducts.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+      shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
+
+      // 4. Montagem Final (Garante que settings e message existam)
       const combinedResults = {
         message: finalMessage,
         content: finalMessage,
@@ -234,13 +217,12 @@ export function useUnifiedSearch() {
         stock: finalProducts,
         products: finalProducts,
         referenced_internal_products: referencedIds,
-        intel: [],
-        nabData: [],
-        web: [],
         settings: aiResponse?.settings || {},
-        agent_name: activeAgent?.provider_name ? 'Especialista MY WAY' : 'Busca Básica',
+        agent_name: activeAgent?.provider_name || 'Especialista MY WAY',
         should_show_whatsapp_button: shouldShowWhatsapp,
         is_intermediate: false,
+        intel: aiResponse?.intel || [],
+        nabData: aiResponse?.nab_data || [],
       }
 
       console.log('SEARCH_RESULTS:', combinedResults)
