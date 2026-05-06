@@ -18,6 +18,8 @@ import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export function ChatInterface() {
   const { search, isLoading, results } = useAiSearch()
+  // Extrai o WhatsApp dinâmico das configurações globais enviadas pelo index.ts
+  const whatsappNumber = results?.settings?.company_whatsapp?.replace(/\D/g, '') || '17867161170'
   const [query, setQuery] = useState('')
   const [messages, setMessages] = useState<
     Array<{
@@ -206,8 +208,8 @@ export function ChatInterface() {
                               />
                             </div>
                           </div>
-                          <div className="text-primary/80 font-medium animate-pulse text-sm mt-2">
-                            {(results?.message || 'Processando...').replace(/my way/gi, 'MY WAY')}
+                          <div className="text-primary/80 font-medium animate-pulse text-sm mt-2 italic">
+                            {results?.message || 'Iniciando busca profunda MY WAY...'}
                           </div>
                         </div>
                       ) : msg.role === 'assistant' ? (
@@ -223,7 +225,7 @@ export function ChatInterface() {
                     (msg.showWhatsapp || msg.confidence === 'low') && (
                       <div className="mt-4 max-w-[85%]">
                         <Button
-                          onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                          onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
                           className="bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md border border-green-600/20 group transition-all duration-300"
                         >
                           <Phone className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />

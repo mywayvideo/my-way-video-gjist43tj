@@ -15,6 +15,7 @@ export default function Index() {
   const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const debounceTimerRef = useRef<number | null>(null)
+  const whatsappNumber = results?.settings?.company_whatsapp?.replace(/\D/g, '') || '17867161170'
 
   const handleSearch = useCallback(
     (query: string) => {
@@ -101,7 +102,7 @@ export default function Index() {
                   <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
                   <Button
                     className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg shadow-green-900/20"
-                    onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                    onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
                   >
                     Falar com Especialista
                   </Button>

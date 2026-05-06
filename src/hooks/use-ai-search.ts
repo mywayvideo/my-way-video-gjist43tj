@@ -43,41 +43,41 @@ export function useUnifiedSearch() {
 
     console.log('NEW SEARCH FOR:', cleanQuery)
 
+    // 1. Definição das Fases de Elite (Soberania MY WAY)
     const phases = [
       'Iniciando busca profunda MY WAY... Analisando termo técnico.',
       'Tier 1: Consultando base de dados e estoque imediato...',
-      'Tier 2-4: Refinando busca por modelos e variações técnicas...',
-      'Soberania de Dados: Validando preços e SKUs oficiais MY WAY...',
+      'Tier 2: Refinando busca por modelos e variações técnicas...',
+      'Tier 3: Validando preços e SKUs oficiais MY WAY...',
+      'Tier 4: Sintetizando inteligência de mercado...',
     ]
 
-    const initialMsg = phases[0].replace(/my way/gi, 'MY WAY')
-    const intermediateResults = {
-      message: initialMsg,
-      content: initialMsg,
+    // 2. Estado Inicial Intermediário
+    setResults({
+      message: phases[0],
+      content: phases[0],
       confidence_level: 'high',
       referenced_internal_products: [],
       should_show_whatsapp_button: false,
       is_intermediate: true,
-    }
-    setResults(intermediateResults)
+    })
     setIsLoading(true)
 
+    // 3. Batida do Coração (Heartbeat) - Sincronização de Visão
     let phaseIndex = 0
     const heartbeatInterval = setInterval(() => {
-      phaseIndex = Math.min(phaseIndex + 1, phases.length - 1)
-      setResults((prev: any) => {
-        if (!prev || !prev.is_intermediate) {
-          clearInterval(heartbeatInterval)
-          return prev
-        }
-        const phaseMsg =
-          phases[phaseIndex]?.replace(/my way/gi, 'MY WAY') ||
-          prev.message ||
-          prev.content ||
-          'Processando...'
-        return { ...prev, message: phaseMsg, content: phaseMsg }
-      })
-    }, 1500)
+      if (phaseIndex < phases.length - 1) {
+        phaseIndex++
+        setResults((prev: any) => ({
+          ...prev,
+          message: phases[phaseIndex],
+          content: phases[phaseIndex],
+          is_intermediate: true,
+        }))
+      } else {
+        clearInterval(heartbeatInterval)
+      }
+    }, 1000) // Frequência de 1s para maior fluidez
 
     try {
       let sessionId = sessionStorage.getItem('ai_chat_session_id')
@@ -237,7 +237,7 @@ export function useUnifiedSearch() {
         intel: [],
         nabData: [],
         web: [],
-        settings: {},
+        settings: aiResponse?.settings || {},
         agent_name: activeAgent?.provider_name ? 'Especialista MY WAY' : 'Busca Básica',
         should_show_whatsapp_button: shouldShowWhatsapp,
         is_intermediate: false,

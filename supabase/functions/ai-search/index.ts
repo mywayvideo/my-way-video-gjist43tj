@@ -14,7 +14,7 @@ function extractJson(
     }
   }
   try {
-    const match = text.match(/\{[\s\S]*\}/)
+    const match = text.match(/\{[\s\S]*?\}/)
     if (match) {
       return JSON.parse(match[0])
     }
@@ -194,6 +194,10 @@ Deno.serve(async (req: Request) => {
       proactivity: agentRes.data?.proactivity_level,
       stopWords: aiRes.data?.custom_stop_words,
       transparencyNote: globalSettingsMap['transparency_note'],
+      trigger_keywords: aiRes.data?.trigger_keywords || [],
+      whatsapp_trigger_expensive: aiRes.data?.whatsapp_trigger_expensive,
+      whatsapp_trigger_low_confidence: aiRes.data?.whatsapp_trigger_low_confidence,
+      confidence_threshold: aiRes.data?.confidence_threshold || 'low',
     }
 
     // 3. Fusão de Identidade (Garante que a Persona entre no Template)
@@ -435,7 +439,7 @@ ${tonePrompt}
                       allReturnedProducts.push(p)
                     }
                   }
-                  if (p.price_usd && p.price_usd > settings.price_limit_usd) {
+                  if (p.price_usd && p.price_usd > settings.priceLimit) {
                     hasExpensiveProduct = true
                   }
                 })
@@ -456,15 +460,12 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA INQUEBRÁVEL (V41)
+            // REFORÇO DE DOUTRINA (V41) - Sem redundância de texto
             msgs.push({
               role: 'system',
               content: `Data received. Now, synthesize the final response in the user's language. 
-              CRITICAL RULES:
-              1. You MUST include the MANDATORY FOOTER (Nota de Transparência) exactly as defined.
-              2. You MUST return ONLY a RAW JSON object. 
-              3. DO NOT repeat the JSON object. Return exactly ONE JSON instance.
-              4. Follow the Persona and Doctrine rules strictly.`,
+              CRITICAL: You MUST strictly follow the JSON STRUCTURE and the MANDATORY FOOTER defined in the original SYSTEM PROMPT template. 
+              Do not deviate from the established format.`,
             })
             calls++
           } else {
