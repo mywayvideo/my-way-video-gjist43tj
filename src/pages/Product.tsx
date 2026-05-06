@@ -809,7 +809,12 @@ export default function Product() {
                   </p>
                 </div>
 
-                <Button className="w-full mt-6" size="lg" onClick={() => setIsAiChatOpen(true)}>
+                <Button
+                  type="button"
+                  className="w-full mt-6"
+                  size="lg"
+                  onClick={() => setIsAiChatOpen(true)}
+                >
                   Fazer Pergunta
                 </Button>
               </div>
