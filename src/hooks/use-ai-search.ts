@@ -18,6 +18,7 @@ export function useUnifiedSearch() {
 
   const clearResults = () => {
     setResults(null)
+    setIsLoading(false) // Garante que o loading também resete
   }
 
   const calculateFinalPrice = (p: any) => {

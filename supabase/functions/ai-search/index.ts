@@ -649,13 +649,14 @@ ${tonePrompt}
       result.message = result.message.trim() + '\n\n' + transparencyNote
     }
 
-    // 3. Faxina Estética Ninja (Garante o espaçamento em toda a aplicação)
     // Este Regex força quebras de linha duplas antes de títulos e bullets, resolvendo o texto embolado.
+    // 3. Faxina Estética Ninja (Garante o espaçamento 4K em toda a aplicação)
     result.message = result.message
-      .replace(/\n*## /g, '\n\n## ') // Espaço antes de títulos de produtos
-      .replace(/\n?([-*]) /g, '\n\n$1 ') // Espaço antes de bullets (- ou *)
+      .replace(/\n*## /g, '\n\n## ') // Espaço antes de títulos
+      .replace(/\n+([-*])\s+/g, '\n$1 ') // CORRIGIDO: Apenas uma quebra antes do bullet para mantê-lo na mesma linha do texto
       .replace(/\n?(\d+\.)/g, '\n\n$1') // Espaço antes de listas numeradas
-      .replace(/\s{3,}/g, '\n\n') // Remove excesso de quebras de linha acidentais
+      .replace(/\n?(\*\*.*?\*\*:)/g, '\n\n$1') // Espaço antes de labels em negrito
+      .replace(/\s{3,}/g, '\n\n') // Remove excesso de quebras acidentais
       .trim()
 
     if (

@@ -5,7 +5,7 @@ import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Star, TrendingUp, Flame } from 'lucide-react'
+import { Star, TrendingUp, Flame, Loader2 } from 'lucide-react'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -80,6 +80,15 @@ export default function Index() {
                 isExternalLoading={isSearchLoading}
                 className="w-full"
               />
+              {/* INJEÇÃO DOS TIERS EM TRANSIÇÃO NA HOME PAGE */}
+              {results?.is_intermediate && (
+                <div className="w-full mt-4 flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 border border-orange-500/30 animate-pulse text-left">
+                  <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                  <span className="text-orange-500 font-bold text-sm tracking-wider">
+                    {results.message}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
