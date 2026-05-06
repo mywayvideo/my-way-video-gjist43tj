@@ -197,9 +197,17 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Fusão de Identidade (Garante que a Persona entre no Template)
+    // LOG DE DEPURAÇÃO - Verifique isso no console do Supabase
+    console.log('DEBUG - Persona:', settings.persona?.substring(0, 50))
+    console.log('DEBUG - Template:', settings.template?.substring(0, 50))
+    console.log('DEBUG - Logistics:', settings.logistics?.substring(0, 50))
+    console.log('DEBUG - Institutional:', institutionalContext?.substring(0, 50))
+
     const finalBasePrompt = settings.template?.includes('{{system_prompt}}')
       ? settings.template.replace('{{system_prompt}}', settings.persona || '')
       : `${settings.persona || ''}\n\n${settings.template || ''}`
+
+    console.log('DEBUG - Final Prompt Length:', finalBasePrompt.length)
 
     // 4. Segurança e Tom
     const currentProactivity = settings.proactivity ?? 5
@@ -448,10 +456,12 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
+            // REFORÇO DE DOUTRINA PARA O SEGUNDO TURNO
             msgs.push({
               role: 'system',
-              content:
-                "Data received. Now, synthesize a strategic response in the user's language, integrating technical specs with market intelligence insights. Return ONLY the JSON object.",
+              content: `Data received. Now, synthesize the final response in the user's language. 
+              CRITICAL: You MUST follow the original SYSTEM PROMPT, the JSON STRUCTURE, and include the MANDATORY FOOTER (Nota de Transparência) exactly as defined in the template.
+              Return ONLY the RAW JSON object.`,
             })
             calls++
           } else {
