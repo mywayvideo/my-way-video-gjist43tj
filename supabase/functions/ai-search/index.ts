@@ -460,13 +460,19 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA (V42) - Mantém a Persona e as Regras da Empresa
+            // REFORÇO DE DOUTRINA NINJA (V45)
             msgs.push({
               role: 'system',
               content: `Data received. You are the My Way Senior Technical Consultant. 
-              Synthesize the final response in Portuguese (PT-BR) following the Persona, Logistics, 
-              and Mandatory JSON Structure defined in the original instructions. 
-              Do not deviate from your specialized identity.`,
+              Synthesize the final response in Portuguese (PT-BR).
+              
+              MANDATORY FORMATTING:
+              1. Use '## ' for each product model name.
+              2. Insert EXACTLY two line breaks (\\n\\n) BEFORE each '## ' header.
+              3. Use bullet points for technical specs.
+              4. DO NOT write any "Transparency Note" yourself. The system will handle it.
+              5. If currentProductId (${currentProductId}) is provided, do NOT recommend it as a 'related product' in the text synthesis.
+              6. Keep paragraphs short and professional.`,
             })
             calls++
           } else {
@@ -622,18 +628,35 @@ ${tonePrompt}
       }
     }
 
-    result.referenced_internal_products = Array.from(new Set(validatedRefs))
+    // 1. Consolidação dos IDs validados (Filtrando o produto atual para evitar redundância no banco/cache)
+    result.referenced_internal_products = Array.from(new Set(validatedRefs)).filter(
+      (id) =>
+        String(id).toLowerCase().trim() !==
+        String(currentProductId || '')
+          .toLowerCase()
+          .trim(),
+    )
 
-    result.message = (result.message || '').replace(/\n*## /g, '\n\n## ').trim()
+    // 2. Injeção Programática da Nota de Transparência (Soberania do Banco de Dados)
+    // Buscamos na tabela settings. Se não existir, usamos o fallback de segurança.
+    const transparencyNote =
+      globalSettingsMap['transparency_note'] ||
+      globalSettingsMap['company_transparency_note'] ||
+      'Nota de Transparência: Preços e disponibilidades sujeitos a confirmação.'
 
-    if (allReturnedProducts.length === 0) {
-      const transparencyNote =
-        globalSettingsMap['transparency_note'] ||
-        'Nota de Transparência: Os preços e disponibilidades informados podem sofrer alterações sem aviso prévio. Consulte um especialista para confirmar as condições comerciais.'
-      if (!result.message.includes('Nota de Transparência')) {
-        result.message = result.message.trim() + '\n\n' + transparencyNote
-      }
+    // Injetamos apenas se a nota ainda não estiver presente no texto (evita duplicidade)
+    if (result.message && !result.message.includes('Nota de Transparência')) {
+      result.message = result.message.trim() + '\n\n' + transparencyNote
     }
+
+    // 3. Faxina Estética Ninja (Garante o espaçamento em toda a aplicação)
+    // Este Regex força quebras de linha duplas antes de títulos e bullets, resolvendo o texto embolado.
+    result.message = result.message
+      .replace(/\n*## /g, '\n\n## ') // Espaço antes de títulos de produtos
+      .replace(/\n?([-*]) /g, '\n\n$1 ') // Espaço antes de bullets (- ou *)
+      .replace(/\n?(\d+\.)/g, '\n\n$1') // Espaço antes de listas numeradas
+      .replace(/\s{3,}/g, '\n\n') // Remove excesso de quebras de linha acidentais
+      .trim()
 
     if (
       result.confidence_level === 'high' &&

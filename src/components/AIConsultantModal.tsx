@@ -105,8 +105,10 @@ export function AIConsultantModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          'fixed inset-x-0 bottom-0 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
-          'sm:relative sm:inset-auto sm:top-[50%] sm:left-[50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-10 sm:border',
+          // Mobile: Gaveta no fundo
+          'fixed inset-x-0 bottom-0 z-50 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
+          // Desktop: Centralizado e fixo (CORRIGIDO: sm:fixed em vez de sm:relative)
+          'sm:fixed sm:inset-auto sm:top-[50%] sm:left-[50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-10 sm:border',
         )}
       >
         <DialogHeader>
@@ -135,14 +137,25 @@ export function AIConsultantModal({
                 <ReactMarkdown>{formattedMessage}</ReactMarkdown>
               </div>
               {results.products &&
-                results.products.filter(
-                  (p: any) => String(p?.id || '').trim() !== String(currentProductId || '').trim(),
-                ).length > 0 && (
+                results.products.filter((p: any) => {
+                  const pid = String(p?.id || '')
+                    .toLowerCase()
+                    .trim()
+                  const currentId = String(currentProductId || '')
+                    .toLowerCase()
+                    .trim()
+                  return pid !== currentId
+                }).length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
                     {results.products
                       .filter(
                         (p: any) =>
-                          String(p?.id || '').trim() !== String(currentProductId || '').trim(),
+                          String(p?.id || '')
+                            .toLowerCase()
+                            .trim() !==
+                          String(currentProductId || '')
+                            .toLowerCase()
+                            .trim(),
                       )
                       .map((product: any) => (
                         <ProductCard key={product.id} product={product} />
