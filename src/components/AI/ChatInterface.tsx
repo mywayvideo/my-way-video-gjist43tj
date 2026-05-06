@@ -206,11 +206,9 @@ export function ChatInterface() {
                               />
                             </div>
                           </div>
-                          {results?.message && (
-                            <div className="text-primary/80 font-medium animate-pulse text-sm">
-                              {results.message.replace(/my way/gi, 'MY WAY')}
-                            </div>
-                          )}
+                          <div className="text-primary/80 font-medium animate-pulse text-sm mt-2">
+                            {(results?.message || 'Processando...').replace(/my way/gi, 'MY WAY')}
+                          </div>
                         </div>
                       ) : msg.role === 'assistant' ? (
                         <ResponseFormatter content={msg.content} products={msg.products} />

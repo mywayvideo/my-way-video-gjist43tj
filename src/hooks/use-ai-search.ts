@@ -70,7 +70,11 @@ export function useUnifiedSearch() {
           clearInterval(heartbeatInterval)
           return prev
         }
-        const phaseMsg = phases[phaseIndex].replace(/my way/gi, 'MY WAY')
+        const phaseMsg =
+          phases[phaseIndex]?.replace(/my way/gi, 'MY WAY') ||
+          prev.message ||
+          prev.content ||
+          'Processando...'
         return { ...prev, message: phaseMsg, content: phaseMsg }
       })
     }, 1500)
