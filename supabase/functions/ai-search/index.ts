@@ -456,12 +456,15 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA PARA O SEGUNDO TURNO
+            // REFORÇO DE DOUTRINA INQUEBRÁVEL (V41)
             msgs.push({
               role: 'system',
               content: `Data received. Now, synthesize the final response in the user's language. 
-              CRITICAL: You MUST follow the original SYSTEM PROMPT, the JSON STRUCTURE, and include the MANDATORY FOOTER (Nota de Transparência) exactly as defined in the template.
-              Return ONLY the RAW JSON object.`,
+              CRITICAL RULES:
+              1. You MUST include the MANDATORY FOOTER (Nota de Transparência) exactly as defined.
+              2. You MUST return ONLY a RAW JSON object. 
+              3. DO NOT repeat the JSON object. Return exactly ONE JSON instance.
+              4. Follow the Persona and Doctrine rules strictly.`,
             })
             calls++
           } else {
