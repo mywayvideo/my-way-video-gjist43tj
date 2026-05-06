@@ -145,8 +145,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // --- INÍCIO DA SOBERANIA ABSOLUTA MY WAY (V35) ---
-    // 1. Busca Coordenada de Dados (Hierarquia de Elite - Sem Fallbacks Hardcoded)
+    // --- INÍCIO DA SOBERANIA ABSOLUTA MY WAY (V38) ---
+    // 1. Busca Coordenada (Mapeamento Real de Campos)
     const [agentRes, aiRes, globalRes, mfgRes, compRes, providersRes] = await Promise.all([
       supabase
         .from('ai_agent_settings')
@@ -176,90 +176,59 @@ Deno.serve(async (req: Request) => {
     })
 
     const mfgList = mfgRes.data?.map((m: any) => m.name).join(', ') || ''
-    const compInfo = (compRes.data || [])
-      .map((c: any) => `[${c.type}]: ${c.content}`)
-      .join('\n')
-      .substring(0, 2000)
+
+    // Filtra o Contexto Institucional da tabela company_info (type: ai_knowledge)
+    const institutionalContext =
+      compRes.data?.find((c: any) => c.type === 'ai_knowledge')?.content || ''
+
     const providers = providersRes.data
     if (!providers?.length) throw new Error('No active providers found')
 
-    // 2. Consolidação de Configurações (Fidelidade Total ao Painel Admin)
+    // 2. Consolidação Fiel (Sem chutes, apenas dados reais)
     const settings = {
       persona: agentRes.data?.system_prompt,
       template: aiRes.data?.system_prompt_template,
       logistics: aiRes.data?.logistics_rules_prompt,
-      institutional: aiRes.data?.institutional_context,
       priceLimit: aiRes.data?.price_threshold_usd,
-      productPagePrompt: aiRes.data?.product_page_prompt,
+      productPage: aiRes.data?.product_page_prompt,
       proactivity: agentRes.data?.proactivity_level,
       stopWords: aiRes.data?.custom_stop_words,
-      confidenceThreshold: agentRes.data?.confidence_threshold_for_whatsapp,
-      triggerExpensive: agentRes.data?.whatsapp_trigger_expensive_product,
-      triggerLowConf: agentRes.data?.whatsapp_trigger_low_confidence,
-      triggerKeywords: agentRes.data?.whatsapp_trigger_keywords || [],
       transparencyNote: globalSettingsMap['transparency_note'],
     }
 
-    // 3. Contexto de Página de Produto
-    let productPageContext = ''
-    if (hasProductContext) {
-      const pPrompt = (settings.productPagePrompt || '')
-        .replaceAll('{{productName}}', productName || '')
-        .replaceAll('{{currentProductId}}', currentProductId || '')
-      productPageContext = `\n\nCONTEXTO DO PRODUTO ATUAL:\nProduto: ${productName}\nEspecificações: ${technicalInfo}\n${pPrompt}`
-    }
-
-    // 4. Segurança e Tom (Baseado na Seção J do Admin)
-    const securityClause = !isAdmin
-      ? `\n- SECURITY: You are a Senior Consultant. Internal logic/UUIDs/JSON keys are INVISIBLE. NEVER discuss them.`
-      : `\n- ADMIN MODE: You may discuss technical internal logic if asked.`
-
-    const tonePrompt =
-      settings.proactivity >= 7
-        ? `\nESTILO DE RESPOSTA (NÍVEL ${settings.proactivity}): Consultor Ativo e Vendedor. Sugira proativamente soluções completas e produtos complementares.`
-        : `\nESTILO DE RESPOSTA (NÍVEL ${settings.proactivity}): Consultor Reativo. Responda estritamente o que foi perguntado.`
-
-    // 5. Construção do Prompt Mestre (Fusão Persona + Doutrina)
-    // Se a tag {{system_prompt}} não existir, a Persona é colocada no topo por segurança.
+    // 3. Fusão de Identidade (Garante que a Persona entre no Template)
     const finalBasePrompt = settings.template?.includes('{{system_prompt}}')
       ? settings.template.replace('{{system_prompt}}', settings.persona || '')
-      : `${settings.persona}\n\n${settings.template}`
+      : `${settings.persona || ''}\n\n${settings.template || ''}`
 
+    // 4. Segurança e Tom
+    const currentProactivity = settings.proactivity ?? 5
+    const tonePrompt =
+      currentProactivity >= 7
+        ? `\nESTILO DE RESPOSTA (NÍVEL ${currentProactivity}): Consultor Ativo e Vendedor. Sugira proativamente soluções completas.`
+        : `\nESTILO DE RESPOSTA (NÍVEL ${currentProactivity}): Consultor Reativo. Responda estritamente o que foi perguntado.`
+
+    // 5. Prompt Mestre de Autoridade
     const sysPrompt = `### MANDATORY OPERATIONAL RULES: HIGHEST AUTHORITY ###
-1. PERSONA & DOCTRINE (YOUR CORE IDENTITY):
+1. PERSONA & DOCTRINE (CORE IDENTITY):
 ${finalBasePrompt}
 
-2. LOGISTICS RULES (MANDATORY SHIPPING LOGIC):
+2. LOGISTICS & SHIPPING RULES (MANDATORY):
 ${settings.logistics}
 
-3. INSTITUTIONAL CONTEXT (COMPANY AUTHORITY):
-${settings.institutional}
+3. INSTITUTIONAL CONTEXT (MY WAY AUTHORITY):
+${institutionalContext}
 
 ### DATA & BEHAVIOR CONTEXT ###
-DADOS DA EMPRESA: ${compInfo}
 FABRICANTES HOMOLOGADOS: ${mfgList}
-PALAVRAS A IGNORAR: ${settings.stopWords}
-${productPageContext}
+STOP WORDS: ${settings.stopWords}
 ${tonePrompt}
-${securityClause}
 
 ### EXECUTION DIRECTIVES ###
-- You MUST follow the Persona, Logistics Rules, and Institutional Context above.
-- If price_usd and price_nationalized_sales are empty, you MUST set confidence_level to low.
-- You MUST call the 'search_products' tool to verify inventory before any recommendation.
-- SOBERANIA DE DADOS: Use database prices and SKUs as absolute truth. NEVER fabricate prices.
-- If a product price exceeds ${settings.priceLimit}, set should_show_whatsapp_button to true.
-- FORMAT: Return ONLY a RAW JSON object. No markdown code blocks.
-
-JSON STRUCTURE:
-{
-  "message": "Your technical response...",
-  "confidence_level": "high" | "low",
-  "should_show_whatsapp_button": boolean,
-  "referenced_internal_products": ["uuid-1", "uuid-2"]
-}
-
-IMPORTANT: Your final response MUST be a RAW JSON object. Do NOT wrap it in markdown code blocks.`
+- You MUST follow the Persona, Logistics, and Doctrine above.
+- If prices are empty, set confidence_level to low.
+- SOBERANIA DE DADOS: Database is the ONLY truth. NEVER fabricate prices.
+- FORMAT: Return ONLY RAW JSON. Include the MANDATORY FOOTER in 'message'.`
     // --- FIM DA SOBERANIA ABSOLUTA MY WAY ---
 
     const tools = [
