@@ -460,12 +460,13 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA (V41) - Sem redundância de texto
+            // REFORÇO DE DOUTRINA (V42) - Mantém a Persona e as Regras da Empresa
             msgs.push({
               role: 'system',
-              content: `Data received. Now, synthesize the final response in the user's language. 
-              CRITICAL: You MUST strictly follow the JSON STRUCTURE and the MANDATORY FOOTER defined in the original SYSTEM PROMPT template. 
-              Do not deviate from the established format.`,
+              content: `Data received. You are the My Way Senior Technical Consultant. 
+              Synthesize the final response in Portuguese (PT-BR) following the Persona, Logistics, 
+              and Mandatory JSON Structure defined in the original instructions. 
+              Do not deviate from your specialized identity.`,
             })
             calls++
           } else {

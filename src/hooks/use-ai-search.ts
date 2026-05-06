@@ -67,8 +67,8 @@ export function useUnifiedSearch() {
     let phaseIndex = 0
     const heartbeatInterval = setInterval(() => {
       setResults((prev: any) => {
-        // Se a busca já terminou (is_intermediate agora é false), mata o intervalo
-        if (!prev || !prev.is_intermediate) {
+        // Se a busca já terminou (is_intermediate virou false), para o intervalo imediatamente
+        if (!prev || prev.is_intermediate === false) {
           clearInterval(heartbeatInterval)
           return prev
         }
@@ -132,43 +132,44 @@ export function useUnifiedSearch() {
       const activeAgent = await getActiveAgent()
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      // 1. Verificação de Agente (Apenas aviso, não bloqueia o fluxo)
-      if (!activeAgent) {
-        toast({
-          title: 'Aviso',
-          description: 'Nenhum agente configurado. Usando busca padrão.',
-        })
-      }
-
-      // 2. Declaração de Escopo Seguro
+      // Declaramos aiResponse aqui para garantir o escopo global na função search
       let aiResponse: any = null
 
-      try {
-        const sanitizedHistory = chatHistory.filter((msg: any) => {
-          const content = msg.content || ''
-          return !content.includes('erro técnico')
+      if (!activeAgent) {
+        finalMessage = 'Nenhum agente de IA configurado.'
+        toast({
+          title: 'Aviso',
+          description: 'Nenhum agente configurado. Usando busca básica.',
         })
+      } else {
+        // O processamento da IA deve acontecer no ELSE (quando há agente)
+        try {
+          const sanitizedHistory = chatHistory.filter((msg: any) => {
+            const content = msg.content || ''
+            return !content.includes('erro técnico')
+          })
 
-        const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
-          body: {
-            query: cleanQuery,
-            session_id: sessionId,
-            history: sanitizedHistory,
-            userName,
-            productName: extraContext?.productName,
-            technicalInfo: extraContext?.technicalInfo,
-            currentProductId: extraContext?.currentProductId || null,
-            isAdmin: !!isAdmin,
-          },
-        })
-        if (aiErrorReq) throw aiErrorReq
-        aiResponse = aiData
-      } catch (aiError) {
-        console.error('Error calling AI:', aiError)
-        aiResponse = {
-          message: 'Desculpe, ocorreu um erro ao processar a resposta.',
-          confidence_level: 'low',
-          referenced_internal_products: [],
+          const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
+            body: {
+              query: cleanQuery,
+              session_id: sessionId,
+              history: sanitizedHistory,
+              userName,
+              productName: extraContext?.productName,
+              technicalInfo: extraContext?.technicalInfo,
+              currentProductId: extraContext?.currentProductId || null,
+              isAdmin: !!isAdmin,
+            },
+          })
+          if (aiErrorReq) throw aiErrorReq
+          aiResponse = aiData
+        } catch (aiError) {
+          console.error('Error parsing AI response:', aiError)
+          aiResponse = {
+            message: 'Desculpe, ocorreu um erro ao processar a resposta da IA.',
+            confidence_level: 'low',
+            referenced_internal_products: [],
+          }
         }
       }
 
