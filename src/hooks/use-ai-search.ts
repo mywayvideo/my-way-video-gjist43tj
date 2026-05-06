@@ -65,10 +65,12 @@ export function useUnifiedSearch() {
 
     // 3. Batida do Coração (Heartbeat) - Sincronização de Visão
     let phaseIndex = 0
+
     const heartbeatInterval = setInterval(() => {
       setResults((prev: any) => {
-        // Se a busca já terminou (is_intermediate virou false), para o intervalo imediatamente
-        if (!prev || prev.is_intermediate === false) {
+        // REGRA DE OURO: Se a busca já terminou (is_intermediate virou false),
+        // mata o intervalo imediatamente e não toca no estado.
+        if (prev && prev.is_intermediate === false) {
           clearInterval(heartbeatInterval)
           return prev
         }
