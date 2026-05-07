@@ -461,19 +461,20 @@ Deno.serve(async (req: Request) => {
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA NINJA (V50 - SOBERANIA DE DADOS)
+            // REFORÇO DE DOUTRINA NINJA (V51.1 - FOCO EM SKU E ESTÉTICA)
             msgs.push({
               role: 'system',
-              content: `Data received from database. You are the My Way Senior Technical Consultant.
+              content: `Data received. You are the My Way Senior Technical Consultant.
               Synthesize the final response in Portuguese (PT-BR).
 
-              MANDATORY RULES FOR THIS TURN:
-              1. You MUST map every product described in your text to its EXACT UUID found in the tool output.
-              2. Include these UUIDs in the 'referenced_internal_products' array.
-              3. If you use specifications or prices that differ from the tool output, you are violating protocol.
-              4. If the 'stock' list is empty, only then you may use general terms and set confidence_level to 'low'.
-              5. Use '## ' for headers and bullet points for specs.
-              6. DO NOT write any "Transparency Note".`,
+              MANDATORY FORMATTING RULES:
+              1. Use '## ' for product names.
+              2. NEVER put a bullet point on its own line. Text MUST start immediately after '- '.
+              3. Format: '- **Spec Name**: Value'.
+              4. EXPOSIÇÃO DE DADOS: Inclua o SKU do produto logo abaixo do título '##'.
+              5. PROIBIÇÃO TOTAL: Nunca escreva UUIDs ou IDs (ex: a7fb...) no texto. Use apenas o SKU comercial.
+              6. Use EXACTLY one line break between bullet points.
+              7. Use EXACTLY two line breaks before a new '## ' header.`,
             })
             calls++
           } else {
@@ -651,14 +652,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // Este Regex força quebras de linha duplas antes de títulos e bullets, resolvendo o texto embolado.
-    // 3. Faxina Estética Ninja (Garante o espaçamento 4K e bullets perfeitos)
+    // 3. Faxina Estética Ninja (O Fim Definitivo do Desalinhamento)
     result.message = result.message
-      .replace(/\n*## /g, '\n\n## ') // Espaço antes de títulos
-      .replace(/\n+([-*])[\s\n]+/g, '\n$1 ') // FIX SUPREMO: Cola o texto no bullet e remove quebras extras
-      .replace(/\n?(\d+\.)/g, '\n\n$1') // Espaço antes de listas numeradas
-      .replace(/\n?(\*\*.*?\*\*:)/g, '\n\n$1') // Espaço antes de labels em negrito
-      .replace(/\s{3,}/g, '\n\n') // Remove excesso de quebras acidentais
-      .replace(/Nota de Transparência:/gi, '\n\nNota de Transparência:')
+      .replace(/\n*## /g, '\n\n## ') // Garante respiro antes de títulos
+      .replace(/\n+([-*])[\s\n]*/g, '\n$1 ') // FIX SUPREMO: Cola o texto no bullet
+      .replace(/\n{3,}/g, '\n\n') // Limita a no máximo duas quebras seguidas
+      .replace(/(\*\*[^*]+\*\*): \n/g, '$1: ') // Remove quebra após o label em negrito
+      .replace(/ID: [a-z0-9-]{36}/gi, '') // Remove UUIDs rotulados
+      .replace(/[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/gi, '') // Remove UUIDs puros
       .trim()
 
     if (
