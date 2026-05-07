@@ -9,8 +9,6 @@ interface ResponseFormatterProps {
   content: string
   products?: Product[]
   stock?: Product[]
-  nabData?: any[]
-  intel?: any[]
   referenced_internal_products?: string[]
   className?: string
 }
@@ -26,8 +24,6 @@ export function ResponseFormatter({
 
   const formattedContent = content.replace(/my way/gi, 'MY WAY')
 
-  const parts = formattedContent.split(/(\n(?:\|.*\|\n)+)/g)
-
   const itemsToRender = stock && stock.length > 0 ? stock : products
   const productIds =
     referenced_internal_products && referenced_internal_products.length > 0
@@ -35,60 +31,16 @@ export function ResponseFormatter({
       : itemsToRender?.map((p: any) => p.id)
 
   return (
-    <div
-      className={cn(
-        'flex flex-col w-full text-foreground/90 leading-[1.625] text-sm md:text-base prose dark:prose-invert max-w-none',
-        className,
-      )}
-    >
-      {parts.map((part, i) => {
-        if (part.trim().startsWith('|') && part.trim().endsWith('|')) {
-          const rows = part
-            .trim()
-            .split('\n')
-            .map((r) => r.split('|').filter((c) => c.trim() !== ''))
-
-          if (rows.length < 2) {
-            return (
-              <ReactMarkdown key={i} components={markdownComponents} remarkPlugins={[remarkGfm]}>
-                {part}
-              </ReactMarkdown>
-            )
-          }
-
-          const dataRows = rows.slice(1).filter((r) => !r.every((c) => c.trim().match(/^[-:]+$/)))
-
-          return (
-            <div
-              key={i}
-              className="my-4 overflow-x-auto bg-slate-900/80 rounded-xl border-l-4 border-primary p-6 shadow-inner animate-fade-in"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 min-w-[300px]">
-                {dataRows.map((row, rIdx) => (
-                  <div key={rIdx} className="flex flex-col border-b border-white/10 pb-2">
-                    <span className="text-muted-foreground text-sm font-semibold mb-1">
-                      {row[0]?.trim() || 'Property'}
-                    </span>
-                    <span className="font-mono text-primary">
-                      {row.slice(1).join(' | ').trim() || '-'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        }
-
-        return (
-          <ReactMarkdown key={i} components={markdownComponents} remarkPlugins={[remarkGfm]}>
-            {part}
-          </ReactMarkdown>
-        )
-      })}
+    <div className={cn('flex flex-col w-full space-y-8', className)}>
+      <div className="prose prose-invert max-w-none">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+          {formattedContent}
+        </ReactMarkdown>
+      </div>
 
       {productIds && productIds.length > 0 && (
-        <div className="mt-8 animate-fade-in-up delay-150 not-prose">
-          <h3 className="text-xl font-bold text-foreground pl-3 border-l-4 border-primary mb-6">
+        <div className="mt-8 animate-fade-in-up not-prose">
+          <h3 className="text-sm font-bold tracking-widest text-zinc-500 uppercase mb-6 pl-3 border-l-4 border-primary">
             Equipamentos Localizados
           </h3>
           <ReferencedProducts ids={productIds} />
@@ -99,34 +51,30 @@ export function ResponseFormatter({
 }
 
 const markdownComponents = {
-  table: ({ node, ...props }: any) => (
-    <div className="my-6 overflow-x-auto rounded-lg border border-white/10">
-      <table className="w-full border-collapse text-sm" {...props} />
+  table: ({ children }: any) => (
+    <div className="my-6 overflow-x-auto rounded-lg border border-white/10 shadow-2xl">
+      <table className="w-full border-collapse text-sm text-left">{children}</table>
     </div>
   ),
-  thead: ({ node, ...props }: any) => (
-    <thead
-      className="bg-white/5 border-b border-white/10 uppercase tracking-widest text-[10px]"
-      {...props}
-    />
+  thead: ({ children }: any) => (
+    <thead className="bg-white/5 border-b border-white/10 uppercase tracking-widest text-[10px]">
+      {children}
+    </thead>
   ),
-  th: ({ node, ...props }: any) => (
-    <th
-      className="px-4 py-3 font-bold text-zinc-200 border-r border-white/10 last:border-0"
-      {...props}
-    />
+  th: ({ children }: any) => (
+    <th className="px-4 py-3 font-bold text-zinc-200 border-r border-white/10 last:border-0">
+      {children}
+    </th>
   ),
-  td: ({ node, ...props }: any) => (
-    <td
-      className="px-4 py-3 text-zinc-300 border-b border-white/10 border-r last:border-0"
-      {...props}
-    />
+  td: ({ children }: any) => (
+    <td className="px-4 py-3 text-zinc-300 border-b border-white/10 border-r last:border-0">
+      {children}
+    </td>
   ),
-  tr: ({ node, ...props }: any) => (
-    <tr
-      className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
-      {...props}
-    />
+  tr: ({ children }: any) => (
+    <tr className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+      {children}
+    </tr>
   ),
   h2: ({ node, ...props }: any) => (
     <h2
@@ -141,40 +89,10 @@ const markdownComponents = {
   ul: ({ node, ...props }: any) => (
     <ul className="ml-6 mt-4 mb-4 list-disc marker:text-primary/70 space-y-2" {...props} />
   ),
-  ol: ({ node, ...props }: any) => (
-    <ol className="ml-6 mt-2 mb-2 list-decimal marker:text-primary/70" {...props} />
-  ),
   li: ({ node, ...props }: any) => <li className="text-zinc-300 leading-relaxed" {...props} />,
-  blockquote: ({ node, ...props }: any) => (
-    <blockquote
-      className="border-l-4 border-primary pl-4 ml-0 my-4 text-muted-foreground"
-      {...props}
-    />
-  ),
   p: ({ node, ...props }: any) => (
-    <p className="mb-4 last:mb-0 text-zinc-300 leading-relaxed whitespace-pre-wrap" {...props} />
+    <p className="mb-4 last:mb-0 text-zinc-300 leading-relaxed" {...props} />
   ),
-  pre: ({ node, ...props }: any) => (
-    <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
-  ),
-  code: ({ node, className, children, ...props }: any) => {
-    const match = /language-(\w+)/.exec(className || '')
-    const isInline = !match && String(children).indexOf('\n') === -1
-
-    if (isInline) {
-      return (
-        <code className="bg-muted px-2 py-1 rounded font-mono text-sm" {...props}>
-          {children}
-        </code>
-      )
-    }
-
-    return (
-      <code className={cn('font-mono text-sm', className)} {...props}>
-        {children}
-      </code>
-    )
-  },
   a: ({ node, ...props }: any) => (
     <a className="text-primary underline underline-offset-4" {...props} />
   ),

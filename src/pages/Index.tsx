@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { AIPrompt } from '@/components/AI/AIPrompt'
-import { ResponseFormatter } from '@/components/AI/ResponseFormatter'
+import { ResponseFormatter } from '@/components/ResponseFormatter'
 import { ProductCard } from '@/components/ProductCard'
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
