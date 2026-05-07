@@ -36,33 +36,36 @@ export function ResponseFormatter({
       {/* RENDERIZAÇÃO SHOW: Estilo unificado com o Modal */}
       {content && (
         <div className="prose prose-invert max-w-none text-lg leading-relaxed text-white/90">
-          <ReactMarkdown
-            components={{
-              // Título menor (text-lg ou text-xl) e cor suavizada (zinc-200)
-              h2: ({ children }) => (
-                <h2 className="text-xl font-bold mt-8 mb-4 text-zinc-200 tracking-tight border-b border-white/5 pb-2">
-                  {children}
-                </h2>
-              ),
-              // Texto principal em cinza claro (zinc-300) para evitar o brilho excessivo
-              p: ({ children }) => (
-                <p className="mb-4 last:mb-0 text-zinc-300 leading-relaxed">
-                  {children}
-                </p>
-              ),
-              // Itens de lista também suavizados
-              li: ({ children }) => (
-                <li className="mb-1 leading-normal text-zinc-300">
-                  {children}
-                </li>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc ml-6 space-y-2 my-4 text-zinc-300">
-                  {children}
-                </ul>
-              ),
-            }}
-          >
+{content && (
+  <div className="prose prose-invert max-w-none text-lg leading-relaxed text-white/90">
+    <ReactMarkdown
+      components={{
+        h2: ({ children }) => (
+          <h2 className="text-xl font-bold mt-8 mb-4 text-zinc-200 tracking-tight border-b border-white/5 pb-2">
+            {children}
+          </h2>
+        ),
+        p: ({ children }) => (
+          <p className="mb-4 last:mb-0 text-zinc-300 leading-relaxed">
+            {children}
+          </p>
+        ),
+        li: ({ children }) => (
+          <li className="mb-1 leading-normal text-zinc-300">
+            {children}
+          </li>
+        ),
+        ul: ({ children }) => (
+          <ul className="list-disc ml-6 space-y-2 my-4 text-zinc-300">
+            {children}
+          </ul>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  </div>
+)}
             {content}
           </ReactMarkdown>
             {content}
