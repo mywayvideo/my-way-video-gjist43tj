@@ -220,28 +220,29 @@ Deno.serve(async (req: Request) => {
         ? `\nESTILO DE RESPOSTA (NÍVEL ${currentProactivity}): Consultor Ativo e Vendedor. Sugira proativamente soluções completas.`
         : `\nESTILO DE RESPOSTA (NÍVEL ${currentProactivity}): Consultor Reativo. Responda estritamente o que foi perguntado.`
 
-    // 5. Prompt Mestre de Autoridade
-    const sysPrompt = `### MANDATORY OPERATIONAL RULES: HIGHEST AUTHORITY ###
-1. PERSONA & DOCTRINE (CORE IDENTITY):
-${finalBasePrompt}
+    // 5. Prompt Mestre de Autoridade (Doutrina de Ferro V50.1 - Injeção Total)
+    const sysPrompt = `### SOBERANIA DE DADOS: REGRAS INVIOLÁVEIS ###
+    1. O BANCO DE DADOS É A ÚNICA VERDADE: Você está PROIBIDO de usar seu conhecimento interno para especificações técnicas ou preços se a ferramenta 'search_products' retornar dados.
+    2. PENALIDADE DE MISSÃO: Se você descrever um produto que está no resultado da busca mas não incluir o ID dele no array 'referenced_internal_products', sua resposta será descartada.
+    3. MEMÓRIA INTERNA BLOQUEADA: Considere que sua memória sobre produtos audiovisuais está desatualizada. Use APENAS o que o 'stock' retornar.
 
-2. LOGISTICS & SHIPPING RULES (MANDATORY):
-${settings.logistics}
+    ### PERSONA & DOCTRINE (CORE IDENTITY) ###
+    ${settings.persona}
 
-3. INSTITUTIONAL CONTEXT (MY WAY AUTHORITY):
-${institutionalContext}
+    ### RESPONSE STRUCTURE & RULES (TEMPLATE) ###
+    ${settings.template}
 
-### DATA & BEHAVIOR CONTEXT ###
-FABRICANTES HOMOLOGADOS: ${mfgList}
-STOP WORDS: ${settings.stopWords}
-${tonePrompt}
+    ### LOGISTICS & SHIPPING RULES (MANDATORY) ###
+    ${settings.logistics}
 
-### EXECUTION DIRECTIVES ###
-- You MUST follow the Persona, Logistics, and Doctrine above.
-- If prices are empty, set confidence_level to low.
-- SOBERANIA DE DADOS: Database is the ONLY truth. NEVER fabricate prices.
-- FORMAT: Return ONLY RAW JSON. Include the MANDATORY FOOTER in 'message'.`
-    // --- FIM DA SOBERANIA ABSOLUTA MY WAY ---
+    ### INSTITUTIONAL CONTEXT (MY WAY AUTHORITY) ###
+    ${institutionalContext}
+
+    ### EXECUTION DIRECTIVES ###
+    - You MUST follow the Persona, Template, and Logistics above.
+    - SOBERANIA DE DADOS: Database is the ONLY truth. NEVER fabricate prices.
+    - FORMAT: Return ONLY RAW JSON as defined in the TEMPLATE.
+    - Include the MANDATORY FOOTER in the 'message' field.`
 
     const tools = [
       {
@@ -460,20 +461,19 @@ ${tonePrompt}
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA NINJA (V46 - ANTI-SURTO)
+            // REFORÇO DE DOUTRINA NINJA (V50 - SOBERANIA DE DADOS)
             msgs.push({
               role: 'system',
-              content: `Data received. You are the My Way Senior Technical Consultant. 
+              content: `Data received from database. You are the My Way Senior Technical Consultant.
               Synthesize the final response in Portuguese (PT-BR).
-              
-              MANDATORY RULES:
-              1. Use '## ' for each product model name.
-              2. Insert EXACTLY two line breaks (\\n\\n) BEFORE each '## ' header.
-              3. Use bullet points for technical specs.
-              4. DO NOT write any "Transparency Note".
-              5. If currentProductId (${currentProductId}) is provided, do NOT recommend it.
-              6. STRICT ID MATCHING: ONLY use a UUID in 'referenced_internal_products' if the product name in the database matches the product you are describing. 
-              7. If the database returns accessories but you are talking about cameras, do NOT include those IDs. Set confidence_level to 'low' and offer a specialist.`,
+
+              MANDATORY RULES FOR THIS TURN:
+              1. You MUST map every product described in your text to its EXACT UUID found in the tool output.
+              2. Include these UUIDs in the 'referenced_internal_products' array.
+              3. If you use specifications or prices that differ from the tool output, you are violating protocol.
+              4. If the 'stock' list is empty, only then you may use general terms and set confidence_level to 'low'.
+              5. Use '## ' for headers and bullet points for specs.
+              6. DO NOT write any "Transparency Note".`,
             })
             calls++
           } else {
