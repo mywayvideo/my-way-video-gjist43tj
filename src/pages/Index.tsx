@@ -80,13 +80,17 @@ export default function Index() {
                 isExternalLoading={isSearchLoading}
                 className="w-full"
               />
-              {/* INJEÇÃO DOS TIERS EM TRANSIÇÃO NA HOME PAGE */}
+
+              {/* STATUS DE PROCESSAMENTO: Agora colado no prompt */}
               {results?.is_intermediate && (
-                <div className="w-full mt-4 flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 border border-orange-500/30 animate-pulse text-left">
-                  <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-                  <span className="text-orange-500 font-bold text-sm tracking-wider">
-                    {results.message}
-                  </span>
+                <div className="w-full mt-2 flex items-center gap-3 p-3 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold tracking-[0.2em] text-orange-500 uppercase">
+                      Busca Profunda My Way
+                    </span>
+                    <span className="text-zinc-400 text-sm leading-tight">{results.message}</span>
+                  </div>
                 </div>
               )}
             </div>
