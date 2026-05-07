@@ -1,53 +1,54 @@
 import React, { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
-import ProductCard from '@/components/ProductCard'
+import { ProductCard } from '@/components/ProductCard'
 import { cn } from '@/lib/utils'
 
 interface ResponseFormatterProps {
   content: string
-  products: any[]
-  stock: any[]
-  referenced_internal_products: string[]
+  products?: any[]
+  stock?: any[]
+  referenced_internal_products?: string[]
+  nabData?: any[]
+  intel?: any[]
 }
 
-const ResponseFormatter: React.FC<ResponseFormatterProps> = ({
+export function ResponseFormatter({
   content,
   products,
   stock,
   referenced_internal_products,
-}) => {
+}: ResponseFormatterProps) {
+  // SOBERANIA DE DADOS: Só exibimos o que a IA validou explicitamente por ID
   const finalProducts = useMemo(() => {
-    let prods: any[] = []
-    if (products.length > 0) {
-      prods = products
-    } else {
-      prods = stock.filter((item: any) => referenced_internal_products.includes(item.id))
+    let prods: any[] = products || []
+
+    if (prods.length === 0 && stock && stock.length > 0 && referenced_internal_products) {
+      const refs = referenced_internal_products
+      prods = stock.filter((p: any) => refs.includes(p.id))
     }
 
-    // Remove duplicates by ID
-    const unique = new Map<string, any>()
-    prods.forEach((p) => {
-      if (p.id) {
-        unique.set(p.id, p)
-      }
-    })
-    return Array.from(unique.values())
+    // Remove duplicatas por ID
+    return prods.filter((v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i)
   }, [products, stock, referenced_internal_products])
 
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-8 w-full max-w-full overflow-hidden">
+      {/* RENDERIZAÇÃO SHOW: Estilo unificado com o Modal */}
       {content && (
-        <div className="prose prose-invert max-w-none text-lg leading-relaxed text-white/90">
+        <div className="prose prose-invert max-w-none text-lg leading-relaxed">
           <ReactMarkdown
             components={{
+              // 1. Hierarquia Corrigida (text-xl) e Anti-Glare (zinc-200)
               h2: ({ children }) => (
                 <h2 className="text-xl font-bold mt-8 mb-4 text-zinc-200 tracking-tight border-b border-white/5 pb-2">
                   {children}
                 </h2>
               ),
+              // 2. Conforto Visual (zinc-300) para o corpo do texto
               p: ({ children }) => (
                 <p className="mb-4 last:mb-0 text-zinc-300 leading-relaxed">{children}</p>
               ),
+              // 3. Bullets e Listas suavizados (zinc-300)
               li: ({ children }) => (
                 <li className="mb-1 leading-normal text-zinc-300">{children}</li>
               ),
@@ -60,14 +61,16 @@ const ResponseFormatter: React.FC<ResponseFormatterProps> = ({
           </ReactMarkdown>
         </div>
       )}
-      {finalProducts.length > 0 && (
-        <div>
-          <h3 className="uppercase text-sm font-bold tracking-widest text-zinc-500 mb-6">
-            PRODUTOS RELACIONADOS MY WAY
+
+      {/* GRID DE PRODUTOS: Apenas produtos de elite validados */}
+      {finalProducts && finalProducts.length > 0 && (
+        <div className="mt-12 animate-fade-in-up border-t border-white/5 pt-8">
+          <h3 className="text-sm font-bold tracking-widest text-zinc-500 uppercase mb-6">
+            Produtos Relacionados MY WAY
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {finalProducts.map((product, index) => (
-              <ProductCard key={product.id || index} {...product} />
+            {finalProducts.map((product: any) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
@@ -75,5 +78,3 @@ const ResponseFormatter: React.FC<ResponseFormatterProps> = ({
     </div>
   )
 }
-
-export default ResponseFormatter
