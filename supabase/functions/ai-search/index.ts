@@ -1,29 +1,20 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 
-function extractJson(
-  text: string,
-  fallbackMessage: string = 'Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.',
-): any {
-  if (!text || !text.trim()) {
-    return {
-      message: fallbackMessage,
-      confidence_level: 'low',
-      should_show_whatsapp_button: true,
-      referenced_internal_products: [],
-    }
-  }
+function extractJson(text: string, fallback: string): any {
   try {
-    const match = text.match(/{[\s\S]*?}/)
-    if (match) {
-      return JSON.parse(match[0])
-    }
-    throw new Error('No JSON object found')
-  } catch (e: any) {
-    console.error('Failed to parse JSON:', e.stack || e)
-    console.log('FAILED TO PARSE CONTENT:', text)
+    const match = text.match(/\{[\s\S]*?\}/)
+    return match
+      ? JSON.parse(match[0])
+      : {
+          message: fallback,
+          confidence_level: 'low',
+          should_show_whatsapp_button: true,
+          referenced_internal_products: [],
+        }
+  } catch {
     return {
-      message: fallbackMessage,
+      message: fallback,
       confidence_level: 'low',
       should_show_whatsapp_button: true,
       referenced_internal_products: [],
@@ -36,12 +27,6 @@ function getFallbackMessage(query: string): string {
   if (lowerQuery.match(/\b(the|is|what|how|why|where|can|you|please|help)\b/)) {
     return "I'm sorry, a technical error occurred while processing the data. Please contact a specialist."
   }
-  if (lowerQuery.match(/\b(el|la|qué|como|por qué|donde|puedes|por favor|ayuda)\b/)) {
-    return 'Lo siento, ocurrió un error técnico al procesar los datos. Por favor, contacte a un especialista.'
-  }
-  if (lowerQuery.match(/\b(le|la|les|quoi|comment|pourquoi|où|pouvez|s'il vous plaît|aide)\b/)) {
-    return "Désolé, une erreur technique s'est produite lors du traitement des données. Veuillez contacter un spécialiste."
-  }
   return 'Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.'
 }
 
@@ -52,116 +37,22 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
-
-  console.log('FUNCTION_START: Received request')
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const supUrl = Deno.env.get('SUPABASE_URL') || ''
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+    )
+    const body = await req.json()
+    const { query, history, currentProductId, isAdmin } = body
+    const actualQuery = query.match(/User Query: (.*)/)?.[1] || query
 
-    const supabase = createClient(supUrl, serviceRoleKey)
-
-    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
-    let userId = null
-
-    if (authHeader) {
-      try {
-        const token = authHeader.replace('Bearer ', '')
-        const user = await supabase.auth.getUser(token)
-        userId = user.data.user?.id || null
-      } catch (e) {}
-    }
-
-    const bodyText = await req.text()
-    let query = ''
-    let sessionId = undefined
-    let history: any[] = []
-    let userName = 'Usuário'
-    let productName = 'Não informado'
-    let technicalInfo = 'Não informado'
-    let currentProductId = null
-    let isAdmin = false
-
-    try {
-      const parsed = JSON.parse(bodyText)
-      query = parsed.query || bodyText
-      sessionId = parsed.session_id
-      history = parsed.history || []
-      userName = parsed.userName || userName
-      productName = parsed.productName || productName
-      technicalInfo = parsed.technicalInfo || technicalInfo
-      currentProductId = parsed.currentProductId || null
-      isAdmin = !!parsed.isAdmin
-    } catch {
-      query = bodyText
-    }
-
-    if (!query || typeof query !== 'string' || !query.trim()) {
-      throw new Error('Query is required')
-    }
-
-    let actualQuery = query
-    const userQueryMatch = query.match(/User Query: (.*)/)
-    if (userQueryMatch) {
-      actualQuery = userQueryMatch[1]
-    }
-
-    const fallbackMessage = getFallbackMessage(actualQuery)
-
-    const hasProductContext = productName && productName !== 'Não informado'
-
-    if (!isAdmin && !hasProductContext) {
-      try {
-        const { data: cacheData, error: cacheError } = await supabase
-          .from('product_search_cache')
-          .select('product_specs')
-          .eq('search_query', actualQuery)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (!cacheError && cacheData && cacheData.product_specs) {
-          const specs =
-            typeof cacheData.product_specs === 'string'
-              ? JSON.parse(cacheData.product_specs)
-              : cacheData.product_specs
-          if (
-            specs &&
-            Array.isArray(specs.referenced_internal_products) &&
-            specs.referenced_internal_products.length > 0
-          ) {
-            console.log('FUNCTION_END: Returning cached result')
-            return new Response(JSON.stringify(specs), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 200,
-            })
-          }
-        }
-      } catch (e) {
-        console.error('Cache read error:', e)
-      }
-    }
-
-    // --- INÍCIO DA SOBERANIA ABSOLUTA MY WAY (V38) ---
-    // 1. Busca Coordenada (Mapeamento Real de Campos)
-    const [agentRes, aiRes, globalRes, mfgRes, compRes, providersRes] = await Promise.all([
-      supabase
-        .from('ai_agent_settings')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single(),
-      supabase
-        .from('ai_settings')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single(),
+    // 1. CAPTURA DE INTELIGÊNCIA INTEGRAL
+    const [agentRes, aiRes, globalRes, compRes, providersRes] = await Promise.all([
+      supabase.from('ai_agent_settings').select('*').single(),
+      supabase.from('ai_settings').select('*').single(),
       supabase.from('settings').select('key, value'),
-      supabase.from('manufacturers').select('name'),
       supabase.from('company_info').select('content, type'),
       supabase
         .from('ai_providers')
@@ -174,96 +65,42 @@ Deno.serve(async (req: Request) => {
     globalRes.data?.forEach((s: any) => {
       if (s.value) globalSettingsMap[s.key] = s.value
     })
-
-    const mfgList = mfgRes.data?.map((m: any) => m.name).join(', ') || ''
-
-    // Filtra o Contexto Institucional da tabela company_info (type: ai_knowledge)
     const institutionalContext =
       compRes.data?.find((c: any) => c.type === 'ai_knowledge')?.content || ''
+    const providers = providersRes.data || []
 
-    const providers = providersRes.data
-    if (!providers?.length) throw new Error('No active providers found')
-
-    // 2. Consolidação Fiel (Sem chutes, apenas dados reais)
     const settings = {
       persona: agentRes.data?.system_prompt,
       template: aiRes.data?.system_prompt_template,
       logistics: aiRes.data?.logistics_rules_prompt,
       priceLimit: aiRes.data?.price_threshold_usd,
-      productPage: aiRes.data?.product_page_prompt,
-      proactivity: agentRes.data?.proactivity_level,
       stopWords: aiRes.data?.custom_stop_words,
-      transparencyNote: globalSettingsMap['transparency_note'],
-      trigger_keywords: aiRes.data?.trigger_keywords || [],
-      whatsapp_trigger_expensive: aiRes.data?.whatsapp_trigger_expensive,
-      whatsapp_trigger_low_confidence: aiRes.data?.whatsapp_trigger_low_confidence,
-      confidence_threshold: aiRes.data?.confidence_threshold || 'low',
+      ignoreStock: aiRes.data?.ignore_stock_flag ?? false,
+      proactivity: agentRes.data?.proactivity_level ?? 5,
+      temperature: aiRes.data?.temperature ?? 0.7, // MAPEAMENTO DE PRECISÃO
     }
 
-    // 3. Fusão de Identidade (Garante que a Persona entre no Template)
-    // LOG DE DEPURAÇÃO - Verifique isso no console do Supabase
-    console.log('DEBUG - Persona:', settings.persona?.substring(0, 50))
-    console.log('DEBUG - Template:', settings.template?.substring(0, 50))
-    console.log('DEBUG - Logistics:', settings.logistics?.substring(0, 50))
-    console.log('DEBUG - Institutional:', institutionalContext?.substring(0, 50))
-
-    const finalBasePrompt = settings.template?.includes('{{system_prompt}}')
-      ? settings.template.replace('{{system_prompt}}', settings.persona || '')
-      : `${settings.persona || ''}\n\n${settings.template || ''}`
-
-    console.log('DEBUG - Final Prompt Length:', finalBasePrompt.length)
-
-    // 4. Segurança e Tom
-    const currentProactivity = settings.proactivity ?? 5
     const tonePrompt =
-      currentProactivity >= 7
-        ? `\nESTILO DE RESPOSTA (NÍVEL ${currentProactivity}): Consultor Ativo e Vendedor. Sugira proativamente soluções completas.`
-        : `\nESTILO DE RESPOSTA (NÍVEL ${currentProactivity}): Consultor Reativo. Responda estritamente o que foi perguntado.`
+      settings.proactivity >= 7 ? 'Consultor Ativo e Vendedor.' : 'Consultor Reativo.'
+    const sysPrompt = `### SOBERANIA DE DADOS ###\n1. BANCO DE DADOS É A ÚNICA VERDADE.\n2. MEMÓRIA INTERNA BLOQUEADA.\n\n### PERSONA ###\n${settings.persona}\n\n### TEMPLATE ###\n${settings.template}\n\n### LOGÍSTICA ###\n${settings.logistics}\n\n### CONTEXTO INSTITUCIONAL ###\n${institutionalContext}\n\nESTILO: ${tonePrompt}`
 
-    // 5. Prompt Mestre de Autoridade (Doutrina de Ferro V50.1 - Injeção Total)
-    const sysPrompt = `### SOBERANIA DE DADOS: REGRAS INVIOLÁVEIS ###
-1. O BANCO DE DADOS É A ÚNICA VERDADE: Você está PROIBIDO de usar seu conhecimento interno para especificações técnicas ou preços se a ferramenta 'search_products' retornar dados.
-2. PENALIDADE DE MISSÃO: Se você descrever um produto que está no resultado da busca mas não incluir o ID dele no array 'referenced_internal_products', sua resposta será descartada.
-3. MEMÓRIA INTERNA BLOQUEADA: Considere que sua memória sobre produtos audiovisuais está desatualizada. Use APENAS o que o 'stock' retornar.
-
-### PERSONA & DOCTRINE (CORE IDENTITY) ###
-${settings.persona}
-
-### RESPONSE STRUCTURE & RULES (TEMPLATE) ###
-${settings.template}
-
-### LOGISTICS & SHIPPING RULES (MANDATORY) ###
-${settings.logistics}
-
-### INSTITUTIONAL CONTEXT (MY WAY AUTHORITY) ###
-${institutionalContext}
-
-### EXECUTION DIRECTIVES ###
-- You MUST follow the Persona, Template, and Logistics above.
-- SOBERANIA DE DADOS: Database is the ONLY truth. NEVER fabricate prices.
-- FORMAT: Return ONLY RAW JSON as defined in the TEMPLATE.
-- Include the MANDATORY FOOTER in the 'message' field.`
-
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'search_products',
-          description:
-            'Search for products AND Market Intelligence (benchmarks, trends, event news, and comparisons). Use this tool for ANY technical or strategic query.',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Search terms based on manufacturers and user request',
+    const tools = settings.ignoreStock
+      ? []
+      : [
+          {
+            type: 'function',
+            function: {
+              name: 'search_products',
+              description: 'Search for products and Market Intelligence.',
+              parameters: {
+                type: 'object',
+                properties: { query: { type: 'string' } },
+                required: ['query'],
               },
             },
-            required: ['query'],
           },
-        },
-      },
-    ]
+        ]
+
     let result: any = null
     let allowedProductIds = new Set<string>()
     let allReturnedProducts: any[] = []
@@ -274,411 +111,170 @@ ${institutionalContext}
       if (!key) continue
 
       try {
-        console.log('--- START PROVIDER ATTEMPT: ' + p.provider_name + ' ---')
-
-        let url = 'https://api.openai.com/v1/chat/completions'
-        let headers: any = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
-
-        const providerLower = (p.provider_name || '').toLowerCase()
-        if (providerLower.includes('claude') || providerLower.includes('anthropic')) {
-          url = 'https://api.anthropic.com/v1/messages'
-          headers = {
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json',
-          }
-        } else if (p.provider_name === 'deepseek') {
-          url = 'https://api.deepseek.com/chat/completions'
-        } else if (p.provider_name === 'gemini') {
-          url = `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
-        }
-
         let msgs: any[] = [{ role: 'system', content: sysPrompt }]
-        if (Array.isArray(history) && history.length > 0) {
-          const cleanHistory = history.filter(
-            (h) =>
-              typeof h.content === 'string' && !h.content.toLowerCase().includes('erro técnico'),
-          )
-          msgs.push(...cleanHistory.slice(-6))
-        }
+        if (Array.isArray(history) && history.length > 0) msgs.push(...history.slice(-6))
         msgs.push({ role: 'user', content: actualQuery })
 
         let calls = 0
-        let finalResponseObtained = false
-        let hasCalledSearchProducts = false
+        let finalObtained = false
 
         while (calls <= 2) {
+          // PAYLOAD COM TEMPERATURA (PRECISÃO ADMIN)
           const payload: any = {
             model: p.model_id,
             messages: msgs,
             response_format: { type: 'json_object' },
+            temperature: settings.temperature,
           }
-
-          if (calls === 0) {
+          if (tools.length > 0) {
             payload.tools = tools
             payload.tool_choice = 'auto'
-          } else {
-            payload.tools = tools
           }
 
-          console.log('Attempting provider: ' + p.provider_name)
-          const res = await fetch(url, {
+          const res = await fetch(p.api_url || 'https://api.openai.com/v1/chat/completions', {
             method: 'POST',
-            headers,
+            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           })
 
-          if (res.status === 401 || res.status === 403) {
-            console.error(
-              `Provider ${p.provider_name} returned ${res.status}. Moving to next provider.`,
-            )
-            break
-          }
-
-          if (!res.ok) throw new Error(await res.text())
-
+          if (!res.ok) break
           const resData = await res.json()
-          if (calls === 0) {
-            console.log('RAW AI RESPONSE (Turn 1):', JSON.stringify(resData))
-          }
           const msg = resData.choices?.[0]?.message
-          const finishReason = resData.choices?.[0]?.finish_reason
 
           if (msg?.tool_calls) {
             msgs.push(msg)
             for (const t of msg.tool_calls) {
-              if (t.function.name === 'search_products') {
-                hasCalledSearchProducts = true
-                const args = JSON.parse(t.function.arguments || '{}')
-                let rpcData: any = { stock: [], intel: [], nab_data: [], tiers_executed: [] }
+              const args = JSON.parse(t.function.arguments || '{}')
+              let rpcData: any = { stock: [], intel: [], nab_data: [], tiers_executed: [] }
+              let queryStr = args.query || actualQuery
 
-                try {
-                  // 1. APLICAÇÃO DE STOP WORDS (Limpeza Ninja)
-                  let queryStr = args.query || actualQuery
-                  if (settings.stopWords) {
-                    const stopWordsArray = settings.stopWords
-                      .split(',')
-                      .map((w) => w.trim().toLowerCase())
-                    queryStr = queryStr
-                      .split(' ')
-                      .filter((w) => !stopWordsArray.includes(w.toLowerCase()))
-                      .join(' ')
-                  }
-
-                  // 2. BUSCA MULTI-TIER PARALELIZADA
-                  const { data: data1, error: error1 } = await supabase.rpc('execute_ai_search', {
-                    search_term: queryStr,
-                  })
-
-                  let mergedStockMap = new Map<string, any>()
-
-                  if (!error1 && data1?.stock?.length > 0) {
-                    data1.stock.forEach((p: any) => mergedStockMap.set(p.id, p))
-                    rpcData.intel = data1.intel || []
-                    rpcData.nab_data = data1.nab_data || []
-                    rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
-                  } else {
-                    const queryWords = queryStr
-                      .trim()
-                      .split(/\s+/)
-                      .filter((w: string) => w.length > 2)
-                    const word2 = queryWords[1],
-                      word3 = queryWords[2]
-                    const searchPromises = []
-
-                    if (word2)
-                      searchPromises.push(supabase.rpc('execute_ai_search', { search_term: word2 }))
-                    if (word3)
-                      searchPromises.push(supabase.rpc('execute_ai_search', { search_term: word3 }))
-                    if (word2 && word3)
-                      searchPromises.push(
-                        supabase.rpc('execute_ai_search', { search_term: `${word2} ${word3}` }),
-                      )
-
-                    const parallelResults = await Promise.all(searchPromises)
-                    parallelResults.forEach((res, idx) => {
-                      if (res.data?.stock) {
-                        res.data.stock.forEach((p: any) => mergedStockMap.set(p.id, p))
-                        rpcData.tiers_executed.push(`Tier ${idx + 2}: Refinamento Técnico`)
-                      }
-                    })
-                  }
-
-                  // 3. ORDENAÇÃO E SOBERANIA
-                  rpcData.stock = Array.from(mergedStockMap.values()).sort((a: any, b: any) => {
-                    const scoreA = a.relevance_score || 0
-                    const scoreB = b.relevance_score || 0
-                    return scoreA !== scoreB
-                      ? scoreB - scoreA
-                      : (b.price_usd || 0) - (a.price_usd || 0)
-                  })
-                } catch (dbErr: any) {
-                  // Silencioso para manter a UI limpa
-                }
-
-                let filteredStock = (rpcData?.stock || []).slice(0, 15)
-                filteredStock.forEach((p: any) => {
-                  if (p.id) {
-                    allowedProductIds.add(p.id)
-                    if (!allReturnedProducts.some((existing) => existing.id === p.id))
-                      allReturnedProducts.push(p)
-                  }
-                  if (p.price_usd && p.price_usd > settings.priceLimit) hasExpensiveProduct = true
-                })
-
-                let content = JSON.stringify({
-                  stock: filteredStock.map((prod: any) => ({
-                    id: prod.id,
-                    name: prod.name,
-                    sku: prod.sku,
-                    price_usd: prod.price_usd,
-                    manufacturer_name: prod.manufacturer_name,
-                    ncm: prod.ncm,
-                  })),
-                  intel: (rpcData?.intel || []).slice(0, 2),
-                  nab_data: (rpcData?.nab_data || []).slice(0, 2),
-                  search_metadata: {
-                    tiers_active: rpcData.tiers_executed,
-                    status: 'Soberania de Dados Validada',
-                  },
-                })
-                msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
+              if (settings.stopWords) {
+                const stopWordsArray = settings.stopWords
+                  .split(',')
+                  .map((w: string) => w.trim().toLowerCase())
+                queryStr = queryStr
+                  .split(' ')
+                  .filter((w: string) => !stopWordsArray.includes(w.toLowerCase()))
+                  .join(' ')
               }
+
+              const { data: d1 } = await supabase.rpc('execute_ai_search', {
+                search_term: queryStr,
+              })
+              let mergedMap = new Map()
+              if (d1?.stock?.length > 0) {
+                d1.stock.forEach((p: any) => mergedMap.set(p.id, p))
+                rpcData.intel = d1.intel || []
+                rpcData.nab_data = d1.nab_data || []
+                rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
+              } else {
+                const words = queryStr
+                  .trim()
+                  .split(/\s+/)
+                  .filter((w: any) => w.length > 2)
+                const promises = []
+                if (words[1])
+                  promises.push(supabase.rpc('execute_ai_search', { search_term: words[1] }))
+                if (words[2])
+                  promises.push(supabase.rpc('execute_ai_search', { search_term: words[2] }))
+                if (words[1] && words[2])
+                  promises.push(
+                    supabase.rpc('execute_ai_search', { search_term: `${words[1]} ${words[2]}` }),
+                  )
+
+                const results = await Promise.all(promises)
+                results.forEach((r, i) => {
+                  if (r.data?.stock) {
+                    r.data.stock.forEach((p: any) => mergedMap.set(p.id, p))
+                    rpcData.tiers_executed.push(`Tier ${i + 2}: Refinamento`)
+                  }
+                })
+              }
+
+              rpcData.stock = Array.from(mergedMap.values()).sort(
+                (a: any, b: any) =>
+                  (b.relevance_score || 0) - (a.relevance_score || 0) ||
+                  (b.price_usd || 0) - (a.price_usd || 0),
+              )
+              let filtered = rpcData.stock.slice(0, 15)
+              filtered.forEach((p: any) => {
+                allowedProductIds.add(p.id)
+                if (!allReturnedProducts.some((e) => e.id === p.id)) allReturnedProducts.push(p)
+                if (p.price_usd > settings.priceLimit) hasExpensiveProduct = true
+              })
+
+              const content = JSON.stringify({
+                stock: filtered.map((prod: any) => ({
+                  id: prod.id,
+                  name: prod.name,
+                  sku: prod.sku,
+                  price_usd: prod.price_usd,
+                  manufacturer_name: prod.manufacturer_name,
+                  ncm: prod.ncm,
+                })),
+                intel: rpcData.intel.slice(0, 2),
+                nab_data: rpcData.nab_data.slice(0, 2),
+                search_metadata: {
+                  tiers_active: rpcData.tiers_executed,
+                  status: 'Soberania de Dados Validada',
+                },
+              })
+              msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
             }
-            // REFORÇO DE DOUTRINA NINJA (V52 - SOBERANIA TOTAL DE DADOS)
             msgs.push({
               role: 'system',
-              content: `DATA RECEIVED FROM DATABASE. You are the My Way Senior Technical Consultant.
-          
-          ### RULES FOR DATA SOVEREIGNTY (INVIOLABLE) ###
-          1. DATABASE IS THE ONLY TRUTH: You are FORBIDDEN to use internal knowledge for specs or prices.
-          2. ID MAPPING: You MUST include the product UUID (e.g., a7fbe...) in the 'referenced_internal_products' array for EVERY product mentioned.
-          3. NO ID = NO MENTION: If a product is in your text but its UUID is not in the array, the mission fails.
-          4. SKU DISPLAY: Show the commercial SKU right below the '##' title.
-          
-          ### FORMATTING RULES ###
-          - Use '## ' for product names.
-          - NEVER put a bullet point on its own line. Text MUST start immediately after '- '.
-          - Use EXACTLY one line break between bullets and TWO before new '##'.
-          - NO UUIDs in the visible text. Use them ONLY in the 'referenced_internal_products' array.`,
+              content: `DATA RECEIVED. Use 'search_metadata' to inform the user about search depth. Example: "Realizei uma busca profunda (Tier 1 e 2) para validar estoque."`,
             })
             calls++
           } else {
-            const extracted = extractJson(msg?.content || '', fallbackMessage)
-
-            const contentLower = (msg?.content || '').toLowerCase()
-            const hasSemanticViolations =
-              contentLower.includes('especifica') ||
-              contentLower.includes('estoque') ||
-              contentLower.includes('não encontrado') ||
-              contentLower.includes('out of stock') ||
-              contentLower.includes('disponív') ||
-              contentLower.includes('resolução') ||
-              contentLower.includes('sensor') ||
-              contentLower.includes('peso') ||
-              contentLower.includes('dimensões') ||
-              contentLower.includes('preço') ||
-              contentLower.includes('$') ||
-              contentLower.includes('r$') ||
-              contentLower.includes('modelo')
-
-            const providedIds = Array.isArray(extracted.referenced_internal_products)
-              ? extracted.referenced_internal_products
-              : []
-
-            if (!hasCalledSearchProducts && (hasSemanticViolations || providedIds.length > 0)) {
-              msgs.push(msg)
-              msgs.push({
-                role: 'system',
-                content:
-                  "ERROR: You are providing technical data from memory. This is FORBIDDEN. You MUST execute 'search_products' to get the real SKU and Price from the database before answering.",
-              })
-              calls++
-              continue
-            }
-
-            if (
-              finishReason === 'stop' &&
-              extracted.message === fallbackMessage &&
-              !(msg?.content || '').includes('{')
-            ) {
-              finalResponseObtained = false
-              break
-            }
-            result = extracted
-            finalResponseObtained = true
+            result = extractJson(msg?.content || '', getFallbackMessage(actualQuery))
+            finalObtained = true
             break
           }
         }
-        if (finalResponseObtained) break
-      } catch (e: any) {
-        console.error(`Provider ${p.provider_name} failed:`, e.stack || e)
+        if (finalObtained) break
+      } catch (e) {
+        continue
       }
     }
 
-    if (!result || typeof result !== 'object') {
-      result = {
-        message: fallbackMessage,
-        confidence_level: 'low',
-        should_show_whatsapp_button: true,
-        referenced_internal_products: [],
-      }
-    } else {
-      if (result.content && !result.message) {
-        result.message = result.content
-      }
-      if (!result.message || typeof result.message !== 'string' || !result.message.trim()) {
-        result.message = fallbackMessage
-        result.confidence_level = 'low'
-        result.should_show_whatsapp_button = true
-      }
-    }
-
-    // Remove unsupported properties to enforce strict JSON structure
-    if (result.products) delete result.products
-    if (result.content) delete result.content
-
-    if (allReturnedProducts.length === 0) {
-      result.confidence_level = 'low'
-      result.should_show_whatsapp_button = true
-
-      const negativeRegex =
-        /[^.!?\n]*(?:não temos informações|não localizei|não encontrei|não localizamos|não temos)[^.!?\n]*[.!?]?/gi
-      if (negativeRegex.test(result.message)) {
-        result.message = result.message
-          .replace(
-            negativeRegex,
-            ' No momento, o termo exato não retornou um registro direto em nosso estoque imediato, mas como consultores MY WAY, temos acesso global e podemos viabilizar seu projeto. ',
-          )
-          .replace(/\s+/g, ' ')
-          .trim()
-      }
-    } else {
-      result.confidence_level = 'high'
-      const negativeRegex =
-        /[^.!?\n]*(?:não temos informações|não localizei|não encontrei|não localizamos|não temos)[^.!?\n]*[.!?]?/gi
-      if (negativeRegex.test(result.message)) {
-        result.message = result.message.replace(negativeRegex, ' ').replace(/\s+/g, ' ').trim()
-      }
-    }
-
-    let forceWhatsApp = false
-    const lowerQuery = actualQuery.toLowerCase()
-    const hasTriggerKeyword =
-      Array.isArray(settings.trigger_keywords) &&
-      settings.trigger_keywords.some((kw: string) => lowerQuery.includes(kw.toLowerCase()))
-
-    if (settings.whatsapp_trigger_expensive && hasExpensiveProduct) {
-      forceWhatsApp = true
-    }
-    if (
-      settings.whatsapp_trigger_low_confidence &&
-      result.confidence_level === settings.confidence_threshold
-    ) {
-      forceWhatsApp = true
-    }
-    if (result.confidence_level === 'low') {
-      forceWhatsApp = true
-    }
-    if (hasTriggerKeyword) {
-      forceWhatsApp = true
-    }
-    if (allowedProductIds.size === 0) {
-      forceWhatsApp = true
-    }
-
-    result.should_show_whatsapp_button = forceWhatsApp || !!result.should_show_whatsapp_button
-
-    let refs: string[] = []
-    if (Array.isArray(result.referenced_internal_products)) {
-      refs = result.referenced_internal_products
-        .map((p: any) => (typeof p === 'string' ? p : p.id))
-        .filter(Boolean)
-    }
-
-    // Eliminate Auto-Discovery: AI is the sole authority for metadata.
-    // Validate each UUID given by AI against allowedProductIds.
-    const validatedRefs: string[] = []
-    refs.forEach((id) => {
-      if (allowedProductIds.has(id)) {
-        validatedRefs.push(id)
-      }
-    })
-
-    if (validatedRefs.length === 0) {
-      const messageContentLower = (result.message || '').toLowerCase()
-      const hasSpecsOrModels = messageContentLower.match(
-        /\b(resolução|sensor|peso|dimensões|hz|kg|lbs|mm|cm|polegadas|4k|8k|1080p|hdmi|sdi)\b/,
+    if (allReturnedProducts.length === 0 && result) {
+      const negRegex =
+        /[^{}]*(não temos informações|não localizei|não encontrei|não localizamos)[^{}]*/gi
+      result.message = (result.message || '').replace(
+        negRegex,
+        ' No momento, o termo exato não retornou um registro direto em nosso estoque imediato, mas como consultores MY WAY, temos acesso global e podemos viabilizar seu projeto. ',
       )
-      if (hasSpecsOrModels) {
-        result.confidence_level = 'low'
+    }
+
+    if (result && Array.isArray(result.referenced_internal_products)) {
+      result.referenced_internal_products = result.referenced_internal_products.filter(
+        (id: string) => allowedProductIds.has(id),
+      )
+    }
+
+    const transparencyNote =
+      globalSettingsMap['transparency_note'] || 'Nota: Preços sujeitos a confirmação.'
+    if (result) {
+      result.message = (result.message || '').trim() + '\n\n' + transparencyNote
+      result.message = result.message
+        .replace(/\n*## /g, '\n\n## ')
+        .replace(/\n+([-*])[\s\n]*/g, '\n$1 ')
+        .trim()
+      if (
+        hasExpensiveProduct ||
+        result.confidence_level === 'low' ||
+        allowedProductIds.size === 0
+      ) {
         result.should_show_whatsapp_button = true
       }
-    }
-
-    // 1. Consolidação dos IDs validados (Filtrando o produto atual para evitar redundância no banco/cache)
-    result.referenced_internal_products = Array.from(new Set(validatedRefs)).filter(
-      (id) =>
-        String(id).toLowerCase().trim() !==
-        String(currentProductId || '')
-          .toLowerCase()
-          .trim(),
-    )
-
-    // 2. Injeção Programática da Nota de Transparência (Soberania do Banco de Dados)
-    // Buscamos na tabela settings. Se não existir, usamos o fallback de segurança.
-    const transparencyNote =
-      globalSettingsMap['transparency_note'] ||
-      globalSettingsMap['company_transparency_note'] ||
-      'Nota de Transparência: Preços e disponibilidades sujeitos a confirmação.'
-
-    // Injetamos apenas se a nota ainda não estiver presente no texto (evita duplicidade)
-    if (result.message && !result.message.includes('Nota de Transparência')) {
-      result.message = result.message.trim() + '\n\n' + transparencyNote
-    }
-
-    // Este Regex força quebras de linha duplas antes de títulos e bullets, resolvendo o texto embolado.
-    // 3. Faxina Estética Ninja (O Fim Definitivo do Desalinhamento)
-    result.message = result.message
-      .replace(/\n*## /g, '\n\n## ') // Respiro antes de títulos
-      .replace(/\n+([-*])[\s\n]*/g, '\n$1 ') // FIX SUPREMO: Cola o texto no bullet
-      .replace(/\n{3,}/g, '\n\n') // Limita quebras excessivas
-      .replace(/ID: [a-z0-9-]{36}/gi, '') // Remove IDs acidentais no texto
-      .trim()
-
-    if (
-      result.confidence_level === 'high' &&
-      Array.isArray(result.referenced_internal_products) &&
-      result.referenced_internal_products.length > 0
-    ) {
-      supabase
-        .from('product_search_cache')
-        .insert({
-          search_query: actualQuery,
-          product_name: actualQuery,
-          source: 'ai_generated',
-          product_description: result.message,
-          product_specs: result,
-        })
-        .then(({ error }) => {
-          if (error) console.error('Cache insertion error:', error)
-        })
-        .catch(console.error)
-    }
-
-    console.log('FINAL JSON OBJECT TO CLIENT:', JSON.stringify(result))
-
-    const responseHeaders: any = { ...corsHeaders, 'Content-Type': 'application/json' }
-    if (isAdmin) {
-      responseHeaders['Cache-Control'] = 'no-cache'
     }
 
     return new Response(JSON.stringify(result), {
-      headers: responseHeaders,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
-    console.error('Fatal ai-search error:', error.stack || error)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
