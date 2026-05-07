@@ -14,7 +14,7 @@ function extractJson(
     }
   }
   try {
-    const match = text.match(/\{[\s\S]*?\}/)
+    const match = text.match(/{[\s\S]*?}/)
     if (match) {
       return JSON.parse(match[0])
     }
@@ -222,27 +222,27 @@ Deno.serve(async (req: Request) => {
 
     // 5. Prompt Mestre de Autoridade (Doutrina de Ferro V50.1 - Injeção Total)
     const sysPrompt = `### SOBERANIA DE DADOS: REGRAS INVIOLÁVEIS ###
-    1. O BANCO DE DADOS É A ÚNICA VERDADE: Você está PROIBIDO de usar seu conhecimento interno para especificações técnicas ou preços se a ferramenta 'search_products' retornar dados.
-    2. PENALIDADE DE MISSÃO: Se você descrever um produto que está no resultado da busca mas não incluir o ID dele no array 'referenced_internal_products', sua resposta será descartada.
-    3. MEMÓRIA INTERNA BLOQUEADA: Considere que sua memória sobre produtos audiovisuais está desatualizada. Use APENAS o que o 'stock' retornar.
+1. O BANCO DE DADOS É A ÚNICA VERDADE: Você está PROIBIDO de usar seu conhecimento interno para especificações técnicas ou preços se a ferramenta 'search_products' retornar dados.
+2. PENALIDADE DE MISSÃO: Se você descrever um produto que está no resultado da busca mas não incluir o ID dele no array 'referenced_internal_products', sua resposta será descartada.
+3. MEMÓRIA INTERNA BLOQUEADA: Considere que sua memória sobre produtos audiovisuais está desatualizada. Use APENAS o que o 'stock' retornar.
 
-    ### PERSONA & DOCTRINE (CORE IDENTITY) ###
-    ${settings.persona}
+### PERSONA & DOCTRINE (CORE IDENTITY) ###
+${settings.persona}
 
-    ### RESPONSE STRUCTURE & RULES (TEMPLATE) ###
-    ${settings.template}
+### RESPONSE STRUCTURE & RULES (TEMPLATE) ###
+${settings.template}
 
-    ### LOGISTICS & SHIPPING RULES (MANDATORY) ###
-    ${settings.logistics}
+### LOGISTICS & SHIPPING RULES (MANDATORY) ###
+${settings.logistics}
 
-    ### INSTITUTIONAL CONTEXT (MY WAY AUTHORITY) ###
-    ${institutionalContext}
+### INSTITUTIONAL CONTEXT (MY WAY AUTHORITY) ###
+${institutionalContext}
 
-    ### EXECUTION DIRECTIVES ###
-    - You MUST follow the Persona, Template, and Logistics above.
-    - SOBERANIA DE DADOS: Database is the ONLY truth. NEVER fabricate prices.
-    - FORMAT: Return ONLY RAW JSON as defined in the TEMPLATE.
-    - Include the MANDATORY FOOTER in the 'message' field.`
+### EXECUTION DIRECTIVES ###
+- You MUST follow the Persona, Template, and Logistics above.
+- SOBERANIA DE DADOS: Database is the ONLY truth. NEVER fabricate prices.
+- FORMAT: Return ONLY RAW JSON as defined in the TEMPLATE.
+- Include the MANDATORY FOOTER in the 'message' field.`
 
     const tools = [
       {
@@ -349,100 +349,81 @@ Deno.serve(async (req: Request) => {
             for (const t of msg.tool_calls) {
               if (t.function.name === 'search_products') {
                 hasCalledSearchProducts = true
-                console.log('TOOL CALL ARGS:', t.function.arguments)
                 const args = JSON.parse(t.function.arguments || '{}')
+                let rpcData: any = { stock: [], intel: [], nab_data: [], tiers_executed: [] }
 
-                console.log('Iniciando busca profunda MY WAY... Analisando termo técnico.')
-                let rpcData: any = { stock: [], intel: [], nab_data: [] }
                 try {
-                  const queryStr = args.query || actualQuery
-                  console.log('Tier 1: Consultando base de dados e estoque imediato...')
+                  // 1. APLICAÇÃO DE STOP WORDS (Limpeza Ninja)
+                  let queryStr = args.query || actualQuery
+                  if (settings.stopWords) {
+                    const stopWordsArray = settings.stopWords
+                      .split(',')
+                      .map((w) => w.trim().toLowerCase())
+                    queryStr = queryStr
+                      .split(' ')
+                      .filter((w) => !stopWordsArray.includes(w.toLowerCase()))
+                      .join(' ')
+                  }
+
+                  // 2. BUSCA MULTI-TIER PARALELIZADA
                   const { data: data1, error: error1 } = await supabase.rpc('execute_ai_search', {
                     search_term: queryStr,
                   })
 
                   let mergedStockMap = new Map<string, any>()
 
-                  if (!error1 && data1 && (data1 as any).stock && (data1 as any).stock.length > 0) {
-                    ;(data1 as any).stock.forEach((p: any) => mergedStockMap.set(p.id, p))
-                    rpcData.intel = (data1 as any).intel || []
-                    rpcData.nab_data = (data1 as any).nab_data || []
+                  if (!error1 && data1?.stock?.length > 0) {
+                    data1.stock.forEach((p: any) => mergedStockMap.set(p.id, p))
+                    rpcData.intel = data1.intel || []
+                    rpcData.nab_data = data1.nab_data || []
+                    rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
                   } else {
-                    console.log('Tier 2-4: Refinando busca por modelos e variações técnicas...')
                     const queryWords = queryStr
                       .trim()
                       .split(/\s+/)
                       .filter((w: string) => w.length > 2)
-                    const word2 = queryWords[1]
-                    const word3 = queryWords[2]
+                    const word2 = queryWords[1],
+                      word3 = queryWords[2]
+                    const searchPromises = []
 
-                    if (word2) {
-                      const { data: data2, error: error2 } = await supabase.rpc(
-                        'execute_ai_search',
-                        { search_term: word2 },
+                    if (word2)
+                      searchPromises.push(supabase.rpc('execute_ai_search', { search_term: word2 }))
+                    if (word3)
+                      searchPromises.push(supabase.rpc('execute_ai_search', { search_term: word3 }))
+                    if (word2 && word3)
+                      searchPromises.push(
+                        supabase.rpc('execute_ai_search', { search_term: `${word2} ${word3}` }),
                       )
-                      if (!error2 && data2 && (data2 as any).stock) {
-                        ;(data2 as any).stock.forEach((p: any) => mergedStockMap.set(p.id, p))
-                        if (rpcData.intel.length === 0) rpcData.intel = (data2 as any).intel || []
-                        if (rpcData.nab_data.length === 0)
-                          rpcData.nab_data = (data2 as any).nab_data || []
-                      }
-                    }
 
-                    if (word3) {
-                      const { data: data3, error: error3 } = await supabase.rpc(
-                        'execute_ai_search',
-                        { search_term: word3 },
-                      )
-                      if (!error3 && data3 && (data3 as any).stock) {
-                        ;(data3 as any).stock.forEach((p: any) => mergedStockMap.set(p.id, p))
-                        if (rpcData.intel.length === 0) rpcData.intel = (data3 as any).intel || []
-                        if (rpcData.nab_data.length === 0)
-                          rpcData.nab_data = (data3 as any).nab_data || []
+                    const parallelResults = await Promise.all(searchPromises)
+                    parallelResults.forEach((res, idx) => {
+                      if (res.data?.stock) {
+                        res.data.stock.forEach((p: any) => mergedStockMap.set(p.id, p))
+                        rpcData.tiers_executed.push(`Tier ${idx + 2}: Refinamento Técnico`)
                       }
-                    }
-
-                    if (word2 && word3) {
-                      const combined = `${word2} ${word3}`
-                      const { data: data4, error: error4 } = await supabase.rpc(
-                        'execute_ai_search',
-                        { search_term: combined },
-                      )
-                      if (!error4 && data4 && (data4 as any).stock) {
-                        ;(data4 as any).stock.forEach((p: any) => mergedStockMap.set(p.id, p))
-                        if (rpcData.intel.length === 0) rpcData.intel = (data4 as any).intel || []
-                        if (rpcData.nab_data.length === 0)
-                          rpcData.nab_data = (data4 as any).nab_data || []
-                      }
-                    }
+                    })
                   }
-                  console.log('Soberania de Dados: Validando preços e SKUs oficiais MY WAY...')
+
+                  // 3. ORDENAÇÃO E SOBERANIA
                   rpcData.stock = Array.from(mergedStockMap.values()).sort((a: any, b: any) => {
                     const scoreA = a.relevance_score || 0
                     const scoreB = b.relevance_score || 0
-                    if (scoreA !== scoreB) return scoreB - scoreA
-                    const priceA = a.price_usd || 0
-                    const priceB = b.price_usd || 0
-                    return priceB - priceA
+                    return scoreA !== scoreB
+                      ? scoreB - scoreA
+                      : (b.price_usd || 0) - (a.price_usd || 0)
                   })
                 } catch (dbErr: any) {
-                  console.error('Database search error:', dbErr.stack || dbErr)
+                  // Silencioso para manter a UI limpa
                 }
 
-                console.log('DATABASE RPC RESULT (Count):', rpcData?.stock?.length || 0)
-
                 let filteredStock = (rpcData?.stock || []).slice(0, 15)
-
                 filteredStock.forEach((p: any) => {
                   if (p.id) {
                     allowedProductIds.add(p.id)
-                    if (!allReturnedProducts.some((existing) => existing.id === p.id)) {
+                    if (!allReturnedProducts.some((existing) => existing.id === p.id))
                       allReturnedProducts.push(p)
-                    }
                   }
-                  if (p.price_usd && p.price_usd > settings.priceLimit) {
-                    hasExpensiveProduct = true
-                  }
+                  if (p.price_usd && p.price_usd > settings.priceLimit) hasExpensiveProduct = true
                 })
 
                 let content = JSON.stringify({
@@ -456,8 +437,11 @@ Deno.serve(async (req: Request) => {
                   })),
                   intel: (rpcData?.intel || []).slice(0, 2),
                   nab_data: (rpcData?.nab_data || []).slice(0, 2),
+                  search_metadata: {
+                    tiers_active: rpcData.tiers_executed,
+                    status: 'Soberania de Dados Validada',
+                  },
                 })
-
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
@@ -465,18 +449,18 @@ Deno.serve(async (req: Request) => {
             msgs.push({
               role: 'system',
               content: `DATA RECEIVED FROM DATABASE. You are the My Way Senior Technical Consultant.
-              
-              ### RULES FOR DATA SOVEREIGNTY (INVIOLABLE) ###
-              1. DATABASE IS THE ONLY TRUTH: You are FORBIDDEN to use internal knowledge for specs or prices.
-              2. ID MAPPING: You MUST include the product UUID (e.g., a7fbe...) in the 'referenced_internal_products' array for EVERY product mentioned.
-              3. NO ID = NO MENTION: If a product is in your text but its UUID is not in the array, the mission fails.
-              4. SKU DISPLAY: Show the commercial SKU right below the '##' title.
-              
-              ### FORMATTING RULES ###
-              - Use '## ' for product names.
-              - NEVER put a bullet point on its own line. Text MUST start immediately after '- '.
-              - Use EXACTLY one line break between bullets and TWO before new '##'.
-              - NO UUIDs in the visible text. Use them ONLY in the 'referenced_internal_products' array.`,
+          
+          ### RULES FOR DATA SOVEREIGNTY (INVIOLABLE) ###
+          1. DATABASE IS THE ONLY TRUTH: You are FORBIDDEN to use internal knowledge for specs or prices.
+          2. ID MAPPING: You MUST include the product UUID (e.g., a7fbe...) in the 'referenced_internal_products' array for EVERY product mentioned.
+          3. NO ID = NO MENTION: If a product is in your text but its UUID is not in the array, the mission fails.
+          4. SKU DISPLAY: Show the commercial SKU right below the '##' title.
+          
+          ### FORMATTING RULES ###
+          - Use '## ' for product names.
+          - NEVER put a bullet point on its own line. Text MUST start immediately after '- '.
+          - Use EXACTLY one line break between bullets and TWO before new '##'.
+          - NO UUIDs in the visible text. Use them ONLY in the 'referenced_internal_products' array.`,
             })
             calls++
           } else {
