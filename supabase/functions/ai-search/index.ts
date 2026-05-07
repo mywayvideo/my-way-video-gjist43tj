@@ -461,20 +461,22 @@ Deno.serve(async (req: Request) => {
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
-            // REFORÇO DE DOUTRINA NINJA (V51.1 - FOCO EM SKU E ESTÉTICA)
+            // REFORÇO DE DOUTRINA NINJA (V52 - SOBERANIA TOTAL DE DADOS)
             msgs.push({
               role: 'system',
-              content: `Data received. You are the My Way Senior Technical Consultant.
-              Synthesize the final response in Portuguese (PT-BR).
-
-              MANDATORY FORMATTING RULES:
-              1. Use '## ' for product names.
-              2. NEVER put a bullet point on its own line. Text MUST start immediately after '- '.
-              3. Format: '- **Spec Name**: Value'.
-              4. EXPOSIÇÃO DE DADOS: Inclua o SKU do produto logo abaixo do título '##'.
-              5. PROIBIÇÃO TOTAL: Nunca escreva UUIDs ou IDs (ex: a7fb...) no texto. Use apenas o SKU comercial.
-              6. Use EXACTLY one line break between bullet points.
-              7. Use EXACTLY two line breaks before a new '## ' header.`,
+              content: `DATA RECEIVED FROM DATABASE. You are the My Way Senior Technical Consultant.
+              
+              ### RULES FOR DATA SOVEREIGNTY (INVIOLABLE) ###
+              1. DATABASE IS THE ONLY TRUTH: You are FORBIDDEN to use internal knowledge for specs or prices.
+              2. ID MAPPING: You MUST include the product UUID (e.g., a7fbe...) in the 'referenced_internal_products' array for EVERY product mentioned.
+              3. NO ID = NO MENTION: If a product is in your text but its UUID is not in the array, the mission fails.
+              4. SKU DISPLAY: Show the commercial SKU right below the '##' title.
+              
+              ### FORMATTING RULES ###
+              - Use '## ' for product names.
+              - NEVER put a bullet point on its own line. Text MUST start immediately after '- '.
+              - Use EXACTLY one line break between bullets and TWO before new '##'.
+              - NO UUIDs in the visible text. Use them ONLY in the 'referenced_internal_products' array.`,
             })
             calls++
           } else {
@@ -654,12 +656,10 @@ Deno.serve(async (req: Request) => {
     // Este Regex força quebras de linha duplas antes de títulos e bullets, resolvendo o texto embolado.
     // 3. Faxina Estética Ninja (O Fim Definitivo do Desalinhamento)
     result.message = result.message
-      .replace(/\n*## /g, '\n\n## ') // Garante respiro antes de títulos
+      .replace(/\n*## /g, '\n\n## ') // Respiro antes de títulos
       .replace(/\n+([-*])[\s\n]*/g, '\n$1 ') // FIX SUPREMO: Cola o texto no bullet
-      .replace(/\n{3,}/g, '\n\n') // Limita a no máximo duas quebras seguidas
-      .replace(/(\*\*[^*]+\*\*): \n/g, '$1: ') // Remove quebra após o label em negrito
-      .replace(/ID: [a-z0-9-]{36}/gi, '') // Remove UUIDs rotulados
-      .replace(/[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/gi, '') // Remove UUIDs puros
+      .replace(/\n{3,}/g, '\n\n') // Limita quebras excessivas
+      .replace(/ID: [a-z0-9-]{36}/gi, '') // Remove IDs acidentais no texto
       .trim()
 
     if (

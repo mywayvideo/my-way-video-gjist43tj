@@ -81,10 +81,10 @@ export default function Index() {
                 className="w-full"
               />
 
-              {/* STATUS DE PROCESSAMENTO: Agora colado no prompt */}
+              {/* STATUS DE PROCESSAMENTO (TIERS) - COLADO NO PROMPT */}
               {results?.is_intermediate && (
-                <div className="w-full mt-2 flex items-center gap-3 p-3 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
-                  <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                <div className="w-full mt-2 flex items-center gap-3 p-4 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
+                  <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold tracking-[0.2em] text-orange-500 uppercase">
                       Busca Profunda My Way
