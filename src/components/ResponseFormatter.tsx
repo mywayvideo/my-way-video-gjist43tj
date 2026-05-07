@@ -1,6 +1,7 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { Product } from '@/types'
 
@@ -49,7 +50,7 @@ export function ResponseFormatter({
 
           if (rows.length < 2) {
             return (
-              <ReactMarkdown key={i} components={markdownComponents}>
+              <ReactMarkdown key={i} components={markdownComponents} remarkPlugins={[remarkGfm]}>
                 {part}
               </ReactMarkdown>
             )
@@ -79,7 +80,7 @@ export function ResponseFormatter({
         }
 
         return (
-          <ReactMarkdown key={i} components={markdownComponents}>
+          <ReactMarkdown key={i} components={markdownComponents} remarkPlugins={[remarkGfm]}>
             {part}
           </ReactMarkdown>
         )
@@ -98,27 +99,61 @@ export function ResponseFormatter({
 }
 
 const markdownComponents = {
+  table: ({ node, ...props }: any) => (
+    <div className="my-6 overflow-x-auto rounded-lg border border-white/10">
+      <table className="w-full border-collapse text-sm" {...props} />
+    </div>
+  ),
+  thead: ({ node, ...props }: any) => (
+    <thead
+      className="bg-white/5 border-b border-white/10 uppercase tracking-widest text-[10px]"
+      {...props}
+    />
+  ),
+  th: ({ node, ...props }: any) => (
+    <th
+      className="px-4 py-3 font-bold text-zinc-200 border-r border-white/10 last:border-0"
+      {...props}
+    />
+  ),
+  td: ({ node, ...props }: any) => (
+    <td
+      className="px-4 py-3 text-zinc-300 border-b border-white/10 border-r last:border-0"
+      {...props}
+    />
+  ),
+  tr: ({ node, ...props }: any) => (
+    <tr
+      className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
+      {...props}
+    />
+  ),
   h2: ({ node, ...props }: any) => (
-    <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
+    <h2
+      className="text-xl font-bold mt-8 mb-4 text-zinc-200 border-b border-white/5 pb-2"
+      {...props}
+    />
   ),
   h3: ({ node, ...props }: any) => (
-    <h3 className="text-xl font-semibold mt-4 mb-3 text-primary" {...props} />
+    <h3 className="text-lg font-semibold mt-6 mb-3 text-zinc-300" {...props} />
   ),
   strong: ({ node, ...props }: any) => <strong className="font-bold text-primary" {...props} />,
   ul: ({ node, ...props }: any) => (
-    <ul className="ml-6 mt-2 mb-2 list-disc marker:text-primary/70" {...props} />
+    <ul className="ml-6 mt-4 mb-4 list-disc marker:text-primary/70 space-y-2" {...props} />
   ),
   ol: ({ node, ...props }: any) => (
     <ol className="ml-6 mt-2 mb-2 list-decimal marker:text-primary/70" {...props} />
   ),
-  li: ({ node, ...props }: any) => <li className="mb-2" {...props} />,
+  li: ({ node, ...props }: any) => <li className="text-zinc-300 leading-relaxed" {...props} />,
   blockquote: ({ node, ...props }: any) => (
     <blockquote
       className="border-l-4 border-primary pl-4 ml-0 my-4 text-muted-foreground"
       {...props}
     />
   ),
-  p: ({ node, ...props }: any) => <p className="mb-4 last:mb-0 whitespace-pre-wrap" {...props} />,
+  p: ({ node, ...props }: any) => (
+    <p className="mb-4 last:mb-0 text-zinc-300 leading-relaxed whitespace-pre-wrap" {...props} />
+  ),
   pre: ({ node, ...props }: any) => (
     <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
   ),
