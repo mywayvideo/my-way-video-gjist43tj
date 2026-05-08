@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Product as ProductType } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
@@ -19,24 +18,19 @@ import ReactMarkdown from 'react-markdown'
 import { TechnicalInfoModal } from '@/components/TechnicalInfoModal'
 import {
   ShoppingCart,
-  Bot,
   Globe,
   Loader2,
   Sparkles,
   MessageCircle,
   Calculator,
   ChevronRight,
-  X,
-  Send,
   Info,
   HelpCircle,
   ChevronLeft,
   Heart,
 } from 'lucide-react'
 import { Helmet, HelmetProvider } from 'react-helmet-async'
-import { MarkdownRenderer } from '@/components/MarkdownRenderer'
-import { ReferencedProducts } from '@/components/ReferencedProducts'
-import { formatPrice, formatPriceBRL } from '@/utils/priceFormatter'
+import { formatPrice } from '@/utils/priceFormatter'
 import { AIConsultantModal } from '@/components/AIConsultantModal'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
@@ -100,31 +94,33 @@ const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
 }
 
 const markdownComponents = {
-  h2: ({ node, ...props }: any) => (
+  h2: ({ node: _, ...props }: any) => (
     <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
   ),
-  h3: ({ node, ...props }: any) => (
+  h3: ({ node: _, ...props }: any) => (
     <h3 className="text-xl font-semibold mt-4 mb-3 text-primary" {...props} />
   ),
-  strong: ({ node, ...props }: any) => <strong className="font-bold text-primary" {...props} />,
-  ul: ({ node, ...props }: any) => (
+  strong: ({ node: _, ...props }: any) => <strong className="font-bold text-primary" {...props} />,
+  ul: ({ node: _, ...props }: any) => (
     <ul className="ml-6 mt-2 mb-2 list-disc marker:text-primary/70" {...props} />
   ),
-  ol: ({ node, ...props }: any) => (
+  ol: ({ node: _, ...props }: any) => (
     <ol className="ml-6 mt-2 mb-2 list-decimal marker:text-primary/70" {...props} />
   ),
-  li: ({ node, ...props }: any) => <li className="mb-2" {...props} />,
-  blockquote: ({ node, ...props }: any) => (
+  li: ({ node: _, ...props }: any) => <li className="mb-2" {...props} />,
+  blockquote: ({ node: _, ...props }: any) => (
     <blockquote
       className="border-l-4 border-primary pl-4 ml-0 my-4 text-muted-foreground"
       {...props}
     />
   ),
-  p: ({ node, ...props }: any) => <p className="mb-4 last:mb-0 whitespace-pre-wrap" {...props} />,
-  pre: ({ node, ...props }: any) => (
+  p: ({ node: _, ...props }: any) => (
+    <p className="mb-4 last:mb-0 whitespace-pre-wrap" {...props} />
+  ),
+  pre: ({ node: _, ...props }: any) => (
     <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
   ),
-  code: ({ node, className, children, ...props }: any) => {
+  code: ({ node: _, className, children, ...props }: any) => {
     const match = /language-(\w+)/.exec(className || '')
     const isInline = !match && String(children).indexOf('\n') === -1
 

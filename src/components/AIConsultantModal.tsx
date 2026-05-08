@@ -12,7 +12,6 @@ import { useAiSearch } from '@/hooks/use-ai-search'
 import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, MessageCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
@@ -95,7 +94,7 @@ export function AIConsultantModal({
       if (response && !response.error && response.data?.setting_value) {
         whatsappNumber = response.data.setting_value
       }
-    } catch (e) {
+    } catch {
       // Fallback to default number on error
     }
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
