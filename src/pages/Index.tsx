@@ -44,13 +44,6 @@ export default function Index() {
     fetchSpecials()
   }, [])
 
-  // Lógica de Extração de Status Dinâmico
-  const currentStatus =
-    Array.isArray(results?.search_metadata?.tiers_active) &&
-    results.search_metadata.tiers_active.length > 0
-      ? results.search_metadata.tiers_active[results.search_metadata.tiers_active.length - 1]
-      : results?.search_metadata?.status || 'PROCESSANDO...'
-
   return (
     <div className="flex flex-col gap-16 pb-24">
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
@@ -98,7 +91,7 @@ export default function Index() {
                 <div className="flex items-center gap-3 p-4 mb-4 rounded-xl bg-zinc-900/50 border border-orange-500/30 animate-pulse">
                   <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
                   <span className="text-orange-500 font-bold text-sm tracking-wider uppercase">
-                    {results?.message || currentStatus || 'PROCESSANDO BUSCA PROFUNDA MY WAY...'}
+                    {results?.message || 'PROCESSANDO BUSCA PROFUNDA MY WAY...'}
                   </span>
                 </div>
               ) : null}
