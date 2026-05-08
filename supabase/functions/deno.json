@@ -8,6 +8,7 @@
     "validate-image-url": 30,
     "change-admin-password": 30,
     "toggle-2fa": 30,
+    "change-customer-password": 30,
     "send-confirmation-email": 30,
     "create-customer": 32,
     "send-welcome-email": 30,
