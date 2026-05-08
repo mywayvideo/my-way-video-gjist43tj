@@ -40,12 +40,10 @@ export function AIConsultantModal({
     if (!isOpen) {
       clearResults()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   useEffect(() => {
     clearResults()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProductId])
 
   const userName =
@@ -81,34 +79,31 @@ export function AIConsultantModal({
   const handleWhatsAppClick = async () => {
     let whatsappNumber = '17867161170'
     try {
-      const fetchSettings = supabase
+      const { data } = await supabase
         .from('app_settings')
         .select('setting_value')
         .eq('setting_key', 'company_whatsapp')
         .single()
-
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 1500),
-      )
-
-      const response = (await Promise.race([fetchSettings, timeout])) as any
-      if (response && !response.error && response.data?.setting_value) {
-        whatsappNumber = response.data.setting_value
-      }
-    } catch (e) {
-      // Use fallback
-    }
+      if (data?.setting_value) whatsappNumber = data.setting_value
+    } catch (e) {}
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
+
+  // Lógica de Status Dinâmico (Tiers)
+  const currentStatus =
+    Array.isArray(results?.search_metadata?.tiers_active) &&
+    results.search_metadata.tiers_active.length > 0
+      ? results.search_metadata.tiers_active[results.search_metadata.tiers_active.length - 1]
+      : results?.search_metadata?.status || 'PROCESSANDO...'
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          // Mobile: Gaveta no fundo
-          'fixed inset-x-0 bottom-0 z-50 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
-          // Desktop: Centralizado e fixo (CORRIGIDO: sm:fixed em vez de sm:relative)
-          'sm:fixed sm:inset-auto sm:top-[50%] sm:left-[50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-10 sm:border',
+          // Mobile: Gaveta no fundo (Reset de posicionamento central)
+          'fixed left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0 z-50 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
+          // Desktop: Centralizado nativo (Reset de posicionamento mobile)
+          'sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:rounded-2xl sm:p-10 sm:border',
         )}
       >
         <DialogHeader>
@@ -125,8 +120,8 @@ export function AIConsultantModal({
           {results?.is_intermediate && (
             <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-800/50 border border-orange-500/30 animate-pulse">
               <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-              <span className="text-orange-500 font-bold text-sm tracking-wider">
-                PROCESSANDO BUSCA PROFUNDA MY WAY...
+              <span className="text-orange-500 font-bold text-[10px] tracking-widest uppercase">
+                {currentStatus}
               </span>
             </div>
           )}
@@ -137,26 +132,11 @@ export function AIConsultantModal({
                 <ReactMarkdown>{formattedMessage}</ReactMarkdown>
               </div>
               {results.products &&
-                results.products.filter((p: any) => {
-                  const pid = String(p?.id || '')
-                    .toLowerCase()
-                    .trim()
-                  const currentId = String(currentProductId || '')
-                    .toLowerCase()
-                    .trim()
-                  return pid !== currentId
-                }).length > 0 && (
+                results.products.filter((p: any) => String(p?.id) !== String(currentProductId))
+                  .length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
                     {results.products
-                      .filter(
-                        (p: any) =>
-                          String(p?.id || '')
-                            .toLowerCase()
-                            .trim() !==
-                          String(currentProductId || '')
-                            .toLowerCase()
-                            .trim(),
-                      )
+                      .filter((p: any) => String(p?.id) !== String(currentProductId))
                       .map((product: any) => (
                         <ProductCard key={product.id} product={product} />
                       ))}
