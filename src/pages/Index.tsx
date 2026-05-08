@@ -35,7 +35,6 @@ export default function Index() {
   useEffect(() => {
     async function fetchSpecials() {
       const { data } = await supabase.from('products').select('*').eq('is_special', true).limit(8)
-
       if (data) {
         const randomized = [...data].sort(() => Math.random() - 0.5)
         setSpecials(randomized)
@@ -44,6 +43,13 @@ export default function Index() {
     }
     fetchSpecials()
   }, [])
+
+  // Lógica de Extração de Status Dinâmico
+  const currentStatus =
+    Array.isArray(results?.search_metadata?.tiers_active) &&
+    results.search_metadata.tiers_active.length > 0
+      ? results.search_metadata.tiers_active[results.search_metadata.tiers_active.length - 1]
+      : results?.search_metadata?.status || 'PROCESSANDO...'
 
   return (
     <div className="flex flex-col gap-16 pb-24">
@@ -81,17 +87,12 @@ export default function Index() {
                 className="w-full"
               />
 
-              {/* STATUS DE PROCESSAMENTO (TIERS) - COLADO NO PROMPT */}
+              {/* STATUS BAR - 100% DINÂMICA E SEM TEXTO FIXO */}
               {results?.is_intermediate && (
                 <div className="w-full mt-2 flex items-center gap-3 p-4 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
                   <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-                  <span className="text-[10px] font-bold tracking-wider text-orange-500 uppercase">
-                    {Array.isArray(results?.search_metadata?.tiers_active) &&
-                    results.search_metadata.tiers_active.length > 0
-                      ? results.search_metadata.tiers_active[
-                          results.search_metadata.tiers_active.length - 1
-                        ]
-                      : results?.search_metadata?.status || 'PROCESSANDO...'}
+                  <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase">
+                    {currentStatus}
                   </span>
                 </div>
               )}
@@ -103,7 +104,6 @@ export default function Index() {
               id="ai-response-container"
               className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24"
             >
-              {/* Entrega direta: O componente agora cuida da estética e do conteúdo */}
               <ResponseFormatter
                 content={results.message || ''}
                 products={results.products}
