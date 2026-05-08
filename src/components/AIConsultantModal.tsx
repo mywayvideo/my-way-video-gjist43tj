@@ -90,12 +90,12 @@ export function AIConsultantModal({
       }
     } catch (e) {
       // Fallback to default number if database fetch fails
-      console.log('WhatsApp fetch error, using fallback')
+      console.error('WhatsApp fetch error:', e)
     }
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
-  // Lógica de Status Dinâmico (Tiers)
+  // Lógica de Status Dinâmico (Tiers) - Extrai o status real do backend
   const currentStatus =
     Array.isArray(results?.search_metadata?.tiers_active) &&
     results.search_metadata.tiers_active.length > 0
@@ -106,10 +106,10 @@ export function AIConsultantModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          // Mobile: Gaveta no fundo (Reset de posicionamento central)
-          'fixed left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0 z-50 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
-          // Desktop: Centralizado nativo (Reset de posicionamento mobile)
-          'sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:rounded-2xl sm:p-10 sm:border',
+          // Mobile: Estilo Gaveta (Reset de coordenadas centrais do Radix)
+          'fixed inset-x-0 bottom-0 top-auto translate-y-0 translate-x-0 z-50 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
+          // Desktop: Centralização absoluta (Reset de coordenadas mobile)
+          'sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:rounded-2xl sm:p-10 sm:border sm:border-zinc-800',
         )}
       >
         <DialogHeader>
@@ -123,6 +123,7 @@ export function AIConsultantModal({
         </DialogHeader>
 
         <ScrollArea className="flex-1 border border-zinc-800/50 rounded-lg p-4 bg-black/20">
+          {/* BARRA DE STATUS DINÂMICA - SUBSTITUI A MENSAGEM ESTÁTICA */}
           {results?.is_intermediate && (
             <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-800/50 border border-orange-500/30 animate-pulse">
               <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
