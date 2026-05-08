@@ -86,44 +86,47 @@ export default function Index() {
                 isExternalLoading={isSearchLoading}
                 className="w-full"
               />
-
-              {/* STATUS BAR - 100% DINÂMICA E SEM TEXTO FIXO */}
-              {results?.is_intermediate && (
-                <div className="w-full mt-2 flex items-center gap-3 p-4 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
-                  <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-                  <span className="text-[10px] font-bold tracking-widest text-orange-500 uppercase">
-                    {currentStatus}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
-          {results && !results.is_intermediate && !Array.isArray(results) && (
+          {(results || isSearchLoading) && !Array.isArray(results) && (
             <div
               id="ai-response-container"
-              className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24"
+              className="mt-12 text-left bg-background/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 animate-fade-in-up scroll-mt-24 w-full max-w-4xl mx-auto"
             >
-              <ResponseFormatter
-                content={results.message || ''}
-                products={results.products}
-                stock={results.stock}
-                referenced_internal_products={results.referenced_internal_products}
-                nabData={results.nabData || results.nab_data}
-                intel={results.intel}
-              />
-
-              {results.should_show_whatsapp_button && (
-                <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4 animate-fade-in-up delay-200">
-                  <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
-                  <Button
-                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg shadow-green-900/20"
-                    onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
-                  >
-                    Falar com Especialista
-                  </Button>
+              {results?.is_intermediate || (!results && isSearchLoading) ? (
+                <div className="flex items-center gap-3 p-4 mb-4 rounded-xl bg-zinc-900/50 border border-orange-500/30 animate-pulse">
+                  <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                  <span className="text-orange-500 font-bold text-sm tracking-wider uppercase">
+                    {results?.message || currentStatus || 'PROCESSANDO BUSCA PROFUNDA MY WAY...'}
+                  </span>
                 </div>
-              )}
+              ) : null}
+
+              {results && !results.is_intermediate ? (
+                <>
+                  <ResponseFormatter
+                    content={results.message || ''}
+                    products={results.products}
+                    stock={results.stock}
+                    referenced_internal_products={results.referenced_internal_products}
+                    nabData={results.nabData || results.nab_data}
+                    intel={results.intel}
+                  />
+
+                  {results.should_show_whatsapp_button && (
+                    <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4 animate-fade-in-up delay-200">
+                      <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
+                      <Button
+                        className="bg-green-600 hover:bg-green-700 text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg shadow-green-900/20"
+                        onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
+                      >
+                        Falar com Especialista
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
           )}
         </div>
