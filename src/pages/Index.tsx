@@ -85,16 +85,14 @@ export default function Index() {
               {results?.is_intermediate && (
                 <div className="w-full mt-2 flex items-center gap-3 p-4 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
                   <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold tracking-wider text-orange-500 uppercase">
-                      {Array.isArray(results?.search_metadata?.tiers_active) &&
-                      results.search_metadata.tiers_active.length > 0
-                        ? results.search_metadata.tiers_active[
-                            results.search_metadata.tiers_active.length - 1
-                          ]
-                        : results?.search_metadata?.status || 'PROCESSANDO...'}
-                    </span>
-                  </div>
+                  <span className="text-[10px] font-bold tracking-wider text-orange-500 uppercase">
+                    {Array.isArray(results?.search_metadata?.tiers_active) &&
+                    results.search_metadata.tiers_active.length > 0
+                      ? results.search_metadata.tiers_active[
+                          results.search_metadata.tiers_active.length - 1
+                        ]
+                      : results?.search_metadata?.status || 'PROCESSANDO...'}
+                  </span>
                 </div>
               )}
             </div>
