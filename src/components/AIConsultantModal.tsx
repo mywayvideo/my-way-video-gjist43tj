@@ -96,21 +96,14 @@ export function AIConsultantModal({
         whatsappNumber = response.data.setting_value
       }
     } catch (e) {
-      // Use fallback
+      // Fallback to default number on error
     }
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className={cn(
-          // Mobile: Gaveta no fundo
-          'fixed inset-x-0 bottom-0 z-50 h-[92vh] w-full rounded-t-[32px] border-t border-zinc-800 bg-zinc-900/95 p-4 flex flex-col gap-4 backdrop-blur-md shadow-2xl transition-all duration-300',
-          // Desktop: Centralizado e fixo (CORRIGIDO: sm:fixed em vez de sm:relative)
-          'sm:fixed sm:inset-auto sm:top-[50%] sm:left-[50%] sm:h-full sm:max-h-[85vh] sm:w-[95vw] sm:max-w-4xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-10 sm:border',
-        )}
-      >
+      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-zinc-800 bg-zinc-900/95 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
         <DialogHeader>
           <DialogTitle className="text-white text-xl flex items-center gap-2">
             <MessageCircle className="w-5 h-5 text-primary" />
