@@ -19,9 +19,14 @@ export default function Index() {
 
   const handleSearch = useCallback(
     (query: string) => {
-      if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current)
+      if (debounceTimerRef.current) {
+        window.clearTimeout(debounceTimerRef.current)
+      }
+
       debounceTimerRef.current = window.setTimeout(() => {
-        if (query?.trim()) aiSearch(query)
+        if (query && query.trim()) {
+          aiSearch(query)
+        }
       }, 300)
     },
     [aiSearch],
@@ -30,12 +35,16 @@ export default function Index() {
   useEffect(() => {
     async function fetchSpecials() {
       const { data } = await supabase.from('products').select('*').eq('is_special', true).limit(8)
-      if (data) setSpecials([...data].sort(() => Math.random() - 0.5))
+      if (data) {
+        const randomized = [...data].sort(() => Math.random() - 0.5)
+        setSpecials(randomized)
+      }
       setLoading(false)
     }
     fetchSpecials()
   }, [])
 
+  // Lógica de Extração de Status Dinâmico
   const currentStatus =
     Array.isArray(results?.search_metadata?.tiers_active) &&
     results.search_metadata.tiers_active.length > 0
@@ -46,13 +55,15 @@ export default function Index() {
     <div className="flex flex-col gap-16 pb-24">
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
+
         <div className="text-center space-y-6 z-10 w-full max-w-5xl mx-auto animate-fade-in-up">
           {results?.has_nab_intelligence && (
             <Badge
               variant="destructive"
               className="mb-4 bg-red-600 animate-pulse text-white px-4 py-1 text-sm font-bold tracking-wider border-none"
             >
-              <Flame className="w-4 h-4 mr-2 inline-block" /> COBERTURA AO VIVO - NAB 2026
+              <Flame className="w-4 h-4 mr-2 inline-block" />
+              COBERTURA AO VIVO - NAB 2026
             </Badge>
           )}
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
@@ -75,6 +86,8 @@ export default function Index() {
                 isExternalLoading={isSearchLoading}
                 className="w-full"
               />
+
+              {/* STATUS BAR - 100% DINÂMICA E SEM TEXTO FIXO */}
               {results?.is_intermediate && (
                 <div className="w-full mt-2 flex items-center gap-3 p-4 rounded-xl bg-zinc-900/50 border border-orange-500/20 animate-pulse text-left backdrop-blur-sm">
                   <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
@@ -99,6 +112,7 @@ export default function Index() {
                 nabData={results.nabData || results.nab_data}
                 intel={results.intel}
               />
+
               {results.should_show_whatsapp_button && (
                 <div className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center justify-center space-y-4 animate-fade-in-up delay-200">
                   <p className="text-muted-foreground text-sm">{results.whatsapp_reason}</p>
@@ -117,20 +131,26 @@ export default function Index() {
 
       <section className="container mx-auto px-4 pb-12">
         <h2 className="text-2xl md:text-3xl font-bold mb-8 uppercase tracking-wide flex items-center gap-3 text-orange-500">
-          <Star className="w-6 h-6 md:w-8 md:h-8 text-yellow-500 fill-yellow-500" /> DESTAQUES
+          <Star className="w-6 h-6 md:w-8 md:h-8 text-yellow-500 fill-yellow-500" />
+          DESTAQUES
         </h2>
+
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-[350px] w-full rounded-xl bg-white/5" />
             ))}
           </div>
-        ) : (
+        ) : specials.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
             {specials.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-10 border border-dashed border-border rounded-xl">
+            Nenhum produto em destaque no momento.
+          </p>
         )}
       </section>
     </div>
