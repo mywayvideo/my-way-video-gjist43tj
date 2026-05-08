@@ -39,6 +39,8 @@ const corsHeaders = {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  console.log('--- FUNCTION_START: Nova Requisição My Way ---')
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') || '',
@@ -48,6 +50,9 @@ Deno.serve(async (req: Request) => {
     const { query, history, currentProductId, isAdmin } = body
     const actualQuery = query.match(/User Query: (.*)/)?.[1] || query
 
+    console.log('QUERY RECEBIDA:', actualQuery)
+
+    // 1. CAPTURA DE TODA A INTELIGÊNCIA MY WAY
     const [agentRes, aiRes, globalRes, compRes, providersRes] = await Promise.all([
       supabase.from('ai_agent_settings').select('*').single(),
       supabase.from('ai_settings').select('*').single(),
@@ -79,9 +84,37 @@ Deno.serve(async (req: Request) => {
       temperature: aiRes.data?.temperature ?? 0.7,
     }
 
+    console.log('CONFIGURAÇÕES CARREGADAS:', {
+      ignoreStock: settings.ignoreStock,
+      temperature: settings.temperature,
+    })
+
     const tonePrompt =
       settings.proactivity >= 7 ? 'Consultor Ativo e Vendedor.' : 'Consultor Reativo.'
-    const sysPrompt = `### SOBERANIA DE DADOS ###\n1. BANCO DE DADOS É A ÚNICA VERDADE.\n2. MEMÓRIA INTERNA BLOQUEADA.\n\n### PERSONA ###\n${settings.persona}\n\n### TEMPLATE ###\n${settings.template}\n\n### LOGÍSTICA ###\n${settings.logistics}\n\n### CONTEXTO INSTITUCIONAL ###\n${institutionalContext}\n\nESTILO: ${tonePrompt}`
+
+    // REFORÇO DE ESTRUTURA: Proíbe a IA de escrever Tiers no texto
+    const sysPrompt = `### SOBERANIA DE DADOS ###
+1. BANCO DE DADOS É A ÚNICA VERDADE.
+2. MEMÓRIA INTERNA BLOQUEADA. Use apenas o contexto recebido.
+
+### PERSONA ###
+${settings.persona}
+
+### TEMPLATE ###
+${settings.template}
+
+### LOGÍSTICA ###
+${settings.logistics}
+
+### CONTEXTO INSTITUCIONAL ###
+${institutionalContext}
+
+### REGRAS DE EXIBIÇÃO (CRÍTICO) ###
+- NUNCA escreva "Tier 1", "Busca Profunda" ou status de processamento no campo 'message'.
+- O status de busca deve ser retornado APENAS no objeto 'search_metadata' do JSON final.
+- Se o produto tiver PESO, DIMENSÕES ou SPECS técnicos no contexto, você DEVE exibir.
+
+ESTILO: ${tonePrompt}`
 
     const tools = settings.ignoreStock
       ? []
@@ -110,13 +143,14 @@ Deno.serve(async (req: Request) => {
       if (!key) continue
 
       try {
+        console.log(`TENTANDO PROVEDOR: ${p.provider_name} (${p.model_id})`)
         let msgs: any[] = [{ role: 'system', content: sysPrompt }]
         if (Array.isArray(history) && history.length > 0) msgs.push(...history.slice(-6))
         msgs.push({ role: 'user', content: actualQuery })
 
         let calls = 0
         let finalObtained = false
-        let hasCalledSearch = false
+        let searchMetadataFinal: any = null
 
         while (calls <= 2) {
           const payload: any = {
@@ -136,7 +170,7 @@ Deno.serve(async (req: Request) => {
             body: JSON.stringify(payload),
           })
 
-          if (!res.ok) throw new Error('Provider error')
+          if (!res.ok) throw new Error(`Provider ${p.provider_name} Error: ${res.status}`)
           const resData = await res.json()
           const msg = resData.choices?.[0]?.message
 
@@ -144,27 +178,21 @@ Deno.serve(async (req: Request) => {
             msgs.push(msg)
             for (const t of msg.tool_calls) {
               if (t.function.name === 'search_products') {
-                hasCalledSearch = true
                 const args = JSON.parse(t.function.arguments || '{}')
                 let rpcData: any = { stock: [], intel: [], nab_data: [], tiers_executed: [] }
                 let queryStr = args.query || actualQuery
 
-                if (settings.stopWords) {
-                  const stopWordsArray = settings.stopWords
-                    .split(',')
-                    .map((w: string) => w.trim().toLowerCase())
-                  queryStr = queryStr
-                    .split(' ')
-                    .filter((w: string) => !stopWordsArray.includes(w.toLowerCase()))
-                    .join(' ')
-                }
+                console.log('EXECUTANDO TOOL search_products:', queryStr)
 
-                const { data: d1 } = await supabase.rpc('execute_ai_search', {
+                // TIER 1
+                const { data: d1, error: e1 } = await supabase.rpc('execute_ai_search', {
                   search_term: queryStr,
                 })
                 let mergedMap = new Map()
                 if (d1?.stock?.length > 0) {
                   d1.stock.forEach((p: any) => mergedMap.set(p.id, p))
+                  rpcData.intel = d1.intel || []
+                  rpcData.nab_data = d1.nab_data || []
                   rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
                 } else {
                   const words = queryStr
@@ -180,20 +208,19 @@ Deno.serve(async (req: Request) => {
                     promises.push(
                       supabase.rpc('execute_ai_search', { search_term: `${words[1]} ${words[2]}` }),
                     )
+
                   const results = await Promise.all(promises)
                   results.forEach((r, i) => {
                     if (r.data?.stock) {
                       r.data.stock.forEach((p: any) => mergedMap.set(p.id, p))
-                      rpcData.tiers_executed.push(`Tier ${i + 2}: Refinamento`)
+                      rpcData.tiers_executed.push(`Tier ${i + 2}: Refinamento Técnico`)
                     }
                   })
                 }
 
-                rpcData.stock = Array.from(mergedMap.values()).sort(
-                  (a: any, b: any) =>
-                    (b.relevance_score || 0) - (a.relevance_score || 0) ||
-                    (b.price_usd || 0) - (a.price_usd || 0),
-                )
+                rpcData.stock = Array.from(mergedMap.values())
+                console.log(`PRODUTOS ENCONTRADOS: ${rpcData.stock.length}`)
+
                 let filtered = rpcData.stock.slice(0, 15)
                 filtered.forEach((p: any) => {
                   allowedProductIds.add(p.id)
@@ -201,6 +228,7 @@ Deno.serve(async (req: Request) => {
                   if (p.price_usd > settings.priceLimit) hasExpensiveProduct = true
                 })
 
+                // INJEÇÃO DE DADOS COMPLETOS (PESO, DIMENSÕES, ETC)
                 const content = JSON.stringify({
                   stock: filtered.map((prod: any) => ({
                     id: prod.id,
@@ -209,35 +237,39 @@ Deno.serve(async (req: Request) => {
                     price_usd: prod.price_usd,
                     manufacturer_name: prod.manufacturer_name,
                     ncm: prod.ncm,
+                    weight: prod.weight || prod.peso, // Garante captura de peso
+                    dimensions: prod.dimensions || prod.dimensoes,
+                    specs: prod.technical_specs || prod.specs || prod.description, // Passa specs completas
                   })),
+                  intel: rpcData.intel.slice(0, 2),
+                  nab_data: rpcData.nab_data.slice(0, 2),
                   search_metadata: {
                     tiers_active: rpcData.tiers_executed,
                     status: 'Soberania de Dados Validada',
                   },
                 })
+                searchMetadataFinal = {
+                  tiers_active: rpcData.tiers_executed,
+                  status: 'Soberania de Dados Validada',
+                }
                 msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
             }
             msgs.push({
               role: 'system',
-              content: `DATA RECEIVED. Use 'search_metadata' to update status.`,
+              content: `DATA RECEIVED. Include search_metadata in your final JSON. DO NOT write Tiers in the message text.`,
             })
             calls++
           } else {
-            // TRAVA SEMÂNTICA: Se a IA tentou responder sem buscar (e a busca está ativa), força o próximo provider
-            const content = (msg?.content || '').toLowerCase()
-            const looksLikeTechnicalResponse =
-              content.includes('$') || content.includes('sku') || content.includes('estoque')
-            if (!hasCalledSearch && !settings.ignoreStock && looksLikeTechnicalResponse) {
-              throw new Error('Semantic Violation: Hallucination detected')
-            }
             result = extractJson(msg?.content || '', getFallbackMessage(actualQuery))
+            if (searchMetadataFinal) result.search_metadata = searchMetadataFinal
             finalObtained = true
             break
           }
         }
         if (finalObtained) break
       } catch (e) {
+        console.error(`FALHA NO PROVEDOR ${p.provider_name}:`, e.message)
         continue
       }
     }
@@ -270,11 +302,13 @@ Deno.serve(async (req: Request) => {
         result.should_show_whatsapp_button = true
     }
 
+    console.log('--- RESPOSTA FINAL ENVIADA ---')
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
+    console.error('ERRO FATAL:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
