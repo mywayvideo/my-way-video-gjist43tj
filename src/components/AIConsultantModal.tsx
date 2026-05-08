@@ -40,11 +40,11 @@ export function AIConsultantModal({
     if (!isOpen) {
       clearResults()
     }
-  }, [isOpen])
+  }, [isOpen, clearResults])
 
   useEffect(() => {
     clearResults()
-  }, [currentProductId])
+  }, [currentProductId, clearResults])
 
   const userName =
     user?.user_metadata?.full_name?.split(' ')[0] ||
@@ -84,8 +84,14 @@ export function AIConsultantModal({
         .select('setting_value')
         .eq('setting_key', 'company_whatsapp')
         .single()
-      if (data?.setting_value) whatsappNumber = data.setting_value
-    } catch (e) {}
+
+      if (data?.setting_value) {
+        whatsappNumber = data.setting_value
+      }
+    } catch (e) {
+      // Fallback to default number if database fetch fails
+      console.log('WhatsApp fetch error, using fallback')
+    }
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
