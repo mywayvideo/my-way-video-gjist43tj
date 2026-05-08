@@ -48,7 +48,6 @@ Deno.serve(async (req: Request) => {
     const { query, history, currentProductId, isAdmin } = body
     const actualQuery = query.match(/User Query: (.*)/)?.[1] || query
 
-    // 1. CAPTURA DE INTELIGÊNCIA INTEGRAL
     const [agentRes, aiRes, globalRes, compRes, providersRes] = await Promise.all([
       supabase.from('ai_agent_settings').select('*').single(),
       supabase.from('ai_settings').select('*').single(),
@@ -77,7 +76,7 @@ Deno.serve(async (req: Request) => {
       stopWords: aiRes.data?.custom_stop_words,
       ignoreStock: aiRes.data?.ignore_stock_flag ?? false,
       proactivity: agentRes.data?.proactivity_level ?? 5,
-      temperature: aiRes.data?.temperature ?? 0.7, // MAPEAMENTO DE PRECISÃO
+      temperature: aiRes.data?.temperature ?? 0.7,
     }
 
     const tonePrompt =
@@ -117,9 +116,9 @@ Deno.serve(async (req: Request) => {
 
         let calls = 0
         let finalObtained = false
+        let hasCalledSearch = false
 
         while (calls <= 2) {
-          // PAYLOAD COM TEMPERATURA (PRECISÃO ADMIN)
           const payload: any = {
             model: p.model_id,
             messages: msgs,
@@ -137,96 +136,101 @@ Deno.serve(async (req: Request) => {
             body: JSON.stringify(payload),
           })
 
-          if (!res.ok) break
+          if (!res.ok) throw new Error('Provider error')
           const resData = await res.json()
           const msg = resData.choices?.[0]?.message
 
           if (msg?.tool_calls) {
             msgs.push(msg)
             for (const t of msg.tool_calls) {
-              const args = JSON.parse(t.function.arguments || '{}')
-              let rpcData: any = { stock: [], intel: [], nab_data: [], tiers_executed: [] }
-              let queryStr = args.query || actualQuery
+              if (t.function.name === 'search_products') {
+                hasCalledSearch = true
+                const args = JSON.parse(t.function.arguments || '{}')
+                let rpcData: any = { stock: [], intel: [], nab_data: [], tiers_executed: [] }
+                let queryStr = args.query || actualQuery
 
-              if (settings.stopWords) {
-                const stopWordsArray = settings.stopWords
-                  .split(',')
-                  .map((w: string) => w.trim().toLowerCase())
-                queryStr = queryStr
-                  .split(' ')
-                  .filter((w: string) => !stopWordsArray.includes(w.toLowerCase()))
-                  .join(' ')
-              }
+                if (settings.stopWords) {
+                  const stopWordsArray = settings.stopWords
+                    .split(',')
+                    .map((w: string) => w.trim().toLowerCase())
+                  queryStr = queryStr
+                    .split(' ')
+                    .filter((w: string) => !stopWordsArray.includes(w.toLowerCase()))
+                    .join(' ')
+                }
 
-              const { data: d1 } = await supabase.rpc('execute_ai_search', {
-                search_term: queryStr,
-              })
-              let mergedMap = new Map()
-              if (d1?.stock?.length > 0) {
-                d1.stock.forEach((p: any) => mergedMap.set(p.id, p))
-                rpcData.intel = d1.intel || []
-                rpcData.nab_data = d1.nab_data || []
-                rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
-              } else {
-                const words = queryStr
-                  .trim()
-                  .split(/\s+/)
-                  .filter((w: any) => w.length > 2)
-                const promises = []
-                if (words[1])
-                  promises.push(supabase.rpc('execute_ai_search', { search_term: words[1] }))
-                if (words[2])
-                  promises.push(supabase.rpc('execute_ai_search', { search_term: words[2] }))
-                if (words[1] && words[2])
-                  promises.push(
-                    supabase.rpc('execute_ai_search', { search_term: `${words[1]} ${words[2]}` }),
-                  )
-
-                const results = await Promise.all(promises)
-                results.forEach((r, i) => {
-                  if (r.data?.stock) {
-                    r.data.stock.forEach((p: any) => mergedMap.set(p.id, p))
-                    rpcData.tiers_executed.push(`Tier ${i + 2}: Refinamento`)
-                  }
+                const { data: d1 } = await supabase.rpc('execute_ai_search', {
+                  search_term: queryStr,
                 })
+                let mergedMap = new Map()
+                if (d1?.stock?.length > 0) {
+                  d1.stock.forEach((p: any) => mergedMap.set(p.id, p))
+                  rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
+                } else {
+                  const words = queryStr
+                    .trim()
+                    .split(/\s+/)
+                    .filter((w: any) => w.length > 2)
+                  const promises = []
+                  if (words[1])
+                    promises.push(supabase.rpc('execute_ai_search', { search_term: words[1] }))
+                  if (words[2])
+                    promises.push(supabase.rpc('execute_ai_search', { search_term: words[2] }))
+                  if (words[1] && words[2])
+                    promises.push(
+                      supabase.rpc('execute_ai_search', { search_term: `${words[1]} ${words[2]}` }),
+                    )
+                  const results = await Promise.all(promises)
+                  results.forEach((r, i) => {
+                    if (r.data?.stock) {
+                      r.data.stock.forEach((p: any) => mergedMap.set(p.id, p))
+                      rpcData.tiers_executed.push(`Tier ${i + 2}: Refinamento`)
+                    }
+                  })
+                }
+
+                rpcData.stock = Array.from(mergedMap.values()).sort(
+                  (a: any, b: any) =>
+                    (b.relevance_score || 0) - (a.relevance_score || 0) ||
+                    (b.price_usd || 0) - (a.price_usd || 0),
+                )
+                let filtered = rpcData.stock.slice(0, 15)
+                filtered.forEach((p: any) => {
+                  allowedProductIds.add(p.id)
+                  if (!allReturnedProducts.some((e) => e.id === p.id)) allReturnedProducts.push(p)
+                  if (p.price_usd > settings.priceLimit) hasExpensiveProduct = true
+                })
+
+                const content = JSON.stringify({
+                  stock: filtered.map((prod: any) => ({
+                    id: prod.id,
+                    name: prod.name,
+                    sku: prod.sku,
+                    price_usd: prod.price_usd,
+                    manufacturer_name: prod.manufacturer_name,
+                    ncm: prod.ncm,
+                  })),
+                  search_metadata: {
+                    tiers_active: rpcData.tiers_executed,
+                    status: 'Soberania de Dados Validada',
+                  },
+                })
+                msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
               }
-
-              rpcData.stock = Array.from(mergedMap.values()).sort(
-                (a: any, b: any) =>
-                  (b.relevance_score || 0) - (a.relevance_score || 0) ||
-                  (b.price_usd || 0) - (a.price_usd || 0),
-              )
-              let filtered = rpcData.stock.slice(0, 15)
-              filtered.forEach((p: any) => {
-                allowedProductIds.add(p.id)
-                if (!allReturnedProducts.some((e) => e.id === p.id)) allReturnedProducts.push(p)
-                if (p.price_usd > settings.priceLimit) hasExpensiveProduct = true
-              })
-
-              const content = JSON.stringify({
-                stock: filtered.map((prod: any) => ({
-                  id: prod.id,
-                  name: prod.name,
-                  sku: prod.sku,
-                  price_usd: prod.price_usd,
-                  manufacturer_name: prod.manufacturer_name,
-                  ncm: prod.ncm,
-                })),
-                intel: rpcData.intel.slice(0, 2),
-                nab_data: rpcData.nab_data.slice(0, 2),
-                search_metadata: {
-                  tiers_active: rpcData.tiers_executed,
-                  status: 'Soberania de Dados Validada',
-                },
-              })
-              msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
             }
             msgs.push({
               role: 'system',
-              content: `DATA RECEIVED. Use 'search_metadata' to inform the user about search depth. Example: "Realizei uma busca profunda (Tier 1 e 2) para validar estoque."`,
+              content: `DATA RECEIVED. Use 'search_metadata' to update status.`,
             })
             calls++
           } else {
+            // TRAVA SEMÂNTICA: Se a IA tentou responder sem buscar (e a busca está ativa), força o próximo provider
+            const content = (msg?.content || '').toLowerCase()
+            const looksLikeTechnicalResponse =
+              content.includes('$') || content.includes('sku') || content.includes('estoque')
+            if (!hasCalledSearch && !settings.ignoreStock && looksLikeTechnicalResponse) {
+              throw new Error('Semantic Violation: Hallucination detected')
+            }
             result = extractJson(msg?.content || '', getFallbackMessage(actualQuery))
             finalObtained = true
             break
@@ -238,6 +242,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // PÓS-PROCESSAMENTO
     if (allReturnedProducts.length === 0 && result) {
       const negRegex =
         /[^{}]*(não temos informações|não localizei|não encontrei|não localizamos)[^{}]*/gi
@@ -261,13 +266,8 @@ Deno.serve(async (req: Request) => {
         .replace(/\n*## /g, '\n\n## ')
         .replace(/\n+([-*])[\s\n]*/g, '\n$1 ')
         .trim()
-      if (
-        hasExpensiveProduct ||
-        result.confidence_level === 'low' ||
-        allowedProductIds.size === 0
-      ) {
+      if (hasExpensiveProduct || result.confidence_level === 'low' || allowedProductIds.size === 0)
         result.should_show_whatsapp_button = true
-      }
     }
 
     return new Response(JSON.stringify(result), {
