@@ -23,7 +23,7 @@ function extractJson(text: string, fallback: string): any {
 }
 
 function getFallbackMessage(query: string): string {
-  return 'Desculpe, ocorreu um erro técnico. Por favor, entre em contato com um especialista.'
+  return 'Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.'
 }
 
 const corsHeaders = {
@@ -73,15 +73,14 @@ Deno.serve(async (req: Request) => {
       temperature: aiRes.data?.temperature ?? 0.7,
     }
 
-    // DOUTRINA V64: Silêncio total sobre processamento no texto
     const sysPrompt = `### SOBERANIA DE DADOS ###
 1. BANCO DE DADOS É A ÚNICA VERDADE.
-2. MAPEAMENTO DE ID: Use o UUID correto.
-3. PESO/SPECS: Exiba se estiver no contexto.
+2. MAPEAMENTO DE ID (CRÍTICO): Você DEVE usar o UUID exato do produto que descreveu. Trocar IDs é falha grave.
+3. PESO E DIMENSÕES: Se o contexto trouxer 'weight' ou 'dimensions', você DEVE exibir.
 
-### REGRAS DE STATUS (PROIBIÇÃO ABSOLUTA) ###
-- NUNCA escreva sobre a busca, Tiers ou processamento no campo 'message'.
-- Essas informações são enviadas via metadados automaticamente.
+### REGRAS DE STATUS ###
+- É PROIBIDO escrever "Tier 1", "Busca Profunda" ou qualquer status no campo 'message'.
+- O status de busca deve ir APENAS no objeto 'search_metadata'.
 
 ### CONTEXTO ###
 ${settings.persona}
@@ -96,7 +95,7 @@ ${institutionalContext}`
             type: 'function',
             function: {
               name: 'search_products',
-              description: 'Search for products and specs.',
+              description: 'Search for products and technical specs.',
               parameters: {
                 type: 'object',
                 properties: { query: { type: 'string' } },
@@ -108,6 +107,7 @@ ${institutionalContext}`
 
     let result: any = null
     let allowedProductIds = new Set<string>()
+    let allReturnedProducts: any[] = []
     let searchMetadataFinal: any = null
 
     for (const p of providers) {
@@ -177,7 +177,10 @@ ${institutionalContext}`
 
               rpcData.stock = Array.from(mergedMap.values())
               let filtered = rpcData.stock.slice(0, 15)
-              filtered.forEach((p: any) => allowedProductIds.add(p.id))
+              filtered.forEach((p: any) => {
+                allowedProductIds.add(p.id)
+                if (!allReturnedProducts.some((e) => e.id === p.id)) allReturnedProducts.push(p)
+              })
 
               const content = JSON.stringify({
                 stock: filtered.map((prod: any) => ({
@@ -186,6 +189,7 @@ ${institutionalContext}`
                   sku: prod.sku,
                   price_usd: prod.price_usd,
                   weight: prod.weight || prod.peso,
+                  dimensions: prod.dimensions,
                   specs: prod.technical_specs,
                 })),
                 search_metadata: {
@@ -214,14 +218,35 @@ ${institutionalContext}`
     }
 
     if (result) {
-      // FAXINA FINAL: Remove qualquer menção a Tiers que a IA tenha escrito por erro
-      const tierCleanupRegex =
+      // 1. LIMPEZA DE TEXTO: Remove qualquer menção a Tiers no texto final
+      const tierRegex =
         /[^.!?\n]*(Tier|Busca Profunda|Fase de Pesquisa|Soberania de Dados)[^.!?\n]*[.!?]?/gi
-      result.message = (result.message || '').replace(tierCleanupRegex, '').trim()
+      result.message = (result.message || '').replace(tierRegex, '').trim()
+
+      // 2. VALIDAÇÃO DE IDS: Só permite IDs que realmente foram retornados na busca
+      if (Array.isArray(result.referenced_internal_products)) {
+        result.referenced_internal_products = result.referenced_internal_products.filter(
+          (id: string) => allowedProductIds.has(id),
+        )
+      }
+
+      // 3. PITCH DE VENDAS SE VAZIO
+      if (allReturnedProducts.length === 0) {
+        const negRegex =
+          /[^{}]*(não temos informações|não localizei|não encontrei|não localizamos)[^{}]*/gi
+        result.message = result.message.replace(
+          negRegex,
+          ' No momento, o termo exato não retornou um registro direto em nosso estoque imediato, mas como consultores MY WAY, temos acesso global e podemos viabilizar seu projeto. ',
+        )
+      }
 
       const transparencyNote =
         globalSettingsMap['transparency_note'] || 'Nota: Preços sujeitos a confirmação.'
       result.message = result.message.trim() + '\n\n' + transparencyNote
+      result.message = result.message
+        .replace(/\n*## /g, '\n\n## ')
+        .replace(/\n+([-*])[\s\n]*/g, '\n$1 ')
+        .trim()
     }
 
     return new Response(JSON.stringify(result), {
