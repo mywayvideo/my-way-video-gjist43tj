@@ -75,11 +75,11 @@ Deno.serve(async (req: Request) => {
 
     const sysPrompt = `### SOBERANIA DE DADOS ###
 1. BANCO DE DADOS É A ÚNICA VERDADE.
-2. MAPEAMENTO DE ID (CRÍTICO): Você DEVE usar o UUID exato do produto que descreveu. 
-3. PESO E SPECS: Se o contexto trouxer 'weight' ou 'specs', você DEVE exibir.
+2. MAPEAMENTO DE ID (CRÍTICO): Você DEVE usar o UUID exato do produto que descreveu. Trocar IDs é falha grave.
+3. PESO E DIMENSÕES: Se o contexto trouxer 'weight' ou 'dimensions', você DEVE exibir.
 
-### REGRAS DE STATUS (PROIBIÇÃO) ###
-- NUNCA escreva "Tier 1", "Busca Profunda" ou qualquer status no campo 'message'.
+### REGRAS DE STATUS ###
+- É PROIBIDO escrever "Tier 1", "Busca Profunda" ou qualquer status no campo 'message'.
 - O status de busca deve ir APENAS no objeto 'search_metadata'.
 
 ### CONTEXTO ###
@@ -189,6 +189,7 @@ ${institutionalContext}`
                   sku: prod.sku,
                   price_usd: prod.price_usd,
                   weight: prod.weight || prod.peso,
+                  dimensions: prod.dimensions,
                   specs: prod.technical_specs,
                 })),
                 search_metadata: {
@@ -217,23 +218,26 @@ ${institutionalContext}`
     }
 
     if (result) {
-      // 1. FAXINA DE TIERS: Remove menções a processamento no texto
+      // 1. LIMPEZA DE TEXTO: Remove qualquer menção a Tiers no texto final
       const tierRegex =
         /[^.!?\n]*(Tier|Busca Profunda|Fase de Pesquisa|Soberania de Dados)[^.!?\n]*[.!?]?/gi
       result.message = (result.message || '').replace(tierRegex, '').trim()
 
-      // 2. SINCRONIA DE CARDS (FIM DOS GHOST CARDS):
-      // Só mantém o ID se o nome ou SKU do produto estiverem no texto da mensagem
-      if (Array.isArray(result.referenced_internal_products) && allReturnedProducts.length > 0) {
-        result.referenced_internal_products = result.referenced_internal_products.filter((id) => {
-          const prod = allReturnedProducts.find((p) => p.id === id)
-          if (!prod) return false
-          const nameInText = result.message.toLowerCase().includes(prod.name.toLowerCase())
-          const skuInText = prod.sku
-            ? result.message.toLowerCase().includes(prod.sku.toLowerCase())
-            : false
-          return nameInText || skuInText
-        })
+      // 2. VALIDAÇÃO DE IDS: Só permite IDs que realmente foram retornados na busca
+      if (Array.isArray(result.referenced_internal_products)) {
+        result.referenced_internal_products = result.referenced_internal_products.filter(
+          (id: string) => allowedProductIds.has(id),
+        )
+      }
+
+      // 3. PITCH DE VENDAS SE VAZIO
+      if (allReturnedProducts.length === 0) {
+        const negRegex =
+          /[^{}]*(não temos informações|não localizei|não encontrei|não localizamos)[^{}]*/gi
+        result.message = result.message.replace(
+          negRegex,
+          ' No momento, o termo exato não retornou um registro direto em nosso estoque imediato, mas como consultores MY WAY, temos acesso global e podemos viabilizar seu projeto. ',
+        )
       }
 
       const transparencyNote =
