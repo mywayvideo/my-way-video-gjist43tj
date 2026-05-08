@@ -3,7 +3,6 @@ import { Loader2, Search, Sparkles, Bot, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getActiveAgent, getAISettings } from '@/services/intelligence'
 import { Link } from 'react-router-dom'
-import { Skeleton } from '@/components/ui/skeleton'
 
 interface AIPromptProps {
   onSearch?: (query: string) => Promise<any> | void
@@ -305,76 +304,6 @@ export function AIPrompt({
           </button>
         </div>
       </form>
-
-      {(isLoading || isExternalLoading || isSettingsLoading) && query && (
-        <div className="w-[95%] max-w-3xl px-6 py-4 mt-4 bg-background/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-10 animate-fade-in-down pointer-events-none">
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex space-x-1.5">
-              <div
-                className="w-2 h-2 bg-orange-500/60 rounded-full animate-bounce"
-                style={{ animationDelay: '0ms' }}
-              />
-              <div
-                className="w-2 h-2 bg-orange-500/80 rounded-full animate-bounce"
-                style={{ animationDelay: '150ms' }}
-              />
-              <div
-                className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"
-                style={{ animationDelay: '300ms' }}
-              />
-            </div>
-            <p className="text-center text-orange-500 text-sm md:text-base font-medium animate-pulse">
-              PROCESSANDO BUSCA PROFUNDA MY WAY...
-            </p>
-          </div>
-        </div>
-      )}
-
-      {(isLoading || isExternalLoading || isSettingsLoading) && query && (
-        <div className="w-full max-w-4xl mt-6 sm:mt-8 flex flex-col gap-6 animate-fade-in-up relative z-0">
-          <div className="bg-gradient-to-b from-black/80 to-black/40 border border-white/10 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
-              <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[150px]" />
-                <Skeleton className="h-3 w-[100px]" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-[90%]" />
-              <Skeleton className="h-4 w-[95%]" />
-              <Skeleton className="h-4 w-[80%]" />
-            </div>
-          </div>
-
-          <div className="w-full mt-6">
-            <div className="flex items-center gap-4 mb-6">
-              <Skeleton className="h-6 w-[250px]" />
-              <div className="h-[1px] flex-1 bg-white/10" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="bg-black/60 border border-white/10 rounded-xl p-4 h-full flex flex-col gap-3"
-                >
-                  <Skeleton className="w-full aspect-square rounded-lg" />
-                  <div className="space-y-2 mt-2">
-                    <Skeleton className="h-3 w-[60%]" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-[80%]" />
-                  </div>
-                  <div className="mt-auto pt-3 border-t border-white/10 flex justify-between">
-                    <Skeleton className="h-3 w-[80px]" />
-                    <Skeleton className="h-4 w-[100px]" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {(localResult?.content || localResult?.message) &&
         !isLoading &&
