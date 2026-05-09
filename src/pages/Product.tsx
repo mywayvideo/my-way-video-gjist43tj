@@ -423,12 +423,15 @@ export default function Product() {
 
   if (!product)
     return (
-      <div className="p-12 text-center text-muted-foreground flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <>
+        <SEO title="Carregando Produto..." />
+        <div className="p-12 text-center text-muted-foreground flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </>
     )
 
-  const metaDescription = product.description ? product.description.substring(0, 160) : undefined
+  const metaDescription = product.description ? product.description.substring(0, 150) : undefined
 
   return (
     <>
@@ -436,6 +439,7 @@ export default function Product() {
         title={product.name}
         description={metaDescription}
         image={product.image_url || undefined}
+        article={true}
       />
       <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
         <div className="text-sm text-muted-foreground mb-8 font-mono">

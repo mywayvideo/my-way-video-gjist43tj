@@ -47,7 +47,10 @@ export default function Index() {
 
   return (
     <div className="flex flex-col gap-16 pb-24">
-      <SEO title="Início" />
+      <SEO
+        title="Inteligência em Audiovisual Profissional"
+        description="Encontre equipamentos ideais, simule projetos e consulte especialistas em segundos."
+      />
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
