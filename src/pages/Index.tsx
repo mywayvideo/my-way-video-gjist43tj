@@ -9,6 +9,7 @@ import { Star, TrendingUp, Flame, Loader2 } from 'lucide-react'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { SEO } from '@/components/SEO'
 
 export default function Index() {
   const { search: aiSearch, isLoading: isSearchLoading, results } = useAiSearch()
@@ -46,6 +47,7 @@ export default function Index() {
 
   return (
     <div className="flex flex-col gap-16 pb-24">
+      <SEO title="Início" />
       <section className="relative pt-32 pb-16 px-4 flex flex-col items-center justify-center min-h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 

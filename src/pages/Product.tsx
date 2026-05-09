@@ -29,8 +29,8 @@ import {
   ChevronLeft,
   Heart,
 } from 'lucide-react'
-import { Helmet, HelmetProvider } from 'react-helmet-async'
 import { formatPrice } from '@/utils/priceFormatter'
+import { SEO } from '@/components/SEO'
 import { AIConsultantModal } from '@/components/AIConsultantModal'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
 import { ProductPrice } from '@/components/ProductPrice'
@@ -428,26 +428,15 @@ export default function Product() {
       </div>
     )
 
-  const metaTitle = `${product.name} | My Way Video`
-  const metaDescription = product.description
-    ? product.description.substring(0, 160)
-    : 'Equipamento audiovisual profissional na My Way Video.'
-  const metaImage = product.image_url || 'https://www.mywayvideo.com/logo.png'
-  const metaUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const metaDescription = product.description ? product.description.substring(0, 160) : undefined
 
   return (
     <>
-      <HelmetProvider>
-        <Helmet>
-          <title>{metaTitle}</title>
-          <meta property="og:title" content={product.name} />
-          <meta property="og:description" content={metaDescription} />
-          <meta property="og:image" content={metaImage} />
-          <meta property="og:url" content={metaUrl} />
-          <meta property="og:type" content="product" />
-          <meta name="twitter:card" content="summary_large_image" />
-        </Helmet>
-      </HelmetProvider>
+      <SEO
+        title={product.name}
+        description={metaDescription}
+        image={product.image_url || undefined}
+      />
       <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
         <div className="text-sm text-muted-foreground mb-8 font-mono">
           <Link to="/" className="hover:text-primary transition-colors">
