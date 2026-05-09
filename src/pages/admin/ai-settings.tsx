@@ -64,6 +64,7 @@ const formSchema = z.object({
   custom_stop_words: z.string().optional(),
   proactivity_level: z.coerce.number().min(1).max(10).default(5),
   product_page_prompt: z.string().optional(),
+  transparency_note: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -100,6 +101,7 @@ export default function AdminAISettings() {
       custom_stop_words: '',
       proactivity_level: 5,
       product_page_prompt: '',
+      transparency_note: '',
     },
   })
 
@@ -127,6 +129,7 @@ export default function AdminAISettings() {
         const [
           { data: aiSettingsData, error: aiSettingsError },
           { data: aiAgentSettingsData, error: aiAgentSettingsError },
+          { data: transparencyData },
         ] = await Promise.all([
           supabase
             .from('ai_settings')
@@ -140,6 +143,7 @@ export default function AdminAISettings() {
             .order('created_at', { ascending: false })
             .limit(1)
             .single(),
+          supabase.from('settings').select('value').eq('key', 'transparency_note').maybeSingle(),
         ])
 
         if (aiSettingsError) throw aiSettingsError
@@ -196,6 +200,7 @@ export default function AdminAISettings() {
           custom_stop_words: aiSettingsData?.custom_stop_words || '',
           proactivity_level: aiAgentSettingsData?.proactivity_level ?? 5,
           product_page_prompt: aiSettingsData?.product_page_prompt || '',
+          transparency_note: transparencyData?.value || '',
         })
       } catch (error: any) {
         toast({
@@ -262,7 +267,7 @@ export default function AdminAISettings() {
         throw new Error('IDs de configuração não encontrados. Recarregue a página.')
       }
 
-      const [res1, res2] = await Promise.all([
+      const [res1, res2, res3] = await Promise.all([
         supabase
           .from('ai_settings')
           .update(aiSettingsPayload)
@@ -275,10 +280,17 @@ export default function AdminAISettings() {
           .eq('id', aiAgentSettingsId)
           .select()
           .single(),
+        supabase
+          .from('settings')
+          .upsert(
+            { key: 'transparency_note', value: values.transparency_note || '' },
+            { onConflict: 'key' },
+          ),
       ])
 
       if (res1.error) throw res1.error
       if (res2.error) throw res2.error
+      if (res3.error) throw res3.error
 
       toast({
         title: 'Sucesso',
@@ -906,6 +918,35 @@ export default function AdminAISettings() {
                         {...field}
                         className="font-mono text-sm min-h-[150px]"
                         placeholder="Ex: Foque nos diferenciais deste produto e sugira acessórios compatíveis..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Seção L */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Seção L (Nota de Transparência)</CardTitle>
+              <CardDescription>
+                Texto anexado automaticamente ao final de todas as respostas da IA.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="transparency_note"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nota de Transparência</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        className="font-mono text-sm min-h-[150px]"
+                        placeholder="Ex: Os preços e a disponibilidade de estoque são baseados nas condições atuais e podem sofrer alterações..."
                       />
                     </FormControl>
                     <FormMessage />
