@@ -20,8 +20,7 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // PASSO 1: Receber todos os prompts das tabelas de configuração
-    console.log('[LOG 2] Passo 1: Carregando prompts de configuração...')
+    // PASSO 1: Carregar prompts
     const [
       { data: agentSettings },
       { data: aiSettings },
@@ -46,20 +45,17 @@ serve(async (req: Request) => {
       ${aiSettings?.logistics_rules_prompt || ''}
       ${companyInfo?.content || ''}
       
-      ### REGRAS DE PERSONALIZAÇÃO ###
-      O nome do usuário logado é: ${userName || 'Cliente'}. 
-      Use este nome naturalmente na saudação inicial.
-
-      ### REGRAS DE RESPOSTA ###
-      - Responda APENAS em JSON no formato: {"message": "...", "referenced_internal_products": ["UUID1", "UUID2"]}
-      - Mantenha parágrafos curtos (2-3 frases).
-      - Use blocos de código para especificações técnicas.
-      - NUNCA mencione Tiers ou status internos no texto.
+      ### REGRAS DE OURO (NÃO NEGOCIÁVEIS) ###
+      1. O nome do usuário é: ${userName || 'Cliente'}. Use-o na saudação.
+      2. Se você citar um produto, você DEVE incluir o ID dele no array 'referenced_internal_products'.
+      3. Use APENAS os IDs que o sistema de busca retornar.
+      4. Responda em JSON: {"message": "...", "referenced_internal_products": ["ID1", "ID2"]}
+      5. Parágrafos curtos. Especificações técnicas em blocos de código.
     `
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: query }, // Query RAW
+      { role: 'user', content: query },
     ]
 
     const tools = [
@@ -67,20 +63,18 @@ serve(async (req: Request) => {
         type: 'function',
         function: {
           name: 'search_products',
-          description: 'Busca produtos e especificações técnicas no catálogo My Way.',
+          description: 'Busca produtos no catálogo My Way.',
           parameters: {
             type: 'object',
-            properties: {
-              search_term: { type: 'string', description: 'Termo de busca' },
-            },
+            properties: { search_term: { type: 'string' } },
             required: ['search_term'],
           },
         },
       },
     ]
 
-    // PASSO 3: IA requisita produtos (Tool Call)
-    console.log('[LOG 3] Passo 3: IA processando intenção de busca...')
+    // PASSO 3 & 4: IA requisita e Sistema levanta produtos
+    console.log('[LOG 3] IA processando intenção de busca...')
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -92,33 +86,26 @@ serve(async (req: Request) => {
         messages,
         tools,
         tool_choice: 'auto',
-        temperature: aiSettings?.temperature || 0.7,
+        temperature: 0.1, // Temperatura baixa para maior precisão nos IDs
       }),
     })
 
     const aiData = await aiResponse.json()
     const aiMessage = aiData.choices[0].message
-
-    let productsFound: any[] = []
+    let allowedProductIds = new Set<string>()
 
     if (aiMessage.tool_calls) {
       for (const toolCall of aiMessage.tool_calls) {
         const args = JSON.parse(toolCall.function.arguments)
-        console.log(`[LOG 3.1] IA solicitou busca por: "${args.search_term}"`)
-
-        // PASSO 4: Sistema levanta produtos (RPC)
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('execute_ai_search', {
+        const { data: rpcResult } = await supabase.rpc('execute_ai_search', {
           search_term: args.search_term,
         })
 
-        if (rpcError) {
-          console.error('[ERRO RPC]', rpcError)
-          continue
-        }
-
         const stock = rpcResult?.stock || []
-        console.log(`[LOG 4] Passo 4: Banco retornou ${stock.length} produtos.`)
-        productsFound.push(...stock)
+        console.log(`[LOG 4] Banco retornou ${stock.length} produtos para "${args.search_term}"`)
+
+        // Mapeia IDs permitidos (apenas o que o banco de fato encontrou)
+        stock.forEach((p: any) => allowedProductIds.add(p.id))
 
         messages.push(aiMessage)
         messages.push({
@@ -128,7 +115,6 @@ serve(async (req: Request) => {
         })
       }
 
-      // Segunda chamada para finalizar a resposta com os dados do banco
       const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -138,6 +124,7 @@ serve(async (req: Request) => {
         body: JSON.stringify({
           model: aiSettings?.model_id || 'gpt-4o-mini',
           messages,
+          response_format: { type: 'json_object' },
         }),
       })
       const finalData = await finalAiResponse.json()
@@ -145,43 +132,29 @@ serve(async (req: Request) => {
     }
 
     // PASSO 5: IA Finaliza a resposta
-    console.log('[LOG 5] Passo 5: IA gerou resposta final.')
-    let result = { message: aiMessage.content, referenced_internal_products: [] }
+    console.log('[LOG 5] IA gerou resposta final.')
+    let result = JSON.parse(aiMessage.content)
 
-    try {
-      const jsonMatch = aiMessage.content.match(/\{[\s\S]*?\}/)
-      if (jsonMatch) result = JSON.parse(jsonMatch[0])
-    } catch (e) {
-      console.error('[ERRO PARSE JSON]', e)
-    }
-
-    // PASSO 6: Ninja Filter (Sincronia de Cards)
-    console.log('[LOG 6] Passo 6: Aplicando Ninja Filter...')
+    // PASSO 6: Validação de Segurança (Anti-Intruso)
+    // Em vez de filtrar por nome, filtramos apenas para garantir que o ID existe na busca atual
     if (Array.isArray(result.referenced_internal_products)) {
       const originalCount = result.referenced_internal_products.length
 
       result.referenced_internal_products = result.referenced_internal_products.filter(
         (id: string) => {
-          const product = productsFound.find((p) => p.id === id)
-          if (!product) return false
-
-          // Verifica se o nome do produto está no texto da resposta
-          const isMentioned = result.message.toLowerCase().includes(product.name.toLowerCase())
-          if (!isMentioned) {
-            console.log(`[FILTER] Removendo card intruso: ${product.name}`)
-          }
-          return isMentioned
+          const isValid = allowedProductIds.has(id)
+          if (!isValid) console.log(`[LOG 6] Removendo ID intruso não retornado na busca: ${id}`)
+          return isValid
         },
       )
 
       console.log(
-        `[LOG 6.1] Cards validados: ${result.referenced_internal_products.length} de ${originalCount}`,
+        `[LOG 6.1] Cards finais: ${result.referenced_internal_products.length} de ${originalCount}`,
       )
     }
 
-    // Adiciona Nota de Transparência
     const transparencyNote = globalSettingsMap['transparency_note'] || ''
-    result.message = result.message + '\n\n' + transparencyNote
+    result.message = result.message.replace(/tier|tiers/gi, '').trim() + '\n\n' + transparencyNote
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
