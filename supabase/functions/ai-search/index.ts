@@ -7,206 +7,191 @@ const corsHeaders = {
 }
 
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { query, userName }: { query: string; userName: string } = await req.json()
-
-    console.log('Entrada: query=', query, 'userName=', userName)
-
-    // Step 1: Carregar prompts
-    console.log('Step 1: Carregando prompts de sistema...')
+    const { query, userName } = await req.json()
+    console.log(`[LOG 1] Entrada: Usuário="${userName}", Query="${query}"`)
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
+    // PASSO 1: Receber todos os prompts das tabelas de configuração
+    console.log('[LOG 2] Passo 1: Carregando prompts de configuração...')
     const [
       { data: agentSettings },
       { data: aiSettings },
-      { data: settings },
+      { data: globalSettings },
       { data: companyInfo },
     ] = await Promise.all([
-      supabase.from('ai_agent_settings').select('system_prompt').limit(1),
-      supabase.from('ai_settings').select('system_prompt').limit(1),
-      supabase.from('settings').select('system_prompt').limit(1),
-      supabase.from('company_info').select('system_prompt').limit(1),
+      supabase.from('ai_agent_settings').select('*').maybeSingle(),
+      supabase.from('ai_settings').select('*').maybeSingle(),
+      supabase.from('settings').select('key, value'),
+      supabase.from('company_info').select('content, type').maybeSingle(),
     ])
 
-    let systemPrompt = [
-      agentSettings?.system_prompt,
-      aiSettings?.system_prompt,
-      settings?.system_prompt,
-      companyInfo?.system_prompt,
+    const globalSettingsMap: Record<string, string> = {}
+    globalSettings?.forEach((s: any) => {
+      if (s.value) globalSettingsMap[s.key] = s.value
+    })
+
+    // PASSO 2: IA recebe query RAW + Personalização
+    const systemPrompt = `
+      ${agentSettings?.system_prompt || ''}
+      ${aiSettings?.system_prompt_template || ''}
+      ${aiSettings?.logistics_rules_prompt || ''}
+      ${companyInfo?.content || ''}
+      
+      ### REGRAS DE PERSONALIZAÇÃO ###
+      O nome do usuário logado é: ${userName || 'Cliente'}. 
+      Use este nome naturalmente na saudação inicial.
+
+      ### REGRAS DE RESPOSTA ###
+      - Responda APENAS em JSON no formato: {"message": "...", "referenced_internal_products": ["UUID1", "UUID2"]}
+      - Mantenha parágrafos curtos (2-3 frases).
+      - Use blocos de código para especificações técnicas.
+      - NUNCA mencione Tiers ou status internos no texto.
+    `
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: query }, // Query RAW
     ]
-      .filter(Boolean)
-      .join('\n\n')
 
-    systemPrompt += `\n\nOlá, ${userName}! Você é um assistente especialista em produtos. Saudação direta ao usuário.\n\n`
-    systemPrompt += `Responda em parágrafos curtos (2-3 frases). Especificações técnicas em blocos de código:\n\n\
-...
-\
-\n`
-    systemPrompt += `Remova menções a 'Tiers' ou status internos do texto final.\n\n`
-    systemPrompt += `Para buscar produtos, use a ferramenta 'search_products'.\nApós coletar dados, forneça a resposta FINAL APENAS como JSON válido:\n{"message": "texto da resposta", "referenced_internal_products": [array de IDs de produtos referenciados, apenas relevantes]}\nNão inclua outro texto fora do JSON.`
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'search_products',
+          description: 'Busca produtos e especificações técnicas no catálogo My Way.',
+          parameters: {
+            type: 'object',
+            properties: {
+              search_term: { type: 'string', description: 'Termo de busca' },
+            },
+            required: ['search_term'],
+          },
+        },
+      },
+    ]
 
-    console.log(
-      'Prompt de sistema carregado (primeiros 200 chars):',
-      systemPrompt.substring(0, 200) + '...',
-    )
+    // PASSO 3: IA requisita produtos (Tool Call)
+    console.log('[LOG 3] Passo 3: IA processando intenção de busca...')
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: aiSettings?.model_id || 'gpt-4o-mini',
+        messages,
+        tools,
+        tool_choice: 'auto',
+        temperature: aiSettings?.temperature || 0.7,
+      }),
+    })
 
-    // OpenAI client
-    const getOpenAIResponse = async (messages: any[], tools?: any[]) => {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiData = await aiResponse.json()
+    const aiMessage = aiData.choices[0].message
+
+    let productsFound: any[] = []
+
+    if (aiMessage.tool_calls) {
+      for (const toolCall of aiMessage.tool_calls) {
+        const args = JSON.parse(toolCall.function.arguments)
+        console.log(`[LOG 3.1] IA solicitou busca por: "${args.search_term}"`)
+
+        // PASSO 4: Sistema levanta produtos (RPC)
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('execute_ai_search', {
+          search_term: args.search_term,
+        })
+
+        if (rpcError) {
+          console.error('[ERRO RPC]', rpcError)
+          continue
+        }
+
+        const stock = rpcResult?.stock || []
+        console.log(`[LOG 4] Passo 4: Banco retornou ${stock.length} produtos.`)
+        productsFound.push(...stock)
+
+        messages.push(aiMessage)
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(stock),
+        })
+      }
+
+      // Segunda chamada para finalizar a resposta com os dados do banco
+      const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: aiSettings?.model_id || 'gpt-4o-mini',
           messages,
-          tools,
-          tool_choice: 'auto',
         }),
       })
-      if (!response.ok) {
-        throw new Error(`Erro no provedor de IA: ${response.statusText}`)
-      }
-      return await response.json()
+      const finalData = await finalAiResponse.json()
+      aiMessage.content = finalData.choices[0].message.content
     }
 
-    // Tool definition
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'search_products',
-          description:
-            'Busca produtos por palavras-chave, retorna IDs, nomes, SKUs, preços, pesos, dimensões e especificações.',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Termo de busca' },
-            },
-            required: ['query'],
-          },
-        },
-      },
-    ]
+    // PASSO 5: IA Finaliza a resposta
+    console.log('[LOG 5] Passo 5: IA gerou resposta final.')
+    let result = { message: aiMessage.content, referenced_internal_products: [] }
 
-    // Messages iniciais
-    let messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: query },
-    ]
-
-    console.log('Step 2: Iniciando conversa com IA...')
-
-    let finalResponse: string | null = null
-
-    while (true) {
-      const completion: any = await getOpenAIResponse(messages, tools)
-      console.log('Resposta bruta da IA:', JSON.stringify(completion, null, 2))
-
-      const choice = completion.choices[0]
-      const message = choice.message
-
-      if (
-        choice.finish_reason === 'tool_calls' &&
-        message.tool_calls &&
-        message.tool_calls.length > 0
-      ) {
-        // Assume first tool call
-        const toolCall = message.tool_calls[0]
-        const args = JSON.parse(toolCall.function.arguments)
-
-        console.log('Step 3: Chamada de ferramenta search_products(query=', args.query, ')')
-
-        // Step 4: Executar RPC
-        const { data: products, error } = await supabase.rpc('execute_ai_search', {
-          query: args.query,
-        })
-
-        if (error) {
-          throw new Error(`Erro na busca de produtos: ${error.message}`)
-        }
-
-        console.log('Step 4: Produtos do banco:', products)
-
-        // Adicionar à conversa
-        messages.push(message)
-        messages.push({
-          role: 'tool',
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(products),
-        })
-      } else {
-        finalResponse = message.content
-        console.log('Step 5: Resposta final da IA capturada:', finalResponse)
-        break
-      }
-    }
-
-    // Parse JSON
-    let parsed
     try {
-      parsed = JSON.parse(finalResponse!)
+      const jsonMatch = aiMessage.content.match(/\{[\s\S]*?\}/)
+      if (jsonMatch) result = JSON.parse(jsonMatch[0])
     } catch (e) {
-      throw new Error('A IA não retornou JSON válido. Tente novamente.')
+      console.error('[ERRO PARSE JSON]', e)
     }
 
-    const { message: rawMessage, referenced_internal_products: ids = [] } = parsed
-    console.log('Step 5: JSON parseado:', { rawMessage, ids })
+    // PASSO 6: Ninja Filter (Sincronia de Cards)
+    console.log('[LOG 6] Passo 6: Aplicando Ninja Filter...')
+    if (Array.isArray(result.referenced_internal_products)) {
+      const originalCount = result.referenced_internal_products.length
 
-    // Step 6: Ninja Filter
-    console.log('Step 6: Aplicando Ninja Filter...')
-    let filteredIds = ids
-    if (ids.length > 0) {
-      const { data: productDetails } = await supabase
-        .from('internal_products')
-        .select('id, name')
-        .in('id', ids)
+      result.referenced_internal_products = result.referenced_internal_products.filter(
+        (id: string) => {
+          const product = productsFound.find((p) => p.id === id)
+          if (!product) return false
 
-      console.log('Detalhes dos produtos para filtro:', productDetails)
+          // Verifica se o nome do produto está no texto da resposta
+          const isMentioned = result.message.toLowerCase().includes(product.name.toLowerCase())
+          if (!isMentioned) {
+            console.log(`[FILTER] Removendo card intruso: ${product.name}`)
+          }
+          return isMentioned
+        },
+      )
 
-      const productNames = new Map(productDetails?.map((p: any) => [p.id, p.name]) ?? [])
-
-      filteredIds = ids.filter((id: any) => {
-        const name = productNames.get(id)
-        if (!name) return false
-        return rawMessage.toLowerCase().includes(name.toLowerCase())
-      })
-
-      console.log('IDs filtrados:', filteredIds)
+      console.log(
+        `[LOG 6.1] Cards validados: ${result.referenced_internal_products.length} de ${originalCount}`,
+      )
     }
 
-    // Limpeza: remover Tiers/status
-    const cleanMessage = rawMessage
-      .replace(/tier|tier\d+|tiers?|status interno|status de tier/gi, '')
-      .trim()
+    // Adiciona Nota de Transparência
+    const transparencyNote = globalSettingsMap['transparency_note'] || ''
+    result.message = result.message + '\n\n' + transparencyNote
 
-    const finalOutput = {
-      message: cleanMessage,
-      referenced_internal_products: filteredIds,
-    }
-
-    console.log('Resposta final após filtragem e limpeza:', finalOutput)
-
-    return new Response(JSON.stringify(finalOutput), {
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
-    console.error('Erro completo:', error)
-    const errorMsg = error.message || 'Erro interno no servidor. Tente novamente.'
-    return new Response(JSON.stringify({ error: errorMsg }), {
-      status: 500,
+    console.error('[ERRO GLOBAL]', error)
+    return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
     })
   }
 })
