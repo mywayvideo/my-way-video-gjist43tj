@@ -1,262 +1,212 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
-
-function extractJson(text: string, fallback: string): any {
-  try {
-    const match = text.match(/\{[\s\S]*?\}/)
-    return match
-      ? JSON.parse(match[0])
-      : {
-          message: fallback,
-          confidence_level: 'low',
-          should_show_whatsapp_button: true,
-          referenced_internal_products: [],
-        }
-  } catch {
-    return {
-      message: fallback,
-      confidence_level: 'low',
-      should_show_whatsapp_button: true,
-      referenced_internal_products: [],
-    }
-  }
-}
-
-function getFallbackMessage(query: string): string {
-  return 'Desculpe, ocorreu um erro técnico ao processar os dados. Por favor, entre em contato com um especialista.'
-}
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
-    )
-    const body = await req.json()
-    const { query, history, currentProductId } = body
-    const actualQuery = query.match(/User Query: (.*)/)?.[1] || query
+    const { query, userName }: { query: string; userName: string } = await req.json()
 
-    const [agentRes, aiRes, globalRes, compRes, providersRes] = await Promise.all([
-      supabase.from('ai_agent_settings').select('*').single(),
-      supabase.from('ai_settings').select('*').single(),
-      supabase.from('settings').select('key, value'),
-      supabase.from('company_info').select('content, type'),
-      supabase
-        .from('ai_providers')
-        .select('*')
-        .eq('is_active', true)
-        .order('priority_order', { ascending: true }),
+    console.log('Entrada: query=', query, 'userName=', userName)
+
+    // Step 1: Carregar prompts
+    console.log('Step 1: Carregando prompts de sistema...')
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+
+    const [
+      { data: agentSettings },
+      { data: aiSettings },
+      { data: settings },
+      { data: companyInfo },
+    ] = await Promise.all([
+      supabase.from('ai_agent_settings').select('system_prompt').limit(1),
+      supabase.from('ai_settings').select('system_prompt').limit(1),
+      supabase.from('settings').select('system_prompt').limit(1),
+      supabase.from('company_info').select('system_prompt').limit(1),
     ])
 
-    const globalSettingsMap: Record<string, string> = {}
-    globalRes.data?.forEach((s: any) => {
-      if (s.value) globalSettingsMap[s.key] = s.value
-    })
-    const institutionalContext =
-      compRes.data?.find((c: any) => c.type === 'ai_knowledge')?.content || ''
-    const providers = providersRes.data || []
+    let systemPrompt = [
+      agentSettings?.system_prompt,
+      aiSettings?.system_prompt,
+      settings?.system_prompt,
+      companyInfo?.system_prompt,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
 
-    const settings = {
-      persona: agentRes.data?.system_prompt,
-      template: aiRes.data?.system_prompt_template,
-      logistics: aiRes.data?.logistics_rules_prompt,
-      priceLimit: aiRes.data?.price_threshold_usd,
-      ignoreStock: aiRes.data?.ignore_stock_flag ?? false,
-      temperature: aiRes.data?.temperature ?? 0.7,
+    systemPrompt += `\n\nOlá, ${userName}! Você é um assistente especialista em produtos. Saudação direta ao usuário.\n\n`
+    systemPrompt += `Responda em parágrafos curtos (2-3 frases). Especificações técnicas em blocos de código:\n\n\
+...
+\
+\n`
+    systemPrompt += `Remova menções a 'Tiers' ou status internos do texto final.\n\n`
+    systemPrompt += `Para buscar produtos, use a ferramenta 'search_products'.\nApós coletar dados, forneça a resposta FINAL APENAS como JSON válido:\n{"message": "texto da resposta", "referenced_internal_products": [array de IDs de produtos referenciados, apenas relevantes]}\nNão inclua outro texto fora do JSON.`
+
+    console.log(
+      'Prompt de sistema carregado (primeiros 200 chars):',
+      systemPrompt.substring(0, 200) + '...',
+    )
+
+    // OpenAI client
+    const getOpenAIResponse = async (messages: any[], tools?: any[]) => {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages,
+          tools,
+          tool_choice: 'auto',
+        }),
+      })
+      if (!response.ok) {
+        throw new Error(`Erro no provedor de IA: ${response.statusText}`)
+      }
+      return await response.json()
     }
 
-    const sysPrompt = `### SOBERANIA DE DADOS ###
-1. BANCO DE DADOS É A ÚNICA VERDADE.
-2. MAPEAMENTO DE ID (CRÍTICO): Você DEVE usar o UUID exato do produto que descreveu. Trocar IDs é falha grave.
-3. PESO E DIMENSÕES: Se o contexto trouxer 'weight' ou 'dimensions', você DEVE exibir.
-
-### REGRAS DE STATUS ###
-- É PROIBIDO escrever "Tier 1", "Busca Profunda" ou qualquer status no campo 'message'.
-- O status de busca deve ir APENAS no objeto 'search_metadata'.
-
-### CONTEXTO ###
-${settings.persona}
-${settings.template}
-${settings.logistics}
-${institutionalContext}`
-
-    const tools = settings.ignoreStock
-      ? []
-      : [
-          {
-            type: 'function',
-            function: {
-              name: 'search_products',
-              description: 'Search for products and technical specs.',
-              parameters: {
-                type: 'object',
-                properties: { query: { type: 'string' } },
-                required: ['query'],
-              },
+    // Tool definition
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'search_products',
+          description:
+            'Busca produtos por palavras-chave, retorna IDs, nomes, SKUs, preços, pesos, dimensões e especificações.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Termo de busca' },
             },
+            required: ['query'],
           },
-        ]
+        },
+      },
+    ]
 
-    let result: any = null
-    let allowedProductIds = new Set<string>()
-    let allReturnedProducts: any[] = []
-    let searchMetadataFinal: any = null
+    // Messages iniciais
+    let messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: query },
+    ]
 
-    for (const p of providers) {
-      const key = Deno.env.get(p.api_key_secret_name)
-      if (!key) continue
+    console.log('Step 2: Iniciando conversa com IA...')
 
-      try {
-        let msgs: any[] = [{ role: 'system', content: sysPrompt }]
-        if (Array.isArray(history) && history.length > 0) msgs.push(...history.slice(-6))
-        msgs.push({ role: 'user', content: actualQuery })
+    let finalResponse: string | null = null
 
-        let calls = 0
-        let finalObtained = false
+    while (true) {
+      const completion: any = await getOpenAIResponse(messages, tools)
+      console.log('Resposta bruta da IA:', JSON.stringify(completion, null, 2))
 
-        while (calls <= 2) {
-          const res = await fetch(p.api_url || 'https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: p.model_id,
-              messages: msgs,
-              tools,
-              response_format: { type: 'json_object' },
-              temperature: settings.temperature,
-            }),
-          })
+      const choice = completion.choices[0]
+      const message = choice.message
 
-          if (!res.ok) break
-          const resData = await res.json()
-          const msg = resData.choices?.[0]?.message
+      if (
+        choice.finish_reason === 'tool_calls' &&
+        message.tool_calls &&
+        message.tool_calls.length > 0
+      ) {
+        // Assume first tool call
+        const toolCall = message.tool_calls[0]
+        const args = JSON.parse(toolCall.function.arguments)
 
-          if (msg?.tool_calls) {
-            msgs.push(msg)
-            for (const t of msg.tool_calls) {
-              const args = JSON.parse(t.function.arguments || '{}')
-              let rpcData: any = { stock: [], tiers_executed: [] }
-              const { data: d1 } = await supabase.rpc('execute_ai_search', {
-                search_term: args.query || actualQuery,
-              })
+        console.log('Step 3: Chamada de ferramenta search_products(query=', args.query, ')')
 
-              let mergedMap = new Map()
-              if (d1?.stock?.length > 0) {
-                d1.stock.forEach((p: any) => mergedMap.set(p.id, p))
-                rpcData.tiers_executed.push('Tier 1: Estoque Imediato')
-              } else {
-                const words = (args.query || actualQuery)
-                  .trim()
-                  .split(/\s+/)
-                  .filter((w: any) => w.length > 2)
-                const promises = []
-                if (words[1])
-                  promises.push(supabase.rpc('execute_ai_search', { search_term: words[1] }))
-                if (words[2])
-                  promises.push(supabase.rpc('execute_ai_search', { search_term: words[2] }))
-                if (words[1] && words[2])
-                  promises.push(
-                    supabase.rpc('execute_ai_search', { search_term: `${words[1]} ${words[2]}` }),
-                  )
-                const results = await Promise.all(promises)
-                results.forEach((r, i) => {
-                  if (r.data?.stock) {
-                    r.data.stock.forEach((p: any) => mergedMap.set(p.id, p))
-                    rpcData.tiers_executed.push(`Tier ${i + 2}: Refinamento`)
-                  }
-                })
-              }
+        // Step 4: Executar RPC
+        const { data: products, error } = await supabase.rpc('execute_ai_search', {
+          query: args.query,
+        })
 
-              rpcData.stock = Array.from(mergedMap.values())
-              let filtered = rpcData.stock.slice(0, 15)
-              filtered.forEach((p: any) => {
-                allowedProductIds.add(p.id)
-                if (!allReturnedProducts.some((e) => e.id === p.id)) allReturnedProducts.push(p)
-              })
-
-              const content = JSON.stringify({
-                stock: filtered.map((prod: any) => ({
-                  id: prod.id,
-                  name: prod.name,
-                  sku: prod.sku,
-                  price_usd: prod.price_usd,
-                  weight: prod.weight || prod.peso,
-                  dimensions: prod.dimensions,
-                  specs: prod.technical_specs,
-                })),
-                search_metadata: {
-                  tiers_active: rpcData.tiers_executed,
-                  status: 'Soberania de Dados Validada',
-                },
-              })
-              searchMetadataFinal = {
-                tiers_active: rpcData.tiers_executed,
-                status: 'Soberania de Dados Validada',
-              }
-              msgs.push({ role: 'tool', tool_call_id: t.id, name: t.function.name, content })
-            }
-            calls++
-          } else {
-            result = extractJson(msg?.content || '', getFallbackMessage(actualQuery))
-            if (searchMetadataFinal) result.search_metadata = searchMetadataFinal
-            finalObtained = true
-            break
-          }
+        if (error) {
+          throw new Error(`Erro na busca de produtos: ${error.message}`)
         }
-        if (finalObtained) break
-      } catch (e) {
-        continue
+
+        console.log('Step 4: Produtos do banco:', products)
+
+        // Adicionar à conversa
+        messages.push(message)
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(products),
+        })
+      } else {
+        finalResponse = message.content
+        console.log('Step 5: Resposta final da IA capturada:', finalResponse)
+        break
       }
     }
 
-    if (result) {
-      // 1. LIMPEZA DE TEXTO: Remove qualquer menção a Tiers no texto final
-      const tierRegex =
-        /[^.!?\n]*(Tier|Busca Profunda|Fase de Pesquisa|Soberania de Dados)[^.!?\n]*[.!?]?/gi
-      result.message = (result.message || '').replace(tierRegex, '').trim()
-
-      // 2. VALIDAÇÃO DE IDS: Só permite IDs que realmente foram retornados na busca
-      if (Array.isArray(result.referenced_internal_products)) {
-        result.referenced_internal_products = result.referenced_internal_products.filter(
-          (id: string) => allowedProductIds.has(id),
-        )
-      }
-
-      // 3. PITCH DE VENDAS SE VAZIO
-      if (allReturnedProducts.length === 0) {
-        const negRegex =
-          /[^{}]*(não temos informações|não localizei|não encontrei|não localizamos)[^{}]*/gi
-        result.message = result.message.replace(
-          negRegex,
-          ' No momento, o termo exato não retornou um registro direto em nosso estoque imediato, mas como consultores MY WAY, temos acesso global e podemos viabilizar seu projeto. ',
-        )
-      }
-
-      const transparencyNote =
-        globalSettingsMap['transparency_note'] || 'Nota: Preços sujeitos a confirmação.'
-      result.message = result.message.trim() + '\n\n' + transparencyNote
-      result.message = result.message
-        .replace(/\n*## /g, '\n\n## ')
-        .replace(/\n+([-*])[\s\n]*/g, '\n$1 ')
-        .trim()
+    // Parse JSON
+    let parsed
+    try {
+      parsed = JSON.parse(finalResponse!)
+    } catch (e) {
+      throw new Error('A IA não retornou JSON válido. Tente novamente.')
     }
 
-    return new Response(JSON.stringify(result), {
+    const { message: rawMessage, referenced_internal_products: ids = [] } = parsed
+    console.log('Step 5: JSON parseado:', { rawMessage, ids })
+
+    // Step 6: Ninja Filter
+    console.log('Step 6: Aplicando Ninja Filter...')
+    let filteredIds = ids
+    if (ids.length > 0) {
+      const { data: productDetails } = await supabase
+        .from('internal_products')
+        .select('id, name')
+        .in('id', ids)
+
+      console.log('Detalhes dos produtos para filtro:', productDetails)
+
+      const productNames = new Map(productDetails?.map((p: any) => [p.id, p.name]) ?? [])
+
+      filteredIds = ids.filter((id: any) => {
+        const name = productNames.get(id)
+        if (!name) return false
+        return rawMessage.toLowerCase().includes(name.toLowerCase())
+      })
+
+      console.log('IDs filtrados:', filteredIds)
+    }
+
+    // Limpeza: remover Tiers/status
+    const cleanMessage = rawMessage
+      .replace(/tier|tier\d+|tiers?|status interno|status de tier/gi, '')
+      .trim()
+
+    const finalOutput = {
+      message: cleanMessage,
+      referenced_internal_products: filteredIds,
+    }
+
+    console.log('Resposta final após filtragem e limpeza:', finalOutput)
+
+    return new Response(JSON.stringify(finalOutput), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.error('Erro completo:', error)
+    const errorMsg = error.message || 'Erro interno no servidor. Tente novamente.'
+    return new Response(JSON.stringify({ error: errorMsg }), {
       status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
