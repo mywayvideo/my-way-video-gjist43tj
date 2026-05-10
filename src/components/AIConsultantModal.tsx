@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -7,19 +6,22 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Loader2, Send, Bot, Sparkles } from 'lucide-react'
-import { supabase } from '@/lib/supabase/client'
-import { cn } from '@/lib/utils'
+import { useAiSearch } from '@/hooks/use-ai-search'
+import { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { Send, Loader2, MessageCircle } from 'lucide-react'
+import { ProductCard } from '@/components/ProductCard'
+import { useAuth } from '@/hooks/use-auth'
+import { supabase } from '@/lib/supabase/client'
 
-interface Props {
+interface AIConsultantModalProps {
   isOpen: boolean
   onClose: () => void
-  productName: string
-  technicalInfo: string
-  currentProductId: string
+  productName?: string
+  technicalInfo?: string
+  currentProductId?: string
 }
 
 export function AIConsultantModal({
@@ -28,127 +30,182 @@ export function AIConsultantModal({
   productName,
   technicalInfo,
   currentProductId,
-}: Props) {
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+}: AIConsultantModalProps) {
+  const [query, setQuery] = useState('')
+  const { search, isLoading, results, clearResults } = useAiSearch()
+  const { user } = useAuth()
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (!isOpen) {
+      clearResults()
     }
-  }, [messages])
+  }, [isOpen, clearResults])
 
-  const handleSend = async () => {
-    if (!input.trim()) return
-    const userMsg = input
-    setInput('')
-    setMessages((prev) => [...prev, { role: 'user', content: userMsg }])
-    setIsLoading(true)
+  useEffect(() => {
+    clearResults()
+  }, [currentProductId, clearResults])
 
-    try {
-      const { data, error } = await supabase.functions.invoke('call-ai-agent', {
-        body: { query: userMsg, session_id: 'prod_' + currentProductId },
-      })
+  const userName =
+    user?.user_metadata?.full_name?.split(' ')[0] ||
+    user?.user_metadata?.name?.split(' ')[0] ||
+    'Usuário'
 
-      if (error) throw error
+  const handleSearch = async () => {
+    if (!query.trim()) return
+    const priorityQuery = productName
+      ? '[CONTEXTO PRIORITÁRIO: Produto ' + productName + '] ' + query
+      : query
+    await search(priorityQuery, [], { productName, technicalInfo, currentProductId })
+    setQuery('')
+  }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.message || data.response || 'Não foi possível obter uma resposta.',
-        },
-      ])
-    } catch (error) {
-      console.error(error)
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: 'Desculpe, ocorreu um erro ao processar sua pergunta.' },
-      ])
-    } finally {
-      setIsLoading(false)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSearch()
     }
   }
 
+  const formattedMessage = results?.message
+    ? results.message
+        .replace(/\n?## /g, '\n\n## ')
+        .replace(/\n?(\d+\.)/g, '\n\n$1')
+        .replace(/\n?([-*]) /g, '\n\n$1 ')
+        .replace(/\n?(\*\*.*?\*\*:)/g, '\n\n$1')
+        .trim()
+    : ''
+
+  const handleWhatsAppClick = async () => {
+    let whatsappNumber = '17867161170'
+    try {
+      const fetchSettings = supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'company_whatsapp')
+        .single()
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 1500),
+      )
+      const response = (await Promise.race([fetchSettings, timeout])) as any
+      if (response && !response.error && response.data?.setting_value) {
+        whatsappNumber = response.data.setting_value
+      }
+    } catch {
+      // Fallback
+    }
+    window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] h-[85vh] flex flex-col bg-[#011409] border-[#023317] p-0 overflow-hidden shadow-2xl">
-        <DialogHeader className="p-5 border-b border-[#023317] bg-[#011409]">
-          <DialogTitle className="text-[#4ade80] flex items-center gap-3 text-xl font-bold tracking-tight">
-            <Sparkles className="w-5 h-5 text-[#4ade80]" />
-            Engenharia IA
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-[#05381a]/80 bg-[#021307]/98 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
+        <DialogHeader>
+          <DialogTitle className="text-green-400 text-xl flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-green-400" />
+            Engenharia IA {productName ? `- ${productName}` : ''}
           </DialogTitle>
-          <DialogDescription className="text-emerald-100/70 text-sm mt-1">
-            Consultoria técnica avançada para {productName}
+          <DialogDescription className="text-green-100/60 text-lg">
+            Tire suas dúvidas técnicas, sobre compatibilidade ou prazo de entrega.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 p-5" ref={scrollRef}>
-          <div className="space-y-6">
-            {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center text-center text-emerald-100/40 h-full min-h-[200px] gap-4">
-                <Bot className="w-12 h-12 opacity-50 text-[#4ade80]" />
-                <p className="text-sm max-w-[80%]">
-                  Olá! Sou o assistente de engenharia da My Way. Como posso te ajudar com as
-                  especificações e integrações deste equipamento hoje?
-                </p>
-              </div>
-            )}
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-              >
-                <div
-                  className={cn(
-                    'max-w-[85%] rounded-2xl p-4 text-[0.95rem] leading-relaxed shadow-sm',
-                    msg.role === 'user'
-                      ? 'bg-[#044a24] text-white rounded-br-sm'
-                      : 'bg-[#022412] border border-[#044a24]/50 text-emerald-50 rounded-bl-sm',
-                  )}
+        <ScrollArea className="flex-1 border border-green-800/40 rounded-lg p-4 bg-black/20">
+          {results?.is_intermediate && (
+            <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-900/50 border border-orange-500/30 animate-pulse">
+              <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+              <span className="text-orange-500 font-bold text-sm tracking-wider">
+                PROCESSANDO BUSCA PROFUNDA MY WAY...
+              </span>
+            </div>
+          )}
+
+          {results?.message ? (
+            <div className="flex flex-col gap-6">
+              <div className="prose prose-invert max-w-none text-white/90 text-lg leading-relaxed">
+                <ReactMarkdown
+                  components={{
+                    strong: ({ node, ...props }) => (
+                      <strong className="text-green-300 font-bold" {...props} />
+                    ),
+                    h1: ({ node, ...props }) => <h1 className="text-white" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-white" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-white" {...props} />,
+                  }}
                 >
-                  {msg.role === 'user' ? (
-                    msg.content
-                  ) : (
-                    <div className="prose prose-invert prose-emerald max-w-none text-sm">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  )}
-                </div>
+                  {formattedMessage}
+                </ReactMarkdown>
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="bg-[#022412] border border-[#044a24]/50 text-emerald-50 rounded-2xl rounded-bl-sm p-4 text-sm flex items-center gap-3 shadow-sm">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#4ade80]" />
-                  <span className="opacity-80">Analisando especificações...</span>
-                </div>
-              </div>
-            )}
-          </div>
+              {results.products &&
+                results.products.filter((p: any) => {
+                  const pid = String(p?.id || '')
+                    .toLowerCase()
+                    .trim()
+                  const currentId = String(currentProductId || '')
+                    .toLowerCase()
+                    .trim()
+                  return pid !== currentId
+                }).length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
+                    {results.products
+                      .filter(
+                        (p: any) =>
+                          String(p?.id || '')
+                            .toLowerCase()
+                            .trim() !==
+                          String(currentProductId || '')
+                            .toLowerCase()
+                            .trim(),
+                      )
+                      .map((product: any) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                  </div>
+                )}
+              {results?.should_show_whatsapp_button && (
+                <Button
+                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-6 flex items-center justify-center gap-3 shadow-lg"
+                  onClick={handleWhatsAppClick}
+                >
+                  <MessageCircle className="w-6 h-6" />
+                  Falar com Especialista no WhatsApp
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="text-green-100/30 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
+              <MessageCircle className="w-8 h-8 opacity-20" />
+              <p>
+                Olá {userName}, como posso ajudar com sua dúvida sobre o {productName || 'produto'}?
+              </p>
+            </div>
+          )}
+          {isLoading && !results?.is_intermediate && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-green-400" />
+            </div>
+          )}
         </ScrollArea>
 
-        <div className="p-4 border-t border-[#023317] bg-[#011409]">
-          <div className="relative flex items-center">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Digite sua dúvida técnica aqui..."
-              className="bg-[#022412] border-[#044a24] text-emerald-50 placeholder:text-emerald-100/30 h-14 pl-5 pr-14 rounded-full focus-visible:ring-[#4ade80]/30 shadow-inner text-base"
-              disabled={isLoading}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={isLoading || !input.trim()}
-              size="icon"
-              className="absolute right-2 w-10 h-10 rounded-full bg-[#4ade80] hover:bg-[#22c55e] text-[#011409] transition-transform active:scale-95 disabled:opacity-50"
-            >
-              <Send className="w-4 h-4 ml-0.5" />
-            </Button>
-          </div>
+        <div className="flex gap-2 items-end mt-2">
+          <Textarea
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Digite sua dúvida..."
+            className="text-lg text-white placeholder:text-green-100/30 bg-[#03200c]/60 border-green-900/50 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-green-500"
+          />
+          <Button
+            onClick={handleSearch}
+            disabled={isLoading || !query.trim()}
+            size="icon"
+            className="mb-1 h-[60px] w-[60px] shrink-0 rounded-xl bg-[#0a5c2b] hover:bg-green-700 transition-colors duration-200"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
