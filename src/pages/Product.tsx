@@ -759,9 +759,8 @@ export default function Product() {
                 disabled={favLoading}
                 className={cn(
                   'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm relative overflow-hidden bg-[#012211] hover:bg-[#023317]',
-                  isProductFavorite
-                    ? 'border-transparent'
-                    : 'border-[#4ade80] hover:border-[#4ade80]',
+                  isProductFavorite ? 'border-transparent' : 'border-transparent',
+                  //  : 'border-[#4ade80] hover:border-[#4ade80]',
                 )}
                 aria-label={isProductFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
               >

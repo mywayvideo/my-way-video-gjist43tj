@@ -12,7 +12,23 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { query, userName } = await req.json()
+    // =========================
+    //  INPUT VALIDATION
+    // =========================
+    let body = null
+    try {
+      body = await req.json()
+    } catch (e) {
+      console.error('[ERRO] Body JSON inválido:', e)
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+
+    const query = typeof body?.query === 'string' ? body.query : ''
+    const userName = typeof body?.userName === 'string' ? body.userName : 'Cliente'
+
     console.log(`[LOG 1] Entrada: Usuário="${userName}", Query="${query}"`)
 
     const supabase = createClient(
@@ -20,7 +36,9 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // PASSO 1: Carregar prompts
+    // =========================
+    //  LOAD CONFIG
+    // =========================
     const [
       { data: agentSettings },
       { data: aiSettings },
@@ -34,11 +52,15 @@ serve(async (req: Request) => {
     ])
 
     const globalSettingsMap: Record<string, string> = {}
-    globalSettings?.forEach((s: any) => {
-      if (s.value) globalSettingsMap[s.key] = s.value
-    })
+    if (Array.isArray(globalSettings)) {
+      for (const s of globalSettings) {
+        if (s?.key && s?.value) globalSettingsMap[s.key] = s.value
+      }
+    }
 
-    // PASSO 2: IA recebe query RAW + Personalização
+    // =========================
+    //  SYSTEM PROMPT
+    // =========================
     const systemPrompt = `
       ${agentSettings?.system_prompt || ''}
       ${aiSettings?.system_prompt_template || ''}
@@ -46,14 +68,14 @@ serve(async (req: Request) => {
       ${companyInfo?.content || ''}
       
       ### REGRAS DE OURO (NÃO NEGOCIÁVEIS) ###
-      1. O nome do usuário é: ${userName || 'Cliente'}. Use-o na saudação.
+      1. O nome do usuário é: ${userName}. Use-o na saudação.
       2. Se você citar um produto, você DEVE incluir o ID dele no array 'referenced_internal_products'.
       3. Use APENAS os IDs que o sistema de busca retornar.
       4. Responda em JSON: {"message": "...", "referenced_internal_products": ["ID1", "ID2"]}
       5. Parágrafos curtos. Especificações técnicas em blocos de código.
     `
 
-    const messages = [
+    const messages: any[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: query },
     ]
@@ -73,8 +95,11 @@ serve(async (req: Request) => {
       },
     ]
 
-    // PASSO 3 & 4: IA requisita e Sistema levanta produtos
+    // =========================
+    //  FIRST CALL TO OPENAI
+    // =========================
     console.log('[LOG 3] IA processando intenção de busca...')
+
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -86,26 +111,54 @@ serve(async (req: Request) => {
         messages,
         tools,
         tool_choice: 'auto',
-        temperature: 0.1, // Temperatura baixa para maior precisão nos IDs
+        temperature: 0.1,
       }),
     })
 
-    const aiData = await aiResponse.json()
-    const aiMessage = aiData.choices[0].message
-    let allowedProductIds = new Set<string>()
+    let aiData: any = null
+    try {
+      aiData = await aiResponse.json()
+    } catch (e) {
+      console.error('[ERRO] JSON inválido da OpenAI:', e)
+      return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta da IA' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
 
-    if (aiMessage.tool_calls) {
+    // VALIDATION: choices must exist
+    if (!aiData?.choices?.length || !aiData.choices[0]?.message) {
+      console.error('[ERRO] OpenAI retornou payload inválido (fase 1):', aiData)
+      return new Response(JSON.stringify({ error: 'Falha ao obter resposta da IA.' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
+
+    const aiMessage = aiData.choices[0].message
+    const allowedProductIds = new Set<string>()
+
+    // =========================
+    //  TOOL CALLS
+    // =========================
+    if (Array.isArray(aiMessage?.tool_calls)) {
       for (const toolCall of aiMessage.tool_calls) {
-        const args = JSON.parse(toolCall.function.arguments)
+        let args = {}
+        try {
+          args = JSON.parse(toolCall?.function?.arguments || '{}')
+        } catch (e) {
+          console.error('[ERRO] Argumentos de tool_call inválidos:', toolCall)
+          continue
+        }
+
+        const term = typeof args?.search_term === 'string' ? args.search_term : ''
         const { data: rpcResult } = await supabase.rpc('execute_ai_search', {
-          search_term: args.search_term,
+          search_term: term,
         })
 
-        const stock = rpcResult?.stock || []
-        console.log(`[LOG 4] Banco retornou ${stock.length} produtos para "${args.search_term}"`)
-
-        // Mapeia IDs permitidos (apenas o que o banco de fato encontrou)
-        stock.forEach((p: any) => allowedProductIds.add(p.id))
+        const stock = Array.isArray(rpcResult?.stock) ? rpcResult.stock : []
+        console.log(`[LOG 4] Banco retornou ${stock.length} produtos para "${term}"`)
+        for (const p of stock) allowedProductIds.add(p.id)
 
         messages.push(aiMessage)
         messages.push({
@@ -115,6 +168,9 @@ serve(async (req: Request) => {
         })
       }
 
+      // =========================
+      //  FINAL CALL TO OPENAI
+      // =========================
       const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -127,24 +183,54 @@ serve(async (req: Request) => {
           response_format: { type: 'json_object' },
         }),
       })
-      const finalData = await finalAiResponse.json()
+
+      let finalData = null
+      try {
+        finalData = await finalAiResponse.json()
+      } catch {
+        console.error('[ERRO] Resposta final da IA é inválida JSON')
+        return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta final' }), {
+          headers: corsHeaders,
+          status: 500,
+        })
+      }
+
+      if (!finalData?.choices?.length || !finalData.choices[0]?.message?.content) {
+        console.error('[ERRO] OpenAI retornou payload final inválido (fase 2):', finalData)
+        return new Response(JSON.stringify({ error: 'Falha ao obter resposta final da IA.' }), {
+          headers: corsHeaders,
+          status: 500,
+        })
+      }
+
       aiMessage.content = finalData.choices[0].message.content
     }
 
-    // PASSO 5: IA Finaliza a resposta
-    console.log('[LOG 5] IA gerou resposta final.')
-    let result = JSON.parse(aiMessage.content)
+    // =========================
+    //  JSON PARSE SAFETY
+    // =========================
+    let result: any = {}
+    try {
+      result = JSON.parse(aiMessage.content)
+    } catch (e) {
+      console.error('[ERRO] JSON inválido retornado pela IA:', aiMessage.content)
+      return new Response(JSON.stringify({ error: 'IA retornou JSON inválido' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
 
-    // PASSO 6: Validação de Segurança (Anti-Intruso)
-    // Em vez de filtrar por nome, filtramos apenas para garantir que o ID existe na busca atual
+    // =========================
+    //  SECURITY: PRODUCT IDS
+    // =========================
     if (Array.isArray(result.referenced_internal_products)) {
       const originalCount = result.referenced_internal_products.length
 
       result.referenced_internal_products = result.referenced_internal_products.filter(
         (id: string) => {
-          const isValid = allowedProductIds.has(id)
-          if (!isValid) console.log(`[LOG 6] Removendo ID intruso não retornado na busca: ${id}`)
-          return isValid
+          const ok = allowedProductIds.has(id)
+          if (!ok) console.log(`[LOG 6] Removendo ID intruso: ${id}`)
+          return ok
         },
       )
 
@@ -153,8 +239,18 @@ serve(async (req: Request) => {
       )
     }
 
-    const transparencyNote = globalSettingsMap['transparency_note'] || ''
-    result.message = result.message.replace(/tier|tiers/gi, '').trim() + '\n\n' + transparencyNote
+    // =========================
+    //  MESSAGE CLEANUP & APPEND
+    // =========================
+    if (typeof result.message === 'string') {
+      result.message =
+        result.message.replace(/tier|tiers/gi, '').trim() +
+        '\n\n' +
+        (globalSettingsMap['transparency_note'] || '')
+    } else {
+      console.error('[ERRO] result.message NÃO é string:', result.message)
+      result.message = globalSettingsMap['transparency_note'] || ''
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
