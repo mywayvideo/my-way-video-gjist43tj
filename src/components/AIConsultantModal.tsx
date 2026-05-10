@@ -102,18 +102,18 @@ export function AIConsultantModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-zinc-800 bg-zinc-900/95 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
+      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-green-900/50 bg-green-950/95 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
         <DialogHeader>
-          <DialogTitle className="text-white text-xl flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-primary" />
+          <DialogTitle className="text-green-400 text-xl flex items-center gap-2">
+            <MessageCircle className="w-5 h-5 text-green-400" />
             Engenharia IA {productName ? `- ${productName}` : ''}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400 text-lg">
+          <DialogDescription className="text-green-100/60 text-lg">
             Tire suas dúvidas técnicas, sobre compatibilidade ou prazo de entrega.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 border border-zinc-800/50 rounded-lg p-4 bg-black/20">
+        <ScrollArea className="flex-1 border border-green-800/40 rounded-lg p-4 bg-black/20">
           {results?.is_intermediate && (
             <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-800/50 border border-orange-500/30 animate-pulse">
               <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
@@ -125,7 +125,7 @@ export function AIConsultantModal({
 
           {results?.message ? (
             <div className="flex flex-col gap-6">
-              <div className="prose prose-invert max-w-none text-lg leading-relaxed">
+              <div className="prose prose-invert max-w-none text-lg leading-relaxed prose-p:text-slate-50 prose-headings:text-white prose-li:text-slate-50 prose-strong:text-green-300">
                 <ReactMarkdown>{formattedMessage}</ReactMarkdown>
               </div>
               {results.products &&
@@ -165,8 +165,8 @@ export function AIConsultantModal({
               )}
             </div>
           ) : (
-            <div className="text-zinc-500 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
-              <MessageCircle className="w-8 h-8 opacity-20" />
+            <div className="text-green-100/50 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
+              <MessageCircle className="w-8 h-8 opacity-20 text-green-400" />
               <p>
                 Olá {userName}, como posso ajudar com sua dúvida sobre o {productName || 'produto'}?
               </p>
@@ -185,13 +185,13 @@ export function AIConsultantModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua dúvida..."
-            className="text-lg text-white placeholder:text-lg placeholder:text-zinc-500 bg-zinc-800/50 border-zinc-700 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-primary"
+            className="text-lg text-white placeholder:text-lg placeholder:text-green-700/60 bg-green-950/40 border-green-800/50 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-green-500"
           />
           <Button
             onClick={handleSearch}
             disabled={isLoading || !query.trim()}
             size="icon"
-            className="mb-1 h-[60px] w-[60px] shrink-0 rounded-xl"
+            className="mb-1 h-[60px] w-[60px] shrink-0 rounded-xl bg-green-600 hover:bg-green-500 text-white border-0 shadow-lg shadow-green-900/20"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />

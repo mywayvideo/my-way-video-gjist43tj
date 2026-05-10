@@ -494,16 +494,20 @@ export default function Product() {
 
             <div className="order-4 lg:order-none mb-8 lg:mb-0">
               <div className="bg-card border border-border/50 rounded-2xl overflow-hidden text-sm shadow-sm">
-                <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
-                  <h3 className="font-bold text-foreground">Especificações Base</h3>
+                <div className="flex items-center justify-between p-4 border-b border-green-900/40 bg-green-950/20">
+                  <h3 className="font-bold text-green-400">Especificações Base</h3>
                   <div className="flex items-center gap-2 text-xs">
-                    <span
-                      className={!isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}
-                    >
+                    <span className={!isMetric ? 'font-bold text-green-400' : 'text-green-800'}>
                       IMP
                     </span>
-                    <Switch checked={isMetric} onCheckedChange={setIsMetric} className="scale-75" />
-                    <span className={isMetric ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                    <div className="[&_[data-state=checked]]:bg-green-500 [&_[data-state=unchecked]]:bg-green-900/50 flex items-center">
+                      <Switch
+                        checked={isMetric}
+                        onCheckedChange={setIsMetric}
+                        className="scale-75"
+                      />
+                    </div>
+                    <span className={isMetric ? 'font-bold text-green-400' : 'text-green-800'}>
                       MET
                     </span>
                   </div>
@@ -720,10 +724,10 @@ export default function Product() {
                     }
                   }}
                   className={cn(
-                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all',
+                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all bg-green-600 hover:bg-green-500 text-white',
                     product.is_discontinued
-                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto'
-                      : 'hover:shadow-primary/20 hover:-translate-y-0.5',
+                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto bg-green-800'
+                      : 'hover:shadow-green-500/20 hover:-translate-y-0.5',
                   )}
                 >
                   <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Carrinho

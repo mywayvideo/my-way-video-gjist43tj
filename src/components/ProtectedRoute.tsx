@@ -39,7 +39,6 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       } catch (error) {
         console.error('Error fetching user role:', error)
         if (isMounted) {
-          toast.error('Erro ao verificar permissões de acesso.')
           setIsAdmin(false)
         }
       } finally {
