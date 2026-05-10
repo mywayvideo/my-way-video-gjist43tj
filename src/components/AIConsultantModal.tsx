@@ -16,6 +16,62 @@ import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 
+const premiumMarkdownComponents = {
+  h1: (props) => (
+    <h1
+      className="text-3xl font-semibold text-zinc-100 tracking-tight mb-6 mt-4 border-b border-white/10 pb-2"
+      {...props}
+    />
+  ),
+  h2: (props) => (
+    <h2
+      className="text-2xl font-semibold text-green-300 tracking-tight mt-8 mb-4 border-b border-green-300/20 pb-1"
+      {...props}
+    />
+  ),
+  h3: (props) => <h3 className="text-xl font-semibold text-green-200 mt-6 mb-3" {...props} />,
+  p: (props) => <p className="text-zinc-300 leading-relaxed mb-4" {...props} />,
+  strong: (props) => <strong className="font-bold text-green-300" {...props} />,
+  ul: (props) => (
+    <ul className="ml-6 mt-4 mb-4 space-y-2 list-disc marker:text-green-400/70" {...props} />
+  ),
+  ol: (props) => (
+    <ol className="ml-6 mt-4 mb-4 space-y-2 list-decimal marker:text-green-400/70" {...props} />
+  ),
+  li: (props) => <li className="text-zinc-300 leading-relaxed pl-1" {...props} />,
+  blockquote: (props) => (
+    <blockquote
+      className="border-l-4 border-green-400/40 pl-4 italic text-zinc-400 my-6"
+      {...props}
+    />
+  ),
+  table: ({ children }) => (
+    <div className="my-6 overflow-x-auto rounded-lg border border-green-400/20 shadow-xl">
+      <table className="w-full border-collapse text-sm text-left">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-green-900/20 border-b border-green-400/20 uppercase tracking-wider text-[11px]">
+      {children}
+    </thead>
+  ),
+  th: ({ children }) => (
+    <th className="px-4 py-3 font-bold text-green-200 border-r border-green-400/10 last:border-0">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="px-4 py-3 text-zinc-300 border-b border-green-400/10 border-r last:border-0">
+      {children}
+    </td>
+  ),
+  tr: ({ children }) => (
+    <tr className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+      {children}
+    </tr>
+  ),
+}
+
 interface AIConsultantModalProps {
   isOpen: boolean
   onClose: () => void
@@ -68,15 +124,6 @@ export function AIConsultantModal({
     }
   }
 
-  const formattedMessage = results?.message
-    ? results.message
-        .replace(/\n?## /g, '\n\n## ')
-        .replace(/\n?(\d+\.)/g, '\n\n$1')
-        .replace(/\n?([-*]) /g, '\n\n$1 ')
-        .replace(/\n?(\*\*.*?\*\*:)/g, '\n\n$1')
-        .trim()
-    : ''
-
   const handleWhatsAppClick = async () => {
     let whatsappNumber = '17867161170'
     try {
@@ -123,18 +170,9 @@ export function AIConsultantModal({
 
           {results?.message ? (
             <div className="flex flex-col gap-6">
-              <div className="prose prose-invert max-w-none text-white/90 text-lg leading-relaxed">
-                <ReactMarkdown
-                  components={{
-                    strong: ({ node, ...props }) => (
-                      <strong className="text-green-300 font-bold" {...props} />
-                    ),
-                    h1: ({ node, ...props }) => <h1 className="text-white" {...props} />,
-                    h2: ({ node, ...props }) => <h2 className="text-white" {...props} />,
-                    h3: ({ node, ...props }) => <h3 className="text-white" {...props} />,
-                  }}
-                >
-                  {formattedMessage}
+              <div className="prose-invert max-w-none text-white/90 text-lg leading-relaxed [&>*]:my-4">
+                <ReactMarkdown components={premiumMarkdownComponents}>
+                  {results?.message || ''}
                 </ReactMarkdown>
               </div>
               {results.products &&
