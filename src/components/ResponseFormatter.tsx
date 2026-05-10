@@ -1,7 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { Product } from '@/types'
 
@@ -33,9 +32,7 @@ export function ResponseFormatter({
   return (
     <div className={cn('flex flex-col w-full space-y-8', className)}>
       <div className="prose prose-invert max-w-none">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-          {formattedContent}
-        </ReactMarkdown>
+        <ReactMarkdown components={markdownComponents}>{formattedContent}</ReactMarkdown>
       </div>
 
       {productIds && productIds.length > 0 && (
