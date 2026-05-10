@@ -500,7 +500,7 @@ export default function Product() {
                     <span className={!isMetric ? 'font-bold text-green-400' : 'text-green-800'}>
                       IMP
                     </span>
-                    <div className="[&_[data-state=checked]]:bg-green-500 [&_[data-state=unchecked]]:bg-green-900/50 flex items-center">
+                    <div className="[&_[data-state=checked]]:bg-green-600 [&_[data-state=unchecked]]:bg-zinc-600 flex items-center">
                       <Switch
                         checked={isMetric}
                         onCheckedChange={setIsMetric}
@@ -724,10 +724,10 @@ export default function Product() {
                     }
                   }}
                   className={cn(
-                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all bg-green-600 hover:bg-green-500 text-white',
+                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all bg-[#FF9F1A] hover:bg-[#E68E17] text-[#111111]',
                     product.is_discontinued
-                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto bg-green-800'
-                      : 'hover:shadow-green-500/20 hover:-translate-y-0.5',
+                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto bg-[#cc7f14]'
+                      : 'hover:shadow-[#FF9F1A]/20 hover:-translate-y-0.5',
                   )}
                 >
                   <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Carrinho
