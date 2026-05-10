@@ -500,11 +500,11 @@ export default function Product() {
                     <span className={!isMetric ? 'font-bold text-green-400' : 'text-green-800'}>
                       IMP
                     </span>
-                    <div className="[&_[data-state=checked]]:bg-green-600 [&_[data-state=unchecked]]:bg-zinc-600 flex items-center">
+                    <div className="flex items-center">
                       <Switch
                         checked={isMetric}
                         onCheckedChange={setIsMetric}
-                        className="scale-75"
+                        className="scale-75 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-green-800 [&>span]:bg-[#4ade80]"
                       />
                     </div>
                     <span className={isMetric ? 'font-bold text-green-400' : 'text-green-800'}>
@@ -724,10 +724,10 @@ export default function Product() {
                     }
                   }}
                   className={cn(
-                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all bg-[#FF9F1A] hover:bg-[#E68E17] text-[#111111]',
+                    'flex-1 h-14 text-base font-semibold shadow-lg transition-all',
                     product.is_discontinued
-                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto bg-[#cc7f14]'
-                      : 'hover:shadow-[#FF9F1A]/20 hover:-translate-y-0.5',
+                      ? 'opacity-50 cursor-not-allowed !pointer-events-auto bg-[#cc7f14] text-[#111111]'
+                      : 'bg-[#FF9F1A] hover:bg-[#FF9F1A]/90 text-[#111111] hover:shadow-[#FF9F1A]/20 hover:-translate-y-0.5',
                   )}
                 >
                   <ShoppingCart className="w-5 h-5 mr-3" /> Adicionar ao Carrinho
@@ -758,23 +758,25 @@ export default function Product() {
                 onClick={handleToggleFavorite}
                 disabled={favLoading}
                 className={cn(
-                  'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm relative overflow-hidden',
+                  'h-14 w-14 shrink-0 rounded-xl transition-all shadow-sm relative overflow-hidden bg-[#012211] hover:bg-[#023317]',
                   isProductFavorite
-                    ? 'border-red-200 bg-red-50 hover:bg-red-100'
-                    : 'hover:bg-muted',
+                    ? 'border-transparent'
+                    : 'border-[#4ade80] hover:border-[#4ade80]',
                 )}
                 aria-label={isProductFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
               >
                 <Heart
                   className={cn(
                     'w-6 h-6 transition-all duration-300 relative z-10',
-                    isProductFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
+                    isProductFavorite
+                      ? 'fill-red-500 text-red-500 stroke-red-500'
+                      : 'text-[#4ade80]',
                   )}
                 />
                 {isAnimating && (
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
                     <Heart className="w-6 h-6 fill-red-500 text-red-500 animate-ping absolute opacity-75" />
-                    <div className="absolute inset-0 bg-red-500/10 animate-pulse" />
+                    <div className="absolute inset-0 bg-[#023317]/50 animate-pulse" />
                   </div>
                 )}
               </Button>
