@@ -16,59 +16,46 @@ import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 
-const premiumMarkdownComponents = {
-  h1: (props) => (
-    <h1
-      className="text-3xl font-semibold text-zinc-100 tracking-tight mb-6 mt-4 border-b border-white/10 pb-2"
-      {...props}
-    />
-  ),
-  h2: (props) => (
-    <h2
-      className="text-2xl font-semibold text-green-300 tracking-tight mt-8 mb-4 border-b border-green-300/20 pb-1"
-      {...props}
-    />
-  ),
-  h3: (props) => <h3 className="text-xl font-semibold text-green-200 mt-6 mb-3" {...props} />,
-  p: (props) => <p className="text-zinc-300 leading-relaxed mb-4" {...props} />,
-  strong: (props) => <strong className="font-bold text-green-300" {...props} />,
-  ul: (props) => (
-    <ul className="ml-6 mt-4 mb-4 space-y-2 list-disc marker:text-green-400/70" {...props} />
-  ),
-  ol: (props) => (
-    <ol className="ml-6 mt-4 mb-4 space-y-2 list-decimal marker:text-green-400/70" {...props} />
-  ),
-  li: (props) => <li className="text-zinc-300 leading-relaxed pl-1" {...props} />,
-  blockquote: (props) => (
-    <blockquote
-      className="border-l-4 border-green-400/40 pl-4 italic text-zinc-400 my-6"
-      {...props}
-    />
-  ),
+/* ⬇️ COLAR AQUI — substituir o bloco existente */
+import type { Components } from 'react-markdown'
+
+export const premiumMarkdownComponents: Components = {
   table: ({ children }) => (
-    <div className="my-6 overflow-x-auto rounded-lg border border-green-400/20 shadow-xl">
-      <table className="w-full border-collapse text-sm text-left">{children}</table>
+    <div className="w-full overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200 bg-white border border-gray-300 rounded-lg shadow-sm">
+        {children}
+      </table>
     </div>
   ),
-  thead: ({ children }) => (
-    <thead className="bg-green-900/20 border-b border-green-400/20 uppercase tracking-wider text-[11px]">
-      {children}
-    </thead>
-  ),
+  thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+  tbody: ({ children }) => <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>,
   th: ({ children }) => (
-    <th className="px-4 py-3 font-bold text-green-200 border-r border-green-400/10 last:border-0">
+    <th
+      className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border border-gray-300"
+      scope="col"
+    >
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-3 text-zinc-300 border-b border-green-400/10 border-r last:border-0">
-      {children}
-    </td>
+    <td className="px-6 py-4 text-sm text-gray-900 border border-gray-300">{children}</td>
   ),
-  tr: ({ children }) => (
-    <tr className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+  tr: ({ children }) => <tr className="hover:bg-gray-50">{children}</tr>,
+  // Componentes adicionais para um visual premium
+  code: ({ children, className, inline }) =>
+    !inline ? (
+      <pre className="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto mt-4 mb-4">
+        <code className={`text-sm ${className || ''}`}>{children}</code>
+      </pre>
+    ) : (
+      <code className="bg-gray-100 text-gray-900 px-2 py-1 rounded text-sm font-mono">
+        {children}
+      </code>
+    ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-gray-300 bg-gray-50 pl-4 py-2 italic text-gray-700 my-4">
       {children}
-    </tr>
+    </blockquote>
   ),
 }
 
