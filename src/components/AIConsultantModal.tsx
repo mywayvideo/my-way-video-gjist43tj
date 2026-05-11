@@ -209,7 +209,8 @@ export function AIConsultantModal({
           {results?.message ? (
             <div className="flex flex-col gap-6">
               <div className="prose-invert max-w-none text-white/90 text-lg leading-relaxed [&>*]:my-4">
-                <ReactMarkdown components={premiumMarkdownComponents}>
+                import rehypeRaw from "rehype-raw";
+                <ReactMarkdown components={premiumMarkdownComponents} rehypePlugins={[rehypeRaw]}>
                   {convertMarkdownTablesToHTML(results?.message || '')}
                 </ReactMarkdown>
               </div>
