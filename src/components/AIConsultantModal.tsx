@@ -19,6 +19,57 @@ import { supabase } from '@/lib/supabase/client'
 /* ⬇️ COLAR AQUI — substituir o bloco existente */
 import type { Components } from 'react-markdown'
 
+function convertMarkdownTablesToHTML(markdown: string) {
+  const lines = markdown.split('\n')
+  const out = []
+  let i = 0
+
+  while (i < lines.length) {
+    if (lines[i].trim().startsWith('|') && lines[i].includes('|')) {
+      const header = lines[i].trim()
+      const divider = lines[i + 1]?.trim()
+      if (divider && divider.match(/^\|\s*-+/)) {
+        const rows = []
+        i += 2
+
+        while (i < lines.length && lines[i].trim().startsWith('|')) {
+          rows.push(lines[i].trim())
+          i++
+        }
+
+        const headerCells = header
+          .split('|')
+          .slice(1, -1)
+          .map((c) => c.trim())
+        const bodyRows = rows.map((r) =>
+          r
+            .split('|')
+            .slice(1, -1)
+            .map((c) => c.trim()),
+        )
+
+        let html = '<table><thead><tr>'
+        headerCells.forEach((c) => (html += `<th>${c}</th>`))
+        html += '</tr></thead><tbody>'
+
+        bodyRows.forEach((r) => {
+          html += '<tr>'
+          r.forEach((c) => (html += `<td>${c}</td>`))
+          html += '</tr>'
+        })
+
+        html += '</tbody></table>'
+        out.push(html)
+        continue
+      }
+    }
+    out.push(lines[i])
+    i++
+  }
+
+  return out.join('\n')
+}
+
 export const premiumMarkdownComponents: Components = {
   table: ({ children }) => (
     <div className="w-full overflow-x-auto">
@@ -159,7 +210,7 @@ export function AIConsultantModal({
             <div className="flex flex-col gap-6">
               <div className="prose-invert max-w-none text-white/90 text-lg leading-relaxed [&>*]:my-4">
                 <ReactMarkdown components={premiumMarkdownComponents}>
-                  {results?.message || ''}
+                  {convertMarkdownTablesToHTML(results?.message || '')}
                 </ReactMarkdown>
               </div>
               {results.products &&
