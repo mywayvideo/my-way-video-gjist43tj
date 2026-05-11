@@ -183,6 +183,8 @@ export function AIConsultantModal({
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
+  const html = convertMarkdownTablesToHTML(results?.message || '')
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-[#05381a]/80 bg-[#021307]/98 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
@@ -209,10 +211,13 @@ export function AIConsultantModal({
           {results?.message ? (
             <div className="flex flex-col gap-6">
               <div className="prose-invert max-w-none text-white/90 text-lg leading-relaxed [&>*]:my-4">
-                import rehypeRaw from "rehype-raw";
-                <ReactMarkdown components={premiumMarkdownComponents} rehypePlugins={[rehypeRaw]}>
-                  {convertMarkdownTablesToHTML(results?.message || '')}
-                </ReactMarkdown>
+                {html.includes('<table>') ? (
+                  <div dangerouslySetInnerHTML={{ __html: html }} />
+                ) : (
+                  <ReactMarkdown components={premiumMarkdownComponents}>
+                    {results?.message || ''}
+                  </ReactMarkdown>
+                )}
               </div>
               {results.products &&
                 results.products.filter((p: any) => {
