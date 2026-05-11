@@ -21,53 +21,82 @@ import type { Components } from 'react-markdown'
 
 function convertMarkdownTablesToHTML(markdown: string) {
   const lines = markdown.split('\n')
-  const out = []
-  let i = 0
 
-  while (i < lines.length) {
-    if (lines[i].trim().startsWith('|') && lines[i].includes('|')) {
-      const header = lines[i].trim()
-      const divider = lines[i + 1]?.trim()
-      if (divider && divider.match(/^\|\s*-+/)) {
-        const rows = []
-        i += 2
+  const tables: string[][] = []
+  let currentTable: string[] = []
+  let insideTable = false
 
-        while (i < lines.length && lines[i].trim().startsWith('|')) {
-          rows.push(lines[i].trim())
-          i++
-        }
+  // Normaliza linhas removendo espaços excedentes
+  const normalize = (line: string) => line.trim()
 
-        const headerCells = header
-          .split('|')
-          .slice(1, -1)
-          .map((c) => c.trim())
-        const bodyRows = rows.map((r) =>
-          r
-            .split('|')
-            .slice(1, -1)
-            .map((c) => c.trim()),
-        )
+  for (let i = 0; i < lines.length; i++) {
+    const line = normalize(lines[i])
 
-        let html = '<table><thead><tr>'
-        headerCells.forEach((c) => (html += `<th>${c}</th>`))
-        html += '</tr></thead><tbody>'
+    const isPotentialRow = line.startsWith('|') && line.endsWith('|') && line.includes('|')
 
-        bodyRows.forEach((r) => {
-          html += '<tr>'
-          r.forEach((c) => (html += `<td>${c}</td>`))
-          html += '</tr>'
-        })
-
-        html += '</tbody></table>'
-        out.push(html)
-        continue
+    if (isPotentialRow) {
+      insideTable = true
+      currentTable.push(line)
+    } else {
+      if (insideTable) {
+        tables.push([...currentTable])
+        currentTable = []
+        insideTable = false
       }
     }
-    out.push(lines[i])
-    i++
   }
 
-  return out.join('\n')
+  // Caso a tabela termine no final do arquivo
+  if (insideTable && currentTable.length > 0) {
+    tables.push(currentTable)
+  }
+
+  // Se não houver tabelas, retorne o markdown original
+  if (tables.length === 0) return markdown
+
+  let output = markdown
+
+  tables.forEach((table) => {
+    if (table.length < 2) return // tabela inválida
+
+    // Extrai header
+    const headerLine = table[0]
+    const headerCols = headerLine
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim())
+
+    // Extrai rows
+    const bodyRows = table.slice(1).map((row) =>
+      row
+        .split('|')
+        .slice(1, -1)
+        .map((c) => c.trim()),
+    )
+
+    // Monta HTML robusto
+    let html = '<table><thead><tr>'
+    headerCols.forEach((h) => (html += `<th>${h}</th>`))
+    html += '</tr></thead><tbody>'
+
+    bodyRows.forEach((cols) => {
+      html += '<tr>'
+      cols.forEach((c) => (html += `<td>${c}</td>`))
+      html += '</tr>'
+    })
+
+    html += '</tbody></table>'
+
+    // Substitui tabela detectada no markdown original
+    const tableRegex = new RegExp(
+      table.map((l) => l.replace(/[-[\]/{}()*+?.^$|]/g, '$&')).join('s*\\n'),
+      'm',
+    )
+
+    output = output.replace(tableRegex, html)
+  })
+
+  return output
 }
 
 export const premiumMarkdownComponents: Components = {
