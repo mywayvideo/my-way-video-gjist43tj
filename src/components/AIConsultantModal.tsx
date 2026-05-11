@@ -17,70 +17,117 @@ import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 
 /* ⬇️ COLAR AQUI — substituir o bloco existente */
-import type { Components } from 'react-markdown'
+function convertMarkdownTablesToHTML(markdown: string): string {
+  function escapeHtml(str: string): string {
+    let res = ''
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i]
+      if (c === '&') res += '&amp;'
+      else if (c === '<') res += '&lt;'
+      else if (c === '>') res += '&gt;'
+      else if (c === '"') res += '&quot;'
+      else if (c === "'") res += '&#039;'
+      else res += c
+    }
+    return res
+  }
 
-function convertMarkdownTablesToHTML(markdown: string) {
-  const lines = markdown.split('\n')
-  const output: string[] = []
+  function looksLikeHeader(trimmed: string): boolean {
+    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length > 2
+  }
 
-  let buffer: string[] = []
-  let insideTable = false
-
-  const flushTable = () => {
-    if (buffer.length < 1) return
-
-    // converte markdown → tabela HTML
-    const header = buffer[0]
-      .split('|')
-      .slice(1, -1)
-      .map((c) => c.trim())
-
-    const body = buffer.slice(1).map((row) =>
-      row
-        .split('|')
-        .slice(1, -1)
-        .map((c) => c.trim()),
-    )
-
-    let html = '<table><thead><tr>'
-    header.forEach((h) => (html += `<th>${h}</th>`))
-    html += '</tr></thead><tbody>'
-
-    body.forEach((cols) => {
-      html += '<tr>'
-      cols.forEach((c) => (html += `<td>${c}</td>`))
-      html += '</tr>'
+  function looksLikeSeparator(trimmed: string): boolean {
+    const parts = trimmed.split('|')
+    if (parts.length < 3) return false
+    return parts.slice(1, -1).every((p) => {
+      const pt = p.trim()
+      if (pt.length < 3) return false
+      for (const ch of pt) {
+        if (ch !== '-' && ch !== ':' && ch !== ' ') return false
+      }
+      return true
     })
+  }
+
+  function parseRow(line: string): string[] {
+    const trimmed = line.trim()
+    const parts = trimmed.split('|')
+    const cells: string[] = []
+    for (let j = 1; j < parts.length - 1; j++) {
+      cells.push(parts[j].trim())
+    }
+    return cells
+  }
+
+  function parseTable(lines: string[], startIdx: number): { html: string; end: number } {
+    const headerRow = parseRow(lines[startIdx])
+    let numCols = headerRow.length
+    let i = startIdx + 2
+
+    const bodyRows: string[][] = []
+    while (i < lines.length) {
+      const trimmed = lines[i].trim()
+      if (trimmed === '') {
+        i++
+        continue
+      }
+
+      if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.split('|').length < 3) break
+
+      const row = parseRow(lines[i])
+      bodyRows.push(row)
+      numCols = Math.max(numCols, row.length)
+      i++
+    }
+
+    let html = '<table class="min-w-full divide-y divide-gray-200 table-auto">'
+    html += '<thead class="bg-gray-50"><tr>'
+
+    for (let c = 0; c < numCols; c++) {
+      const cell = headerRow[c] || ''
+      html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">${escapeHtml(cell)}</th>`
+    }
+
+    html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">'
+
+    for (const row of bodyRows) {
+      html += '<tr>'
+      for (let c = 0; c < numCols; c++) {
+        const cell = row[c] || ''
+        html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(cell)}</td>`
+      }
+      html += '</tr>'
+    }
 
     html += '</tbody></table>'
 
-    output.push(html)
+    return { html, end: i }
   }
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+  const lines: string[] = markdown.split(/\r?\n/)
+  const result: string[] = []
+  let i = 0
 
-    const isRow = line.startsWith('|') && line.endsWith('|') && line.split('|').length >= 3
+  while (i < lines.length) {
+    const currentLine = lines[i]
+    const trimmedCurrent = currentLine.trim()
 
-    if (isRow) {
-      insideTable = true
-      buffer.push(line)
-      continue
+    if (i + 1 < lines.length) {
+      const nextTrimmed = lines[i + 1].trim()
+
+      if (looksLikeHeader(trimmedCurrent) && looksLikeSeparator(nextTrimmed)) {
+        const table = parseTable(lines, i)
+        result.push(`<div class="overflow-x-auto w-full">${table.html}</div>`)
+        i = table.end
+        continue
+      }
     }
 
-    if (insideTable) {
-      flushTable()
-      buffer = []
-      insideTable = false
-    }
-
-    output.push(lines[i])
+    result.push(currentLine)
+    i++
   }
 
-  // última tabela caso termine no EOF
-  if (insideTable) flushTable()
-
-  return output.join('\n')
+  return result.join('\n')
 }
 
 export const premiumMarkdownComponents: Components = {

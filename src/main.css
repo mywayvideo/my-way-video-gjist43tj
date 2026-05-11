@@ -169,4 +169,20 @@
     animation: card-fade-out 0.3s forwards;
     pointer-events: none;
   }
+
+  table {
+    @apply border border-gray-700 border-collapse min-w-max text-sm;
+  }
+  thead tr {
+    @apply bg-gray-800;
+  }
+  th {
+    @apply border border-gray-700 px-3 py-2 text-left whitespace-nowrap;
+  }
+  td {
+    @apply border border-gray-700 px-3 py-2 whitespace-nowrap;
+  }
+  tr:nth-child(even) {
+    @apply bg-gray-900;
+  }
 }
