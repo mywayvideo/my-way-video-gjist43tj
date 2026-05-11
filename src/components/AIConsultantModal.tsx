@@ -187,10 +187,17 @@ export function AIConsultantModal({
 
   const html = htmlRaw
     .replace(
+      /<table([^>]*)>/g,
+      '<table$1 style="min-width:max-content;font-size:0.8rem;border-collapse:collapse;white-space:nowrap;">',
+    )
+    .replace(
       /<th>/g,
       '<th style="padding:6px 10px;border:1px solid #ddd;white-space:nowrap;font-size:0.8rem;">',
     )
-    .replace(/<td>/g, '<td style="padding:6px 10px;border:1px solid #ddd;font-size:0.8rem;">')
+    .replace(
+      /<td>/g,
+      '<td style="padding:6px 10px;border:1px solid #ddd;font-size:0.8rem;white-space:nowrap;">',
+    )
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -217,17 +224,15 @@ export function AIConsultantModal({
 
           {results?.message ? (
             <div className="flex flex-col gap-6">
-              <div className="prose-invert max-w-none text-white/90 text-lg leading-relaxed [&>*]:my-4">
+              <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
                 {html.includes('<table>') ? (
-                  <div
-                    className="w-full overflow-x-auto"
-                    dangerouslySetInnerHTML={{
-                      __html: html.replace(
-                        '<table>',
-                        '<table style="min-width:max-content;font-size:0.8rem;border-collapse:collapse;">',
-                      ),
-                    }}
-                  />
+                  <div className="w-full overflow-x-auto">
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: html,
+                      }}
+                    />
+                  </div>
                 ) : (
                   <ReactMarkdown components={premiumMarkdownComponents}>
                     {results?.message || ''}
