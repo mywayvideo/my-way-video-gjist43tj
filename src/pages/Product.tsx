@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { TechnicalInfoModal } from '@/components/TechnicalInfoModal'
 import {
   ShoppingCart,
@@ -119,6 +120,20 @@ const markdownComponents = {
   ),
   pre: ({ node: _, ...props }: any) => (
     <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
+  ),
+  table: ({ node: _, ...props }: any) => (
+    <div className="overflow-x-auto w-full my-4">
+      <table className="border border-gray-700 border-collapse min-w-max text-sm" {...props} />
+    </div>
+  ),
+  thead: ({ node: _, ...props }: any) => <thead className="[&>tr]:bg-gray-800" {...props} />,
+  tbody: ({ node: _, ...props }: any) => <tbody {...props} />,
+  tr: ({ node: _, ...props }: any) => <tr className="even:bg-gray-900" {...props} />,
+  th: ({ node: _, ...props }: any) => (
+    <th className="border border-gray-700 px-3 py-2 whitespace-nowrap" {...props} />
+  ),
+  td: ({ node: _, ...props }: any) => (
+    <td className="border border-gray-700 px-3 py-2 whitespace-nowrap" {...props} />
   ),
   code: ({ node: _, className, children, ...props }: any) => {
     const match = /language-(\w+)/.exec(className || '')
@@ -563,7 +578,7 @@ export default function Product() {
               <div className="mb-8">
                 <div className="text-foreground/90 text-sm md:text-base leading-relaxed">
                   {product.description ? (
-                    <ReactMarkdown components={markdownComponents}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                       {product.description}
                     </ReactMarkdown>
                   ) : (

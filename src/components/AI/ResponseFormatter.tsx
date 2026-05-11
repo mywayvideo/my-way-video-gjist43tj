@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ProductCard } from '@/components/ProductCard'
 import { cn } from '@/lib/utils'
 
@@ -37,7 +38,23 @@ export function ResponseFormatter({
       {content && (
         <div className="prose prose-invert max-w-none text-lg leading-relaxed">
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
+              table: ({ children }) => (
+                <div className="overflow-x-auto w-full my-6">
+                  <table className="border border-gray-700 border-collapse min-w-max text-sm">
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({ children }) => <thead className="[&>tr]:bg-gray-800">{children}</thead>,
+              th: ({ children }) => (
+                <th className="border border-gray-700 px-3 py-2 whitespace-nowrap">{children}</th>
+              ),
+              td: ({ children }) => (
+                <td className="border border-gray-700 px-3 py-2 whitespace-nowrap">{children}</td>
+              ),
+              tr: ({ children }) => <tr className="even:bg-gray-900">{children}</tr>,
               // 1. Hierarquia Corrigida (text-xl) e Anti-Glare (zinc-200)
               h2: ({ children }) => (
                 <h2 className="text-xl font-bold mt-8 mb-4 text-zinc-200 tracking-tight border-b border-white/5 pb-2">

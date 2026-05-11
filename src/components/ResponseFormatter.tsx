@@ -1,6 +1,7 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
 import { Product } from '@/types'
 
@@ -32,7 +33,9 @@ export function ResponseFormatter({
   return (
     <div className={cn('flex flex-col w-full space-y-8', className)}>
       <div className="prose prose-invert max-w-none">
-        <ReactMarkdown components={markdownComponents}>{formattedContent}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+          {formattedContent}
+        </ReactMarkdown>
       </div>
 
       {productIds && productIds.length > 0 && (
@@ -49,30 +52,18 @@ export function ResponseFormatter({
 
 const markdownComponents = {
   table: ({ children }: any) => (
-    <div className="my-6 overflow-x-auto rounded-lg border border-white/10 shadow-2xl">
-      <table className="w-full border-collapse text-sm text-left">{children}</table>
+    <div className="overflow-x-auto w-full my-6">
+      <table className="border border-gray-700 border-collapse min-w-max text-sm">{children}</table>
     </div>
   ),
-  thead: ({ children }: any) => (
-    <thead className="bg-white/5 border-b border-white/10 uppercase tracking-widest text-[10px]">
-      {children}
-    </thead>
-  ),
+  thead: ({ children }: any) => <thead className="[&>tr]:bg-gray-800">{children}</thead>,
   th: ({ children }: any) => (
-    <th className="px-4 py-3 font-bold text-zinc-200 border-r border-white/10 last:border-0">
-      {children}
-    </th>
+    <th className="border border-gray-700 px-3 py-2 whitespace-nowrap">{children}</th>
   ),
   td: ({ children }: any) => (
-    <td className="px-4 py-3 text-zinc-300 border-b border-white/10 border-r last:border-0">
-      {children}
-    </td>
+    <td className="border border-gray-700 px-3 py-2 whitespace-nowrap">{children}</td>
   ),
-  tr: ({ children }: any) => (
-    <tr className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-      {children}
-    </tr>
-  ),
+  tr: ({ children }: any) => <tr className="even:bg-gray-900">{children}</tr>,
   h2: ({ node, ...props }: any) => (
     <h2
       className="text-xl font-bold mt-8 mb-4 text-zinc-200 border-b border-white/5 pb-2"
