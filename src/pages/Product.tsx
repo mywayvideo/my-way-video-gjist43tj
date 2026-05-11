@@ -14,9 +14,8 @@ import { useCart } from '@/hooks/useCart'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { TechnicalInfoModal } from '@/components/TechnicalInfoModal'
+import { MarkdownWithTables } from '@/components/MarkdownWithTables'
 import {
   ShoppingCart,
   Globe,
@@ -92,67 +91,6 @@ const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
       {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
     </span>
   )
-}
-
-const markdownComponents = {
-  h2: ({ node: _, ...props }: any) => (
-    <h2 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props} />
-  ),
-  h3: ({ node: _, ...props }: any) => (
-    <h3 className="text-xl font-semibold mt-4 mb-3 text-primary" {...props} />
-  ),
-  strong: ({ node: _, ...props }: any) => <strong className="font-bold text-primary" {...props} />,
-  ul: ({ node: _, ...props }: any) => (
-    <ul className="ml-6 mt-2 mb-2 list-disc marker:text-primary/70" {...props} />
-  ),
-  ol: ({ node: _, ...props }: any) => (
-    <ol className="ml-6 mt-2 mb-2 list-decimal marker:text-primary/70" {...props} />
-  ),
-  li: ({ node: _, ...props }: any) => <li className="mb-2" {...props} />,
-  blockquote: ({ node: _, ...props }: any) => (
-    <blockquote
-      className="border-l-4 border-primary pl-4 ml-0 my-4 text-muted-foreground"
-      {...props}
-    />
-  ),
-  p: ({ node: _, ...props }: any) => (
-    <p className="mb-4 last:mb-0 whitespace-pre-wrap" {...props} />
-  ),
-  pre: ({ node: _, ...props }: any) => (
-    <pre className="bg-muted p-4 rounded-lg overflow-x-auto font-mono mb-4" {...props} />
-  ),
-  table: ({ node: _, ...props }: any) => (
-    <div className="overflow-x-auto w-full my-4">
-      <table className="border border-gray-700 border-collapse min-w-max text-sm" {...props} />
-    </div>
-  ),
-  thead: ({ node: _, ...props }: any) => <thead className="[&>tr]:bg-gray-800" {...props} />,
-  tbody: ({ node: _, ...props }: any) => <tbody {...props} />,
-  tr: ({ node: _, ...props }: any) => <tr className="even:bg-gray-900" {...props} />,
-  th: ({ node: _, ...props }: any) => (
-    <th className="border border-gray-700 px-3 py-2 whitespace-nowrap" {...props} />
-  ),
-  td: ({ node: _, ...props }: any) => (
-    <td className="border border-gray-700 px-3 py-2 whitespace-nowrap" {...props} />
-  ),
-  code: ({ node: _, className, children, ...props }: any) => {
-    const match = /language-(\w+)/.exec(className || '')
-    const isInline = !match && String(children).indexOf('\n') === -1
-
-    if (isInline) {
-      return (
-        <code className="bg-muted px-2 py-1 rounded font-mono text-sm" {...props}>
-          {children}
-        </code>
-      )
-    }
-
-    return (
-      <code className={cn('font-mono text-sm', className)} {...props}>
-        {children}
-      </code>
-    )
-  },
 }
 
 export default function Product() {
@@ -578,9 +516,7 @@ export default function Product() {
               <div className="mb-8">
                 <div className="text-foreground/90 text-sm md:text-base leading-relaxed">
                   {product.description ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                      {product.description}
-                    </ReactMarkdown>
+                    <MarkdownWithTables markdown={product.description} />
                   ) : (
                     <p className="text-muted-foreground italic">Descrição não disponível.</p>
                   )}
