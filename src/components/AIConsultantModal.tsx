@@ -21,65 +21,32 @@ import type { Components } from 'react-markdown'
 
 function convertMarkdownTablesToHTML(markdown: string) {
   const lines = markdown.split('\n')
+  const output: string[] = []
 
-  const tables: string[][] = []
-  let currentTable: string[] = []
+  let buffer: string[] = []
   let insideTable = false
 
-  // Normaliza linhas removendo espaços excedentes
-  const normalize = (line: string) => line.trim()
+  const flushTable = () => {
+    if (buffer.length < 1) return
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = normalize(lines[i])
-
-    const isPotentialRow = line.startsWith('|') && line.endsWith('|') && line.includes('|')
-
-    if (isPotentialRow) {
-      insideTable = true
-      currentTable.push(line)
-    } else {
-      if (insideTable) {
-        tables.push([...currentTable])
-        currentTable = []
-        insideTable = false
-      }
-    }
-  }
-
-  // Caso a tabela termine no final do arquivo
-  if (insideTable && currentTable.length > 0) {
-    tables.push(currentTable)
-  }
-
-  // Se não houver tabelas, retorne o markdown original
-  if (tables.length === 0) return markdown
-
-  let output = markdown
-
-  tables.forEach((table) => {
-    if (table.length < 2) return // tabela inválida
-
-    // Extrai header
-    const headerLine = table[0]
-    const headerCols = headerLine
+    // converte markdown → tabela HTML
+    const header = buffer[0]
       .split('|')
       .slice(1, -1)
       .map((c) => c.trim())
 
-    // Extrai rows
-    const bodyRows = table.slice(1).map((row) =>
+    const body = buffer.slice(1).map((row) =>
       row
         .split('|')
         .slice(1, -1)
         .map((c) => c.trim()),
     )
 
-    // Monta HTML robusto
     let html = '<table><thead><tr>'
-    headerCols.forEach((h) => (html += `<th>${h}</th>`))
+    header.forEach((h) => (html += `<th>${h}</th>`))
     html += '</tr></thead><tbody>'
 
-    bodyRows.forEach((cols) => {
+    body.forEach((cols) => {
       html += '<tr>'
       cols.forEach((c) => (html += `<td>${c}</td>`))
       html += '</tr>'
@@ -87,16 +54,33 @@ function convertMarkdownTablesToHTML(markdown: string) {
 
     html += '</tbody></table>'
 
-    // Substitui tabela detectada no markdown original
-    const tableRegex = new RegExp(
-      table.map((l) => l.replace(/[-[\]/{}()*+?.^$|]/g, '$&')).join('s*\\n'),
-      'm',
-    )
+    output.push(html)
+  }
 
-    output = output.replace(tableRegex, html)
-  })
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
 
-  return output
+    const isRow = line.startsWith('|') && line.endsWith('|') && line.split('|').length >= 3
+
+    if (isRow) {
+      insideTable = true
+      buffer.push(line)
+      continue
+    }
+
+    if (insideTable) {
+      flushTable()
+      buffer = []
+      insideTable = false
+    }
+
+    output.push(lines[i])
+  }
+
+  // última tabela caso termine no EOF
+  if (insideTable) flushTable()
+
+  return output.join('\n')
 }
 
 export const premiumMarkdownComponents: Components = {
