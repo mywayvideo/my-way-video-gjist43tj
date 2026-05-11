@@ -183,7 +183,14 @@ export function AIConsultantModal({
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
-  const html = convertMarkdownTablesToHTML(results?.message || '')
+  const htmlRaw = convertMarkdownTablesToHTML(results?.message || '')
+
+  const html = htmlRaw
+    .replace(
+      /<th>/g,
+      '<th style="padding:6px 10px;border:1px solid #ddd;white-space:nowrap;font-size:0.8rem;">',
+    )
+    .replace(/<td>/g, '<td style="padding:6px 10px;border:1px solid #ddd;font-size:0.8rem;">')
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -214,7 +221,12 @@ export function AIConsultantModal({
                 {html.includes('<table>') ? (
                   <div
                     className="w-full overflow-x-auto"
-                    dangerouslySetInnerHTML={{ __html: html }}
+                    dangerouslySetInnerHTML={{
+                      __html: html.replace(
+                        '<table>',
+                        '<table style="min-width:max-content;font-size:0.8rem;border-collapse:collapse;">',
+                      ),
+                    }}
                   />
                 ) : (
                   <ReactMarkdown components={premiumMarkdownComponents}>
