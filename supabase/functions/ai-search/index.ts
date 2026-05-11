@@ -142,69 +142,83 @@ serve(async (req: Request) => {
     //  TOOL CALLS
     // =========================
     if (Array.isArray(aiMessage?.tool_calls)) {
+      // SEMPRE empurrar a mensagem assistant ANTES do loop
+      messages.push({
+        role: 'assistant',
+        content: aiMessage.content ?? '',
+        tool_calls: aiMessage.tool_calls ?? null,
+      })
+
       for (const toolCall of aiMessage.tool_calls) {
+        let stock: any[] = []
         let args = {}
         try {
-          args = JSON.parse(toolCall?.function?.arguments || '{}')
+          const rawArgs =
+            toolCall?.function?.arguments && typeof toolCall.function.arguments === 'string'
+              ? toolCall.function.arguments
+              : '{}'
+
+          args = JSON.parse(rawArgs)
         } catch (e) {
-          console.error('[ERRO] Argumentos de tool_call inválidos:', toolCall)
-          continue
+          console.error('[ERRO] Argumentos inválidos da tool_call:', toolCall, e)
+          args = {} // força estado seguro
         }
 
         const term = typeof args?.search_term === 'string' ? args.search_term : ''
-        const { data: rpcResult } = await supabase.rpc('execute_ai_search', {
-          search_term: term,
-        })
+        try {
+          const { data: rpcResult } = await supabase.rpc('execute_ai_search', { search_term: term })
+          stock = Array.isArray(rpcResult?.stock) ? rpcResult.stock : []
+          stock.forEach((p: any) => allowedProductIds.add(p.id))
+        } catch (e) {
+          console.error('[ERRO] Falha ao executar RPC execute_ai_search:', e)
+        }
 
-        const stock = Array.isArray(rpcResult?.stock) ? rpcResult.stock : []
-        console.log(`[LOG 4] Banco retornou ${stock.length} produtos para "${term}"`)
-        for (const p of stock) allowedProductIds.add(p.id)
-
-        messages.push(aiMessage)
+        // RESPOSTA OBRIGATÓRIA — SEMPRE
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
-          content: JSON.stringify(stock),
+          content: JSON.stringify(stock || []),
         })
       }
-
-      // =========================
-      //  FINAL CALL TO OPENAI
-      // =========================
-      const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: aiSettings?.model_id || 'gpt-4o-mini',
-          messages,
-          response_format: { type: 'json_object' },
-        }),
-      })
-
-      let finalData = null
-      try {
-        finalData = await finalAiResponse.json()
-      } catch {
-        console.error('[ERRO] Resposta final da IA é inválida JSON')
-        return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta final' }), {
-          headers: corsHeaders,
-          status: 500,
-        })
-      }
-
-      if (!finalData?.choices?.length || !finalData.choices[0]?.message?.content) {
-        console.error('[ERRO] OpenAI retornou payload final inválido (fase 2):', finalData)
-        return new Response(JSON.stringify({ error: 'Falha ao obter resposta final da IA.' }), {
-          headers: corsHeaders,
-          status: 500,
-        })
-      }
-
-      aiMessage.content = finalData.choices[0].message.content
     }
+
+    const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: aiSettings?.model_id || 'gpt-4o-mini',
+        messages,
+        response_format: { type: 'json_object' },
+      }),
+    })
+
+    let finalData = null
+    try {
+      finalData = await finalAiResponse.json()
+    } catch {
+      console.error('[ERRO] Resposta final da IA é inválida JSON')
+      return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta final' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
+
+    if (!finalData?.choices?.length || !finalData.choices[0]?.message?.content) {
+      console.error('[ERRO] OpenAI retornou payload final inválido (fase 2):', finalData)
+      return new Response(JSON.stringify({ error: 'Falha ao obter resposta final da IA.' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
+
+    aiMessage.content = finalData.choices[0].message.content
+    aiMessage.role = 'assistant'
+    aiMessage.tool_calls = null
+    delete aiMessage.refusal
+    delete aiMessage.reasoning
 
     // =========================
     //  JSON PARSE SAFETY
