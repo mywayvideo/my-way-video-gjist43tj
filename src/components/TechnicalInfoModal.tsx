@@ -121,12 +121,7 @@ export function TechnicalInfoModal({ isOpen, onClose, technicalInfo }: Technical
             wordWrap: 'break-word',
           }}
         >
-          <ReactMarkdown
-            components={markdownComponents}
-            skipHtml={false}
-            disallowedElements={['script', 'img', 'a']}
-            children={String(formattedInfo)}
-          />
+          <MarkdownWithTables markdown={String(formattedInfo)} />
         </div>
         <DialogFooter className="mt-6">
           <Button variant="secondary" onClick={onClose}>

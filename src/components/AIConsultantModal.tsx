@@ -15,120 +15,7 @@ import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
-
-/* ⬇️ COLAR AQUI — substituir o bloco existente */
-function convertMarkdownTablesToHTML(markdown: string): string {
-  function escapeHtml(str: string): string {
-    let res = ''
-    for (let i = 0; i < str.length; i++) {
-      const c = str[i]
-      if (c === '&') res += '&amp;'
-      else if (c === '<') res += '&lt;'
-      else if (c === '>') res += '&gt;'
-      else if (c === '"') res += '&quot;'
-      else if (c === "'") res += '&#039;'
-      else res += c
-    }
-    return res
-  }
-
-  function looksLikeHeader(trimmed: string): boolean {
-    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length > 2
-  }
-
-  function looksLikeSeparator(trimmed: string): boolean {
-    const parts = trimmed.split('|')
-    if (parts.length < 3) return false
-    return parts.slice(1, -1).every((p) => {
-      const pt = p.trim()
-      if (pt.length < 3) return false
-      for (const ch of pt) {
-        if (ch !== '-' && ch !== ':' && ch !== ' ') return false
-      }
-      return true
-    })
-  }
-
-  function parseRow(line: string): string[] {
-    const trimmed = line.trim()
-    const parts = trimmed.split('|')
-    const cells: string[] = []
-    for (let j = 1; j < parts.length - 1; j++) {
-      cells.push(parts[j].trim())
-    }
-    return cells
-  }
-
-  function parseTable(lines: string[], startIdx: number): { html: string; end: number } {
-    const headerRow = parseRow(lines[startIdx])
-    let numCols = headerRow.length
-    let i = startIdx + 2
-
-    const bodyRows: string[][] = []
-    while (i < lines.length) {
-      const trimmed = lines[i].trim()
-      if (trimmed === '') {
-        i++
-        continue
-      }
-
-      if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.split('|').length < 3) break
-
-      const row = parseRow(lines[i])
-      bodyRows.push(row)
-      numCols = Math.max(numCols, row.length)
-      i++
-    }
-
-    let html = '<table class="min-w-full divide-y divide-gray-200 table-auto">'
-    html += '<thead class="bg-gray-50"><tr>'
-
-    for (let c = 0; c < numCols; c++) {
-      const cell = headerRow[c] || ''
-      html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">${escapeHtml(cell)}</th>`
-    }
-
-    html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">'
-
-    for (const row of bodyRows) {
-      html += '<tr>'
-      for (let c = 0; c < numCols; c++) {
-        const cell = row[c] || ''
-        html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(cell)}</td>`
-      }
-      html += '</tr>'
-    }
-
-    html += '</tbody></table>'
-
-    return { html, end: i }
-  }
-
-  const lines: string[] = markdown.split(/\r?\n/)
-  const result: string[] = []
-  let i = 0
-
-  while (i < lines.length) {
-    const currentLine = lines[i]
-    const trimmedCurrent = currentLine.trim()
-
-    if (i + 1 < lines.length) {
-      const nextTrimmed = lines[i + 1].trim()
-
-      if (looksLikeHeader(trimmedCurrent) && looksLikeSeparator(nextTrimmed)) {
-        const table = parseTable(lines, i)
-        result.push(`<div class="overflow-x-auto w-full">${table.html}</div>`)
-        i = table.end
-        continue
-      }
-    }
-
-    result.push(currentLine)
-    i++
-  }
-
-  return result.join('\n')
-}
+import MarkdownWithTables from '@/components/MarkdownWithTables'
 
 export const premiumMarkdownComponents: Components = {
   table: ({ children }) => (
@@ -243,22 +130,6 @@ export function AIConsultantModal({
     window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
-  const htmlRaw = convertMarkdownTablesToHTML(results?.message || '')
-
-  const html = htmlRaw
-    .replace(
-      /<table([^>]*)>/g,
-      '<table$1 style="min-width:max-content;font-size:0.8rem;border-collapse:collapse;white-space:nowrap;">',
-    )
-    .replace(
-      /<th>/g,
-      '<th style="padding:6px 10px;border:1px solid #ddd;white-space:nowrap;font-size:0.8rem;">',
-    )
-    .replace(
-      /<td>/g,
-      '<td style="padding:6px 10px;border:1px solid #ddd;font-size:0.8rem;white-space:nowrap;">',
-    )
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-[#05381a]/80 bg-[#021307]/98 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
@@ -268,7 +139,7 @@ export function AIConsultantModal({
             Engenharia IA {productName ? `- ${productName}` : ''}
           </DialogTitle>
           <DialogDescription className="text-green-100/60 text-lg">
-            Tire suas dúvidas técnicas, sobre compatibilidade ou prazo de entrega.
+            Tire suas dúvidas técnicas! Solicite especificações detalhads e compatibilidade.
           </DialogDescription>
         </DialogHeader>
 
@@ -285,19 +156,7 @@ export function AIConsultantModal({
           {results?.message ? (
             <div className="flex flex-col gap-6">
               <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
-                {html.includes('<table>') ? (
-                  <div className="w-full overflow-x-auto">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: html,
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <ReactMarkdown components={premiumMarkdownComponents}>
-                    {results?.message || ''}
-                  </ReactMarkdown>
-                )}
+                <MarkdownWithTables markdown={results?.message || ''} />
               </div>
               {results.products &&
                 results.products.filter((p: any) => {
