@@ -196,7 +196,7 @@ export function FavoriteProductCard({
 
         <CardFooter className="p-5 pt-0 mt-auto gap-2 flex flex-col">
           <Button
-            className="w-full bg-green-600 hover:bg-green-700 text-white transition-all hover:scale-[1.02] shadow-sm"
+            className="w-full bg-[#FF9F1A] hover:bg-[#FF9F1A]/90 text-[#111111] font-semibold transition-all hover:scale-[1.02] shadow-sm"
             onClick={() => setQuantityModalOpen(true)}
             disabled={isProcessing}
           >
@@ -253,7 +253,7 @@ export function FavoriteProductCard({
             <Button
               onClick={handleAddToCart}
               disabled={isProcessing}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-[#FF9F1A] hover:bg-[#FF9F1A]/90 text-[#111111] font-semibold"
             >
               {processingAction === 'cart' && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Confirmar

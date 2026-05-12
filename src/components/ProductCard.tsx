@@ -276,7 +276,7 @@ export function ProductCard({ product }: { product: any }) {
       <CardFooter className="p-4 pt-0">
         {hasAnyPrice && !pricingLoading ? (
           <Button
-            className="w-full gap-2 transition-all font-semibold rounded-lg"
+            className="w-full gap-2 transition-all font-semibold rounded-lg bg-[#FF9F1A] hover:bg-[#FF9F1A]/90 text-[#111111]"
             onClick={() => setShowQtyModal(true)}
           >
             <ShoppingCart className="w-4 h-4" />
