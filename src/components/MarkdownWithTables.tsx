@@ -14,15 +14,15 @@ const parseTable = (start: number, lines: string[]): ParseTableResult => {
   let j = start
 
   while (j < lines.length) {
-    const line = lines[j].trim()
-    if (!line.startsWith('|') || line.split('|').length < 3) {
-      break
-    }
+    const raw = lines[j]
+    const line = raw.trim()
+    const pipeCount = raw.split('|').length - 1
+    if (pipeCount < 2) break
     const cells = line
       .split('|')
       .slice(1, -1)
       .map((cell) => cell.trim())
-    const isSeparator = cells.every((cell) => /^-+$/.test(cell))
+    const isSeparator = cells.every((cell) => /^:?-{2,}:?$/.test(cell))
 
     // header vem SEMPRE antes do separator
     if (!isSeparator) {
@@ -159,6 +159,9 @@ const parseMarkdown = (lines: string[]): React.ReactNode[] => {
     }
 
     if (isTableStart(line)) {
+      while (lines[i + 1] !== undefined && lines[i + 1].trim() === '') {
+        i++
+      }
       const tableResult = parseTable(i, lines)
       elements.push(<TableBlock key={elements.length} rows={tableResult.rows} />)
       i = tableResult.end
