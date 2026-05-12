@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { TechnicalInfoModal } from '@/components/TechnicalInfoModal'
-import { MarkdownWithTables } from '@/components/MarkdownWithTables'
+import MarkdownWithTables from '@/components/MarkdownWithTables'
 import {
   ShoppingCart,
   Globe,
