@@ -28,6 +28,7 @@ serve(async (req: Request) => {
 
     const query = typeof body?.query === 'string' ? body.query : ''
     const userName = typeof body?.userName === 'string' ? body.userName : 'Cliente'
+    const session_id = typeof body?.session_id === 'string' ? body.session_id : null
 
     console.log(`[LOG 1] Entrada: Usuário="${userName}", Query="${query}"`)
 
@@ -35,6 +36,25 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
+    // =========================
+    //  LOAD CHAT HISTORY (Supabase)
+    // =========================
+    let history: any[] = []
+
+    if (session_id) {
+      const { data: histRows, error: histError } = await supabase
+        .from('chat_messages')
+        .select('role, message')
+        .eq('session_id', session_id)
+        .order('created_at', { ascending: true })
+
+      if (!histError && Array.isArray(histRows)) {
+        history = histRows.map((row) => ({
+          role: row.role,
+          content: row.message,
+        }))
+      }
+    }
 
     // =========================
     //  LOAD CONFIG
@@ -74,10 +94,29 @@ serve(async (req: Request) => {
       4. Responda em JSON: {"message": "...", "referenced_internal_products": ["ID1", "ID2"]}
     `
 
-    const messages: any[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: query },
-    ]
+    // =========================
+    //  BUILD INITIAL MESSAGES WITH HISTORY
+    // =========================
+    const messages: any[] = [{ role: 'system', content: systemPrompt }]
+
+    // INJEÇÃO DO HISTÓRICO (últimos 8 turnos)
+    if (history.length > 0) {
+      messages.push(...history.slice(-8))
+    }
+
+    // MENSAGEM ATUAL DO USUÁRIO
+    messages.push({ role: 'user', content: query })
+
+    // =========================
+    //  SAVE USER MESSAGE TO HISTORY
+    // =========================
+    if (session_id) {
+      await supabase.from('chat_messages').insert({
+        session_id,
+        role: 'user',
+        message: query,
+      })
+    }
 
     const tools = [
       {
@@ -218,6 +257,17 @@ serve(async (req: Request) => {
     aiMessage.tool_calls = null
     delete aiMessage.refusal
     delete aiMessage.reasoning
+
+    // =========================
+    //  SAVE ASSISTANT FINAL RESPONSE TO HISTORY
+    // =========================
+    if (session_id) {
+      await supabase.from('chat_messages').insert({
+        session_id,
+        role: 'assistant',
+        message: aiMessage.content,
+      })
+    }
 
     // =========================
     //  JSON PARSE SAFETY
