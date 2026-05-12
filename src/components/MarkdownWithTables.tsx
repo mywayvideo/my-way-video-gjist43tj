@@ -22,7 +22,9 @@ const parseTable = (start: number, lines: string[]): ParseTableResult => {
       .split('|')
       .slice(1, -1)
       .map((cell) => cell.trim())
-    const isSeparator = cells.every((cell) => /^-{2,}$/.test(cell))
+    const isSeparator = cells.every((cell) => /^-+$/.test(cell))
+
+    // header vem SEMPRE antes do separator
     if (!isSeparator) {
       rows.push({ cells })
     }
@@ -248,4 +250,4 @@ const MarkdownWithTables: React.FC<MarkdownWithTablesProps> = ({ markdown, class
 }
 
 export default MarkdownWithTables
-export { TableBlock, MarkdownWithTables }
+export { TableBlock }
