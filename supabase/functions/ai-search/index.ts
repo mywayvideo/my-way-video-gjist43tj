@@ -72,7 +72,6 @@ serve(async (req: Request) => {
       2. Se você citar um produto, você DEVE incluir o ID dele no array 'referenced_internal_products'.
       3. Use APENAS os IDs que o sistema de busca retornar.
       4. Responda em JSON: {"message": "...", "referenced_internal_products": ["ID1", "ID2"]}
-      5. Parágrafos curtos. Especificações técnicas em blocos de código.
     `
 
     const messages: any[] = [
