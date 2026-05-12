@@ -37,9 +37,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
 import { useFavorites } from '@/hooks/useFavorites'
+import { useUserRole } from '@/hooks/use-user-role'
 
 export function Header() {
   const { currentUser: user, userRole, signOut } = useAuthContext()
+  const { role: fetchedRole } = useUserRole()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -72,8 +74,8 @@ export function Header() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    setIsAdmin(userRole === 'admin')
-  }, [userRole])
+    setIsAdmin(userRole === 'admin' || fetchedRole === 'admin')
+  }, [userRole, fetchedRole])
 
   useEffect(() => {
     const handleLogoutEvent = () => {

@@ -3,67 +3,52 @@ import { supabase } from '@/lib/supabase/client'
 
 export function useUserRole() {
   const [role, setRole] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let isMounted = true
-
-    async function fetchRole() {
+    const fetchRole = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession()
         if (!session?.user) {
-          if (isMounted) {
-            setRole('customer')
-            setIsLoading(false)
-          }
+          setRole(null)
+          setLoading(false)
           return
         }
 
-        const fetchPromise = supabase
+        const { data, error } = await supabase
           .from('customers')
           .select('role')
           .eq('user_id', session.user.id)
           .maybeSingle()
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('TIMEOUT')), 10000),
-        )
-
-        const result = (await Promise.race([fetchPromise, timeoutPromise])) as any
-
-        if (isMounted) {
-          if (result && result.data && result.data.role) {
-            setRole(result.data.role)
-          } else {
-            setRole('customer')
-          }
+        if (!error && data) {
+          setRole(data.role)
         }
-      } catch (error: any) {
-        if (isMounted) {
-          if (error.message === 'TIMEOUT') {
-            console.warn(
-              '[useUserRole] Timeout fetching user role (10s). Falling back to customer.',
-            )
-          } else {
-            console.error('[useUserRole] Error fetching user role:', error)
-          }
-          setRole('customer')
-        }
+      } catch (err) {
+        console.error('Error fetching user role:', err)
       } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        setLoading(false)
       }
     }
 
     fetchRole()
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchRole()
+      } else {
+        setRole(null)
+      }
+    })
+
     return () => {
-      isMounted = false
+      subscription.unsubscribe()
     }
   }, [])
 
-  return { role, isLoading }
+  return { role, loading }
 }
