@@ -39,6 +39,14 @@ interface TableBlockProps {
 }
 
 const TableBlock: React.FC<TableBlockProps> = ({ rows }) => {
+  const thStyle: React.CSSProperties = {
+    backgroundColor: '#1a1a1a',
+    color: '#fff',
+    border: '1px solid #444',
+    padding: '12px 8px',
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+  }
   if (rows.length === 0) return null
 
   return (
@@ -47,16 +55,7 @@ const TableBlock: React.FC<TableBlockProps> = ({ rows }) => {
         <thead>
           <tr>
             {rows[0].cells.map((header, index) => (
-              <th
-                key={index}
-                style={{
-                  border: '1px solid #ccc',
-                  padding: '12px 8px',
-                  textAlign: 'left',
-                  backgroundColor: '#f4f4f4',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <th key={index} style={thStyle}>
                 {header}
               </th>
             ))}
