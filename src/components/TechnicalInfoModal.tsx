@@ -8,8 +8,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
+import MarkdownWithTables from '@/components/MarkdownWithTables'
 
 interface TechnicalInfoModalProps {
   isOpen: boolean

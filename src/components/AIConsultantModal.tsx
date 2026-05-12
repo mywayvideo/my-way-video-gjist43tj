@@ -10,52 +10,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { useState, useEffect } from 'react'
-import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import MarkdownWithTables from '@/components/MarkdownWithTables'
-
-export const premiumMarkdownComponents: Components = {
-  table: ({ children }) => (
-    <div className="w-full overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 bg-white border border-gray-300 rounded-lg shadow-sm">
-        {children}
-      </table>
-    </div>
-  ),
-  thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
-  tbody: ({ children }) => <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>,
-  th: ({ children }) => (
-    <th
-      className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border border-gray-300"
-      scope="col"
-    >
-      {children}
-    </th>
-  ),
-  td: ({ children }) => (
-    <td className="px-6 py-4 text-sm text-gray-900 border border-gray-300">{children}</td>
-  ),
-  tr: ({ children }) => <tr className="hover:bg-gray-50">{children}</tr>,
-  // Componentes adicionais para um visual premium
-  code: ({ children, className, inline }) =>
-    !inline ? (
-      <pre className="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto mt-4 mb-4">
-        <code className={`text-sm ${className || ''}`}>{children}</code>
-      </pre>
-    ) : (
-      <code className="bg-gray-100 text-gray-900 px-2 py-1 rounded text-sm font-mono">
-        {children}
-      </code>
-    ),
-  blockquote: ({ children }) => (
-    <blockquote className="border-l-4 border-gray-300 bg-gray-50 pl-4 py-2 italic text-gray-700 my-4">
-      {children}
-    </blockquote>
-  ),
-}
 
 interface AIConsultantModalProps {
   isOpen: boolean
@@ -139,7 +98,7 @@ export function AIConsultantModal({
             Engenharia IA {productName ? `- ${productName}` : ''}
           </DialogTitle>
           <DialogDescription className="text-green-100/60 text-lg">
-            Tire suas dúvidas técnicas! Solicite especificações detalhads e compatibilidade.
+            Tire suas dúvidas técnicas! Solicite especificações detalhadas e compatibilidade.
           </DialogDescription>
         </DialogHeader>
 
