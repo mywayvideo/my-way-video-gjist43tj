@@ -6,67 +6,60 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function safeJSONParse(str: string, fallback: any = {}) {
-  if (typeof str !== 'string') return fallback
+function safeJSONParse(str: string, fallback: any = null): any {
+  try {
+    return JSON.parse(str);
+  } catch (_) {}
+
+  let cleaned = str.trim();
+
+  cleaned = cleaned
+    .replaceAll("
+```json", "")
+    .replaceAll("
+```", "")
+    .replaceAll("`", "")
+    .trim();
 
   try {
-    return JSON.parse(str)
-  } catch (_) {
-    // Tentativa 1: limpar fences se existirem
-    let cleaned = str
-      .replace(/```json/gi, '')
-      .replace(/```/g, '')
-      .trim()
+    return JSON.parse(cleaned);
+  } catch (_) {}
 
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
+
+  if (first !== -1 && last !== -1 && last > first) {
+    const extracted = cleaned.slice(first, last + 1);
     try {
-      return JSON.parse(cleaned)
+      return JSON.parse(extracted);
     } catch (_) {}
+  }
 
-    // Tentativa 2: extrair { ... }
-    const first = cleaned.indexOf('{')
-    const last = cleaned.lastIndexOf('}')
+  let repaired = cleaned
+    .replace(/,\s*}/g, "}")
+    .replace(/,\s*]/g, "]")
+    .replace(/“|”/g, '"')
+    .replace(/[\u0000-\u001F\u007F]/g, "");
 
-    if (first !== -1 && last !== -1 && last > first) {
-      try {
-        return JSON.parse(cleaned.slice(first, last + 1))
-      } catch (_) {}
-    }
-
-    // Tentativa 3: reparo leve
-    let repaired = cleaned
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/“|”/g, '"')
-      .replace(/[\u0000-\u001F\u007F]/g, '')
-
-    try {
-      return JSON.parse(repaired)
-    } catch (_) {
-      return fallback
-    }
+  try {
+    return JSON.parse(repaired);
+  } catch (_) {
+    return fallback;
   }
 }
 
 function sanitizeInput(text: any): string {
-  if (!text) return ''
+  if (text == null) return "";
 
-  let s = String(text)
+  let s = String(text);
 
-  // Remove caracteres invisíveis de controle
-  s = s.replace(/[\u0000-\u001F\u007F]/g, '')
+  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  s = s.replace(/\/g, "\\");
+  s = s.replace(/\"/g, "\\"");
+  
+  if (s.length > 10000) s = s.slice(0, 10000);
 
-  // Escapa backslashes (ESSENCIAL)
-  s = s.replace(/\\/g, '\\\\')
-
-  // Escapa aspas duplas
-  s = s.replace(/"/g, '\\"')
-
-  // Previne estouro de contexto
-  if (s.length > 10000) {
-    s = s.slice(0, 10000)
-  }
-
-  return s.trim()
+  return s;
 }
 
 serve(async (req: Request) => {
