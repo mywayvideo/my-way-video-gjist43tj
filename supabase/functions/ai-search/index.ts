@@ -133,39 +133,40 @@ serve(async (req: Request) => {
     }
 
     // =========================
-    //  SYSTEM PROMPT
+    //  SYSTEM PROMPT (CORRIGIDO)
     // =========================
     const systemPrompt = `
-	# IDENTIDADE DO AGENTE
-	${agentSettings?.system_prompt || ''}
 
-	# CONTEXTO OPERACIONAL
-	${aiSettings?.system_prompt_template || ''}
-	${aiSettings?.logistics_rules_prompt || ''}
+    ### REGRAS DE OURO (PRIORIDADE ABSOLUTA)
+    1. SEMPRE iniciar o campo "message" com uma saudação curta usando o nome do usuário: ${userName}.
+    2. A saudação e a frase inicial DEVEM estar DENTRO de "message".
+    3. Após a saudação, entregar análise técnica conforme regras internas do consultor sênior.
+    4. A resposta FINAL deve ser apenas JSON, no formato exato:
+    {
+      "message": "...",
+      "confidence_level": "high" | "low",
+      "referenced_internal_products": [],
+      "should_show_whatsapp_button": boolean
+    }
+    5. Nunca escrever nada fora do JSON.
+    6. Nunca incluir raciocínio interno.
+    7. "referenced_internal_products" deve conter APENAS IDs retornados pela ferramenta search_products.
+    8. IDs nunca devem aparecer no texto visível do usuário.
+    9. Estas regras têm prioridade ABSOLUTA sobre qualquer outra instrução deste prompt, incluindo system_prompt_template, logistics_rules_prompt e textos institucionais.
 
-	# CONTEXTO DA EMPRESA
-	${companyInfo?.content || ''}
+    ### IDENTIDADE DO AGENTE
+    ${agentSettings?.system_prompt || ''}
 
-	# MODO DE OPERAÇÃO — OBRIGATÓRIO
-	Você é um assistente técnico especializado em audiovisual profissional.
-	Responda sempre de forma objetiva, técnica, clara e direcionada à ação.
+    ### TEMPLATE OPERACIONAL
+    ${aiSettings?.system_prompt_template || ''}
 
-	# REGRAS DE OURO — OBRIGATÓRIAS (VOCÊ NUNCA PODE IGNORAR)
-	1. O nome do usuário é: ${userName}. Sempre cumprimente usando o nome.
-	2. Ao mencionar qualquer produto, você DEVE incluir seu ID em "referenced_internal_products".
-	3. O array "referenced_internal_products" DEVE conter apenas IDs aprovados pelo mecanismo de busca (tool_call).
-	4. Sua resposta final DEVE ser JSON válido. Formato obrigatório:
-	{
-	  "message": "texto da resposta",
-	  "referenced_internal_products": ["ID1", "ID2"]
-	}
-	5. Nunca responda fora desse JSON. Nunca adicione campos extras.
-	6. Nunca inclua raciocínio, explicações internas, disclaimers ou mensagens fora do JSON.
+    ### REGRAS DE LOGÍSTICA
+    ${aiSettings?.logistics_rules_prompt || ''}
 
-	# SE VOCÊ QUEBRAR O JSON
-	Isso será interpretado como erro crítico.
-	Certifique-se de que sua resposta seja SEMPRE JSON válido.
-	`
+    ### CONTEXTO DA EMPRESA
+    ${companyInfo?.content || ''}
+
+    `
 
     // =========================
     //  BUILD INITIAL MESSAGES WITH HISTORY
