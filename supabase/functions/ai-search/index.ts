@@ -95,17 +95,17 @@ serve(async (req: Request) => {
     if (session_id) {
       const { data: histRows, error: histError } = await supabase
         .from('chat_messages')
-        .select('role, message')
+        .select('role, content')
         .eq('session_id', session_id)
         .order('created_at', { ascending: false })
-        .limit(8)
+        .limit(30)
 
       if (!histError && Array.isArray(histRows)) {
         history = histRows
           .reverse() // volta para ordem cronológica
           .map((row) => ({
             role: row.role,
-            content: row.message,
+            content: row.content,
           }))
       }
     }
@@ -339,7 +339,7 @@ serve(async (req: Request) => {
       await supabase.from('chat_messages').insert({
         session_id,
         role: 'assistant',
-        message: aiMessage.content,
+        content: aiMessage.content, // ← coluna correta!
       })
     }
 
