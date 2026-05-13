@@ -8,45 +8,45 @@ const corsHeaders = {
 
 function safeJSONParse(str: string, fallback: any = null): any {
   try {
-    return JSON.parse(str)
-  } catch (_) {}
-  let cleaned = str.trim()
+    return JSON.parse(str);
+  } catch () {}
+  let cleaned = str.trim();
+  // Remove markdown fences com regex (sem strings multilinha)
   cleaned = cleaned
-    .replace(/\s*·\s*──\s*```json\s*/g, '')
-    .replace(/\s*```\s*/g, '')
-    .replace(/`/g, '')
-    .trim()
+    .replace(/json\s*/g, "")     .replace(/\s*/g, "")
+    .replace(/`/g, "")
+    .trim();
+  // Tentativa simples
   try {
-    return JSON.parse(cleaned)
-  } catch (_) {}
-  const first = cleaned.indexOf('{')
-  const last = cleaned.lastIndexOf('}')
+    return JSON.parse(cleaned);
+  } catch () {}
+  // Tentativa: extrair bloco { ... }
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
   if (first !== -1 && last !== -1 && last > first) {
-    const extracted = cleaned.slice(first, last + 1)
     try {
-      return JSON.parse(extracted)
-    } catch (_) {}
+      return JSON.parse(cleaned.slice(first, last + 1));
+    } catch () {}
   }
+  // Tentativa leve (reparos comuns)
   let repaired = cleaned
-    .replace(/,\s*}/g, '}')
-    .replace(/,\s*]/g, ']')
-    .replace(/["\"]/g, '"')
-    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/,\s*}/g, "}")
+    .replace(/,\s*]/g, "]")
+    .replace(/[""]/g, '"')
+    .replace(/[\u0000-\u001F\u007F]/g, "");
   try {
-    return JSON.parse(repaired)
-  } catch (_) {
-    return fallback
+    return JSON.parse(repaired);
+  } catch () {
+    return fallback;
   }
 }
 
 function sanitizeInput(text: any): string {
-  if (text == null) return ''
-  let s = String(text)
-  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-  s = s.replace(/\\/g, '\\\\')
-  s = s.replace(/\"/g, '\\"')
-  if (s.length > 10000) s = s.slice(0, 10000)
-  return s
+  try {
+    return JSON.stringify(String(text)).slice(1, -1);
+  } catch {
+    return "";
+  }
 }
 
 serve(async (req: Request) => {
