@@ -5,67 +5,25 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-function safeJSONParse(str: string, fallback: any = {}) {
-  if (typeof str !== 'string') return fallback
 
+function safeJSONParse(input: string): any | null {
   try {
-    return JSON.parse(str)
-  } catch (_) {
-    // tentativa 1: remover markdown
-	let cleaned = str
-	  .replace(/
-	```json/gi, "")
-	  .replace(/
-	```/g, "");
-
-    try {
-      return JSON.parse(cleaned)
-    } catch (_) {
-      // tentativa 2: extrair tudo entre a primeira { e a última }
-      const first = cleaned.indexOf('{')
-      const last = cleaned.lastIndexOf('}')
-      if (first !== -1 && last !== -1 && last > first) {
-        const extracted = cleaned.slice(first, last + 1)
-        try {
-          return JSON.parse(extracted)
-        } catch (_) {}
-      }
-
-      // tentativa 3: reparo leve de vírgulas e aspas
-      let repaired = cleaned
-        .replace(/,\s*}/g, '}')
-        .replace(/,\s*]/g, ']')
-        .replace(/“|”/g, '"') // aspas “ ” → "
-        .replace(/[\u0000-\u001F\u007F]/g, '') // controla caracteres invisíveis
-
-      try {
-        return JSON.parse(repaired)
-      } catch (_) {
-        console.error('[JaRL] Falha total ao reparar JSON da IA')
-        return fallback
-      }
-    }
+    const match = input.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/i)
+    const jsonStr = match ? match[1].trim() : input.trim()
+    return JSON.parse(jsonStr)
+  } catch (e) {
+    return null
   }
 }
 
-function sanitizeInput(text: any): string {
-  if (!text) return "";
-
-  let s = String(text);
-
-  // Remove caracteres de controle invisíveis
-  s = s.replace(/[\u0000-\u001F\u007F]/g, "");
-
-  // Escapa backslashes corretamente (ESSENCIAL)
-  s = s.replace(/\/g, "\\");
-
-  // Escapa aspas duplas corretamente
-  s = s.replace(/"/g, '\"');
-
-  // Trunca entradas absurdas que quebrariam a IA
-  if (s.length > 5000) s = s.slice(0, 5000) + "...";
-
-  return s.trim();
+function sanitizeInput(input: string): string {
+  if (!input || typeof input !== 'string') return ''
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
 serve(async (req: Request) => {
@@ -103,23 +61,23 @@ serve(async (req: Request) => {
     // =========================
     let history: any[] = []
 
-	if (session_id) {
-	  const { data: histRows, error: histError } = await supabase
-		.from('chat_messages')
-		.select('role, message')
-		.eq('session_id', session_id)
-		.order('created_at', { ascending: false })
-		.limit(8)
+    if (session_id) {
+      const { data: histRows, error: histError } = await supabase
+        .from('chat_messages')
+        .select('role, message')
+        .eq('session_id', session_id)
+        .order('created_at', { ascending: false })
+        .limit(8)
 
-	  if (!histError && Array.isArray(histRows)) {
-		history = histRows
-		  .reverse() // volta para ordem cronológica
-		  .map((row) => ({
-			role: row.role,
-			content: row.message,
-		  }))
-	  }
-	}
+      if (!histError && Array.isArray(histRows)) {
+        history = histRows
+          .reverse() // volta para ordem cronológica
+          .map((row) => ({
+            role: row.role,
+            content: row.message,
+          }))
+      }
+    }
 
     // =========================
     //  LOAD CONFIG
@@ -146,7 +104,7 @@ serve(async (req: Request) => {
     // =========================
     //  SYSTEM PROMPT
     // =========================
-	const systemPrompt = `
+    const systemPrompt = `
 	# IDENTIDADE DO AGENTE
 	${agentSettings?.system_prompt || ''}
 
@@ -356,51 +314,47 @@ serve(async (req: Request) => {
     // =========================
     //  JSON PARSE SAFETY
     // =========================
-	const result = safeJSONParse(
-	  aiMessage.content,
-	  {
-		message: globalSettingsMap['transparency_note'] || '',
-		referenced_internal_products: []
-	  }
-	)
+    const result = safeJSONParse(aiMessage.content, {
+      message: globalSettingsMap['transparency_note'] || '',
+      referenced_internal_products: [],
+    })
 
-	// FAILSAFE FINAL: garante estrutura mínima válida
-	if (!result.message || typeof result.message !== 'string') {
-	  result.message = globalSettingsMap['transparency_note'] || 'OK'
-	}
+    // FAILSAFE FINAL: garante estrutura mínima válida
+    if (!result.message || typeof result.message !== 'string') {
+      result.message = globalSettingsMap['transparency_note'] || 'OK'
+    }
 
-	if (!Array.isArray(result.referenced_internal_products)) {
-	  result.referenced_internal_products = []
-	}
-	
-	// =========================
-	//  SECURITY: PRODUCT IDS
-	// =========================
-	if (Array.isArray(result.referenced_internal_products)) {
-	  const originalCount = result.referenced_internal_products.length
+    if (!Array.isArray(result.referenced_internal_products)) {
+      result.referenced_internal_products = []
+    }
 
-	  result.referenced_internal_products =
-		result.referenced_internal_products.filter((id: string) => {
-		  const ok = allowedProductIds.has(id)
-		  if (!ok) console.log(`[LOG 6] Removendo ID intruso: ${id}`)
-		  return ok
-		})
+    // =========================
+    //  SECURITY: PRODUCT IDS
+    // =========================
+    if (Array.isArray(result.referenced_internal_products)) {
+      const originalCount = result.referenced_internal_products.length
 
-	  const validatedCount = result.referenced_internal_products.length
+      result.referenced_internal_products = result.referenced_internal_products.filter(
+        (id: string) => {
+          const ok = allowedProductIds.has(id)
+          if (!ok) console.log(`[LOG 6] Removendo ID intruso: ${id}`)
+          return ok
+        },
+      )
 
-	  if (validatedCount === 0) {
-		console.log(
-		  '[LOG 6.2] Todos os IDs sugeridos pela IA foram rejeitados. IA provavelmente alucinou produtos.'
-		)
+      const validatedCount = result.referenced_internal_products.length
 
-		// Fallback seguro: evita quebrar o frontend
-		result.referenced_internal_products = []
-	  }
+      if (validatedCount === 0) {
+        console.log(
+          '[LOG 6.2] Todos os IDs sugeridos pela IA foram rejeitados. IA provavelmente alucinou produtos.',
+        )
 
-	  console.log(
-		`[LOG 6.1] IDs finais: ${validatedCount} de ${originalCount}`
-	  )
-	}
+        // Fallback seguro: evita quebrar o frontend
+        result.referenced_internal_products = []
+      }
+
+      console.log(`[LOG 6.1] IDs finais: ${validatedCount} de ${originalCount}`)
+    }
 
     // =========================
     //  MESSAGE CLEANUP & APPEND
@@ -413,9 +367,9 @@ serve(async (req: Request) => {
     } else {
       console.error('[ERRO] result.message NÃO é string:', result.message)
       result.message = normalizeMessage(
-		  result.message,
-		  globalSettingsMap['transparency_note'] || ''
-		)
+        result.message,
+        globalSettingsMap['transparency_note'] || '',
+      )
     }
 
     return new Response(JSON.stringify(result), {
