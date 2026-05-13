@@ -5,6 +5,68 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+function safeJSONParse(str: string, fallback: any = {}) {
+  if (typeof str !== 'string') return fallback
+
+  try {
+    return JSON.parse(str)
+  } catch (_) {
+    // tentativa 1: remover markdown
+	let cleaned = str
+	  .replace(/
+	```json/gi, "")
+	  .replace(/
+	```/g, "");
+
+    try {
+      return JSON.parse(cleaned)
+    } catch (_) {
+      // tentativa 2: extrair tudo entre a primeira { e a última }
+      const first = cleaned.indexOf('{')
+      const last = cleaned.lastIndexOf('}')
+      if (first !== -1 && last !== -1 && last > first) {
+        const extracted = cleaned.slice(first, last + 1)
+        try {
+          return JSON.parse(extracted)
+        } catch (_) {}
+      }
+
+      // tentativa 3: reparo leve de vírgulas e aspas
+      let repaired = cleaned
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']')
+        .replace(/“|”/g, '"') // aspas “ ” → "
+        .replace(/[\u0000-\u001F\u007F]/g, '') // controla caracteres invisíveis
+
+      try {
+        return JSON.parse(repaired)
+      } catch (_) {
+        console.error('[JaRL] Falha total ao reparar JSON da IA')
+        return fallback
+      }
+    }
+  }
+}
+
+function sanitizeInput(text: any): string {
+  if (!text) return "";
+
+  let s = String(text);
+
+  // Remove caracteres de controle invisíveis
+  s = s.replace(/[\u0000-\u001F\u007F]/g, "");
+
+  // Escapa backslashes corretamente (ESSENCIAL)
+  s = s.replace(/\/g, "\\");
+
+  // Escapa aspas duplas corretamente
+  s = s.replace(/"/g, '\"');
+
+  // Trunca entradas absurdas que quebrariam a IA
+  if (s.length > 5000) s = s.slice(0, 5000) + "...";
+
+  return s.trim();
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -26,8 +88,8 @@ serve(async (req: Request) => {
       })
     }
 
-    const query = typeof body?.query === 'string' ? body.query : ''
-    const userName = typeof body?.userName === 'string' ? body.userName : 'Cliente'
+    const query = sanitizeInput(body?.query)
+    const userName = sanitizeInput(body?.userName || 'Cliente')
     const session_id = typeof body?.session_id === 'string' ? body.session_id : null
 
     console.log(`[LOG 1] Entrada: Usuário="${userName}", Query="${query}"`)
@@ -41,20 +103,23 @@ serve(async (req: Request) => {
     // =========================
     let history: any[] = []
 
-    if (session_id) {
-      const { data: histRows, error: histError } = await supabase
-        .from('chat_messages')
-        .select('role, message')
-        .eq('session_id', session_id)
-        .order('created_at', { ascending: true })
+	if (session_id) {
+	  const { data: histRows, error: histError } = await supabase
+		.from('chat_messages')
+		.select('role, message')
+		.eq('session_id', session_id)
+		.order('created_at', { ascending: false })
+		.limit(8)
 
-      if (!histError && Array.isArray(histRows)) {
-        history = histRows.map((row) => ({
-          role: row.role,
-          content: row.message,
-        }))
-      }
-    }
+	  if (!histError && Array.isArray(histRows)) {
+		history = histRows
+		  .reverse() // volta para ordem cronológica
+		  .map((row) => ({
+			role: row.role,
+			content: row.message,
+		  }))
+	  }
+	}
 
     // =========================
     //  LOAD CONFIG
@@ -81,18 +146,37 @@ serve(async (req: Request) => {
     // =========================
     //  SYSTEM PROMPT
     // =========================
-    const systemPrompt = `
-      ${agentSettings?.system_prompt || ''}
-      ${aiSettings?.system_prompt_template || ''}
-      ${aiSettings?.logistics_rules_prompt || ''}
-      ${companyInfo?.content || ''}
-      
-      ### REGRAS DE OURO (NÃO NEGOCIÁVEIS) ###
-      1. O nome do usuário é: ${userName}. Use-o na saudação.
-      2. Se você citar um produto, você DEVE incluir o ID dele no array 'referenced_internal_products'.
-      3. Use APENAS os IDs que o sistema de busca retornar.
-      4. Responda em JSON: {"message": "...", "referenced_internal_products": ["ID1", "ID2"]}
-    `
+	const systemPrompt = `
+	# IDENTIDADE DO AGENTE
+	${agentSettings?.system_prompt || ''}
+
+	# CONTEXTO OPERACIONAL
+	${aiSettings?.system_prompt_template || ''}
+	${aiSettings?.logistics_rules_prompt || ''}
+
+	# CONTEXTO DA EMPRESA
+	${companyInfo?.content || ''}
+
+	# MODO DE OPERAÇÃO — OBRIGATÓRIO
+	Você é um assistente técnico especializado em audiovisual profissional.
+	Responda sempre de forma objetiva, técnica, clara e direcionada à ação.
+
+	# REGRAS DE OURO — OBRIGATÓRIAS (VOCÊ NUNCA PODE IGNORAR)
+	1. O nome do usuário é: ${userName}. Sempre cumprimente usando o nome.
+	2. Ao mencionar qualquer produto, você DEVE incluir seu ID em "referenced_internal_products".
+	3. O array "referenced_internal_products" DEVE conter apenas IDs aprovados pelo mecanismo de busca (tool_call).
+	4. Sua resposta final DEVE ser JSON válido. Formato obrigatório:
+	{
+	  "message": "texto da resposta",
+	  "referenced_internal_products": ["ID1", "ID2"]
+	}
+	5. Nunca responda fora desse JSON. Nunca adicione campos extras.
+	6. Nunca inclua raciocínio, explicações internas, disclaimers ou mensagens fora do JSON.
+
+	# SE VOCÊ QUEBRAR O JSON
+	Isso será interpretado como erro crítico.
+	Certifique-se de que sua resposta seja SEMPRE JSON válido.
+	`
 
     // =========================
     //  BUILD INITIAL MESSAGES WITH HISTORY
@@ -105,7 +189,7 @@ serve(async (req: Request) => {
     }
 
     // MENSAGEM ATUAL DO USUÁRIO
-    messages.push({ role: 'user', content: query })
+    messages.push({ role: 'user', content: sanitizeInput(query) })
 
     // =========================
     //  SAVE USER MESSAGE TO HISTORY
@@ -114,7 +198,7 @@ serve(async (req: Request) => {
       await supabase.from('chat_messages').insert({
         session_id,
         role: 'user',
-        message: query,
+        message: sanitizeInput(query),
       })
     }
 
@@ -272,35 +356,51 @@ serve(async (req: Request) => {
     // =========================
     //  JSON PARSE SAFETY
     // =========================
-    let result: any = {}
-    try {
-      result = JSON.parse(aiMessage.content)
-    } catch (e) {
-      console.error('[ERRO] JSON inválido retornado pela IA:', aiMessage.content)
-      return new Response(JSON.stringify({ error: 'IA retornou JSON inválido' }), {
-        headers: corsHeaders,
-        status: 500,
-      })
-    }
+	const result = safeJSONParse(
+	  aiMessage.content,
+	  {
+		message: globalSettingsMap['transparency_note'] || '',
+		referenced_internal_products: []
+	  }
+	)
 
-    // =========================
-    //  SECURITY: PRODUCT IDS
-    // =========================
-    if (Array.isArray(result.referenced_internal_products)) {
-      const originalCount = result.referenced_internal_products.length
+	// FAILSAFE FINAL: garante estrutura mínima válida
+	if (!result.message || typeof result.message !== 'string') {
+	  result.message = globalSettingsMap['transparency_note'] || 'OK'
+	}
 
-      result.referenced_internal_products = result.referenced_internal_products.filter(
-        (id: string) => {
-          const ok = allowedProductIds.has(id)
-          if (!ok) console.log(`[LOG 6] Removendo ID intruso: ${id}`)
-          return ok
-        },
-      )
+	if (!Array.isArray(result.referenced_internal_products)) {
+	  result.referenced_internal_products = []
+	}
+	
+	// =========================
+	//  SECURITY: PRODUCT IDS
+	// =========================
+	if (Array.isArray(result.referenced_internal_products)) {
+	  const originalCount = result.referenced_internal_products.length
 
-      console.log(
-        `[LOG 6.1] Cards finais: ${result.referenced_internal_products.length} de ${originalCount}`,
-      )
-    }
+	  result.referenced_internal_products =
+		result.referenced_internal_products.filter((id: string) => {
+		  const ok = allowedProductIds.has(id)
+		  if (!ok) console.log(`[LOG 6] Removendo ID intruso: ${id}`)
+		  return ok
+		})
+
+	  const validatedCount = result.referenced_internal_products.length
+
+	  if (validatedCount === 0) {
+		console.log(
+		  '[LOG 6.2] Todos os IDs sugeridos pela IA foram rejeitados. IA provavelmente alucinou produtos.'
+		)
+
+		// Fallback seguro: evita quebrar o frontend
+		result.referenced_internal_products = []
+	  }
+
+	  console.log(
+		`[LOG 6.1] IDs finais: ${validatedCount} de ${originalCount}`
+	  )
+	}
 
     // =========================
     //  MESSAGE CLEANUP & APPEND
@@ -312,7 +412,10 @@ serve(async (req: Request) => {
         (globalSettingsMap['transparency_note'] || '')
     } else {
       console.error('[ERRO] result.message NÃO é string:', result.message)
-      result.message = globalSettingsMap['transparency_note'] || ''
+      result.message = normalizeMessage(
+		  result.message,
+		  globalSettingsMap['transparency_note'] || ''
+		)
     }
 
     return new Response(JSON.stringify(result), {

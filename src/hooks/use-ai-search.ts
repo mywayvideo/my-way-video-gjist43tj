@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { getActiveAgent } from '@/services/intelligence'
 import { useAuth } from '@/hooks/use-auth'
-
 export function useUnifiedSearch() {
+  const sessionIdRef = useRef<string | null>(null)
+  const lastRequestIdRef = useRef(0)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null) // ← INSTRUÇÃO 23
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null) // ← INSTRUÇÃO 24
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<any>(null)
   const { toast } = useToast()
@@ -15,12 +18,14 @@ export function useUnifiedSearch() {
     user?.app_metadata?.role === 'admin' ||
     user?.user_metadata?.role === 'admin' ||
     false
-
+  const userName =
+    user?.user_metadata?.full_name?.split(' ')[0] ||
+    user?.user_metadata?.name?.split(' ')[0] ||
+    user?.email?.split('@')[0] ||
+    'Usuário'
   const clearResults = () => {
     setResults(null)
-    setIsLoading(false) // Garante que o loading também resete
   }
-
   const calculateFinalPrice = (p: any) => {
     let finalUsdPrice = Number(p.price_usd || p.price_usa || 0)
     if (Number(p.price_usa_rebate) > 0) {
@@ -33,17 +38,16 @@ export function useUnifiedSearch() {
     }
     return finalUsdPrice
   }
-
   const search = async (
     rawQuery: string,
-    history: any[] = [],
     extraContext?: { productName?: string; technicalInfo?: string; currentProductId?: string },
   ) => {
+    const requestId = Date.now()
+    lastRequestIdRef.current = requestId
     const cleanQuery = rawQuery.trim()
     if (!cleanQuery) return
-
+    setResults(null) // ← INSTRUÇÃO 19
     console.log('NEW SEARCH FOR:', cleanQuery)
-
     // 1. Definição das Fases de Elite (Soberania MY WAY)
     const phases = [
       'Iniciando busca profunda MY WAY... Analisando termo técnico.',
@@ -52,7 +56,6 @@ export function useUnifiedSearch() {
       'Tier 3: Validando preços e SKUs oficiais MY WAY...',
       'Tier 4: Sintetizando inteligência de mercado...',
     ]
-
     // 2. Estado Inicial Intermediário
     setResults({
       message: phases[0],
@@ -63,19 +66,14 @@ export function useUnifiedSearch() {
       is_intermediate: true,
     })
     setIsLoading(true)
-
     // 3. Batida do Coração (Heartbeat) - Sincronização de Visão
     let phaseIndex = 0
-
-    const heartbeatInterval = setInterval(() => {
+    heartbeatRef.current = setInterval(() => {
       setResults((prev: any) => {
-        // REGRA DE OURO: Se a busca já terminou (is_intermediate virou false),
-        // mata o intervalo imediatamente e não toca no estado.
         if (prev && prev.is_intermediate === false) {
-          clearInterval(heartbeatInterval)
+          if (heartbeatRef.current) clearInterval(heartbeatRef.current)
           return prev
         }
-
         if (phaseIndex < phases.length - 1) {
           phaseIndex++
           return {
@@ -88,56 +86,23 @@ export function useUnifiedSearch() {
         return prev
       })
     }, 1000)
-
     try {
-      let sessionId = sessionStorage.getItem('ai_chat_session_id')
-      if (!sessionId) {
-        sessionId = crypto.randomUUID()
-        sessionStorage.setItem('ai_chat_session_id', sessionId)
-      }
-
-      let chatHistory: any[] = []
-      let userId = user?.id || null
-      let userName =
-        user?.user_metadata?.full_name?.split(' ')[0] ||
-        user?.user_metadata?.name?.split(' ')[0] ||
-        user?.email?.split('@')[0] ||
-        'Usuário'
-
-      try {
-        let queryDb = supabase
-          .from('chat_messages')
-          .select('role, content')
-          .eq('session_id', sessionId)
-          .order('created_at', { ascending: false })
-          .limit(10)
-
-        if (userId) {
-          queryDb = queryDb.eq('user_id', userId)
-        } else {
-          queryDb = queryDb.is('user_id', null)
+      if (!sessionIdRef.current) {
+        let uuid = sessionStorage.getItem('ai_chat_session_id')
+        if (!uuid) {
+          uuid = crypto.randomUUID()
+          sessionStorage.setItem('ai_chat_session_id', uuid)
         }
-
-        const { data: historyData } = await queryDb
-        if (historyData) {
-          chatHistory = historyData.reverse().map((h) => ({ role: h.role, content: h.content }))
-        }
-      } catch (e) {
-        console.error('Error fetching history:', e)
+        sessionIdRef.current = `home_global_${uuid}`
       }
-
-      let referencedIds: string[] = []
+      const sessionId = sessionIdRef.current
       let finalMessage = ''
-      let finalConfidence = 'high'
       let finalProducts: any[] = []
       let shouldShowWhatsapp = false
-
       const activeAgent = await getActiveAgent()
       await new Promise((resolve) => setTimeout(resolve, 50))
-
       // Declaramos aiResponse aqui para garantir o escopo global na função search
       let aiResponse: any = null
-
       if (!activeAgent) {
         finalMessage = 'Nenhum agente de IA configurado.'
         toast({
@@ -145,18 +110,11 @@ export function useUnifiedSearch() {
           description: 'Nenhum agente configurado. Usando busca básica.',
         })
       } else {
-        // O processamento da IA deve acontecer no ELSE (quando há agente)
         try {
-          const sanitizedHistory = chatHistory.filter((msg: any) => {
-            const content = msg.content || ''
-            return !content.includes('erro técnico')
-          })
-
           const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
             body: {
               query: cleanQuery,
               session_id: sessionId,
-              history: sanitizedHistory,
               userName,
               productName: extraContext?.productName,
               technicalInfo: extraContext?.technicalInfo,
@@ -175,15 +133,22 @@ export function useUnifiedSearch() {
           }
         }
       }
-
+      if (!aiResponse) {
+        aiResponse = { message: finalMessage }
+      }
       // 3. Processamento de Dados (Fora de qualquer IF restritivo)
-      finalMessage = aiResponse?.message || aiResponse?.content || ''
-      finalConfidence = aiResponse?.confidence_level || 'high'
-      referencedIds = Array.isArray(aiResponse?.referenced_internal_products)
-        ? aiResponse.referenced_internal_products
-        : []
-      const aiStock = Array.isArray(aiResponse?.stock) ? aiResponse.stock : []
-
+      finalMessage =
+        typeof aiResponse?.message === 'string' && aiResponse.message.trim() !== ''
+          ? aiResponse.message
+          : typeof aiResponse?.content === 'string' && aiResponse.content.trim() !== ''
+            ? aiResponse.content
+            : finalMessage || 'Não foi possível gerar uma resposta no momento.'
+      finalMessage = finalMessage.trim()
+      // correção
+      let aiStock: any[] = []
+      if (Array.isArray(aiResponse?.stock)) {
+        aiStock = aiResponse.stock.filter((item: any) => item && typeof item === 'object')
+      }
       if (aiStock.length > 0) {
         finalProducts = aiStock.map((p: any) => ({
           ...p,
@@ -192,35 +157,19 @@ export function useUnifiedSearch() {
           price_brl: Number(p.price_brl || 0),
           stock: Number(p.stock || 0),
         }))
-      } else if (referencedIds.length > 0) {
-        const { data: fetchedProducts } = await supabase
-          .from('products')
-          .select('*, manufacturer:manufacturers(id, name)')
-          .in('id', referencedIds)
-          .eq('is_discontinued', false)
-
-        if (fetchedProducts) {
-          finalProducts = fetchedProducts.map((p: any) => ({
-            ...p,
-            price_usa: calculateFinalPrice(p),
-            price_usd: calculateFinalPrice(p),
-            price_brl: Number(p.price_brl || 0),
-            stock: Number(p.stock || 0),
-          }))
-        }
       }
-
       finalProducts = finalProducts.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
       shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
-
       // 4. Montagem Final (Garante que settings e message existam)
       const combinedResults = {
         message: finalMessage,
         content: finalMessage,
-        confidence_level: finalConfidence,
+        confidence_level: aiResponse?.confidence_level || 'high',
         stock: finalProducts,
         products: finalProducts,
-        referenced_internal_products: referencedIds,
+        referenced_internal_products: Array.isArray(aiResponse?.referenced_internal_products)
+          ? aiResponse.referenced_internal_products
+          : [],
         settings: aiResponse?.settings || {},
         agent_name: activeAgent?.provider_name || 'Especialista MY WAY',
         should_show_whatsapp_button: shouldShowWhatsapp,
@@ -228,32 +177,29 @@ export function useUnifiedSearch() {
         intel: aiResponse?.intel || [],
         nabData: aiResponse?.nab_data || [],
       }
-
       console.log('SEARCH_RESULTS:', combinedResults)
-
-      try {
-        await supabase.from('chat_messages').insert([
-          { session_id: sessionId, user_id: userId, role: 'user', content: cleanQuery },
-          { session_id: sessionId, user_id: userId, role: 'assistant', content: finalMessage },
-        ])
-      } catch (e) {
-        console.error('Error saving history:', e)
+      // Guardião contra respostas atrasadas
+      if (lastRequestIdRef.current !== requestId) {
+        console.log('Resposta ignorada por ser de uma busca antiga.')
+        return
       }
-
+      // Cancelamento de timeouts antigos
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+        scrollTimeoutRef.current = null
+      }
+      // Entrega final dos resultados
       setResults(combinedResults)
-
-      setTimeout(() => {
-        const containers = document.querySelectorAll('#ai-response-container')
-        const container = containers[containers.length - 1]
+      // Scroll seguro com timeout
+      scrollTimeoutRef.current = setTimeout(() => {
+        const container = document.querySelector('.ai-response-container') as HTMLElement | null
         if (container) {
-          container.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          container.scrollIntoView({ behavior: 'smooth' })
         }
       }, 100)
-
       return combinedResults
     } catch (err: any) {
       console.error('[useUnifiedSearch] error:', err)
-
       const fallbackResults = {
         message:
           err?.message ||
@@ -271,8 +217,22 @@ export function useUnifiedSearch() {
         should_show_whatsapp_button: true,
         is_intermediate: false,
       }
-
       setResults(fallbackResults)
+
+      // Cancelamento de timeouts antigos
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+        scrollTimeoutRef.current = null
+      }
+
+      // Scroll seguro com timeout
+      scrollTimeoutRef.current = setTimeout(() => {
+        const container = document.querySelector('.ai-response-container') as HTMLElement | null
+        if (container) {
+          container.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
+
       toast({
         title: 'Erro de Busca',
         description: err?.message || 'Ocorreu um erro ao consultar nossa base de dados.',
@@ -280,12 +240,13 @@ export function useUnifiedSearch() {
       })
       return fallbackResults
     } finally {
-      clearInterval(heartbeatInterval)
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current)
+        heartbeatRef.current = null
+      }
       setIsLoading(false)
     }
   }
-
   return { search, isLoading, results, clearResults }
 }
-
 export const useAiSearch = useUnifiedSearch

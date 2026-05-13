@@ -36,16 +36,10 @@ export function AIConsultantModal({
   const { user } = useAuth()
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
       clearResults()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
-
-  useEffect(() => {
-    clearResults()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProductId])
+  }, [currentProductId, isOpen])
 
   const userName =
     user?.user_metadata?.full_name?.split(' ')[0] ||
@@ -54,10 +48,12 @@ export function AIConsultantModal({
 
   const handleSearch = async () => {
     if (!query.trim()) return
-    const priorityQuery = productName
-      ? '[CONTEXTO PRIORITÁRIO: Produto ' + productName + '] ' + query
-      : query
-    await search(priorityQuery, [], { productName, technicalInfo, currentProductId })
+
+    const priorityQuery =
+      productName || technicalInfo
+        ? `[CONTEXTO PRIORITÁRIO]\nProduto: ${productName || 'N/D'}\nEspecificações: ${technicalInfo || 'N/D'}\n\n${query}`
+        : query
+    await search(priorityQuery, { productName, technicalInfo, currentProductId })
     setQuery('')
   }
 
@@ -97,11 +93,11 @@ export function AIConsultantModal({
             <MessageCircle className="w-5 h-5 text-green-400" />
             Engenharia IA {productName ? `- ${productName}` : ''}
           </DialogTitle>
+
           <DialogDescription className="text-green-100/60 text-lg">
             Tire suas dúvidas técnicas! Solicite especificações detalhadas e compatibilidade.
           </DialogDescription>
         </DialogHeader>
-
         <ScrollArea className="flex-1 border border-green-800/40 rounded-lg p-4 bg-black/20">
           {results?.is_intermediate && (
             <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-900/50 border border-orange-500/30 animate-pulse">
@@ -117,6 +113,7 @@ export function AIConsultantModal({
               <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
                 <MarkdownWithTables markdown={results?.message || ''} />
               </div>
+
               {results.products &&
                 results.products.filter((p: any) => {
                   const pid = String(p?.id || '')
@@ -143,6 +140,7 @@ export function AIConsultantModal({
                       ))}
                   </div>
                 )}
+
               {results?.should_show_whatsapp_button && (
                 <Button
                   className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-6 flex items-center justify-center gap-3 shadow-lg"
@@ -161,11 +159,15 @@ export function AIConsultantModal({
               </p>
             </div>
           )}
+
           {isLoading && !results?.is_intermediate && (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-green-400" />
             </div>
           )}
+
+          {/* ANCORAGEM PARA O SCROLL AUTOMÁTICO — DEVE FICAR AQUI */}
+          <div className="ai-response-container" />
         </ScrollArea>
 
         <div className="flex gap-2 items-end mt-2">
