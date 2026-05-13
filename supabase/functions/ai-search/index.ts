@@ -6,24 +6,67 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function safeJSONParse(input: string): any | null {
+function safeJSONParse(str: string, fallback: any = {}) {
+  if (typeof str !== "string") return fallback;
+
   try {
-    const match = input.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/i)
-    const jsonStr = match ? match[1].trim() : input.trim()
-    return JSON.parse(jsonStr)
-  } catch (e) {
-    return null
+    return JSON.parse(str);
+  } catch (_) {
+    // Tentativa 1: limpar fences se existirem
+    let cleaned = str
+      .replace(/
+```json/gi, "")
+      .replace(/
+```/g, "")
+      .trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (_) {}
+
+    // Tentativa 2: extrair { ... }
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+
+    if (first !== -1 && last !== -1 && last > first) {
+      try {
+        return JSON.parse(cleaned.slice(first, last + 1));
+      } catch (_) {}
+    }
+
+    // Tentativa 3: reparo leve
+    let repaired = cleaned
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/“|”/g, '"')
+      .replace(/[\u0000-\u001F\u007F]/g, "");
+
+    try {
+      return JSON.parse(repaired);
+    } catch (_) {
+      return fallback;
+    }
   }
 }
 
-function sanitizeInput(input: string): string {
-  if (!input || typeof input !== 'string') return ''
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
+function sanitizeInput(text: any): string {
+  if (!text) return "";
+
+  let s = String(text);
+
+  // Remove caracteres invisíveis de controle
+  s = s.replace(/[\u0000-\u001F\u007F]/g, "");
+
+  // Escapa backslashes (ESSENCIAL)
+  s = s.replace(/\/g, "\\");
+
+  // Escapa aspas duplas
+  s = s.replace(/"/g, '\"');
+
+  // Previne estouro de contexto
+  if (s.length > 10000) s = s.slice(0, 10000);
+
+  return s.trim();
 }
 
 serve(async (req: Request) => {
