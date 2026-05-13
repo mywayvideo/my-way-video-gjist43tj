@@ -8,45 +8,52 @@ const corsHeaders = {
 
 function safeJSONParse(str: string, fallback: any = null): any {
   try {
-    return JSON.parse(str);
-  } catch () {}
-  let cleaned = str.trim();
-  // Remove markdown fences com regex (sem strings multilinha)
+    return JSON.parse(str)
+  } catch (e) {}
+
+  let cleaned = str.trim()
+
+  // Remoção segura de cercas sem regex com crase
   cleaned = cleaned
-    .replace(/json\s*/g, "")     
-    .replace(/\s*/g, "")
-    .replace(/`/g, "")
-    .trim();
+    .replaceAll('``' + '`json', '')
+    .replaceAll('``' + '`', '')
+    .replaceAll('`', '')
+    .trim()
+
   // Tentativa simples
   try {
-    return JSON.parse(cleaned);
-  } catch () {}
-  // Tentativa: extrair bloco { ... }
-  const first = cleaned.indexOf("{");
-  const last = cleaned.lastIndexOf("}");
+    return JSON.parse(cleaned)
+  } catch (e) {}
+
+  // Extrair bloco { ... }
+  const first = cleaned.indexOf('{')
+  const last = cleaned.lastIndexOf('}')
+
   if (first !== -1 && last !== -1 && last > first) {
     try {
-      return JSON.parse(cleaned.slice(first, last + 1));
-    } catch () {}
+      return JSON.parse(cleaned.slice(first, last + 1))
+    } catch (e) {}
   }
-  // Tentativa leve (reparos comuns)
+
+  // Reparos leves
   let repaired = cleaned
-    .replace(/,\s*}/g, "}")
-    .replace(/,\s*]/g, "]")
-    .replace(/[""]/g, '"')
-    .replace(/[\u0000-\u001F\u007F]/g, "");
+    .replace(/,\s*}/g, '}')
+    .replace(/,\s*]/g, ']')
+    .replace(/\u201C|\u201D/g, '"')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+
   try {
-    return JSON.parse(repaired);
-  } catch () {
-    return fallback;
+    return JSON.parse(repaired)
+  } catch (e) {
+    return fallback
   }
 }
 
 function sanitizeInput(text: any): string {
   try {
-    return JSON.stringify(String(text)).slice(1, -1);
+    return JSON.stringify(String(text)).slice(1, -1)
   } catch {
-    return "";
+    return ''
   }
 }
 
