@@ -7,66 +7,66 @@ const corsHeaders = {
 }
 
 function safeJSONParse(str: string, fallback: any = {}) {
-  if (typeof str !== "string") return fallback;
+  if (typeof str !== 'string') return fallback
 
   try {
-    return JSON.parse(str);
+    return JSON.parse(str)
   } catch (_) {
     // Tentativa 1: limpar fences se existirem
     let cleaned = str
-      .replace(/
-```json/gi, "")
-      .replace(/
-```/g, "")
-      .trim();
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim()
 
     try {
-      return JSON.parse(cleaned);
+      return JSON.parse(cleaned)
     } catch (_) {}
 
     // Tentativa 2: extrair { ... }
-    const first = cleaned.indexOf("{");
-    const last = cleaned.lastIndexOf("}");
+    const first = cleaned.indexOf('{')
+    const last = cleaned.lastIndexOf('}')
 
     if (first !== -1 && last !== -1 && last > first) {
       try {
-        return JSON.parse(cleaned.slice(first, last + 1));
+        return JSON.parse(cleaned.slice(first, last + 1))
       } catch (_) {}
     }
 
     // Tentativa 3: reparo leve
     let repaired = cleaned
-      .replace(/,\s*}/g, "}")
-      .replace(/,\s*]/g, "]")
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
       .replace(/“|”/g, '"')
-      .replace(/[\u0000-\u001F\u007F]/g, "");
+      .replace(/[\u0000-\u001F\u007F]/g, '')
 
     try {
-      return JSON.parse(repaired);
+      return JSON.parse(repaired)
     } catch (_) {
-      return fallback;
+      return fallback
     }
   }
 }
 
 function sanitizeInput(text: any): string {
-  if (!text) return "";
+  if (!text) return ''
 
-  let s = String(text);
+  let s = String(text)
 
   // Remove caracteres invisíveis de controle
-  s = s.replace(/[\u0000-\u001F\u007F]/g, "");
+  s = s.replace(/[\u0000-\u001F\u007F]/g, '')
 
   // Escapa backslashes (ESSENCIAL)
-  s = s.replace(/\/g, "\\");
+  s = s.replace(/\\/g, '\\\\')
 
   // Escapa aspas duplas
-  s = s.replace(/"/g, '\"');
+  s = s.replace(/"/g, '\\"')
 
   // Previne estouro de contexto
-  if (s.length > 10000) s = s.slice(0, 10000);
+  if (s.length > 10000) {
+    s = s.slice(0, 10000)
+  }
 
-  return s.trim();
+  return s.trim()
 }
 
 serve(async (req: Request) => {
