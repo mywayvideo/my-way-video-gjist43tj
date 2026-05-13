@@ -13,7 +13,8 @@ function safeJSONParse(str: string, fallback: any = null): any {
   let cleaned = str.trim();
   // Remove markdown fences com regex (sem strings multilinha)
   cleaned = cleaned
-    .replace(/json\s*/g, "")     .replace(/\s*/g, "")
+    .replace(/json\s*/g, "")     
+    .replace(/\s*/g, "")
     .replace(/`/g, "")
     .trim();
   // Tentativa simples
