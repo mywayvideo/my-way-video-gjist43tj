@@ -111,6 +111,22 @@ serve(async (req: Request) => {
     }
 
     // =========================
+    //  DETECT LAST REFERENCED PRODUCT FROM HISTORY
+    // =========================
+    let lastReferencedProductId = null
+    for (const msg of history.slice().reverse()) {
+      try {
+        const parsed = JSON.parse(msg.content)
+        if (
+          parsed?.referenced_internal_products &&
+          parsed.referenced_internal_products.length > 0
+        ) {
+          lastReferencedProductId = parsed.referenced_internal_products[0]
+          break
+        }
+      } catch {}
+    }
+    // =========================
     //  LOAD CONFIG
     // =========================
     const [
@@ -130,6 +146,23 @@ serve(async (req: Request) => {
       for (const s of globalSettings) {
         if (s?.key && s?.value) globalSettingsMap[s.key] = s.value
       }
+    }
+
+    // =========================
+    //  LOAD CONTEXTUAL PRODUCT DATA (IF EXIST)
+    // =========================
+    let contextualProductData = null
+
+    if (lastReferencedProductId) {
+      const { data: product } = await supabase
+        .from('products')
+        .select(
+          'id, name, category, compatibility, connectors, mount, media_type, interfaces, manufacturer, description',
+        )
+        .eq('id', lastReferencedProductId)
+        .maybeSingle()
+
+      contextualProductData = product || null
     }
 
     // =========================
@@ -167,18 +200,25 @@ serve(async (req: Request) => {
     ${companyInfo?.content || ''}
 
     `
-
     // =========================
-    //  BUILD INITIAL MESSAGES WITH HISTORY
+    //  BUILD INITIAL MESSAGES
     // =========================
     const messages: any[] = [{ role: 'system', content: systemPrompt }]
 
-    // INJEÇÃO DO HISTÓRICO (últimos 8 turnos)
+    // Inject CONTEXTUAL_PRODUCT_DATA (if exists)
+    if (contextualProductData) {
+      messages.push({
+        role: 'system',
+        content: 'CONTEXTUAL_PRODUCT_DATA:\n' + JSON.stringify(contextualProductData),
+      })
+    }
+
+    // Inject history (limit to last 8 turns)
     if (history.length > 0) {
       messages.push(...history.slice(-8))
     }
 
-    // MENSAGEM ATUAL DO USUÁRIO
+    // User message
     messages.push({ role: 'user', content: sanitizeInput(query) })
 
     // =========================
