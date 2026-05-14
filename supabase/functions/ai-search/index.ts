@@ -170,41 +170,35 @@ serve(async (req: Request) => {
     // =========================
     const systemPrompt = `
 
-    ### REGRAS DE OURO (PRIORIDADE ABSOLUTA)
-    1. SEMPRE iniciar o campo "message" com uma saudação curta usando o nome do usuário: ${userName}.
-    2. A saudação e a frase inicial DEVEM estar DENTRO de "message".
-    3. Após a saudação, entregar análise técnica conforme regras internas do consultor sênior.
-    4. A resposta FINAL deve ser apenas JSON, no formato exato:
-    {
-      "message": "...",
-      "confidence_level": "high" | "low",
-      "referenced_internal_products": [],
-      "should_show_whatsapp_button": boolean
-    }
-    5. Nunca escrever nada fora do JSON.
-    6. Nunca incluir raciocínio interno.
-    7. "referenced_internal_products" deve conter APENAS IDs retornados pela ferramenta search_products.
-    8. IDs nunca devem aparecer no texto visível do usuário.
-    9. Estas regras têm prioridade ABSOLUTA sobre qualquer outra instrução deste prompt, incluindo system_prompt_template, logistics_rules_prompt e textos institucionais.
+  ### IDENTIDADE DO AGENTE
+  ${agentSettings?.system_prompt || ''}
 
-    ### IDENTIDADE DO AGENTE
-    ${agentSettings?.system_prompt || ''}
+  ### TEMPLATE OPERACIONAL (REGRAS TÉCNICAS DE CONSULTORIA)
+  ${aiSettings?.system_prompt_template || ''}
 
-    ### TEMPLATE OPERACIONAL
-    ${aiSettings?.system_prompt_template || ''}
+  ### REGRAS DE LOGÍSTICA
+  ${aiSettings?.logistics_rules_prompt || ''}
 
-    ### REGRAS DE LOGÍSTICA
-    ${aiSettings?.logistics_rules_prompt || ''}
+  ### CONTEXTO DA EMPRESA
+  ${companyInfo?.content || ''}
 
-    ### CONTEXTO DA EMPRESA
-    ${companyInfo?.content || ''}
+  ### REGRAS DE OURO (FORMATO FINAL DO JSON — PRIORIDADE SOMENTE SOBRE O FORMATO)
+  1. A resposta FINAL deve ser apenas JSON, no formato exato:
+  {
+    "message": "...",
+    "confidence_level": "high" | "low",
+    "referenced_internal_products": [],
+    "should_show_whatsapp_button": boolean
+  }
+  2. Nunca escrever nada fora do JSON.
+  3. Nunca incluir raciocínio interno, notas ocultas, logs ou comentários.
+  4. A saudação inicial e todo o conteúdo visível devem estar DENTRO de "message".
+  5. "referenced_internal_products" deve conter TODOS os IDs usados na resposta, seguindo estritamente as regras do TEMPLATE OPERACIONAL.
+  6. IDs nunca devem aparecer no texto visível ao usuário.
+  7. Estas regras definem APENAS a forma do JSON final e NÃO anulam o system_prompt_template, nem regras internas de formatação, busca, preços ou referenciação.
+  8. O campo "message" deve conter apenas texto e Markdown seguro conforme TEMPLATE OPERACIONAL. Nunca usar markdown avançado, HTML ou estilizações proibidas.
 
-    `
-    // =========================
-    //  BUILD INITIAL MESSAGES
-    // =========================
-    const messages: any[] = [{ role: 'system', content: systemPrompt }]
-
+  `
     // Inject CONTEXTUAL_PRODUCT_DATA (if exists)
     if (contextualProductData) {
       messages.push({
