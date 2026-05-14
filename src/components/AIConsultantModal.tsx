@@ -14,7 +14,7 @@ import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
-import ReactMarkdown from 'react-markdown'
+import MarkdownWithTables from '@/components/MarkdownWithTables'
 
 interface AIConsultantModalProps {
   isOpen: boolean
@@ -111,9 +111,7 @@ export function AIConsultantModal({
           {results?.message ? (
             <div className="flex flex-col gap-6">
               <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
-                <ReactMarkdown linkTarget="_blank" skipHtml={false}>
-                  {results?.message || ''}
-                </ReactMarkdown>
+                <MarkdownWithTables markdown={results?.message || ''} />
               </div>
 
               {results.products &&
