@@ -14,7 +14,7 @@ import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
-import MarkdownWithTables from '@/components/MarkdownWithTables'
+import ReactMarkdown from 'react-markdown'
 
 interface AIConsultantModalProps {
   isOpen: boolean
@@ -178,7 +178,7 @@ export function AIConsultantModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua dúvida..."
-            className="text-lg text-white placeholder:text-green-100/30 bg-[#03200c]/60 border-green-900/50 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-green-500"
+            className="text-xl text-white placeholder:text-green-100/30 bg-[#03200c]/60 border-green-900/50 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-green-500"
           />
           <Button
             onClick={handleSearch}
