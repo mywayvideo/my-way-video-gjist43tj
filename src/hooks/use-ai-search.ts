@@ -160,13 +160,30 @@ export function useUnifiedSearch() {
       }
       finalProducts = finalProducts.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
       shouldShowWhatsapp = !!aiResponse?.should_show_whatsapp_button
+      // 2. Enriquecer produtos com os produtos referenciados pela IA
+      let enrichedProducts = [...finalProducts]
+
+      if (
+        Array.isArray(aiResponse?.referenced_internal_products) &&
+        aiResponse.referenced_internal_products.length > 0
+      ) {
+        const { data: related } = await supabase
+          .from('products')
+          .select('*')
+          .in('id', aiResponse.referenced_internal_products)
+
+        if (related && related.length > 0) {
+          enrichedProducts = [...enrichedProducts, ...related]
+        }
+      }
+
       // 4. Montagem Final (Garante que settings e message existam)
       const combinedResults = {
         message: finalMessage,
         content: finalMessage,
         confidence_level: aiResponse?.confidence_level || 'high',
         stock: finalProducts,
-        products: finalProducts,
+        products: enrichedProducts,
         referenced_internal_products: Array.isArray(aiResponse?.referenced_internal_products)
           ? aiResponse.referenced_internal_products
           : [],

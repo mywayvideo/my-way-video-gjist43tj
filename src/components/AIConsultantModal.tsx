@@ -136,7 +136,14 @@ export function AIConsultantModal({
           {results?.message ? (
             <div className="flex flex-col gap-6">
               <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
-                <MarkdownWithTables markdown={results?.message || ''} />
+                <ResponseFormatter
+                  content={results.message || ''}
+                  products={results.products}
+                  stock={results.stock}
+                  referenced_internal_products={results.referenced_internal_products}
+                  nabData={results.nabData || results.nab_data}
+                  intel={results.intel}
+                />
               </div>
 
               {results.products &&
