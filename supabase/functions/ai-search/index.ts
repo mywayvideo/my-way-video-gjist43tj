@@ -179,6 +179,12 @@ serve(async (req: Request) => {
   ### PROMPT ESPECÍFICO DA PÁGINA DE PRODUTO
   ${productPagePrompt && query.includes(productName) ? productPagePrompt : ''}
 
+  ### CONTEXTO DA PÁGINA DE PRODUTO (ATIVAÇÃO)
+  ${productName ? 'Esta conversa ocorre na Página de Produto. O usuário está consultando especificamente este produto e suas alternativas. Todas as respostas devem usar este produto como ponto de referência primário.' : ''}
+
+  ### SUPRESSÃO DE PADRÕES ANTERIORES
+  ${productName ? 'Ignore padrões de resposta e estilos herdados do histórico. Siga exclusivamente o system_prompt, o product_page_prompt e o system_prompt_template.' : ''}
+
   ### REGRAS DE LOGÍSTICA
   ${aiSettings?.logistics_rules_prompt || ''}
 
