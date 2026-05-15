@@ -199,6 +199,11 @@ serve(async (req: Request) => {
   8. O campo "message" deve conter apenas texto e Markdown seguro conforme TEMPLATE OPERACIONAL. Nunca usar markdown avançado, HTML ou estilizações proibidas.
 
   `
+    // =========================
+    //  BUILD INITIAL MESSAGES
+    // =========================
+    const messages: any[] = [{ role: 'system', content: systemPrompt }]
+
     // Inject CONTEXTUAL_PRODUCT_DATA (if exists)
     if (contextualProductData) {
       messages.push({
