@@ -49,11 +49,35 @@ export function AIConsultantModal({
   const handleSearch = async () => {
     if (!query.trim()) return
 
+    // Sanitizar technicalInfo removendo markdown proibido
+    const cleanTechnicalInfo = (technicalInfo || '')
+      .replace(/[*_~`]+/g, '')
+      .replace(/\|/g, '/')
+      .replace(/#/g, '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\n{2,}/g, '\n') // normaliza quebras
+      .trim()
+
+    // Sanitizar productName
+    const cleanProductName = (productName || '')
+      .replace(/[*_~`]+/g, '')
+      .replace(/\|/g, '/')
+      .replace(/#/g, '')
+      .replace(/<[^>]*>/g, '')
+      .trim()
+
+    // Montar PRIORITY QUERY (como a Home, sem alterar query)
     const priorityQuery =
       productName || technicalInfo
-        ? `[CONTEXTO PRIORITÁRIO]\nProduto: ${productName || 'N/D'}\nEspecificações: ${technicalInfo || 'N/D'}\n\n${query}`
+        ? `[CONTEXTO PRIORITÁRIO]\nProduto: ${cleanProductName || 'N/D'}\nEspecificações: ${cleanTechnicalInfo || 'N/D'}\n\n${query}`
         : query
-    await search(priorityQuery, { productName, technicalInfo, currentProductId })
+
+    await search(priorityQuery, {
+      productName,
+      technicalInfo,
+      currentProductId,
+    })
+
     setQuery('')
   }
 
