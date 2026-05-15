@@ -170,44 +170,44 @@ serve(async (req: Request) => {
     // =========================
     const systemPrompt = `
 
-  ### IDENTIDADE DO AGENTE
-  ${agentSettings?.system_prompt || ''}
+    ### IDENTIDADE DO AGENTE
+    ${agentSettings?.system_prompt || ''}
 
-  ### TEMPLATE OPERACIONAL (REGRAS TÉCNICAS DE CONSULTORIA)
-  ${aiSettings?.system_prompt_template || ''}
+    ### PROMPT ESPECÍFICO DA PÁGINA DE PRODUTO (SE ATIVADO)
+    ${lastReferencedProductId ? aiSettings?.product_page_prompt || '' : ''}
 
-  ### PROMPT ESPECÍFICO DA PÁGINA DE PRODUTO
-  ${productPagePrompt && query.includes(productName) ? productPagePrompt : ''}
+    ### CONTEXTO DA PÁGINA DE PRODUTO (ATIVAÇÃO)
+    ${lastReferencedProductId ? 'Esta conversa ocorre na Página de Produto. O usuário está consultando especificamente este produto e suas alternativas. Todas as respostas devem usar este produto como ponto de referência primário.' : ''}
 
-  ### CONTEXTO DA PÁGINA DE PRODUTO (ATIVAÇÃO)
-  ${productName ? 'Esta conversa ocorre na Página de Produto. O usuário está consultando especificamente este produto e suas alternativas. Todas as respostas devem usar este produto como ponto de referência primário.' : ''}
+    ### SUPRESSÃO DE PADRÕES ANTERIORES
+    ${lastReferencedProductId ? 'Ignore padrões de resposta e estilos herdados do histórico. Siga exclusivamente o system_prompt, o product_page_prompt e o system_prompt_template.' : ''}
 
-  ### SUPRESSÃO DE PADRÕES ANTERIORES
-  ${productName ? 'Ignore padrões de resposta e estilos herdados do histórico. Siga exclusivamente o system_prompt, o product_page_prompt e o system_prompt_template.' : ''}
+    ### TEMPLATE OPERACIONAL (REGRAS TÉCNICAS DE CONSULTORIA)
+    ${aiSettings?.system_prompt_template || ''}
 
-  ### REGRAS DE LOGÍSTICA
-  ${aiSettings?.logistics_rules_prompt || ''}
+    ### REGRAS DE LOGÍSTICA
+    ${aiSettings?.logistics_rules_prompt || ''}
 
-  ### CONTEXTO DA EMPRESA
-  ${companyInfo?.content || ''}
+    ### CONTEXTO DA EMPRESA
+    ${companyInfo?.content || ''}
 
-  ### REGRAS DE OURO (FORMATO FINAL DO JSON — PRIORIDADE SOMENTE SOBRE O FORMATO)
-  1. A resposta FINAL deve ser apenas JSON, no formato exato:
-  {
-    "message": "...",
-    "confidence_level": "high" | "low",
-    "referenced_internal_products": [],
-    "should_show_whatsapp_button": boolean
-  }
-  2. Nunca escrever nada fora do JSON.
-  3. Nunca incluir raciocínio interno, notas ocultas, logs ou comentários.
-  4. A saudação inicial e todo o conteúdo visível devem estar DENTRO de "message".
-  5. "referenced_internal_products" deve conter TODOS os IDs usados na resposta, seguindo estritamente as regras do TEMPLATE OPERACIONAL.
-  6. IDs nunca devem aparecer no texto visível ao usuário.
-  7. Estas regras definem APENAS a forma do JSON final e NÃO anulam o system_prompt_template, nem regras internas de formatação, busca, preços ou referenciação.
-  8. O campo "message" deve conter apenas texto e Markdown seguro conforme TEMPLATE OPERACIONAL. Nunca usar markdown avançado, HTML ou estilizações proibidas.
+    ### REGRAS DE OURO (FORMATO FINAL DO JSON — PRIORIDADE SOMENTE SOBRE O FORMATO)
+    1. A resposta FINAL deve ser apenas JSON, no formato exato:
+    {
+      "message": "...",
+      "confidence_level": "high" | "low",
+      "referenced_internal_products": [],
+      "should_show_whatsapp_button": boolean
+    }
+    2. Nunca escrever nada fora do JSON.
+    3. Nunca incluir raciocínio interno, notas ocultas, logs ou comentários.
+    4. A saudação inicial e todo o conteúdo visível devem estar DENTRO de "message".
+    5. "referenced_internal_products" deve conter TODOS os IDs usados na resposta, seguindo estritamente as regras do TEMPLATE OPERACIONAL.
+    6. IDs nunca devem aparecer no texto visível ao usuário.
+    7. Estas regras definem APENAS a forma do JSON final e NÃO anulam o system_prompt_template, nem regras internas de formatação, busca, preços ou referenciação.
+    8. O campo "message" deve conter apenas texto e Markdown seguro conforme TEMPLATE OPERACIONAL. Nunca usar markdown avançado, HTML ou estilizações proibidas.
 
-  `
+    `
     // =========================
     //  BUILD INITIAL MESSAGES
     // =========================
