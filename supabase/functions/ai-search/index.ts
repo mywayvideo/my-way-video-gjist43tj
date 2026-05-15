@@ -182,8 +182,8 @@ serve(async (req: Request) => {
     ### SUPRESSÃO DE PADRÕES ANTERIORES
     ${lastReferencedProductId ? 'Ignore padrões de resposta e estilos herdados do histórico. Siga exclusivamente o system_prompt, o product_page_prompt e o system_prompt_template.' : ''}
 
-    ### TEMPLATE OPERACIONAL (REGRAS TÉCNICAS DE CONSULTORIA)
-    ${aiSettings?.system_prompt_template || ''}
+    ### TEMPLATE OPERACIONAL (RESTRITO À PÁGINA DE PRODUTO)
+    ${lastReferencedProductId ? aiSettings?.system_prompt_template || '' : ''}
 
     ### REGRAS DE LOGÍSTICA
     ${aiSettings?.logistics_rules_prompt || ''}
