@@ -69,7 +69,7 @@ export function AIConsultantModal({
     // Montar PRIORITY QUERY (como a Home, sem alterar query)
     const priorityQuery =
       productName || technicalInfo
-        ? `[CONTEXTO PRIORITÁRIO]\nProduto: ${cleanProductName || 'N/D'}\nEspecificações: ${cleanTechnicalInfo || 'N/D'}\n\n${query}`
+        ? `Contexto técnico:\nProduto: ${cleanProductName}\nEspecificações: ${cleanTechnicalInfo}\n\n${query}`
         : query
 
     await search(priorityQuery, {
