@@ -176,6 +176,9 @@ serve(async (req: Request) => {
   ### TEMPLATE OPERACIONAL (REGRAS TÉCNICAS DE CONSULTORIA)
   ${aiSettings?.system_prompt_template || ''}
 
+  ### PROMPT ESPECÍFICO DA PÁGINA DE PRODUTO
+  ${productPagePrompt && query.includes(productName) ? productPagePrompt : ''}
+
   ### REGRAS DE LOGÍSTICA
   ${aiSettings?.logistics_rules_prompt || ''}
 
