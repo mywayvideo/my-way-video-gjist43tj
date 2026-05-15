@@ -75,7 +75,8 @@ export function AIConsultantModal({
     await search(priorityQuery, {
       productName,
       technicalInfo,
-      currentProductId,
+      currentProductId, // mantém para o frontend (se o hook usar)
+      lastReferencedProductId: currentProductId, // envia para a Edge Function
     })
 
     setQuery('')
