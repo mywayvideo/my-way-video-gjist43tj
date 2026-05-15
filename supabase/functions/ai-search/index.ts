@@ -208,13 +208,20 @@ serve(async (req: Request) => {
     if (contextualProductData) {
       messages.push({
         role: 'system',
-        content: 'CONTEXTUAL_PRODUCT_DATA:\n' + JSON.stringify(contextualProductData),
+        content:
+          'CONTEXTUAL PRODUCT DATA (Sanitized):\n' +
+          sanitizeInput(Object.values(contextualProductData).join('; ')),
       })
     }
 
     // Inject history (limit to last 8 turns)
     if (history.length > 0) {
-      messages.push(...history.slice(-8))
+      for (const h of history.slice(-8)) {
+        messages.push({
+          role: h.role,
+          content: sanitizeInput(h.content),
+        })
+      }
     }
 
     // User message

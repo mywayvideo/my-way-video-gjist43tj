@@ -60,6 +60,21 @@ const formatNCM = (ncm?: string | number | null) => {
   return formatted
 }
 
+function normalizeSpecs(specs: any) {
+  if (Array.isArray(specs)) {
+    return specs
+      .map((s) =>
+        String(s)
+          .replace(/[*_~`]+/g, '')
+          .trim(),
+      )
+      .join('; ')
+  }
+  return String(specs || '')
+    .replace(/[*_~`]+/g, '')
+    .trim()
+}
+
 const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(
     null,
@@ -810,14 +825,14 @@ export default function Product() {
           isOpen={isAiChatOpen}
           onClose={() => setIsAiChatOpen(false)}
           productName={product.name}
-          technicalInfo={product.technical_info || ''}
+          technicalInfo={normalizeSpecs(product.technical_info)}
           currentProductId={product.id}
         />
 
         <TechnicalInfoModal
           isOpen={isTechnicalInfoOpen}
           onClose={() => setIsTechnicalInfoOpen(false)}
-          technicalInfo={product.technical_info || ''}
+          technicalInfo={normalizeSpecs(product.technical_info)}
         />
 
         <Dialog open={isBrlModalOpen} onOpenChange={setIsBrlModalOpen}>
