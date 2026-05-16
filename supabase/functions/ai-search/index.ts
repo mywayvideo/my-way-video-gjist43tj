@@ -113,19 +113,8 @@ serve(async (req: Request) => {
     // =========================
     //  DETECT LAST REFERENCED PRODUCT FROM HISTORY
     // =========================
-    let lastReferencedProductId = null
-    for (const msg of history.slice().reverse()) {
-      try {
-        const parsed = JSON.parse(msg.content)
-        if (
-          parsed?.referenced_internal_products &&
-          parsed.referenced_internal_products.length > 0
-        ) {
-          lastReferencedProductId = parsed.referenced_internal_products[0]
-          break
-        }
-      } catch {}
-    }
+    const lastReferencedProductId = body?.currentProductId || null
+
     // =========================
     //  LOAD CONFIG
     // =========================
@@ -205,7 +194,7 @@ serve(async (req: Request) => {
     5. "referenced_internal_products" deve conter TODOS os IDs usados na resposta, seguindo estritamente as regras do TEMPLATE OPERACIONAL.
     6. IDs nunca devem aparecer no texto visível ao usuário.
     7. Estas regras definem APENAS a forma do JSON final e NÃO anulam o system_prompt_template, nem regras internas de formatação, busca, preços ou referenciação.
-    8. O campo "message" deve conter apenas texto e Markdown seguro conforme TEMPLATE OPERACIONAL. Nunca usar markdown avançado, HTML ou estilizações proibidas.
+    8. No modo Página de Produto, seguir as regras técnicas do TEMPLATE OPERACIONAL. No modo Home ou Busca Global, o campo "message" pode usar Markdown padrão livre.
 
     `
     // =========================
@@ -214,7 +203,7 @@ serve(async (req: Request) => {
     const messages: any[] = [{ role: 'system', content: systemPrompt }]
 
     // Inject CONTEXTUAL_PRODUCT_DATA (if exists)
-    if (contextualProductData) {
+    if (lastReferencedProductId && contextualProductData) {
       messages.push({
         role: 'system',
         content:
@@ -358,7 +347,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         model: aiSettings?.model_id || 'gpt-4o-mini',
         messages,
-        response_format: { type: 'json_object' },
+        response_format: lastReferencedProductId ? { type: 'json_object' } : undefined,
       }),
     })
 
@@ -447,16 +436,19 @@ serve(async (req: Request) => {
     //  MESSAGE CLEANUP & APPEND
     // =========================
     if (typeof result.message === 'string') {
-      result.message =
-        result.message.replace(/tier|tiers/gi, '').trim() +
-        '\n\n' +
-        (globalSettingsMap['transparency_note'] || '')
+      result.message = result.message.trim()
+
+      // transparency_note só na Página de Produto
+      if (lastReferencedProductId) {
+        result.message += '\n\n' + (globalSettingsMap['transparency_note'] || '')
+      }
     } else {
       console.error('[ERRO] result.message NÃO é string:', result.message)
-      result.message = normalizeMessage(
-        result.message,
-        globalSettingsMap['transparency_note'] || '',
-      )
+      result.message = String(result.message || '').trim()
+
+      if (lastReferencedProductId) {
+        result.message += '\n\n' + (globalSettingsMap['transparency_note'] || '')
+      }
     }
 
     return new Response(JSON.stringify(result), {
