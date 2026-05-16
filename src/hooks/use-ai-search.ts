@@ -40,7 +40,7 @@ export function useUnifiedSearch() {
   }
   const search = async (
     rawQuery: string,
-    extraContext?: { productName?: string; technicalInfo?: string; currentProductId?: string },
+    extraContext: { productName?: string; technicalInfo?: string; currentProductId?: string } = {},
   ) => {
     const requestId = Date.now()
     lastRequestIdRef.current = requestId
