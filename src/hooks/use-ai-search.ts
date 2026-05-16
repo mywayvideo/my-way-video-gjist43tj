@@ -88,12 +88,7 @@ export function useUnifiedSearch() {
     }, 1000)
     try {
       if (!sessionIdRef.current) {
-        let uuid = sessionStorage.getItem('ai_chat_session_id')
-        if (!uuid) {
-          uuid = crypto.randomUUID()
-          sessionStorage.setItem('ai_chat_session_id', uuid)
-        }
-        sessionIdRef.current = `home_global_${uuid}`
+        sessionIdRef.current = `home_${crypto.randomUUID()}`
       }
       const sessionId = sessionIdRef.current
       let finalMessage = ''
