@@ -130,6 +130,10 @@ serve(async (req: Request) => {
       supabase.from('company_info').select('content, type').maybeSingle(),
     ])
 
+    const { data: manufacturers } = await supabase.from('manufacturers').select('name')
+
+    const manufacturerList = manufacturers ? manufacturers.map((m) => m.name).join(', ') : ''
+
     const globalSettingsMap: Record<string, string> = {}
     if (Array.isArray(globalSettings)) {
       for (const s of globalSettings) {
@@ -179,6 +183,22 @@ serve(async (req: Request) => {
 
     ### CONTEXTO DA EMPRESA
     ${companyInfo?.content || ''}
+
+    ### FABRICANTES DISPONÍVEIS (CATÁLOGO OFICIAL)
+    Você só pode sugerir produtos cujos fabricantes estejam nesta lista oficial da My Way:
+    ${manufacturerList}
+    Nunca sugira, invente ou recombine produtos de fabricantes fora desta lista.
+    Se o usuário mencionar um fabricante inexistente, corrija gentilmente e redirecione para um dos fabricantes válidos acima.
+
+    ### REGRAS DE VALIDAÇÃO DE MARCA E MODELO
+    Sempre valide qualquer modelo mencionado pelo usuário contra a lista de fabricantes acima.  
+    Se o usuário mencionar apenas o modelo (ex: “fx3”, “r5”, “pyxis 6k”), identifique automaticamente a marca correspondente usando o catálogo real.
+
+    ### RESTRIÇÃO DE NOMES DE PRODUTO
+    Use apenas nomes exatos de produtos presentes no catálogo.  
+    Nunca invente variações, kits, bundles, combinações, versões alternativas ou extensões do nome original.  
+    Se o usuário mencionar uma variação inexistente, normalize para o nome real mais próximo ou informe que o modelo exato não existe.
+    Se não existir correspondência válida, comunique isso e sugira apenas modelos existentes dos fabricantes permitidos.
 
     ### REGRAS DE OURO (FORMATO FINAL DO JSON — PRIORIDADE SOMENTE SOBRE O FORMATO)
     1. A resposta FINAL deve ser apenas JSON, no formato exato:
