@@ -11,7 +11,6 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react'
-import { AIPrompt } from '@/components/AIPrompt'
 import { performAISearch } from '@/services/ai-search'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 
@@ -87,9 +86,6 @@ export default function Search() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]">
-      <div className="mb-8">
-        <AIPrompt initialQuery={query} />
-      </div>
       {query && searchType === 'ai' && (
         <div className="flex items-center gap-3 mb-8 pb-4 border-b">
           <SearchIcon className="w-6 h-6 text-primary" />
