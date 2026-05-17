@@ -8,6 +8,7 @@ import { useAiSearch } from '@/hooks/use-ai-search'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SEO } from '@/components/SEO'
+import { AIPrompt } from '@/components/AI/AIPrompt'
 import { X, Search, Loader2, Star, Flame } from 'lucide-react'
 
 export default function Index() {
@@ -85,47 +86,11 @@ export default function Index() {
             className="pt-8 w-full flex flex-col items-center animate-fade-in relative"
             style={{ animationDelay: '200ms' }}
           >
-            <div className="w-full max-w-4xl z-20 flex flex-col items-center relative">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (query.trim()) handleSearch(query)
-                }}
-                className="relative flex items-center bg-black/60 border border-white/20 rounded-[2rem] shadow-[0_0_15px_rgba(255,255,255,0.05)] backdrop-blur-xl p-2 sm:p-3 transition-all duration-300"
-              >
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="O que você está procurando?"
-                  aria-label="Campo de busca por equipamentos profissionais"
-                  className="w-full bg-transparent text-white placeholder:text-white/50 px-4 py-4 outline-none text-lg"
-                />
-
-                {query && (
-                  <button
-                    type="button"
-                    onClick={() => setQuery('')}
-                    className="absolute right-20 text-white/50 hover:text-white transition-colors p-2"
-                  >
-                    <X size={20} />
-                  </button>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={!query.trim() || isSearchLoading}
-                  className="px-8 py-4 rounded-full flex items-center justify-center gap-2 font-semibold bg-primary text-white hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSearchLoading ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <Search size={20} />
-                  )}
-                  <span className="ml-2">Buscar</span>
-                </button>
-              </form>
-            </div>
+            <AIPrompt
+              onSearch={handleSearch}
+              isExternalLoading={isSearchLoading}
+              className="w-full"
+            />
           </div>
 
           {(results || isSearchLoading) && !Array.isArray(results) && (
