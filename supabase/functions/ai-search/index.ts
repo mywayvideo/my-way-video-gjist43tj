@@ -217,6 +217,8 @@ serve(async (req: Request) => {
     8. No modo Página de Produto, seguir as regras técnicas do TEMPLATE OPERACIONAL. No modo Home ou Busca Global, o campo "message" pode usar Markdown padrão livre.
 
     `
+    console.log('[SYSTEM PROMPT FINAL]\n', systemPrompt)
+
     // =========================
     //  BUILD INITIAL MESSAGES
     // =========================
