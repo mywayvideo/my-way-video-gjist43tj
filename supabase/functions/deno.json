@@ -42,6 +42,7 @@
     "square-payment": 9,
     "process-knowledge": 5,
     "process-query": 32,
-    "notify-admin-payment": 2
+    "notify-admin-payment": 2,
+    "update-cache-settings": 1
   }
 }

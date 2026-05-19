@@ -25,8 +25,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const formSchema = z.object({
   // ai_settings
-  cache_expiration_days: z.coerce.number().min(0),
+  cache_expiration_days: z.coerce.number().min(0).optional(),
   price_threshold_usd: z.coerce.number().min(0),
+
+  // cache_settings
+  mi_expiration_days: z.coerce.number().min(0).max(10000).default(365),
+  product_search_cache_expiration_days: z.coerce.number().min(0).max(10000).default(30),
   search_algorithm_sql: z.string().optional(),
   result_component_config: z.string().optional(),
   ignore_stock_count: z.boolean(),
@@ -75,6 +79,7 @@ export default function AdminAISettings() {
   const [isSaving, setIsSaving] = useState(false)
   const [aiSettingsId, setAiSettingsId] = useState<string | null>(null)
   const [aiAgentSettingsId, setAiAgentSettingsId] = useState<string | null>(null)
+  const [cacheSettingsId, setCacheSettingsId] = useState<string | null>(null)
 
   const navigate = useNavigate()
 
@@ -83,6 +88,8 @@ export default function AdminAISettings() {
     defaultValues: {
       cache_expiration_days: 30,
       price_threshold_usd: 5000,
+      mi_expiration_days: 365,
+      product_search_cache_expiration_days: 30,
       search_algorithm_sql: '',
       result_component_config: '{}',
       ignore_stock_count: true,
@@ -130,6 +137,7 @@ export default function AdminAISettings() {
           { data: aiSettingsData, error: aiSettingsError },
           { data: aiAgentSettingsData, error: aiAgentSettingsError },
           { data: transparencyData },
+          { data: cacheSettingsData, error: cacheSettingsError },
         ] = await Promise.all([
           supabase
             .from('ai_settings')
@@ -144,10 +152,12 @@ export default function AdminAISettings() {
             .limit(1)
             .single(),
           supabase.from('settings').select('value').eq('key', 'transparency_note').maybeSingle(),
+          supabase.from('cache_settings').select('*').limit(1).maybeSingle(),
         ])
 
         if (aiSettingsError) throw aiSettingsError
         if (aiAgentSettingsError) throw aiAgentSettingsError
+        if (cacheSettingsError) console.error(cacheSettingsError)
 
         if (aiSettingsData) {
           setAiSettingsId(aiSettingsData.id)
@@ -155,9 +165,15 @@ export default function AdminAISettings() {
         if (aiAgentSettingsData) {
           setAiAgentSettingsId(aiAgentSettingsData.id)
         }
+        if (cacheSettingsData) {
+          setCacheSettingsId(cacheSettingsData.id)
+        }
 
         form.reset({
           cache_expiration_days: aiSettingsData?.cache_expiration_days ?? 30,
+          mi_expiration_days: cacheSettingsData?.mi_expiration_days ?? 365,
+          product_search_cache_expiration_days:
+            cacheSettingsData?.product_search_cache_expiration_days ?? 30,
           price_threshold_usd: aiSettingsData?.price_threshold_usd ?? 5000,
           search_algorithm_sql: aiSettingsData?.search_algorithm_sql || '',
           result_component_config:
@@ -267,7 +283,7 @@ export default function AdminAISettings() {
         throw new Error('IDs de configuração não encontrados. Recarregue a página.')
       }
 
-      const [res1, res2, res3] = await Promise.all([
+      const [res1, res2, res3, res4] = await Promise.all([
         supabase
           .from('ai_settings')
           .update(aiSettingsPayload)
@@ -286,11 +302,20 @@ export default function AdminAISettings() {
             { key: 'transparency_note', value: values.transparency_note || '' },
             { onConflict: 'key' },
           ),
+        supabase.functions.invoke('update-cache-settings', {
+          body: {
+            id: cacheSettingsId || '00000000-0000-0000-0000-000000000001',
+            mi_expiration_days: values.mi_expiration_days,
+            product_search_cache_expiration_days: values.product_search_cache_expiration_days,
+          },
+        }),
       ])
 
       if (res1.error) throw res1.error
       if (res2.error) throw res2.error
       if (res3.error) throw res3.error
+      if (res4.error)
+        throw new Error(res4.error.message || 'Erro ao atualizar cache_settings via service_role')
 
       toast({
         title: 'Sucesso',
@@ -360,12 +385,35 @@ export default function AdminAISettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="cache_expiration_days"
+                  name="price_threshold_usd"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Expiração do Cache (Dias)</FormLabel>
+                      <FormLabel>Limite de Preço (USD)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="mi_expiration_days"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Validade do Market Intelligence (dias)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10000}
+                          placeholder="Ex: 365"
+                          title="Número de dias até expiração automática das entradas de Market Intelligence."
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -373,12 +421,19 @@ export default function AdminAISettings() {
                 />
                 <FormField
                   control={form.control}
-                  name="price_threshold_usd"
+                  name="product_search_cache_expiration_days"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Limite de Preço (USD)</FormLabel>
+                      <FormLabel>Validade do Product Search Cache (dias)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} />
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10000}
+                          placeholder="Ex: 30"
+                          title="Número de dias até expiração automática das entradas do Product Search Cache."
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
