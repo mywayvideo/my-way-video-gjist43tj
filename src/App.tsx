@@ -14,6 +14,7 @@ import AdminProductCache from './pages/AdminProductCache'
 import AdminAISettings from './pages/admin/ai-settings'
 import AdminAIPage from './pages/admin/AdminAIPage'
 import AdminCatalogPage from './pages/admin/AdminCatalogPage'
+import AdminAVProKeywordsPage from './pages/admin/AdminAVProKeywordsPage'
 import ProductsPage from './pages/admin/ProductsPage'
 import AdminPricingPage from './pages/admin/AdminPricingPage'
 import NewProductPage from './pages/admin/NewProductPage'
@@ -122,6 +123,14 @@ const App = () => {
                     element={
                       <ProtectedRoute>
                         <AdminCatalogPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/avpro-keywords"
+                    element={
+                      <ProtectedRoute>
+                        <AdminAVProKeywordsPage />
                       </ProtectedRoute>
                     }
                   />

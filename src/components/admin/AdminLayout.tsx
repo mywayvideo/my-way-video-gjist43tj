@@ -15,6 +15,8 @@ import {
   Users,
   BarChart3,
   Sparkles,
+  Database,
+  BookOpen,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -28,6 +30,8 @@ const navigation = [
   { name: 'Métricas e Relatórios', href: '/admin/metrics', icon: BarChart3 },
   { name: 'IA & Inteligência Artificial', href: '/admin/ai', icon: Brain },
   { name: 'Catálogo & Produtos', href: '/admin/catalog', icon: Package },
+  { name: 'Cache de Produtos', href: '/admin/product-cache', icon: Database },
+  { name: 'Dicionário AVPRO', href: '/admin/avpro-keywords', icon: BookOpen },
   { name: 'Market Intelligence', href: '/admin/nab-hub', icon: Sparkles },
   { name: 'Preços & Câmbio', href: '/admin/pricing', icon: DollarSign },
   { name: 'Fretes & Shipping', href: '/admin/shipping-config', icon: Truck },
