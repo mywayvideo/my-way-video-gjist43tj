@@ -105,6 +105,7 @@ export default function AdminAIPage() {
     { name: 'Provedores', href: '/admin/ai-providers' },
     { name: 'Configurações Globais', href: '/admin/ai-settings' },
     { name: 'Cache de Produtos', href: '/admin/product-cache' },
+    { name: 'Dicionário AVPRO', href: '/admin/avpro-keywords' },
   ]
 
   return (

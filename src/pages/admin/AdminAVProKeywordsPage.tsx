@@ -15,7 +15,9 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Search, Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Bot } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,7 @@ interface AVProKeyword {
 
 export default function AdminAVProKeywordsPage() {
   const { toast } = useToast()
+  const location = useLocation()
   const [keywords, setKeywords] = useState<AVProKeyword[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -194,11 +197,48 @@ export default function AdminAVProKeywordsPage() {
     }
   }
 
+  const tabs = [
+    { name: 'Contexto Institucional', href: '/admin/ai' },
+    { name: 'Provedores', href: '/admin/ai-providers' },
+    { name: 'Configurações Globais', href: '/admin/ai-settings' },
+    { name: 'Cache de Produtos', href: '/admin/product-cache' },
+    { name: 'Dicionário AVPRO', href: '/admin/avpro-keywords' },
+  ]
+
   return (
-    <AdminLayout breadcrumb="Dicionário AVPRO">
-      <div className="flex flex-col space-y-6">
+    <AdminLayout breadcrumb="IA & Inteligência Artificial">
+      <div className="flex flex-col space-y-6 animate-fade-in">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold flex items-center gap-3 text-foreground">
+            <div className="bg-primary/10 p-2 rounded-lg text-primary">
+              <Bot className="w-6 h-6" />
+            </div>
+            IA & Inteligência Artificial
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Gerencie os agentes de IA, provedores e a base de conhecimento.
+          </p>
+        </div>
+
+        <div className="flex overflow-x-auto pb-2 mb-6 border-b border-border/50 gap-2">
+          {tabs.map((tab) => (
+            <Link
+              key={tab.name}
+              to={tab.href}
+              className={cn(
+                'px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 rounded-t-lg',
+                location.pathname === tab.href
+                  ? 'border-primary text-primary bg-primary/5'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border/50 hover:bg-muted/50',
+              )}
+            >
+              {tab.name}
+            </Link>
+          ))}
+        </div>
+
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Dicionário AVPRO</h1>
+          <h2 className="text-2xl font-bold tracking-tight">Dicionário AVPRO</h2>
           <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" /> Nova Keyword
           </Button>
