@@ -56,6 +56,25 @@ export function useUnifiedSearch() {
       'Tier 3: Validando preços e SKUs oficiais MY WAY...',
       'Tier 4: Sintetizando inteligência de mercado...',
     ]
+    const fetchProductDetails = async (productIds: string[]) => {
+      if (!productIds || productIds.length === 0) return []
+
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, price_usa, price_brl, image_url, description, sku, category')
+          .in('id', productIds)
+
+        if (error) {
+          console.error('Erro ao buscar detalhes dos produtos:', error)
+          return []
+        }
+        return data || []
+      } catch (error) {
+        console.error('Erro ao buscar detalhes dos produtos:', error)
+        return []
+      }
+    }
     // 2. Estado Inicial Intermediário
     setResults({
       message: phases[0],
@@ -106,17 +125,17 @@ export function useUnifiedSearch() {
         })
       } else {
         try {
-          const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke('ai-search', {
-            body: {
-              query: cleanQuery,
-              session_id: sessionId,
-              userName,
-              productName: extraContext?.productName,
-              technicalInfo: extraContext?.technicalInfo,
-              currentProductId: extraContext?.currentProductId || null,
-              isAdmin: !!isAdmin,
+          const { data: aiData, error: aiErrorReq } = await supabase.functions.invoke(
+            'execute_ai_search_v2',
+            {
+              body: {
+                query: cleanQuery, // ← Mantém 'query' (V2 espera isso)
+                session_id: sessionId,
+                currentProductId: extraContext?.currentProductId || null,
+                // ← Remove: userName, productName, technicalInfo, isAdmin (V2 não usa)
+              },
             },
-          })
+          )
           if (aiErrorReq) throw aiErrorReq
           aiResponse = aiData
         } catch (aiError) {
@@ -140,15 +159,15 @@ export function useUnifiedSearch() {
             : finalMessage || 'Não foi possível gerar uma resposta no momento.'
       finalMessage = finalMessage.trim()
       // correção
-      let aiStock: any[] = []
-      if (Array.isArray(aiResponse?.stock)) {
-        aiStock = aiResponse.stock.filter((item: any) => item && typeof item === 'object')
-      }
-      if (aiStock.length > 0) {
-        finalProducts = aiStock.map((p: any) => ({
+      if (
+        Array.isArray(aiResponse?.referenced_internal_products) &&
+        aiResponse.referenced_internal_products.length > 0
+      ) {
+        const productDetails = await fetchProductDetails(aiResponse.referenced_internal_products)
+        finalProducts = productDetails.map((p: any) => ({
           ...p,
-          price_usa: p.price_usd !== undefined ? Number(p.price_usd) : calculateFinalPrice(p),
-          price_usd: p.price_usd !== undefined ? Number(p.price_usd) : calculateFinalPrice(p),
+          price_usa: p.price_usa || 0,
+          price_usd: p.price_usa || 0,
           price_brl: Number(p.price_brl || 0),
           stock: Number(p.stock || 0),
         }))
@@ -170,6 +189,21 @@ export function useUnifiedSearch() {
         if (related && related.length > 0) {
           enrichedProducts = [...enrichedProducts, ...related]
         }
+      }
+      // Remove da lista de cards de produtos o produto da pagina corrente
+      if (extraContext?.currentProductId) {
+        enrichedProducts = enrichedProducts.filter(
+          (product: any) => product.id !== extraContext.currentProductId,
+        )
+        console.log(
+          `[FILTER] Removido produto atual (${extraContext.currentProductId}) da lista de renderização`,
+        )
+      }
+
+      // 4. Montagem Final (Garante que settings e message existam)
+      const combinedResults = {
+        message: finalMessage,
+        // ... resto do código
       }
 
       // 4. Montagem Final (Garante que settings e message existam)
