@@ -12,20 +12,19 @@ const corsHeaders = {
 // =========================
 
 async function hashQuery(query: string, context: string = ''): Promise<string> {
-  const msgUint8 = new TextEncoder().encode(`${query.toLowerCase().trim()}|${context}`)
+  const text = `${query.toLowerCase().trim()}|${context}`
+  const msgUint8 = new TextEncoder().encode(text)
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-// Parser simplificado: Confiamos no response_format: json_object da OpenAI
 function safeJSONParse(str: string, fallback: any = null): any {
   if (!str || typeof str !== 'string') return fallback
   try {
     return JSON.parse(str)
   } catch (e) {
-    // Fallback apenas para remover possíveis cercas de markdown se o modelo falhar
-    const match = str.match(/\{[\s\S]*?\}/)
+    const match = str.match(/\{[\s\S]*?\}|\[[\s\S]*?\]/)
     if (match) {
       try {
         return JSON.parse(match[0])
@@ -47,7 +46,6 @@ function sanitizeInput(text: any): string {
 const isUUID = (id: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
 
-// Heurística de Intenção: Rápida, barata e segura
 function getHeuristicIntent(query: string, currentProductId: string | null): string {
   const q = query.toLowerCase()
   if (
@@ -74,14 +72,15 @@ async function checkRateLimit(supabase: any, identifier: string, limit: number):
 }
 
 serve(async (req: Request) => {
+  console.log('[LOG] Request iniciada') // Log de entrada garantido
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const startTime = performance.now()
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 25000)
+  const metadata: any = { steps: [], tool_calls: 0, cache_hit: false }
 
   try {
-    // 1. IDENTIDADE E IP ROBUSTO
     const forwarded = req.headers.get('x-forwarded-for')
     const clientIP = forwarded
       ? forwarded.split(',')[0].trim()
@@ -98,6 +97,8 @@ serve(async (req: Request) => {
     }
 
     const query = sanitizeInput(body?.query)
+    console.log(`[LOG] Query recebida: "${query}"`)
+
     if (!query.trim())
       return new Response(
         JSON.stringify({ message: 'Como posso ajudar?', referenced_internal_products: [] }),
@@ -114,21 +115,21 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // 2. DOUBLE RATE LIMITING (ATÔMICO)
+    // 2. DOUBLE RATE LIMITING
     const [ipAllowed, sessionAllowed] = await Promise.all([
       checkRateLimit(supabase, `ip:${clientIP}`, 20),
       session_id ? checkRateLimit(supabase, `session:${session_id}`, 50) : Promise.resolve(true),
     ])
 
     if (!ipAllowed || !sessionAllowed) {
+      console.log('[LOG] Rate limit atingindo')
       return new Response(
         JSON.stringify({ error: 'Muitas requisições. Tente novamente em 1 minuto.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 },
       )
     }
 
-    // 3. CONFIGS E HEURÍSTICA
-    const { miExpirationDays, productCacheExpirationDays } = await loadCacheSettings()
+    const { productCacheExpirationDays } = await loadCacheSettings()
     const intent = getHeuristicIntent(query, currentProductId)
 
     const [
@@ -165,7 +166,7 @@ serve(async (req: Request) => {
       })
     }
 
-    // 5. CACHE CHECK (SHA-256 COMPOSTO)
+    // 5. CACHE CHECK
     const queryHash = await hashQuery(query, `${currentProductId || 'global'}`)
     const pcQuery = supabase
       .from('product_cache')
@@ -178,6 +179,7 @@ serve(async (req: Request) => {
       )
     const { data: cached } = await pcQuery.maybeSingle()
     if (cached) {
+      console.log('[LOG] Cache hit')
       const result = safeJSONParse(cached.response_text)
       if (result)
         return new Response(JSON.stringify(result), {
@@ -185,7 +187,7 @@ serve(async (req: Request) => {
         })
     }
 
-    // 6. HISTÓRICO E GROUNDING OBRIGATÓRIO
+    // 6. HISTÓRICO E GROUNDING
     let history: any[] = []
     if (session_id) {
       const { data: histRows } = await supabase
@@ -298,7 +300,6 @@ serve(async (req: Request) => {
         })
       }
 
-      // GATING CONTEXTUAL HÍBRIDO
       if (keywordScore < 1.0 && productsFound === 0 && intent !== 'PRODUCT_SPECIFIC') {
         return new Response(
           JSON.stringify({
@@ -340,15 +341,21 @@ serve(async (req: Request) => {
         referenced_internal_products: [],
         confidence_level: 'low',
       }
-    if (typeof result.message !== 'string') result.message = ''
-    if (!['high', 'low'].includes(result.confidence_level)) result.confidence_level = 'low'
 
+    // Filtro de IDs: Garante que os cards apareçam apenas se os IDs forem válidos
+    console.log(`[LOG] IDs sugeridos pela IA: ${result.referenced_internal_products}`)
     result.referenced_internal_products = (result.referenced_internal_products || []).filter(
       (id: string) => allowedIds.has(id),
     )
+    console.log(`[LOG] IDs validados: ${result.referenced_internal_products}`)
+
     if (currentProductId) result.message += '\n\n' + (globalSettingsMap['transparency_note'] || '')
 
-    if (searchPerformed && result.confidence_level === 'high') {
+    if (
+      searchPerformed &&
+      result.confidence_level === 'high' &&
+      result.referenced_internal_products.length > 0
+    ) {
       await supabase
         .from('product_cache')
         .upsert({
@@ -369,6 +376,7 @@ serve(async (req: Request) => {
     })
   } catch (error: any) {
     const errorMsg = error.name === 'AbortError' ? 'Request timeout' : error.message
+    console.error('[ERRO CRÍTICO]', errorMsg)
     return new Response(JSON.stringify({ error: errorMsg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
