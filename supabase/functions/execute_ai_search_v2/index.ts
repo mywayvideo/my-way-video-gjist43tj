@@ -356,13 +356,11 @@ serve(async (req: Request) => {
       result.confidence_level === 'high' &&
       result.referenced_internal_products.length > 0
     ) {
-      await supabase
-        .from('product_cache')
-        .upsert({
-          query_hash: queryHash,
-          response_text: JSON.stringify(result),
-          created_at: new Date().toISOString(),
-        })
+      await supabase.from('product_cache').upsert({
+        query_hash: queryHash,
+        response_text: JSON.stringify(result),
+        created_at: new Date().toISOString(),
+      })
     }
 
     if (session_id)

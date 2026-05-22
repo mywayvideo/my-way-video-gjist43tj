@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { QuantityModal } from '@/components/QuantityModal'
 import { usePricing } from '@/hooks/use-pricing'
 import { useProductDiscount } from '@/hooks/useProductDiscount'
+import { calculateFinalPrice } from '@/utils/pricing'
 
 export function ProductCard({ product }: { product: any }) {
   const [showQtyModal, setShowQtyModal] = useState(false)
@@ -113,7 +114,7 @@ export function ProductCard({ product }: { product: any }) {
 
   const isNationalized = Number(product.price_nationalized_sales) > 0
   const weight = Number(product.weight) || 0
-  const hasUsaPrice = Number(product.price_usd) > 0 || Number(product.price_usa_rebate) > 0
+  const hasUsaPrice = calculateFinalPrice(product) > 0
   const hasAnyPrice = isNationalized || hasUsaPrice
 
   const estimatedBrlPrice =

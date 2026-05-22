@@ -1,3 +1,5 @@
+import { calculateFinalPrice } from './pricing'
+
 export type Destination = 'brasil' | 'usa'
 
 export const safeNum = (val: any) => parseFloat(String(val).replace(/[^\d.-]/g, '')) || 0
@@ -14,7 +16,7 @@ export function getEligibilityAndPrice(
   let rule = ''
   let currency = 'USD'
 
-  const price_usa = safeNum(product?.price_usd ?? product?.price_usa)
+  const price_usa = calculateFinalPrice(product)
   const weight = safeNum(product?.weight)
   const price_nationalized_sales = safeNum(product?.price_nationalized_sales)
 

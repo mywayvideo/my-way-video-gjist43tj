@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { calculateFinalPrice } from '@/utils/pricing'
 
 export interface PricingConfig {
   exchange_rate: number
@@ -81,31 +82,10 @@ export function usePricing(product: any) {
     return { primaryPrice: null, secondaryPrice: null, baseUsaPrice: 0, isLoading }
   }
 
-  const priceUsa = Number(product.price_usd) || Number(product.price_usa) || 0
-  const priceUsaRebate = Number(product.price_usa_rebate) || 0
-  const dateRebate = product.date_rebate
+  const baseUsaPrice = calculateFinalPrice(product)
   const priceNationalizedSales = Number(product.price_nationalized_sales) || 0
   const priceNationalizedCurrency = product.price_nationalized_currency || 'BRL'
   const weight = Number(product.weight) || 0
-
-  let baseUsaPrice = priceUsa
-
-  if (priceUsaRebate > 0) {
-    if (!dateRebate) {
-      baseUsaPrice = priceUsaRebate
-    } else {
-      const currentDate = new Date()
-      currentDate.setHours(0, 0, 0, 0)
-      const rebateDate = new Date(dateRebate)
-      rebateDate.setHours(0, 0, 0, 0)
-
-      if (currentDate <= rebateDate) {
-        baseUsaPrice = priceUsaRebate
-      } else {
-        baseUsaPrice = priceUsa
-      }
-    }
-  }
 
   const exchangeRate = Number(config?.exchange_rate) || 5.0
   const pricePerKg = Number(config?.weight_factor) || 0
