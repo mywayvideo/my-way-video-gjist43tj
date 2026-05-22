@@ -6,7 +6,7 @@ export async function loadCacheSettings() {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const { data, error } = await supabase.from('cache_settings').select('*').limit(1).single()
+  const { data, error } = await supabase.from('cache_settings').select('*').limit(1).maybeSingle()
 
   if (error) {
     console.error('Error loading cache settings:', error)
