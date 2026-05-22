@@ -8,6 +8,47 @@ const corsHeaders = {
 }
 
 // =========================
+// CACHE GLOBAL (7. Redução de latência via cache em memória)
+// =========================
+let cachedManufacturers = ''
+let cachedManufacturersAt = 0
+const MANUFACTURER_CACHE_TTL = 10 * 60 * 1000 // 10 minutos
+
+async function getManufacturersContext(supabase: any): Promise<string> {
+  const now = Date.now()
+
+  // Se cache ainda é válido, retorna
+  if (cachedManufacturers && now - cachedManufacturersAt < MANUFACTURER_CACHE_TTL) {
+    console.log('[LOG] Usando cache de fabricantes')
+    return cachedManufacturers
+  }
+
+  // Caso contrário, busca do banco
+  console.log('[LOG] Atualizando cache de fabricantes')
+  const { data: manufacturers } = await supabase
+    .from('products')
+    .select('manufacturer')
+    .not('manufacturer', 'is', null)
+    .order('manufacturer')
+
+  // 1. Usar Set para remover duplicatas (sem .distinct())
+  const uniqueManufacturers = [
+    ...new Set((manufacturers || []).map((m: any) => m.manufacturer?.trim()).filter(Boolean)),
+  ]
+
+  // 4. Limitar tamanho do prompt (máx 80 fabricantes ou 1200 chars)
+  const limitedManufacturers = uniqueManufacturers.slice(0, 80)
+
+  // 6. Sanitizar cada fabricante contra prompt injection
+  const sanitizedManufacturers = limitedManufacturers.map((m) => sanitizeInput(m))
+
+  cachedManufacturers = sanitizedManufacturers.join(', ')
+  cachedManufacturersAt = now
+
+  return cachedManufacturers
+}
+
+// =========================
 // HELPERS DE ALTA CONFIABILIDADE
 // =========================
 
@@ -53,7 +94,7 @@ function safeJSONParse(str: string, fallback: any = null): any {
 function sanitizeInput(text: any): string {
   if (text === null || text === undefined) return ''
   return String(text)
-    .replace(/[^a-zA-Z0-9\sÀ-ÿ\-_\.\,\?\!\(\)\"\'\:\/\+\%\@\#\&\|]/g, '')
+    .replace(/[^a-zA-Z0-9\sÀ-ÿ\-_\\.\,\?\!\(\)\"\'\:\/\+\%\@\#\&\|]/g, '')
     .slice(0, 3000)
 }
 
@@ -73,7 +114,6 @@ function getHeuristicIntent(query: string, currentProductId: string | null): str
   return 'GENERIC'
 }
 
-// 1. checkRateLimit seguro (Fail-Open parcial para evitar outage total)
 async function checkRateLimit(supabase: any, identifier: string, limit: number): Promise<boolean> {
   const { data, error } = await supabase.rpc('check_ai_rate_limit', {
     user_identifier: identifier,
@@ -81,7 +121,7 @@ async function checkRateLimit(supabase: any, identifier: string, limit: number):
   })
   if (error) {
     console.error('[RATE LIMIT ERROR]', error)
-    return true // Fail-open: se o banco falhar, não bloqueia a operação da empresa
+    return true
   }
   return data as boolean
 }
@@ -115,7 +155,11 @@ serve(async (req: Request) => {
 
     if (!query.trim())
       return new Response(
-        JSON.stringify({ message: 'Como posso ajudar?', referenced_internal_products: [] }),
+        JSON.stringify({
+          message: 'Como posso ajudar?',
+          referenced_internal_products: [],
+          should_show_whatsapp_button: false,
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       )
 
@@ -168,7 +212,6 @@ serve(async (req: Request) => {
     ])
     console.log(`[PERF][DB_META] ${Math.round(performance.now() - tDbMeta)}ms`)
 
-    // 2. globalSettingsMap tipado com segurança
     const globalSettingsMap: Record<string, string | number | boolean | null> = {}
     if (Array.isArray(globalSettings))
       globalSettings.forEach((s) => {
@@ -180,6 +223,7 @@ serve(async (req: Request) => {
         message: companyInfo?.content || 'Somos a My Way Video.',
         confidence_level: 'high',
         referenced_internal_products: [],
+        should_show_whatsapp_button: false,
       }
       if (session_id)
         await supabase
@@ -227,7 +271,6 @@ serve(async (req: Request) => {
           .map((r) => ({ role: r.role, content: sanitizeInput(r.content).slice(0, 1000) }))
     }
 
-    // 7. Validação de segurança lógica do currentProductId
     const allowedIds = new Set<string>()
     let validCurrentProductId: string | null = null
     if (currentProductId) {
@@ -244,14 +287,42 @@ serve(async (req: Request) => {
       console.log(`[PERF][DB_CHECK_PRODUCT] ${Math.round(performance.now() - tCheck)}ms`)
     }
 
-    const systemPrompt = `### IDENTIDADE\n${agentSettings?.system_prompt || ''}\n### REGRAS\n1. Grounding OBRIGATÓRIO via 'search_products'. 2. NUNCA responda fora do domínio audiovisual profissional. 3. Resposta apenas JSON.`
+    // 2. Carregar fabricantes com cache (não em toda requisição)
+    const tManufacturers = performance.now()
+    const manufacturerList = await getManufacturersContext(supabase)
+    console.log(`[PERF][MANUFACTURERS] ${Math.round(performance.now() - tManufacturers)}ms`)
 
-    // 5. Tipagem explícita do array de mensagens
+    // 3. systemPrompt com regras determinísticas contra hallucination
+    const systemPrompt = `### FABRICANTES DISPONÍVEIS
+Você só pode sugerir produtos dos seguintes fabricantes: ${manufacturerList}
+
+### IDENTIDADE
+${agentSettings?.system_prompt || ''}
+
+### REGRAS DE GROUNDING E ANTI-ALUCINAÇÃO
+1. Grounding OBRIGATÓRIO via 'search_products'. Use a ferramenta para TODA recomendação.
+2. NUNCA responda fora do domínio audiovisual profissional.
+3. Nunca invente produtos, modelos, bundles, kits ou acessórios.
+4. Somente utilize produtos retornados pela função search_products.
+5. Se nenhum produto relevante for encontrado, responda informando que não encontrou resultados suficientes.
+6. Nunca assuma compatibilidade técnica sem evidência explícita nos dados retornados.
+7. Nunca sugira variações, "similar a", ou inferências de produtos.
+
+### FORMATO DE SAÍDA (OBRIGATÓRIO)
+Responda EXCLUSIVAMENTE em JSON válido, sem blocos de código markdown:
+{
+  "message": "Sua resposta completa aqui, em Markdown",
+  "confidence_level": "high" | "low",
+  "referenced_internal_products": ["id_1", "id_2"],
+  "should_show_whatsapp_button": true | false
+}`
+
     const messages: any[] = [
       { role: 'system', content: systemPrompt },
       ...history,
       { role: 'user', content: query },
     ]
+
     const tools = [
       {
         type: 'function',
@@ -269,7 +340,6 @@ serve(async (req: Request) => {
 
     const toolChoice = intent === 'PRODUCT_SPECIFIC' ? 'required' : 'auto'
 
-    // 6. Observability granular (OpenAI 1)
     const tOpenAI1 = performance.now()
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -323,6 +393,7 @@ serve(async (req: Request) => {
               message: 'Termo fora de escopo.',
               confidence_level: 'low',
               referenced_internal_products: [],
+              should_show_whatsapp_button: false,
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           )
@@ -334,7 +405,6 @@ serve(async (req: Request) => {
           1.0 + (keywords?.reduce((acc, k) => acc + Number(k.weight), 0) || 0),
         )
 
-        // 8. Timeout granular na RPC via abortSignal
         const tRPC = performance.now()
         const { data: products, error: rpcError } = await supabase
           .rpc('search_products_v2', { search_term: searchTerm, boost_multiplier: queryBoost })
@@ -368,12 +438,12 @@ serve(async (req: Request) => {
               'Posso ajudar apenas com audiovisual profissional e produtos do catálogo My Way.',
             confidence_level: 'low',
             referenced_internal_products: [],
+            should_show_whatsapp_button: false,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         )
       }
 
-      // 6. Observability granular (OpenAI 2)
       const tOpenAI2 = performance.now()
       const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -396,7 +466,7 @@ serve(async (req: Request) => {
       aiMessage.content = finalData?.choices?.[0]?.message?.content
     }
 
-    // 4. Validação estrita do schema final da IA
+    // 5. Validação estrita do schema final com should_show_whatsapp_button
     const rawResult = safeJSONParse(aiMessage.content, {})
     const result = {
       message: typeof rawResult?.message === 'string' ? rawResult.message : 'Erro ao processar.',
@@ -404,6 +474,10 @@ serve(async (req: Request) => {
         ? rawResult.referenced_internal_products
         : [],
       confidence_level: rawResult?.confidence_level === 'high' ? 'high' : 'low',
+      should_show_whatsapp_button:
+        typeof rawResult?.should_show_whatsapp_button === 'boolean'
+          ? rawResult.should_show_whatsapp_button
+          : false,
     }
 
     console.log(`[LOG] IDs sugeridos pela IA: ${result.referenced_internal_products}`)
@@ -412,7 +486,6 @@ serve(async (req: Request) => {
     )
     console.log(`[LOG] IDs validados: ${result.referenced_internal_products}`)
 
-    // 3. Concatenação segura de string
     result.message = String(result.message || '')
     if (validCurrentProductId) {
       result.message += '\n\n' + String(globalSettingsMap['transparency_note'] || '')
@@ -423,11 +496,13 @@ serve(async (req: Request) => {
       result.confidence_level === 'high' &&
       result.referenced_internal_products.length > 0
     ) {
-      await supabase.from('product_cache').upsert({
-        query_hash: queryHash,
-        response_text: JSON.stringify(result),
-        created_at: new Date().toISOString(),
-      })
+      await supabase
+        .from('product_cache')
+        .upsert({
+          query_hash: queryHash,
+          response_text: JSON.stringify(result),
+          created_at: new Date().toISOString(),
+        })
     }
 
     if (session_id)
