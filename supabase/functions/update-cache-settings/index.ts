@@ -4,8 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 Deno.serve(async (req: Request) => {
@@ -27,10 +26,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Não autorizado.' }), {
@@ -64,11 +60,7 @@ Deno.serve(async (req: Request) => {
 
     let targetId = id
     if (!targetId || targetId === '00000000-0000-0000-0000-000000000001') {
-      const { data: existing } = await supabaseAdmin
-        .from('cache_settings')
-        .select('id')
-        .limit(1)
-        .maybeSingle()
+      const { data: existing } = await supabaseAdmin.from('cache_settings').select('id').limit(1).maybeSingle()
       if (existing) {
         targetId = existing.id
       }
@@ -77,17 +69,12 @@ Deno.serve(async (req: Request) => {
     const payload = {
       mi_expiration_days,
       product_search_cache_expiration_days,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
     let query
     if (targetId && targetId !== '00000000-0000-0000-0000-000000000001') {
-      query = supabaseAdmin
-        .from('cache_settings')
-        .update(payload)
-        .eq('id', targetId)
-        .select()
-        .single()
+      query = supabaseAdmin.from('cache_settings').update(payload).eq('id', targetId).select().single()
     } else {
       query = supabaseAdmin.from('cache_settings').insert(payload).select().single()
     }
@@ -99,6 +86,7 @@ Deno.serve(async (req: Request) => {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+
   } catch (error: any) {
     console.error('Error in update-cache-settings:', error)
     return new Response(JSON.stringify({ error: 'Erro interno ao atualizar cache_settings.' }), {

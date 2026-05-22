@@ -1,11 +1,17 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.4'
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -102,6 +108,24 @@ export type Database = {
           updated_at?: string | null
           validation_error?: string | null
           validation_status?: string | null
+        }
+        Relationships: []
+      }
+      ai_rate_limits: {
+        Row: {
+          created_at: string
+          id: number
+          identifier: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          identifier: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          identifier?: string
         }
         Relationships: []
       }
@@ -261,18 +285,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'cart_items_cart_id_fkey'
-            columns: ['cart_id']
+            foreignKeyName: "cart_items_cart_id_fkey"
+            columns: ["cart_id"]
             isOneToOne: false
-            referencedRelation: 'shopping_carts'
-            referencedColumns: ['id']
+            referencedRelation: "shopping_carts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'cart_items_product_id_fkey'
-            columns: ['product_id']
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: 'products'
-            referencedColumns: ['id']
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -396,11 +420,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'coupon_usage_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "coupon_usage_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -461,11 +485,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'customer_addresses_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "customer_addresses_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -490,18 +514,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'customer_favorites_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "customer_favorites_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'customer_favorites_product_id_fkey'
-            columns: ['product_id']
+            foreignKeyName: "customer_favorites_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: 'products'
-            referencedColumns: ['id']
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -541,11 +565,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'customer_payment_methods_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "customer_payment_methods_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -666,18 +690,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discount_coupons_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "discount_coupons_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'discount_coupons_used_on_order_id_fkey'
-            columns: ['used_on_order_id']
+            foreignKeyName: "discount_coupons_used_on_order_id_fkey"
+            columns: ["used_on_order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -699,11 +723,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discount_rule_categories_discount_rule_id_fkey'
-            columns: ['discount_rule_id']
+            foreignKeyName: "discount_rule_categories_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
             isOneToOne: false
-            referencedRelation: 'discount_rules'
-            referencedColumns: ['id']
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -728,18 +752,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discount_rule_customers_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "discount_rule_customers_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'discount_rule_customers_discount_rule_id_fkey'
-            columns: ['discount_rule_id']
+            foreignKeyName: "discount_rule_customers_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
             isOneToOne: false
-            referencedRelation: 'discount_rules'
-            referencedColumns: ['id']
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -770,18 +794,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discount_rule_exclusions_discount_rule_id_fkey'
-            columns: ['discount_rule_id']
+            foreignKeyName: "discount_rule_exclusions_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
             isOneToOne: false
-            referencedRelation: 'discount_rules'
-            referencedColumns: ['id']
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'discount_rule_exclusions_product_id_fkey'
-            columns: ['product_id']
+            foreignKeyName: "discount_rule_exclusions_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: 'products'
-            referencedColumns: ['id']
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -803,18 +827,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discount_rule_manufacturers_discount_rule_id_fkey'
-            columns: ['discount_rule_id']
+            foreignKeyName: "discount_rule_manufacturers_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
             isOneToOne: false
-            referencedRelation: 'discount_rules'
-            referencedColumns: ['id']
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'discount_rule_manufacturers_manufacturer_id_fkey'
-            columns: ['manufacturer_id']
+            foreignKeyName: "discount_rule_manufacturers_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
             isOneToOne: false
-            referencedRelation: 'manufacturers'
-            referencedColumns: ['id']
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -836,18 +860,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discount_rule_products_discount_rule_id_fkey'
-            columns: ['discount_rule_id']
+            foreignKeyName: "discount_rule_products_discount_rule_id_fkey"
+            columns: ["discount_rule_id"]
             isOneToOne: false
-            referencedRelation: 'discount_rules'
-            referencedColumns: ['id']
+            referencedRelation: "discount_rules"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'discount_rule_products_product_id_fkey'
-            columns: ['product_id']
+            foreignKeyName: "discount_rule_products_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: 'products'
-            referencedColumns: ['id']
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -980,18 +1004,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'discounts_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "discounts_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'categories'
-            referencedColumns: ['id']
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'discounts_manufacturer_id_fkey'
-            columns: ['manufacturer_id']
+            foreignKeyName: "discounts_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
             isOneToOne: false
-            referencedRelation: 'manufacturers'
-            referencedColumns: ['id']
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1046,11 +1070,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'favorites_product_id_fkey'
-            columns: ['product_id']
+            foreignKeyName: "favorites_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: 'products'
-            referencedColumns: ['id']
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1114,11 +1138,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'market_intelligence_manufacturer_id_fkey'
-            columns: ['manufacturer_id']
+            foreignKeyName: "market_intelligence_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
             isOneToOne: false
-            referencedRelation: 'manufacturers'
-            referencedColumns: ['id']
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1170,18 +1194,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'order_items_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'order_items_product_id_fkey'
-            columns: ['product_id']
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: 'products'
-            referencedColumns: ['id']
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1221,11 +1245,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'order_refunds_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "order_refunds_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1259,18 +1283,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'order_returns_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "order_returns_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'order_returns_order_item_id_fkey'
-            columns: ['order_item_id']
+            foreignKeyName: "order_returns_order_item_id_fkey"
+            columns: ["order_item_id"]
             isOneToOne: false
-            referencedRelation: 'order_items'
-            referencedColumns: ['id']
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1301,18 +1325,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'order_status_history_changed_by_fkey'
-            columns: ['changed_by']
+            foreignKeyName: "order_status_history_changed_by_fkey"
+            columns: ["changed_by"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'order_status_history_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1385,32 +1409,32 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'orders_billing_address_id_fkey'
-            columns: ['billing_address_id']
+            foreignKeyName: "orders_billing_address_id_fkey"
+            columns: ["billing_address_id"]
             isOneToOne: false
-            referencedRelation: 'customer_addresses'
-            referencedColumns: ['id']
+            referencedRelation: "customer_addresses"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'orders_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'orders_payment_method_id_fkey'
-            columns: ['payment_method_id']
+            foreignKeyName: "orders_payment_method_id_fkey"
+            columns: ["payment_method_id"]
             isOneToOne: false
-            referencedRelation: 'customer_payment_methods'
-            referencedColumns: ['id']
+            referencedRelation: "customer_payment_methods"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'orders_shipping_address_id_fkey'
-            columns: ['shipping_address_id']
+            foreignKeyName: "orders_shipping_address_id_fkey"
+            columns: ["shipping_address_id"]
             isOneToOne: false
-            referencedRelation: 'customer_addresses'
-            referencedColumns: ['id']
+            referencedRelation: "customer_addresses"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1438,11 +1462,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'page_visits_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "page_visits_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1479,11 +1503,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'payment_tokens_order_id_fkey'
-            columns: ['order_id']
+            foreignKeyName: "payment_tokens_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: 'orders'
-            referencedColumns: ['id']
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1546,40 +1570,22 @@ export type Database = {
       }
       product_cache: {
         Row: {
-          cached_at: string | null
-          confidence: number | null
           created_at: string | null
-          expires_at: string | null
           id: string
-          metadata: Json | null
-          product_id: string
-          source: string | null
-          spec_key: string | null
-          spec_value: string | null
+          query_hash: string
+          response_text: string
         }
         Insert: {
-          cached_at?: string | null
-          confidence?: number | null
           created_at?: string | null
-          expires_at?: string | null
           id?: string
-          metadata?: Json | null
-          product_id: string
-          source?: string | null
-          spec_key?: string | null
-          spec_value?: string | null
+          query_hash: string
+          response_text: string
         }
         Update: {
-          cached_at?: string | null
-          confidence?: number | null
           created_at?: string | null
-          expires_at?: string | null
           id?: string
-          metadata?: Json | null
-          product_id?: string
-          source?: string | null
-          spec_key?: string | null
-          spec_value?: string | null
+          query_hash?: string
+          response_text?: string
         }
         Relationships: []
       }
@@ -1640,6 +1646,7 @@ export type Database = {
           date_rebate: string | null
           description: string | null
           dimensions: string | null
+          fts_vector: unknown
           id: string
           image_url: string | null
           is_discontinued: boolean
@@ -1657,6 +1664,7 @@ export type Database = {
           price_usa_rebate: number | null
           price_usd: number | null
           rejected_related_ids: string[] | null
+          search_text: string | null
           sku: string | null
           stock: number | null
           technical_info: string | null
@@ -1670,6 +1678,7 @@ export type Database = {
           date_rebate?: string | null
           description?: string | null
           dimensions?: string | null
+          fts_vector?: unknown
           id?: string
           image_url?: string | null
           is_discontinued?: boolean
@@ -1687,6 +1696,7 @@ export type Database = {
           price_usa_rebate?: number | null
           price_usd?: number | null
           rejected_related_ids?: string[] | null
+          search_text?: string | null
           sku?: string | null
           stock?: number | null
           technical_info?: string | null
@@ -1700,6 +1710,7 @@ export type Database = {
           date_rebate?: string | null
           description?: string | null
           dimensions?: string | null
+          fts_vector?: unknown
           id?: string
           image_url?: string | null
           is_discontinued?: boolean
@@ -1717,6 +1728,7 @@ export type Database = {
           price_usa_rebate?: number | null
           price_usd?: number | null
           rejected_related_ids?: string[] | null
+          search_text?: string | null
           sku?: string | null
           stock?: number | null
           technical_info?: string | null
@@ -1724,18 +1736,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'products_category_id_fkey'
-            columns: ['category_id']
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: 'categories'
-            referencedColumns: ['id']
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'products_manufacturer_id_fkey'
-            columns: ['manufacturer_id']
+            foreignKeyName: "products_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
             isOneToOne: false
-            referencedRelation: 'manufacturers'
-            referencedColumns: ['id']
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1844,11 +1856,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'shopping_carts_customer_id_fkey'
-            columns: ['customer_id']
+            foreignKeyName: "shopping_carts_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: 'customers'
-            referencedColumns: ['id']
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1894,6 +1906,10 @@ export type Database = {
         Args: { p_customer_id: string; p_product_id: string }
         Returns: number
       }
+      check_ai_rate_limit: {
+        Args: { max_requests: number; user_identifier: string }
+        Returns: boolean
+      }
       check_is_admin: { Args: never; Returns: boolean }
       check_legacy_user: {
         Args: { email_input: string }
@@ -1936,15 +1952,16 @@ export type Database = {
       }
       normalize_sku: { Args: { sku: string }; Returns: string }
       search_products_v2: {
-        Args: { boost_multiplier: number; search_term: string }
+        Args: { boost_multiplier?: number; search_term: string }
         Returns: {
           description: string
           final_rank: number
           id: string
           name: string
-          price: number
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       sync_current_user_profile: { Args: never; Returns: undefined }
       unified_search: { Args: { search_term: string }; Returns: Json }
     }
@@ -1957,31 +1974,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1990,23 +2009,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -2015,23 +2034,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -2040,36 +2059,36 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema['Enums']
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
@@ -2077,6 +2096,7 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -2116,6 +2136,10 @@ export const Constants = {
 //   provider_type: text (nullable)
 //   custom_endpoint: text (nullable)
 //   priority: integer (nullable, default: 999)
+// Table: ai_rate_limits
+//   id: bigint (not null, default: nextval('ai_rate_limits_id_seq'::regclass))
+//   identifier: text (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: ai_settings
 //   id: uuid (not null, default: gen_random_uuid())
 //   created_at: timestamp with time zone (not null, default: timezone('utc'::text, now()))
@@ -2437,15 +2461,9 @@ export const Constants = {
 //   exchange_rate: numeric (not null, default: 5.00)
 // Table: product_cache
 //   id: uuid (not null, default: gen_random_uuid())
-//   source: text (nullable, default: 'manual'::text)
-//   cached_at: timestamp with time zone (nullable, default: now())
-//   expires_at: timestamp with time zone (nullable)
+//   query_hash: text (not null)
+//   response_text: text (not null)
 //   created_at: timestamp with time zone (nullable, default: now())
-//   product_id: uuid (not null)
-//   spec_key: text (nullable)
-//   spec_value: text (nullable)
-//   confidence: numeric (nullable, default: 0.8)
-//   metadata: jsonb (nullable, default: '{}'::jsonb)
 // Table: product_search_cache
 //   id: uuid (not null, default: gen_random_uuid())
 //   search_query: text (not null)
@@ -2489,6 +2507,8 @@ export const Constants = {
 //   price_usa_rebate: numeric (nullable)
 //   price_cost_rebate: numeric (nullable)
 //   date_rebate: timestamp with time zone (nullable)
+//   fts_vector: tsvector (nullable)
+//   search_text: text (nullable)
 // Table: sales_metrics
 //   id: uuid (not null, default: gen_random_uuid())
 //   date: date (not null)
@@ -2533,6 +2553,8 @@ export const Constants = {
 //   PRIMARY KEY ai_providers_pkey: PRIMARY KEY (id)
 //   UNIQUE ai_providers_provider_name_key: UNIQUE (provider_name)
 //   CHECK ai_providers_validation_status_check: CHECK ((validation_status = ANY (ARRAY['pending'::text, 'valid'::text, 'invalid'::text, 'error'::text])))
+// Table: ai_rate_limits
+//   PRIMARY KEY ai_rate_limits_pkey: PRIMARY KEY (id)
 // Table: ai_settings
 //   PRIMARY KEY ai_settings_pkey: PRIMARY KEY (id)
 // Table: app_settings
@@ -2682,6 +2704,7 @@ export const Constants = {
 //   PRIMARY KEY pricing_settings_pkey: PRIMARY KEY (id)
 // Table: product_cache
 //   PRIMARY KEY product_cache_pkey: PRIMARY KEY (id)
+//   UNIQUE product_cache_query_hash_key: UNIQUE (query_hash)
 // Table: product_search_cache
 //   PRIMARY KEY product_search_cache_pkey: PRIMARY KEY (id)
 //   CHECK product_search_cache_source_check: CHECK ((source = ANY (ARRAY['ai_generated'::text, 'manual_entry'::text, 'web_search'::text])))
@@ -2719,6 +2742,13 @@ export const Constants = {
 //     WITH CHECK: check_is_admin()
 //   Policy "allow_public_read_ai_providers" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
+// Table: ai_rate_limits
+//   Policy "Apenas o sistema pode gerenciar rate limits" (ALL, PERMISSIVE) roles={service_role}
+//     USING: true
+//     WITH CHECK: true
+//   Policy "Sistema gerencia rate limits" (ALL, PERMISSIVE) roles={service_role}
+//     USING: true
+//     WITH CHECK: true
 // Table: ai_settings
 //   Policy "Allow public read access" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
@@ -3045,11 +3075,9 @@ export const Constants = {
 //     USING: true
 //     WITH CHECK: true
 // Table: product_cache
-//   Policy "Auth read cache" (SELECT, PERMISSIVE) roles={authenticated}
+//   Policy "Sistema gerencia cache" (ALL, PERMISSIVE) roles={service_role}
 //     USING: true
-//   Policy "product_cache_write_admin" (ALL, PERMISSIVE) roles={authenticated}
-//     USING: check_is_admin()
-//     WITH CHECK: check_is_admin()
+//     WITH CHECK: true
 // Table: product_search_cache
 //   Policy "Auth read cache" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
@@ -3131,9 +3159,9 @@ export const Constants = {
 //   BEGIN
 //     SELECT price_usa, price_cost INTO v_price_usa, v_price_cost
 //     FROM products WHERE id = p_product_id;
-//
+//     
 //     IF v_price_usa IS NULL THEN RETURN NULL; END IF;
-//
+//     
 //     SELECT dr.discount_value, dr.discount_calculation_type
 //     INTO v_max_discount, v_discount_type
 //     FROM discount_rules dr
@@ -3142,18 +3170,18 @@ export const Constants = {
 //       AND drc.customer_id = p_customer_id
 //       AND dr.scope_type = 'all_products'
 //       AND NOT EXISTS (
-//         SELECT 1 FROM discount_rule_exclusions dre
-//         WHERE dre.discount_rule_id = dr.id
-//           AND dre.product_id = p_product_id
+//         SELECT 1 FROM discount_rule_exclusions dre 
+//         WHERE dre.discount_rule_id = dr.id 
+//           AND dre.product_id = p_product_id 
 //           AND dre.is_active = true
 //       )
 //     ORDER BY dr.discount_value DESC
 //     LIMIT 1;
-//
+//     
 //     IF v_max_discount IS NULL OR v_max_discount = 0 THEN
 //       RETURN v_price_usa;
 //     END IF;
-//
+//     
 //     IF v_discount_type = 'margin_percentage' THEN
 //       v_final_price := v_price_cost + ((v_max_discount / 100) * (v_price_usa - v_price_cost));
 //     ELSIF v_discount_type = 'price_usa_percentage' THEN
@@ -3161,11 +3189,41 @@ export const Constants = {
 //     ELSE
 //       RETURN v_price_usa;
 //     END IF;
-//
+//     
 //     RETURN ROUND(v_final_price, 2);
 //   END;
 //   $function$
-//
+//   
+// FUNCTION check_ai_rate_limit(text, integer)
+//   CREATE OR REPLACE FUNCTION public.check_ai_rate_limit(user_identifier text, max_requests integer)
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//    SET search_path TO 'public'
+//   AS $function$
+//   DECLARE
+//       request_count int;
+//   BEGIN
+//       -- ATOMICIDADE: Bloqueio consultivo baseado no hash do identificador
+//       -- Isso serializa as requisições do MESMO usuário, impedindo o bypass por concorrência.
+//       PERFORM pg_advisory_xact_lock(hashtext(user_identifier));
+//   
+//       -- Conta requisições no último minuto usando o índice
+//       SELECT count(*) INTO request_count 
+//       FROM public.ai_rate_limits 
+//       WHERE identifier = user_identifier 
+//       AND created_at > now() - interval '1 minute';
+//       
+//       IF request_count >= max_requests THEN
+//           RETURN false;
+//       END IF;
+//       
+//       -- Registra a nova tentativa
+//       INSERT INTO public.ai_rate_limits (identifier) VALUES (user_identifier);
+//       RETURN true;
+//   END;
+//   $function$
+//   
 // FUNCTION check_is_admin()
 //   CREATE OR REPLACE FUNCTION public.check_is_admin()
 //    RETURNS boolean
@@ -3177,14 +3235,14 @@ export const Constants = {
 //     v_is_admin BOOLEAN;
 //   BEGIN
 //     SELECT EXISTS (
-//       SELECT 1 FROM public.customers
+//       SELECT 1 FROM public.customers 
 //       WHERE user_id = auth.uid() AND role = 'admin'
 //     ) INTO v_is_admin;
-//
+//     
 //     RETURN v_is_admin;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION check_legacy_user(text)
 //   CREATE OR REPLACE FUNCTION public.check_legacy_user(email_input text)
 //    RETURNS TABLE(id uuid, found boolean, full_name text, phone text, cpf text, billing_address jsonb, role character varying, is_imported boolean, has_migrated boolean, email text, user_id uuid, status text, created_at timestamp with time zone, updated_at timestamp with time zone)
@@ -3194,7 +3252,7 @@ export const Constants = {
 //   AS $function$
 //   BEGIN
 //     RETURN QUERY
-//     SELECT
+//     SELECT 
 //       c.id,
 //       (c.is_imported = TRUE AND c.has_migrated = FALSE) as found,
 //       c.full_name,
@@ -3214,7 +3272,7 @@ export const Constants = {
 //     LIMIT 1;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION complete_user_migration(uuid, uuid)
 //   CREATE OR REPLACE FUNCTION public.complete_user_migration(cust_id uuid, new_uid uuid)
 //    RETURNS void
@@ -3225,12 +3283,12 @@ export const Constants = {
 //   BEGIN
 //       INSERT INTO public.users (id, email, role)
 //       SELECT id, email, 'customer'
-//       FROM auth.users
+//       FROM auth.users 
 //       WHERE id = new_uid
 //       ON CONFLICT (id) DO NOTHING;
-//
+//   
 //       UPDATE public.customers
-//       SET
+//       SET 
 //           user_id = new_uid,
 //           is_imported = FALSE,
 //           has_migrated = TRUE,
@@ -3238,7 +3296,7 @@ export const Constants = {
 //       WHERE id = cust_id;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION execute_ai_search(text)
 //   CREATE OR REPLACE FUNCTION public.execute_ai_search(search_term text)
 //    RETURNS jsonb
@@ -3251,55 +3309,55 @@ export const Constants = {
 //       -- Limpeza de termos genéricos que não definem o modelo
 //       search_term := regexp_replace(lower(search_term), '\b(camera|câmera|equipamento|modelo|aparelho)\b', '', 'g');
 //       search_words := string_to_array(trim(regexp_replace(search_term, '[,.!]', '', 'g')), ' ');
-//
+//   
 //       SELECT jsonb_build_object(
 //           'stock', (
 //               SELECT jsonb_agg(p_row) FROM (
-//                   SELECT
-//                       p.id,
-//                       p.name,
-//                       p.sku,
-//                       p.price_usd,
-//                       m.name as manufacturer_name,
-//                       p.ncm,
-//                       p.description,
-//                       p.technical_info,
+//                   SELECT 
+//                       p.id, 
+//                       p.name, 
+//                       p.sku, 
+//                       p.price_usd, 
+//                       m.name as manufacturer_name, 
+//                       p.ncm, 
+//                       p.description, 
+//                       p.technical_info, 
 //                       p.stock,
-//
+//   
 //                       -- CÁLCULO DE RELEVÂNCIA SNIPER
 //                       (
 //                           -- Peso 100: Match exato do modelo (segunda ou terceira palavra da busca)
-//                           CASE WHEN p.name ILIKE '%' || search_words[array_upper(search_words, 1)] || '%'
-//                               THEN 100 ELSE 0
+//                           CASE WHEN p.name ILIKE '%' || search_words[array_upper(search_words, 1)] || '%' 
+//                               THEN 100 ELSE 0 
 //                           END +
-//
+//   
 //                           -- Peso 50: Match no SKU
-//                           CASE WHEN p.sku ILIKE '%' || search_words[1] || '%'
-//                               THEN 50 ELSE 0
+//                           CASE WHEN p.sku ILIKE '%' || search_words[1] || '%' 
+//                               THEN 50 ELSE 0 
 //                           END +
-//
+//   
 //                           -- Peso 10: Para cada palavra da busca encontrada no nome
-//                           (SELECT count(*) * 10
-//                            FROM unnest(search_words) w
+//                           (SELECT count(*) * 10 
+//                            FROM unnest(search_words) w 
 //                            WHERE p.name ILIKE '%' || w || '%')
 //                       ) AS relevance_score
-//
+//   
 //                   FROM products p
 //                   LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
-//
+//   
 //                   WHERE p.is_discontinued = false
 //                   AND (
 //                       EXISTS (
-//                           SELECT 1
-//                           FROM unnest(search_words) AS word
-//                           WHERE length(word) > 2
+//                           SELECT 1 
+//                           FROM unnest(search_words) AS word 
+//                           WHERE length(word) > 2 
 //                           AND (
-//                               p.name ILIKE '%' || word || '%'
+//                               p.name ILIKE '%' || word || '%' 
 //                               OR p.sku ILIKE '%' || word || '%'
 //                           )
 //                       )
 //                   )
-//
+//   
 //                   ORDER BY relevance_score DESC, p.price_usd DESC
 //                   LIMIT 20
 //               ) p_row
@@ -3307,11 +3365,11 @@ export const Constants = {
 //           'intel', '[]'::jsonb,
 //           'nab_data', '[]'::jsonb
 //       ) INTO result;
-//
+//   
 //       RETURN result;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION execute_ai_search_v2(text)
 //   CREATE OR REPLACE FUNCTION public.execute_ai_search_v2(search_term text)
 //    RETURNS jsonb
@@ -3328,11 +3386,11 @@ export const Constants = {
 //           'psc', jsonb_build_array(),
 //           'pc', jsonb_build_object()
 //       );
-//
+//   
 //       RETURN result;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION get_applicable_discounts(uuid, uuid)
 //   CREATE OR REPLACE FUNCTION public.get_applicable_discounts(p_product_id uuid, p_customer_id uuid)
 //    RETURNS TABLE(rule_id uuid, rule_name character varying, discount_value numeric, discount_calculation_type character varying, scope_type character varying)
@@ -3348,15 +3406,15 @@ export const Constants = {
 //       AND drc.customer_id = p_customer_id
 //       AND dr.scope_type = 'all_products'
 //       AND NOT EXISTS (
-//         SELECT 1 FROM discount_rule_exclusions dre
-//         WHERE dre.discount_rule_id = dr.id
-//           AND dre.product_id = p_product_id
+//         SELECT 1 FROM discount_rule_exclusions dre 
+//         WHERE dre.discount_rule_id = dr.id 
+//           AND dre.product_id = p_product_id 
 //           AND dre.is_active = true
 //       )
 //     ORDER BY dr.discount_value DESC;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION handle_new_customer()
 //   CREATE OR REPLACE FUNCTION public.handle_new_customer()
 //    RETURNS trigger
@@ -3377,11 +3435,11 @@ export const Constants = {
 //       VALUES (NEW.id, NEW.raw_user_meta_data->>'name', NEW.email)
 //       ON CONFLICT (user_id) DO NOTHING;
 //     END IF;
-//
+//   
 //     RETURN NEW;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION mark_migration_started(text)
 //   CREATE OR REPLACE FUNCTION public.mark_migration_started(target_email text)
 //    RETURNS void
@@ -3391,14 +3449,14 @@ export const Constants = {
 //   AS $function$
 //   BEGIN
 //       UPDATE public.customers
-//       SET
+//       SET 
 //           is_imported = FALSE,
 //           has_migrated = TRUE,
 //           updated_at = NOW()
 //       WHERE email = target_email;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION normalize_sku(text)
 //   CREATE OR REPLACE FUNCTION public.normalize_sku(sku text)
 //    RETURNS text
@@ -3409,30 +3467,119 @@ export const Constants = {
 //     RETURN upper(regexp_replace(sku, '[^a-zA-Z0-9]', '', 'g'));
 //   END;
 //   $function$
-//
-// FUNCTION search_products_v2(text, numeric)
-//   CREATE OR REPLACE FUNCTION public.search_products_v2(search_term text, boost_multiplier numeric)
-//    RETURNS TABLE(id uuid, name text, description text, price numeric, final_rank numeric)
+//   
+// FUNCTION products_search_update()
+//   CREATE OR REPLACE FUNCTION public.products_search_update()
+//    RETURNS trigger
 //    LANGUAGE plpgsql
 //   AS $function$
 //   BEGIN
+//   
+//     -- Campo auxiliar fuzzy
+//     NEW.search_text :=
+//       coalesce(NEW.name, '') || ' ' ||
+//       coalesce(NEW.sku, '') || ' ' ||
+//       coalesce(NEW.category, '');
+//   
+//     -- Full Text Search vector
+//     NEW.fts_vector :=
+//   
+//       setweight(
+//         to_tsvector('simple', coalesce(NEW.name, '')),
+//         'A'
+//       )
+//   
+//       ||
+//   
+//       setweight(
+//         to_tsvector('simple', coalesce(NEW.sku, '')),
+//         'A'
+//       )
+//   
+//       ||
+//   
+//       setweight(
+//         to_tsvector('simple', coalesce(NEW.category, '')),
+//         'B'
+//       )
+//   
+//       ||
+//   
+//       setweight(
+//         to_tsvector('simple', coalesce(NEW.description, '')),
+//         'B'
+//       )
+//   
+//       ||
+//   
+//       setweight(
+//         to_tsvector('simple', coalesce(NEW.technical_info, '')),
+//         'B'
+//       );
+//   
+//     RETURN NEW;
+//   
+//   END;
+//   $function$
+//   
+// FUNCTION search_products_v2(text, numeric)
+//   CREATE OR REPLACE FUNCTION public.search_products_v2(search_term text, boost_multiplier numeric DEFAULT 1.0)
+//    RETURNS TABLE(id uuid, name text, description text, final_rank numeric)
+//    LANGUAGE plpgsql
+//   AS $function$
+//   DECLARE
+//     ts_query tsquery;
+//     normalized_term text;
+//   BEGIN
+//     -- 1. Normalização e Proteção contra busca vazia (Hardening)
+//     normalized_term := lower(trim(search_term));
+//     IF normalized_term = '' OR normalized_term IS NULL THEN
+//       RETURN;
+//     END IF;
+//   
+//     -- 2. Parsing resiliente com Double Fallback (Hardening)
+//     BEGIN
+//       ts_query := websearch_to_tsquery('simple', normalized_term);
+//     EXCEPTION WHEN others THEN
+//       BEGIN
+//         ts_query := plainto_tsquery('simple', normalized_term);
+//       EXCEPTION WHEN others THEN
+//         RETURN; -- Retorna vazio se o input for impossível de processar
+//       END;
+//     END;
+//   
+//     -- 3. Execução com Casts Explícitos (Corrige o erro de estrutura)
 //     RETURN QUERY
-//     SELECT
-//       p.id,
-//       p.name,
-//       p.description,
-//       p.price,
-//       (ts_rank(to_tsvector('portuguese', p.name || ' ' || coalesce(p.description, '')), plainto_tsquery('portuguese', search_term)) * boost_multiplier) AS final_rank
-//     FROM
+//     SELECT 
+//       p.id::uuid, 
+//       p.name::text, 
+//       coalesce(p.description, '')::text,
+//       (
+//         -- Forçamos o cast para numeric em cada etapa do cálculo
+//         (ts_rank_cd(p.fts_vector, ts_query, 32)::numeric * boost_multiplier) +
+//         (CASE 
+//           WHEN length(normalized_term) >= 3 THEN similarity(p.search_text, normalized_term)::numeric * 0.3
+//           ELSE 0 
+//         END)
+//       )::numeric AS final_rank
+//     FROM 
 //       products p
-//     WHERE
-//       to_tsvector('portuguese', p.name || ' ' || coalesce(p.description, '')) @@ plainto_tsquery('portuguese', search_term)
-//     ORDER BY
+//     WHERE 
+//       -- Filtro de catálogo
+//       NOT p.is_discontinued
+//       AND (
+//         -- Busca técnica indexada
+//         p.fts_vector @@ ts_query
+//         OR 
+//         -- Busca por aproximação (fuzzy)
+//         (length(normalized_term) >= 3 AND p.search_text % normalized_term)
+//       )
+//     ORDER BY 
 //       final_rank DESC
 //     LIMIT 20;
 //   END;
 //   $function$
-//
+//   
 // FUNCTION sync_current_user_profile()
 //   CREATE OR REPLACE FUNCTION public.sync_current_user_profile()
 //    RETURNS void
@@ -3442,7 +3589,7 @@ export const Constants = {
 //   AS $function$
 //   BEGIN
 //       UPDATE public.customers
-//       SET
+//       SET 
 //           user_id = auth.uid(),
 //           has_migrated = TRUE,
 //           is_imported = FALSE,
@@ -3451,7 +3598,7 @@ export const Constants = {
 //       AND (user_id IS NULL OR user_id != auth.uid());
 //   END;
 //   $function$
-//
+//   
 // FUNCTION unified_search(text)
 //   CREATE OR REPLACE FUNCTION public.unified_search(search_term text)
 //    RETURNS json
@@ -3462,10 +3609,10 @@ export const Constants = {
 //     SELECT json_build_object(
 //       'stock', (
 //         SELECT COALESCE(json_agg(p), '[]'::json) FROM (
-//           SELECT * FROM products
+//           SELECT * FROM products 
 //           WHERE (name ILIKE '%' || search_term || '%' OR sku ILIKE '%' || search_term || '%')
 //           AND is_discontinued = false
-//           ORDER BY
+//           ORDER BY 
 //             CASE WHEN sku ILIKE search_term THEN 0 WHEN sku ILIKE search_term || '%' THEN 1 ELSE 2 END,
 //             name ILIKE '%' || search_term || '%' DESC,
 //             price_usd ASC
@@ -3474,27 +3621,33 @@ export const Constants = {
 //       ),
 //       'intel', (
 //         SELECT COALESCE(json_agg(c), '[]'::json) FROM (
-//           SELECT * FROM market_intelligence
+//           SELECT * FROM market_intelligence 
 //           WHERE (title ILIKE '%' || search_term || '%' OR ai_summary ILIKE '%' || search_term || '%')
-//           AND status = 'published'
+//           AND status = 'published' 
 //           LIMIT 5
 //         ) c
 //       ),
 //       'nab_data', (
 //         SELECT COALESCE(json_agg(n), '[]'::json) FROM (
-//           SELECT * FROM nab_market
-//           WHERE (title ILIKE '%' || search_term || '%' OR content ILIKE '%' || search_term || '%')
+//           SELECT * FROM nab_market 
+//           WHERE (title ILIKE '%' || search_term || '%' OR content ILIKE '%' || search_term || '%') 
 //           LIMIT 5
 //         ) n
 //       )
 //     );
 //   $function$
-//
+//   
+
+// --- TRIGGERS ---
+// Table: products
+//   trg_products_search_update: CREATE TRIGGER trg_products_search_update BEFORE INSERT OR UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION products_search_update()
 
 // --- INDEXES ---
 // Table: ai_providers
 //   CREATE INDEX ai_providers_priority_active_idx ON public.ai_providers USING btree (priority_order, is_active)
 //   CREATE UNIQUE INDEX ai_providers_provider_name_key ON public.ai_providers USING btree (provider_name)
+// Table: ai_rate_limits
+//   CREATE INDEX idx_ai_rate_limits_identifier_created ON public.ai_rate_limits USING btree (identifier, created_at DESC)
 // Table: app_settings
 //   CREATE UNIQUE INDEX app_settings_setting_key_key ON public.app_settings USING btree (setting_key)
 //   CREATE INDEX idx_app_settings_key ON public.app_settings USING btree (setting_key)
@@ -3578,13 +3731,15 @@ export const Constants = {
 //   CREATE INDEX idx_payment_tokens_user_id ON public.payment_tokens USING btree (user_id)
 //   CREATE UNIQUE INDEX payment_tokens_token_key ON public.payment_tokens USING btree (token)
 // Table: product_cache
-//   CREATE INDEX idx_product_cache_expires ON public.product_cache USING btree (expires_at)
-//   CREATE INDEX idx_product_cache_product_id ON public.product_cache USING btree (product_id)
+//   CREATE INDEX idx_product_cache_query_hash ON public.product_cache USING btree (query_hash)
+//   CREATE UNIQUE INDEX product_cache_query_hash_key ON public.product_cache USING btree (query_hash)
 // Table: product_search_cache
 //   CREATE INDEX product_search_cache_created_idx ON public.product_search_cache USING btree (created_at DESC)
 //   CREATE INDEX product_search_cache_query_idx ON public.product_search_cache USING btree (search_query)
 // Table: products
+//   CREATE INDEX idx_products_fts ON public.products USING gin (fts_vector)
 //   CREATE INDEX idx_products_is_discontinued ON public.products USING btree (is_discontinued)
+//   CREATE INDEX idx_products_search_trgm ON public.products USING gin (search_text gin_trgm_ops)
 //   CREATE INDEX products_is_special_idx ON public.products USING btree (is_special)
 //   CREATE UNIQUE INDEX products_manufacturer_sku_key ON public.products USING btree (manufacturer_id, sku)
 // Table: sales_metrics
@@ -3595,3 +3750,4 @@ export const Constants = {
 //   CREATE UNIQUE INDEX settings_key_key ON public.settings USING btree (key)
 // Table: shopping_carts
 //   CREATE INDEX idx_shopping_carts_customer_id ON public.shopping_carts USING btree (customer_id)
+
