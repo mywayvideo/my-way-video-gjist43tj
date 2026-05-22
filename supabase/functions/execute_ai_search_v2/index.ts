@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { loadCacheSettings } from '../../_shared/cacheSettings.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +10,20 @@ const corsHeaders = {
 // =========================
 // HELPERS DE ALTA CONFIABILIDADE
 // =========================
+
+async function loadCacheSettings(supabase: any) {
+  const { data, error } = await supabase.from('cache_settings').select('*').limit(1).maybeSingle()
+
+  if (error) {
+    console.log('[LOG] Aviso ao carregar cache_settings (tabela vazia ou erro):', error.message)
+  }
+
+  return {
+    miExpirationDays: data?.mi_expiration_days ?? 365,
+    productSearchCacheExpirationDays: data?.product_search_cache_expiration_days ?? 30,
+    productCacheExpirationDays: data?.product_cache_expiration_days ?? 90,
+  }
+}
 
 async function hashQuery(query: string, context: string = ''): Promise<string> {
   const text = `${query.toLowerCase().trim()}|${context}`
@@ -24,16 +37,16 @@ function safeJSONParse(str: string, fallback: any = null): any {
   if (!str || typeof str !== 'string') return fallback
   try {
     return JSON.parse(str)
-  } catch (e) {
-    const match = str.match(/\{[\s\S]*?\}|\[[\s\S]*?\]/)
-    if (match) {
-      try {
-        return JSON.parse(match[0])
-      } catch (e2) {
-        return fallback
-      }
+  } catch {
+    try {
+      const cleaned = str
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim()
+      return JSON.parse(cleaned)
+    } catch {
+      return fallback
     }
-    return fallback
   }
 }
 
@@ -60,6 +73,7 @@ function getHeuristicIntent(query: string, currentProductId: string | null): str
   return 'GENERIC'
 }
 
+// 1. checkRateLimit seguro (Fail-Open parcial para evitar outage total)
 async function checkRateLimit(supabase: any, identifier: string, limit: number): Promise<boolean> {
   const { data, error } = await supabase.rpc('check_ai_rate_limit', {
     user_identifier: identifier,
@@ -67,7 +81,7 @@ async function checkRateLimit(supabase: any, identifier: string, limit: number):
   })
   if (error) {
     console.error('[RATE LIMIT ERROR]', error)
-    return true
+    return true // Fail-open: se o banco falhar, não bloqueia a operação da empresa
   }
   return data as boolean
 }
@@ -115,35 +129,32 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // 2. DOUBLE RATE LIMITING
     const [ipAllowed, sessionAllowed] = await Promise.all([
       checkRateLimit(supabase, `ip:${clientIP}`, 20),
       session_id ? checkRateLimit(supabase, `session:${session_id}`, 50) : Promise.resolve(true),
     ])
 
     if (!ipAllowed || !sessionAllowed) {
-      console.log('[LOG] Rate limit atingindo')
+      console.log('[LOG] Rate limit atingido')
       return new Response(
         JSON.stringify({ error: 'Muitas requisições. Tente novamente em 1 minuto.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 },
       )
     }
 
-    // 3. BLINDAGEM DO CACHE SETTINGS (Resolve o erro PGRST116)
-    let productCacheExpirationDays = 7 // Valor padrão seguro
+    let productCacheExpirationDays = 7
     try {
-      const cacheConfig = await loadCacheSettings()
+      const cacheConfig = await loadCacheSettings(supabase)
       if (cacheConfig && typeof cacheConfig.productCacheExpirationDays === 'number') {
         productCacheExpirationDays = cacheConfig.productCacheExpirationDays
       }
     } catch (err) {
-      console.log(
-        '[LOG] Aviso: loadCacheSettings falhou (tabela vazia?), usando fallback de 7 dias.',
-      )
+      console.log('[LOG] Aviso: loadCacheSettings falhou, usando fallback de 7 dias.')
     }
 
     const intent = getHeuristicIntent(query, currentProductId)
 
+    const tDbMeta = performance.now()
     const [
       { data: agentSettings },
       { data: aiSettings },
@@ -155,14 +166,15 @@ serve(async (req: Request) => {
       supabase.from('company_info').select('content').maybeSingle(),
       supabase.from('settings').select('key, value'),
     ])
+    console.log(`[PERF][DB_META] ${Math.round(performance.now() - tDbMeta)}ms`)
 
-    const globalSettingsMap: Record<string, string> = {}
+    // 2. globalSettingsMap tipado com segurança
+    const globalSettingsMap: Record<string, string | number | boolean | null> = {}
     if (Array.isArray(globalSettings))
       globalSettings.forEach((s) => {
         if (s.key) globalSettingsMap[s.key] = s.value
       })
 
-    // 4. BRANCH INSTITUCIONAL
     if (intent === 'INSTITUTIONAL') {
       const response = {
         message: companyInfo?.content || 'Somos a My Way Video.',
@@ -173,12 +185,12 @@ serve(async (req: Request) => {
         await supabase
           .from('chat_messages')
           .insert({ session_id, role: 'assistant', content: response.message })
+      console.log(`[PERF][TOTAL] ${Math.round(performance.now() - startTime)}ms`)
       return new Response(JSON.stringify(response), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // 5. CACHE CHECK
     const queryHash = await hashQuery(query, `${currentProductId || 'global'}`)
     const pcQuery = supabase
       .from('product_cache')
@@ -193,13 +205,14 @@ serve(async (req: Request) => {
     if (cached) {
       console.log('[LOG] Cache hit')
       const result = safeJSONParse(cached.response_text)
-      if (result)
+      if (result) {
+        console.log(`[PERF][TOTAL_CACHE] ${Math.round(performance.now() - startTime)}ms`)
         return new Response(JSON.stringify(result), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+      }
     }
 
-    // 6. HISTÓRICO E GROUNDING
     let history: any[] = []
     if (session_id) {
       const { data: histRows } = await supabase
@@ -214,11 +227,27 @@ serve(async (req: Request) => {
           .map((r) => ({ role: r.role, content: sanitizeInput(r.content).slice(0, 1000) }))
     }
 
+    // 7. Validação de segurança lógica do currentProductId
     const allowedIds = new Set<string>()
-    if (currentProductId) allowedIds.add(currentProductId)
+    let validCurrentProductId: string | null = null
+    if (currentProductId) {
+      const tCheck = performance.now()
+      const { data: prodCheck } = await supabase
+        .from('products')
+        .select('id')
+        .eq('id', currentProductId)
+        .maybeSingle()
+      if (prodCheck) {
+        validCurrentProductId = prodCheck.id
+        allowedIds.add(validCurrentProductId)
+      }
+      console.log(`[PERF][DB_CHECK_PRODUCT] ${Math.round(performance.now() - tCheck)}ms`)
+    }
 
     const systemPrompt = `### IDENTIDADE\n${agentSettings?.system_prompt || ''}\n### REGRAS\n1. Grounding OBRIGATÓRIO via 'search_products'. 2. NUNCA responda fora do domínio audiovisual profissional. 3. Resposta apenas JSON.`
-    const messages = [
+
+    // 5. Tipagem explícita do array de mensagens
+    const messages: any[] = [
       { role: 'system', content: systemPrompt },
       ...history,
       { role: 'user', content: query },
@@ -238,6 +267,10 @@ serve(async (req: Request) => {
       },
     ]
 
+    const toolChoice = intent === 'PRODUCT_SPECIFIC' ? 'required' : 'auto'
+
+    // 6. Observability granular (OpenAI 1)
+    const tOpenAI1 = performance.now()
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -248,10 +281,11 @@ serve(async (req: Request) => {
         model: aiSettings?.model_id || 'gpt-4o-mini',
         messages,
         tools,
-        tool_choice: 'required',
+        tool_choice: toolChoice,
       }),
       signal: controller.signal,
     })
+    console.log(`[PERF][OPENAI_1] ${Math.round(performance.now() - tOpenAI1)}ms`)
 
     if (!aiResponse.ok) throw new Error(`OpenAI Tool Error: ${aiResponse.status}`)
     const aiData = await aiResponse.json()
@@ -282,7 +316,8 @@ serve(async (req: Request) => {
           .from('avpro_keywords')
           .select('keyword, weight, is_blocking')
           .in('keyword', tokens)
-        if (keywords?.some((k) => k.is_blocking))
+        if (keywords?.some((k) => k.is_blocking)) {
+          console.log(`[PERF][TOTAL_BLOCKED] ${Math.round(performance.now() - startTime)}ms`)
           return new Response(
             JSON.stringify({
               message: 'Termo fora de escopo.',
@@ -291,28 +326,42 @@ serve(async (req: Request) => {
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           )
+        }
 
         keywordScore += keywords?.reduce((acc, k) => acc + Number(k.weight || 0), 0) || 0
         const queryBoost = Math.min(
           3.0,
           1.0 + (keywords?.reduce((acc, k) => acc + Number(k.weight), 0) || 0),
         )
-        const { data: products, error: rpcError } = await supabase.rpc('search_products_v2', {
-          search_term: searchTerm,
-          boost_multiplier: queryBoost,
-        })
+
+        // 8. Timeout granular na RPC via abortSignal
+        const tRPC = performance.now()
+        const { data: products, error: rpcError } = await supabase
+          .rpc('search_products_v2', { search_term: searchTerm, boost_multiplier: queryBoost })
+          .abortSignal(controller.signal)
+        console.log(`[PERF][RPC_SEARCH] ${Math.round(performance.now() - tRPC)}ms`)
+
         if (rpcError) throw new Error('Search engine failure')
 
         productsFound += products?.length || 0
         products?.forEach((p: any) => allowedIds.add(p.id))
+
+        const compactProducts = (products || []).slice(0, 10).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price_usa: p.price_usa,
+          category: p.category,
+        }))
+
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
-          content: JSON.stringify(products || []),
+          content: JSON.stringify(compactProducts),
         })
       }
 
       if (keywordScore < 1.0 && productsFound === 0 && intent !== 'PRODUCT_SPECIFIC') {
+        console.log(`[PERF][TOTAL_NO_PRODUCTS] ${Math.round(performance.now() - startTime)}ms`)
         return new Response(
           JSON.stringify({
             message:
@@ -324,6 +373,8 @@ serve(async (req: Request) => {
         )
       }
 
+      // 6. Observability granular (OpenAI 2)
+      const tOpenAI2 = performance.now()
       const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -337,41 +388,48 @@ serve(async (req: Request) => {
         }),
         signal: controller.signal,
       })
+      console.log(`[PERF][OPENAI_2] ${Math.round(performance.now() - tOpenAI2)}ms`)
+
+      if (!finalResponse.ok) throw new Error(`OpenAI Final Error: ${finalResponse.status}`)
+
       const finalData = await finalResponse.json()
       aiMessage.content = finalData?.choices?.[0]?.message?.content
     }
 
-    // 7. VALIDAÇÃO FINAL E GRAVAÇÃO DE CACHE
-    let result = safeJSONParse(aiMessage.content, {
-      message: 'Erro ao processar.',
-      referenced_internal_products: [],
-      confidence_level: 'low',
-    })
-    if (typeof result !== 'object' || Array.isArray(result))
-      result = {
-        message: 'Erro ao processar.',
-        referenced_internal_products: [],
-        confidence_level: 'low',
-      }
+    // 4. Validação estrita do schema final da IA
+    const rawResult = safeJSONParse(aiMessage.content, {})
+    const result = {
+      message: typeof rawResult?.message === 'string' ? rawResult.message : 'Erro ao processar.',
+      referenced_internal_products: Array.isArray(rawResult?.referenced_internal_products)
+        ? rawResult.referenced_internal_products
+        : [],
+      confidence_level: rawResult?.confidence_level === 'high' ? 'high' : 'low',
+    }
 
     console.log(`[LOG] IDs sugeridos pela IA: ${result.referenced_internal_products}`)
-    result.referenced_internal_products = (result.referenced_internal_products || []).filter(
-      (id: string) => allowedIds.has(id),
+    result.referenced_internal_products = result.referenced_internal_products.filter((id: string) =>
+      allowedIds.has(id),
     )
     console.log(`[LOG] IDs validados: ${result.referenced_internal_products}`)
 
-    if (currentProductId) result.message += '\n\n' + (globalSettingsMap['transparency_note'] || '')
+    // 3. Concatenação segura de string
+    result.message = String(result.message || '')
+    if (validCurrentProductId) {
+      result.message += '\n\n' + String(globalSettingsMap['transparency_note'] || '')
+    }
 
     if (
       searchPerformed &&
       result.confidence_level === 'high' &&
       result.referenced_internal_products.length > 0
     ) {
-      await supabase.from('product_cache').upsert({
-        query_hash: queryHash,
-        response_text: JSON.stringify(result),
-        created_at: new Date().toISOString(),
-      })
+      await supabase
+        .from('product_cache')
+        .upsert({
+          query_hash: queryHash,
+          response_text: JSON.stringify(result),
+          created_at: new Date().toISOString(),
+        })
     }
 
     if (session_id)
@@ -380,12 +438,14 @@ serve(async (req: Request) => {
         { session_id, role: 'assistant', content: result.message },
       ])
 
+    console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`)
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: any) {
     const errorMsg = error.name === 'AbortError' ? 'Request timeout' : error.message
     console.error('[ERRO CRÍTICO]', errorMsg)
+    console.log(`[PERF][TOTAL_ERROR] ${Math.round(performance.now() - startTime)}ms`)
     return new Response(JSON.stringify({ error: errorMsg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
