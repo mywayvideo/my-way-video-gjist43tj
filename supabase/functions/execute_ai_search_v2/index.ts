@@ -73,13 +73,12 @@ async function checkRateLimit(supabase: any, identifier: string, limit: number):
 }
 
 serve(async (req: Request) => {
-  console.log('[LOG] Request iniciada') // Log de entrada garantido
+  console.log('[LOG] Request iniciada')
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const startTime = performance.now()
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 25000)
-  const metadata: any = { steps: [], tool_calls: 0, cache_hit: false }
 
   try {
     const forwarded = req.headers.get('x-forwarded-for')
@@ -130,7 +129,19 @@ serve(async (req: Request) => {
       )
     }
 
-    const { productCacheExpirationDays } = await loadCacheSettings()
+    // 3. BLINDAGEM DO CACHE SETTINGS (Resolve o erro PGRST116)
+    let productCacheExpirationDays = 7 // Valor padrão seguro
+    try {
+      const cacheConfig = await loadCacheSettings()
+      if (cacheConfig && typeof cacheConfig.productCacheExpirationDays === 'number') {
+        productCacheExpirationDays = cacheConfig.productCacheExpirationDays
+      }
+    } catch (err) {
+      console.log(
+        '[LOG] Aviso: loadCacheSettings falhou (tabela vazia?), usando fallback de 7 dias.',
+      )
+    }
+
     const intent = getHeuristicIntent(query, currentProductId)
 
     const [
@@ -343,7 +354,6 @@ serve(async (req: Request) => {
         confidence_level: 'low',
       }
 
-    // Filtro de IDs: Garante que os cards apareçam apenas se os IDs forem válidos
     console.log(`[LOG] IDs sugeridos pela IA: ${result.referenced_internal_products}`)
     result.referenced_internal_products = (result.referenced_internal_products || []).filter(
       (id: string) => allowedIds.has(id),
@@ -357,11 +367,13 @@ serve(async (req: Request) => {
       result.confidence_level === 'high' &&
       result.referenced_internal_products.length > 0
     ) {
-      await supabase.from('product_cache').upsert({
-        query_hash: queryHash,
-        response_text: JSON.stringify(result),
-        created_at: new Date().toISOString(),
-      })
+      await supabase
+        .from('product_cache')
+        .upsert({
+          query_hash: queryHash,
+          response_text: JSON.stringify(result),
+          created_at: new Date().toISOString(),
+        })
     }
 
     if (session_id)
