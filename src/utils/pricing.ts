@@ -1,23 +1,31 @@
-export const calculateFinalPrice = (p: any): number => {
+interface ProductPricingData {
+  price_usd?: number | string | null
+  price_usa?: number | string | null
+  price_usa_rebate?: number | string | null
+  date_rebate?: string | Date | null
+}
+
+export const calculateFinalPrice = (p?: ProductPricingData | null): number => {
   if (!p) return 0
 
-  let finalUsdPrice = Number(p.price_usd) || Number(p.price_usa) || 0
+  const basePrice = Number(p.price_usd) || Number(p.price_usa) || 0
+
   const rebate = Number(p.price_usa_rebate) || 0
 
-  if (rebate > 0) {
-    if (!p.date_rebate) {
-      finalUsdPrice = rebate
-    } else {
-      const currentDate = new Date()
-      currentDate.setHours(0, 0, 0, 0)
-      const rebateDate = new Date(p.date_rebate)
-      rebateDate.setHours(0, 0, 0, 0)
-
-      if (currentDate <= rebateDate) {
-        finalUsdPrice = rebate
-      }
-    }
+  if (rebate <= 0) {
+    return basePrice
   }
 
-  return finalUsdPrice
+  // Rebate sem validade
+  if (!p.date_rebate) {
+    return rebate
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const rebateDate = new Date(p.date_rebate)
+  rebateDate.setHours(0, 0, 0, 0)
+
+  return today <= rebateDate ? rebate : basePrice
 }
