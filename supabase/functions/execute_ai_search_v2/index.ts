@@ -498,165 +498,345 @@ serve(async (req) => {
     return new Response(null, { status: 204, headers: CORS_HEADERS })
   }
 
-  // Only POST
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  let body: RequestBody
   try {
-    body = await req.json()
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-      status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  // Client IP
-  const ip =
-    req.headers.get('cf-connecting-ip') ||
-    req.headers.get('x-real-ip') ||
-    req.headers.get('x-forwarded-for')?.split(',')[0] ||
-    'unknown'
-
-  // Rate Limiting
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!supabaseUrl || !supabaseKey) {
-    return new Response(JSON.stringify({ error: 'Missing environment variables' }), {
-      status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // Try RPC rate limit, fallback to in-memory
-  let rateAllowed = false
-  try {
-    const { data: allowed } = await supabase.rpc('check_rate_limit', {
-      p_ip: ip,
-      p_endpoint: 'execute_ai_search_v2',
-      p_max_requests: RATE_LIMIT_MAX,
-      p_window_seconds: RATE_LIMIT_WINDOW_SEC,
-    })
-    if (allowed === true) {
-      rateAllowed = true
+    // Only POST
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
     }
-  } catch {
-    // RPC failed, use fallback
-    if (!rateLimitCircuitBreakerOpen) {
-      rateAllowed = checkInMemoryRateLimit(ip)
-    } else {
-      rateAllowed = false
+
+    let body: RequestBody
+    try {
+      body = await req.json()
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
     }
-  }
-  if (!rateAllowed) {
-    return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-      status: 429,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
 
-  // Sanitize query
-  const query = sanitizeInput(body.query || '')
-  if (!query) {
-    return new Response(JSON.stringify({ error: 'Query is empty' }), {
-      status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
+    // Client IP
+    const ip =
+      req.headers.get('cf-connecting-ip') ||
+      req.headers.get('x-real-ip') ||
+      req.headers.get('x-forwarded-for')?.split(',')[0] ||
+      'unknown'
 
-  // Load settings and manufacturers
-  const manufacturersContext = await getManufacturersContext(supabase)
-  const providers = await loadActiveProviders(supabase)
-  if (providers.length === 0) {
-    return new Response(JSON.stringify({ error: 'No active AI providers' }), {
-      status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
+    // Rate Limiting
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response(JSON.stringify({ error: 'Missing environment variables' }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
 
-  // System prompt
-  const systemPrompt = `Você é um consultor técnico da My Way Video, especialista em equipamentos audiovisuais profissionais. ${manufacturersContext}. Responda perguntas sobre produtos, especificações técnicas e recomendações. SEMPRE use a ferramenta search_products para buscar informações. Nunca invente produtos. Use o contexto de market_intelligence (MI), product_search_cache (PSC) e product_cache (PC) para enriquecer respostas, mas nunca substitua nome ou preço. Limite-se a no máximo ${MAX_PRODUCTS_IN_PROMPT} produtos. Retorne estritamente um JSON no formato: { "message": "...", "confidence_level": "high" ou "low", "referenced_internal_products": ["..."], "should_show_whatsapp_button": true/false, "pc_save_request": [...], "psc_save_request": [...] }. Preencha pc_save_request apenas com novas especificações descobertas. Preencha psc_save_request com especificações úteis da busca.`
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Build cache key
-  const cacheKey = await hashQuery(
-    query + systemPrompt + providers.map((p) => p.provider_name).join(','),
-  )
-
-  // Check cache
-  const { data: cachedResponse } = await supabase
-    .from('ai_response_cache')
-    .select('response')
-    .eq('query_hash', cacheKey)
-    .gt('expires_at', new Date().toISOString())
-    .maybeSingle()
-  if (cachedResponse?.response) {
-    console.log('[LOG] Cache hit')
-    return new Response(JSON.stringify(cachedResponse.response), {
-      status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  // Prepare chat history
-  const history: Message[] = []
-  if (Array.isArray(body.chat_history)) {
-    for (const msg of body.chat_history) {
-      if (isValidChatMessage(msg)) {
-        history.push(msg)
+    // Try RPC rate limit, fallback to in-memory
+    let rateAllowed = false
+    try {
+      const { data: allowed } = await supabase.rpc('check_rate_limit', {
+        p_ip: ip,
+        p_endpoint: 'execute_ai_search_v2',
+        p_max_requests: RATE_LIMIT_MAX,
+        p_window_seconds: RATE_LIMIT_WINDOW_SEC,
+      })
+      if (allowed === true) {
+        rateAllowed = true
+      }
+    } catch {
+      // RPC failed, use fallback
+      if (!rateLimitCircuitBreakerOpen) {
+        rateAllowed = checkInMemoryRateLimit(ip)
+      } else {
+        rateAllowed = false
       }
     }
-  }
-  history.push({ role: 'user', content: query })
-
-  // Tool definition for search_products
-  const searchTool = {
-    function: {
-      name: 'search_products',
-      description: 'Search internal products database',
-      parameters: {
-        type: 'object',
-        properties: {
-          search_term: { type: 'string', description: 'Search query for products' },
-        },
-        required: ['search_term'],
-      },
-    },
-  }
-
-  // Global abort controller for timeout
-  const globalController = new AbortController()
-  const globalTimeout = setTimeout(() => globalController.abort(), GLOBAL_TIMEOUT_MS)
-
-  // First AI call: attempt to get tool call
-  let toolCallResult: { searchTerm: string } | null = null
-  let firstProviderUsed: (typeof providers)[0] | null = null
-
-  for (const provider of providers) {
-    const circuitBreaker = getCircuitBreaker(provider.provider_name)
-    if (circuitBreaker.isOpen()) {
-      console.log(`[LOG] Circuit breaker open for ${provider.provider_name}`)
-      continue
+    if (!rateAllowed) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+        status: 429,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
     }
 
-    const cap = PROVIDER_CAPABILITIES[provider.provider_name]
-    if (!cap) continue
+    // Sanitize query
+    const query = sanitizeInput(body.query || '')
+    if (!query) {
+      return new Response(JSON.stringify({ error: 'Query is empty' }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
 
-    // Attempt with retries
-    let attempt = 0
-    const maxAttempts = 3
-    let success = false
-    while (attempt < maxAttempts && !success) {
-      attempt++
+    // Load settings and manufacturers
+    const manufacturersContext = await getManufacturersContext(supabase)
+    const providers = await loadActiveProviders(supabase)
+    if (providers.length === 0) {
+      return new Response(JSON.stringify({ error: 'No active AI providers' }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // System prompt
+    const systemPrompt = `Você é um consultor técnico da My Way Video, especialista em equipamentos audiovisuais profissionais. ${manufacturersContext}. Responda perguntas sobre produtos, especificações técnicas e recomendações. SEMPRE use a ferramenta search_products para buscar informações. Nunca invente produtos. Use o contexto de market_intelligence (MI), product_search_cache (PSC) e product_cache (PC) para enriquecer respostas, mas nunca substitua nome ou preço. Limite-se a no máximo ${MAX_PRODUCTS_IN_PROMPT} produtos. Retorne estritamente um JSON no formato: { "message": "...", "confidence_level": "high" ou "low", "referenced_internal_products": ["..."], "should_show_whatsapp_button": true/false, "pc_save_request": [...], "psc_save_request": [...] }. Preencha pc_save_request apenas com novas especificações descobertas. Preencha psc_save_request com especificações úteis da busca.`
+
+    // Build cache key
+    const cacheKey = await hashQuery(
+      query + systemPrompt + providers.map((p) => p.provider_name).join(','),
+    )
+
+    // Check cache
+    const { data: cachedResponse } = await supabase
+      .from('ai_response_cache')
+      .select('response')
+      .eq('query_hash', cacheKey)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle()
+    if (cachedResponse?.response) {
+      console.log('[LOG] Cache hit')
+      return new Response(JSON.stringify(cachedResponse.response), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Prepare chat history
+    const history: Message[] = []
+    if (Array.isArray(body.chat_history)) {
+      for (const msg of body.chat_history) {
+        if (isValidChatMessage(msg)) {
+          history.push(msg)
+        }
+      }
+    }
+    history.push({ role: 'user', content: query })
+
+    // Tool definition for search_products
+    const searchTool = {
+      function: {
+        name: 'search_products',
+        description: 'Search internal products database',
+        parameters: {
+          type: 'object',
+          properties: {
+            search_term: { type: 'string', description: 'Search query for products' },
+          },
+          required: ['search_term'],
+        },
+      },
+    }
+
+    // Global abort controller for timeout
+    const globalController = new AbortController()
+    const globalTimeout = setTimeout(() => globalController.abort(), GLOBAL_TIMEOUT_MS)
+
+    // First AI call: attempt to get tool call
+    let toolCallResult: { searchTerm: string } | null = null
+    let firstProviderUsed: (typeof providers)[0] | null = null
+
+    for (const provider of providers) {
+      const circuitBreaker = getCircuitBreaker(provider.provider_name)
+      if (circuitBreaker.isOpen()) {
+        console.log(`[LOG] Circuit breaker open for ${provider.provider_name}`)
+        continue
+      }
+
+      const cap = PROVIDER_CAPABILITIES[provider.provider_name]
+      if (!cap) continue
+
+      // Attempt with retries
+      let attempt = 0
+      const maxAttempts = 3
+      let success = false
+      while (attempt < maxAttempts && !success) {
+        attempt++
+        const tryController = new AbortController()
+        const tryTimeout = setTimeout(() => tryController.abort(), PER_TRIAL_TIMEOUT_MS)
+        // Combine signals if possible
+        const signal =
+          typeof AbortSignal.any === 'function'
+            ? AbortSignal.any([globalController.signal, tryController.signal])
+            : tryController.signal
+
+        const apiKey = provider.api_key_secret_name
+          ? Deno.env.get(provider.api_key_secret_name)
+          : undefined
+        const endpoint = getProviderEndpoint(
+          provider.provider_name,
+          provider.custom_endpoint,
+          apiKey,
+        )
+
+        const requestBody = buildRequestBody(
+          provider.provider_name,
+          systemPrompt,
+          history.slice(-1), // send only last message for first call
+          true,
+          searchTool,
+        )
+
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (cap.authType === 'bearer' && apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`
+        } else if (cap.authType === 'x-api-key' && apiKey) {
+          headers['x-api-key'] = apiKey
+        }
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(requestBody),
+            signal,
+          })
+
+          clearTimeout(tryTimeout)
+
+          if (response.status === 429 || response.status >= 500) {
+            // Backoff
+            if (attempt < maxAttempts) {
+              const delay = attempt === 1 ? 300 : 700
+              await new Promise((resolve) => setTimeout(resolve, delay))
+              continue
+            } else {
+              circuitBreaker.recordFailure()
+              break
+            }
+          }
+
+          if (!response.ok) {
+            circuitBreaker.recordFailure()
+            break
+          }
+
+          const rawData = await response.json()
+          const normalized = normalizeProviderResponse(provider.provider_name, rawData)
+
+          if (normalized.toolCalls.length > 0) {
+            const toolCall = normalized.toolCalls[0]
+            if (toolCall.function.name === 'search_products') {
+              const args = JSON.parse(toolCall.function.arguments)
+              toolCallResult = { searchTerm: args.search_term || query }
+              firstProviderUsed = provider
+              circuitBreaker.recordSuccess()
+              success = true
+              break
+            }
+          }
+
+          // If no tool call but content, treat as fallback
+          circuitBreaker.recordSuccess()
+          success = true
+          break
+        } catch (e) {
+          clearTimeout(tryTimeout)
+          if (e instanceof DOMException && e.name === 'AbortError') {
+            circuitBreaker.recordFailure()
+            break
+          }
+          if (attempt < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 300))
+          } else {
+            circuitBreaker.recordFailure()
+          }
+        }
+      }
+      if (success) break
+    }
+
+    if (!toolCallResult) {
+      clearTimeout(globalTimeout)
+      return new Response(JSON.stringify({ error: 'Failed to process query' }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    console.log('[PERF] AI_CALL_1 completed')
+
+    // Execute RPC
+    const { data: rpcResults, error: rpcError } = await supabase.rpc('search_products_v2', {
+      search_term: toolCallResult.searchTerm,
+      boost_multiplier: 1.0,
+    })
+
+    if (rpcError) {
+      clearTimeout(globalTimeout)
+      console.error('[ERROR] RPC failed:', rpcError)
+      return new Response(JSON.stringify({ error: 'Search failed' }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    console.log('[PERF] RPC_SEARCH completed')
+
+    const rawProducts: unknown[] = Array.isArray(rpcResults)
+      ? rpcResults.slice(0, MAX_PRODUCTS_FROM_RPC)
+      : []
+    const products: ProductRecord[] = []
+    for (const raw of rawProducts) {
+      const validated = validateProductRecord(raw)
+      if (validated) {
+        products.push(validated)
+      }
+    }
+
+    // Enrich and compact
+    const enrichedProducts = products.slice(0, MAX_PRODUCTS_IN_PROMPT).map((p) => ({
+      id: p.id,
+      name: sanitizeForLLM(p.name),
+      description: sanitizeForLLM(p.description),
+      price_brl: p.price_brl,
+      price_usd: p.price_usd,
+      stock: p.stock,
+      category: p.category,
+      image_url: p.image_url,
+      manufacturer_id: p.manufacturer_id,
+      final_rank: p.final_rank,
+      factual_specs: Object.fromEntries(
+        Object.entries(p.pc).map(([k, v]) => [k, sanitizeForLLM(v.value)]),
+      ),
+      market_context: p.mi.map((m: any) => sanitizeForLLM(m)),
+      technical_specs: p.psc.map((s: any) => sanitizeForLLM(s)),
+    }))
+
+    // Context truncation
+    let productsJson = JSON.stringify(enrichedProducts)
+    if (productsJson.length > MAX_CONTEXT_CHARS) {
+      // Truncate descriptions and arrays
+      let modified = enrichedProducts.map((p) => ({
+        ...p,
+        description: p.description.slice(0, 200),
+        market_context: p.market_context.slice(0, 3),
+        technical_specs: p.technical_specs.slice(0, 3),
+      }))
+      productsJson = JSON.stringify(modified)
+      if (productsJson.length > MAX_CONTEXT_CHARS) {
+        productsJson = productsJson.slice(0, MAX_CONTEXT_CHARS)
+      }
+    }
+
+    // Second AI call: final response
+    let finalResponse: AIResponseSchema | null = null
+    let secondProviderUsed = firstProviderUsed || providers[0]
+
+    for (const provider of firstProviderUsed
+      ? [firstProviderUsed, ...providers.filter((p) => p.id !== firstProviderUsed!.id)]
+      : providers) {
+      const circuitBreaker = getCircuitBreaker(provider.provider_name)
+      if (circuitBreaker.isOpen()) continue
+
+      const cap = PROVIDER_CAPABILITIES[provider.provider_name]
+      if (!cap) continue
+
       const tryController = new AbortController()
       const tryTimeout = setTimeout(() => tryController.abort(), PER_TRIAL_TIMEOUT_MS)
-      // Combine signals if possible
       const signal =
         typeof AbortSignal.any === 'function'
           ? AbortSignal.any([globalController.signal, tryController.signal])
@@ -667,12 +847,14 @@ serve(async (req) => {
         : undefined
       const endpoint = getProviderEndpoint(provider.provider_name, provider.custom_endpoint, apiKey)
 
+      const userMessage = `Com base nos seguintes produtos, responda à pergunta do usuário: "${query}". Produtos: ${productsJson}`
+      const messagesForSecond = [...history.slice(0, -1), { role: 'user', content: userMessage }]
+
       const requestBody = buildRequestBody(
         provider.provider_name,
         systemPrompt,
-        history.slice(-1), // send only last message for first call
-        true,
-        searchTool,
+        messagesForSecond,
+        false,
       )
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -689,327 +871,170 @@ serve(async (req) => {
           body: JSON.stringify(requestBody),
           signal,
         })
-
         clearTimeout(tryTimeout)
-
-        if (response.status === 429 || response.status >= 500) {
-          // Backoff
-          if (attempt < maxAttempts) {
-            const delay = attempt === 1 ? 300 : 700
-            await new Promise((resolve) => setTimeout(resolve, delay))
-            continue
-          } else {
-            circuitBreaker.recordFailure()
-            break
-          }
-        }
 
         if (!response.ok) {
           circuitBreaker.recordFailure()
-          break
+          continue
         }
 
         const rawData = await response.json()
         const normalized = normalizeProviderResponse(provider.provider_name, rawData)
+        finalResponse = parseAIJson(normalized.content)
 
-        if (normalized.toolCalls.length > 0) {
-          const toolCall = normalized.toolCalls[0]
-          if (toolCall.function.name === 'search_products') {
-            const args = JSON.parse(toolCall.function.arguments)
-            toolCallResult = { searchTerm: args.search_term || query }
-            firstProviderUsed = provider
-            circuitBreaker.recordSuccess()
-            success = true
-            break
-          }
+        if (finalResponse) {
+          circuitBreaker.recordSuccess()
+          secondProviderUsed = provider
+          break
+        } else {
+          circuitBreaker.recordFailure()
         }
-
-        // If no tool call but content, treat as fallback
-        circuitBreaker.recordSuccess()
-        success = true
-        break
       } catch (e) {
         clearTimeout(tryTimeout)
         if (e instanceof DOMException && e.name === 'AbortError') {
           circuitBreaker.recordFailure()
           break
         }
-        if (attempt < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 300))
-        } else {
-          circuitBreaker.recordFailure()
-        }
+        circuitBreaker.recordFailure()
       }
     }
-    if (success) break
-  }
 
-  if (!toolCallResult) {
     clearTimeout(globalTimeout)
-    return new Response(JSON.stringify({ error: 'Failed to process query' }), {
-      status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
+    console.log('[PERF] AI_CALL_2 completed')
 
-  console.log('[PERF] AI_CALL_1 completed')
-
-  // Execute RPC
-  const { data: rpcResults, error: rpcError } = await supabase.rpc('search_products_v2', {
-    search_term: toolCallResult.searchTerm,
-    boost_multiplier: 1.0,
-  })
-
-  if (rpcError) {
-    clearTimeout(globalTimeout)
-    console.error('[ERROR] RPC failed:', rpcError)
-    return new Response(JSON.stringify({ error: 'Search failed' }), {
-      status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  console.log('[PERF] RPC_SEARCH completed')
-
-  const rawProducts: unknown[] = Array.isArray(rpcResults)
-    ? rpcResults.slice(0, MAX_PRODUCTS_FROM_RPC)
-    : []
-  const products: ProductRecord[] = []
-  for (const raw of rawProducts) {
-    const validated = validateProductRecord(raw)
-    if (validated) {
-      products.push(validated)
+    if (!finalResponse) {
+      return new Response(JSON.stringify({ error: 'Failed to generate response' }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
     }
-  }
 
-  // Enrich and compact
-  const enrichedProducts = products.slice(0, MAX_PRODUCTS_IN_PROMPT).map((p) => ({
-    id: p.id,
-    name: sanitizeForLLM(p.name),
-    description: sanitizeForLLM(p.description),
-    price_brl: p.price_brl,
-    price_usd: p.price_usd,
-    stock: p.stock,
-    category: p.category,
-    image_url: p.image_url,
-    manufacturer_id: p.manufacturer_id,
-    final_rank: p.final_rank,
-    factual_specs: Object.fromEntries(
-      Object.entries(p.pc).map(([k, v]) => [k, sanitizeForLLM(v.value)]),
-    ),
-    market_context: p.mi.map((m: any) => sanitizeForLLM(m)),
-    technical_specs: p.psc.map((s: any) => sanitizeForLLM(s)),
-  }))
-
-  // Context truncation
-  let productsJson = JSON.stringify(enrichedProducts)
-  if (productsJson.length > MAX_CONTEXT_CHARS) {
-    // Truncate descriptions and arrays
-    let modified = enrichedProducts.map((p) => ({
-      ...p,
-      description: p.description.slice(0, 200),
-      market_context: p.market_context.slice(0, 3),
-      technical_specs: p.technical_specs.slice(0, 3),
-    }))
-    productsJson = JSON.stringify(modified)
-    if (productsJson.length > MAX_CONTEXT_CHARS) {
-      productsJson = productsJson.slice(0, MAX_CONTEXT_CHARS)
-    }
-  }
-
-  // Second AI call: final response
-  let finalResponse: AIResponseSchema | null = null
-  let secondProviderUsed = firstProviderUsed || providers[0]
-
-  for (const provider of firstProviderUsed
-    ? [firstProviderUsed, ...providers.filter((p) => p.id !== firstProviderUsed!.id)]
-    : providers) {
-    const circuitBreaker = getCircuitBreaker(provider.provider_name)
-    if (circuitBreaker.isOpen()) continue
-
-    const cap = PROVIDER_CAPABILITIES[provider.provider_name]
-    if (!cap) continue
-
-    const tryController = new AbortController()
-    const tryTimeout = setTimeout(() => tryController.abort(), PER_TRIAL_TIMEOUT_MS)
-    const signal =
-      typeof AbortSignal.any === 'function'
-        ? AbortSignal.any([globalController.signal, tryController.signal])
-        : tryController.signal
-
-    const apiKey = provider.api_key_secret_name
-      ? Deno.env.get(provider.api_key_secret_name)
-      : undefined
-    const endpoint = getProviderEndpoint(provider.provider_name, provider.custom_endpoint, apiKey)
-
-    const userMessage = `Com base nos seguintes produtos, responda à pergunta do usuário: "${query}". Produtos: ${productsJson}`
-    const messagesForSecond = [...history.slice(0, -1), { role: 'user', content: userMessage }]
-
-    const requestBody = buildRequestBody(
-      provider.provider_name,
-      systemPrompt,
-      messagesForSecond,
-      false,
+    // Validate referenced products against actual results
+    const validIds = new Set(products.map((p) => p.id))
+    finalResponse.referenced_internal_products = finalResponse.referenced_internal_products.filter(
+      (id) => validIds.has(id),
     )
 
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (cap.authType === 'bearer' && apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`
-    } else if (cap.authType === 'x-api-key' && apiKey) {
-      headers['x-api-key'] = apiKey
-    }
+    // Save PC and PSC (fire-and-forget)
+    const saveTasks: Promise<unknown>[] = []
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody),
-        signal,
-      })
-      clearTimeout(tryTimeout)
-
-      if (!response.ok) {
-        circuitBreaker.recordFailure()
+    // PC save
+    for (const pcItem of finalResponse.pc_save_request) {
+      if (
+        !SPEC_KEY_REGEX.test(pcItem.spec_key) ||
+        pcItem.spec_value.length > SPEC_VALUE_MAX_LENGTH ||
+        pcItem.confidence < 0 ||
+        pcItem.confidence > 1 ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pcItem.product_id)
+      ) {
         continue
       }
-
-      const rawData = await response.json()
-      const normalized = normalizeProviderResponse(provider.provider_name, rawData)
-      finalResponse = parseAIJson(normalized.content)
-
-      if (finalResponse) {
-        circuitBreaker.recordSuccess()
-        secondProviderUsed = provider
-        break
-      } else {
-        circuitBreaker.recordFailure()
-      }
-    } catch (e) {
-      clearTimeout(tryTimeout)
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        circuitBreaker.recordFailure()
-        break
-      }
-      circuitBreaker.recordFailure()
+      const sanitizedValue = sanitizeForLLM(pcItem.spec_value)
+      const task = supabase
+        .from('product_cache')
+        .upsert(
+          {
+            product_id: pcItem.product_id,
+            spec_key: pcItem.spec_key,
+            spec_value: sanitizedValue,
+            source: pcItem.source,
+            confidence: pcItem.confidence,
+            cached_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            metadata: {},
+          },
+          { onConflict: 'product_id, spec_key' },
+        )
+        .then(() =>
+          console.log(`[LOG] PC save success for ${pcItem.product_id}:${pcItem.spec_key}`),
+        )
+        .catch((e) => console.error(`[ERROR] PC save failed: ${e}`))
+      saveTasks.push(task)
     }
-  }
 
-  clearTimeout(globalTimeout)
-  console.log('[PERF] AI_CALL_2 completed')
+    // PSC save
+    const pscQueryHash = await hashQuery(query)
+    for (const pscItem of finalResponse.psc_save_request) {
+      const safeQuery = sanitizeInput(pscItem.search_query).slice(0, 200)
+      const task = supabase
+        .from('product_search_cache')
+        .upsert(
+          {
+            search_query: safeQuery,
+            product_specs: pscItem.product_specs,
+            source: 'ai',
+            created_by_admin: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          { onConflict: 'search_query' },
+        )
+        .then(() => console.log(`[LOG] PSC save success for ${safeQuery}`))
+        .catch((e) => console.error(`[ERROR] PSC save failed: ${e}`))
+      saveTasks.push(task)
+    }
 
-  if (!finalResponse) {
-    return new Response(JSON.stringify({ error: 'Failed to generate response' }), {
-      status: 500,
+    // Fire-and-forget using waitUntil if available, else just catch
+    if (typeof (globalThis as any).EdgeRuntime !== 'undefined') {
+      ;(globalThis as any).EdgeRuntime.waitUntil(Promise.allSettled(saveTasks))
+    } else {
+      Promise.allSettled(saveTasks).catch(() => {})
+    }
+
+    // Cache the response
+    await supabase.from('ai_response_cache').upsert(
+      {
+        query_hash: cacheKey,
+        response: finalResponse,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
+      },
+      { onConflict: 'query_hash' },
+    )
+
+    // Persist chat if session_id
+    if (body.session_id) {
+      const chatMessages = [
+        { session_id: body.session_id, role: 'user', content: query },
+        { session_id: body.session_id, role: 'assistant', content: finalResponse.message },
+      ]
+      supabase
+        .from('chat_messages')
+        .insert(chatMessages)
+        .then(() => {})
+        .catch(() => {})
+    }
+
+    console.log('[PERF] TOTAL_SUCCESS')
+
+    const responseBody = {
+      message: finalResponse.message,
+      confidence_level: finalResponse.confidence_level,
+      referenced_internal_products: finalResponse.referenced_internal_products,
+      should_show_whatsapp_button: finalResponse.should_show_whatsapp_button,
+    }
+
+    return new Response(JSON.stringify(responseBody), {
+      status: 200,
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
-  }
+  } catch (err: any) {
+    clearTimeout(globalTimeout)
+    console.error('[FATAL]', err?.message || String(err), err?.stack || '')
 
-  // Validate referenced products against actual results
-  const validIds = new Set(products.map((p) => p.id))
-  finalResponse.referenced_internal_products = finalResponse.referenced_internal_products.filter(
-    (id) => validIds.has(id),
-  )
-
-  // Save PC and PSC (fire-and-forget)
-  const saveTasks: Promise<unknown>[] = []
-
-  // PC save
-  for (const pcItem of finalResponse.pc_save_request) {
-    if (
-      !SPEC_KEY_REGEX.test(pcItem.spec_key) ||
-      pcItem.spec_value.length > SPEC_VALUE_MAX_LENGTH ||
-      pcItem.confidence < 0 ||
-      pcItem.confidence > 1 ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pcItem.product_id)
-    ) {
-      continue
-    }
-    const sanitizedValue = sanitizeForLLM(pcItem.spec_value)
-    const task = supabase
-      .from('product_cache')
-      .upsert(
-        {
-          product_id: pcItem.product_id,
-          spec_key: pcItem.spec_key,
-          spec_value: sanitizedValue,
-          source: pcItem.source,
-          confidence: pcItem.confidence,
-          cached_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          metadata: {},
+    return new Response(
+      JSON.stringify({
+        error: err?.message || 'Failed to process query',
+        stack: err?.stack || '',
+      }),
+      {
+        status: 500,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json',
         },
-        { onConflict: 'product_id, spec_key' },
-      )
-      .then(() => console.log(`[LOG] PC save success for ${pcItem.product_id}:${pcItem.spec_key}`))
-      .catch((e) => console.error(`[ERROR] PC save failed: ${e}`))
-    saveTasks.push(task)
+      },
+    )
   }
-
-  // PSC save
-  const pscQueryHash = await hashQuery(query)
-  for (const pscItem of finalResponse.psc_save_request) {
-    const safeQuery = sanitizeInput(pscItem.search_query).slice(0, 200)
-    const task = supabase
-      .from('product_search_cache')
-      .upsert(
-        {
-          search_query: safeQuery,
-          product_specs: pscItem.product_specs,
-          source: 'ai',
-          created_by_admin: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        { onConflict: 'search_query' },
-      )
-      .then(() => console.log(`[LOG] PSC save success for ${safeQuery}`))
-      .catch((e) => console.error(`[ERROR] PSC save failed: ${e}`))
-    saveTasks.push(task)
-  }
-
-  // Fire-and-forget using waitUntil if available, else just catch
-  if (typeof (globalThis as any).EdgeRuntime !== 'undefined') {
-    ;(globalThis as any).EdgeRuntime.waitUntil(Promise.allSettled(saveTasks))
-  } else {
-    Promise.allSettled(saveTasks).catch(() => {})
-  }
-
-  // Cache the response
-  await supabase.from('ai_response_cache').upsert(
-    {
-      query_hash: cacheKey,
-      response: finalResponse,
-      created_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
-    },
-    { onConflict: 'query_hash' },
-  )
-
-  // Persist chat if session_id
-  if (body.session_id) {
-    const chatMessages = [
-      { session_id: body.session_id, role: 'user', content: query },
-      { session_id: body.session_id, role: 'assistant', content: finalResponse.message },
-    ]
-    supabase
-      .from('chat_messages')
-      .insert(chatMessages)
-      .then(() => {})
-      .catch(() => {})
-  }
-
-  console.log('[PERF] TOTAL_SUCCESS')
-
-  const responseBody = {
-    message: finalResponse.message,
-    confidence_level: finalResponse.confidence_level,
-    referenced_internal_products: finalResponse.referenced_internal_products,
-    should_show_whatsapp_button: finalResponse.should_show_whatsapp_button,
-  }
-
-  return new Response(JSON.stringify(responseBody), {
-    status: 200,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  })
 })
