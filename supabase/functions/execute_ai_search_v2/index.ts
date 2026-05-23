@@ -639,6 +639,11 @@ serve(async (req) => {
     let toolCallResult: { searchTerm: string } | null = null
     let firstProviderUsed: (typeof providers)[0] | null = null
 
+    let lastProviderError: any = null;
+    let lastFailedProvider: string = '';
+    let toolCallResult: { searchTerm: string } | null = null;
+    let firstProviderUsed: typeof providers[0] | null = null;
+
     for (const provider of providers) {
       const circuitBreaker = getCircuitBreaker(provider.provider_name)
       if (circuitBreaker.isOpen()) {
@@ -733,28 +738,40 @@ serve(async (req) => {
           circuitBreaker.recordSuccess()
           success = true
           break
-        } catch (e) {
-          clearTimeout(tryTimeout)
-          if (e instanceof DOMException && e.name === 'AbortError') {
-            circuitBreaker.recordFailure()
-            break
-          }
-          if (attempt < maxAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 300))
-          } else {
-            circuitBreaker.recordFailure()
-          }
+      } catch (e: any) {
+        clearTimeout(tryTimeout);
+        
+        // CAPTURA O ERRO REAL
+        lastProviderError = e;
+        lastFailedProvider = provider.provider_name;
+        console.error(`[ERROR] Provider ${provider.provider_name} failed:`, e?.message || String(e));
+        
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          circuitBreaker.recordFailure();
+          break; // timeout da tentativa, não tenta mais neste provider
+        }
+        
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        } else {
+          circuitBreaker.recordFailure();
         }
       }
-      if (success) break
+      
+      if (success) break;
     }
 
     if (!toolCallResult) {
-      clearTimeout(globalTimeout)
-      return new Response(JSON.stringify({ error: 'Failed to process query' }), {
-        status: 500,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      })
+      clearTimeout(globalTimeout);
+      console.error('[FATAL] All providers failed. Last error:', lastProviderError?.message || 'Unknown');
+      return new Response(
+        JSON.stringify({ 
+          error: lastProviderError?.message || 'All AI providers failed',
+          provider: lastFailedProvider || 'none',
+          type: lastProviderError?.constructor?.name || 'Error'
+        }), 
+        { status: 502, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[PERF] AI_CALL_1 completed')
