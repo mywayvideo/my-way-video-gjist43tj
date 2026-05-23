@@ -453,22 +453,21 @@ async function getManufacturersContext(supabase: ReturnType<typeof createClient>
     : 'No manufacturers available.'
 }
 
-async function loadActiveProviders(
-  supabase: ReturnType<typeof createClient>,
-): Promise<
+async function loadActiveProviders(supabase: ReturnType<typeof createClient>): Promise<
   Array<{
     id: string
     provider_name: string
-    model: string
-    api_base: string
+    model_id: string
+    custom_endpoint: string
     api_key_secret_name: string
   }>
 > {
   const { data, error } = await supabase
     .from('ai_providers')
-    .select('id, provider_name, model, api_base, api_key_secret_name')
+    .select('id, provider_name, model_id, custom_endpoint, api_key_secret_name')
     .eq('is_active', true)
     .order('priority_order', { ascending: true })
+
   if (error || !data) return []
   return data
 }
@@ -666,7 +665,7 @@ serve(async (req) => {
       const apiKey = provider.api_key_secret_name
         ? Deno.env.get(provider.api_key_secret_name)
         : undefined
-      const endpoint = getProviderEndpoint(provider.provider_name, provider.api_base, apiKey)
+      const endpoint = getProviderEndpoint(provider.provider_name, provider.custom_endpoint, apiKey)
 
       const requestBody = buildRequestBody(
         provider.provider_name,
@@ -841,7 +840,7 @@ serve(async (req) => {
     const apiKey = provider.api_key_secret_name
       ? Deno.env.get(provider.api_key_secret_name)
       : undefined
-    const endpoint = getProviderEndpoint(provider.provider_name, provider.api_base, apiKey)
+    const endpoint = getProviderEndpoint(provider.provider_name, provider.custom_endpoint, apiKey)
 
     const userMessage = `Com base nos seguintes produtos, responda à pergunta do usuário: "${query}". Produtos: ${productsJson}`
     const messagesForSecond = [...history.slice(0, -1), { role: 'user', content: userMessage }]
