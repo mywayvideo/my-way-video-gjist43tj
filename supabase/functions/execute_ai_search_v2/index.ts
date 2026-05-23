@@ -639,10 +639,8 @@ serve(async (req) => {
     let toolCallResult: { searchTerm: string } | null = null
     let firstProviderUsed: (typeof providers)[0] | null = null
 
-    let lastProviderError: any = null;
-    let lastFailedProvider: string = '';
-    let toolCallResult: { searchTerm: string } | null = null;
-    let firstProviderUsed: typeof providers[0] | null = null;
+    let lastProviderError: any = null
+    let lastFailedProvider = ''
 
     for (const provider of providers) {
       const circuitBreaker = getCircuitBreaker(provider.provider_name)
@@ -762,7 +760,7 @@ serve(async (req) => {
     }
 
     if (!toolCallResult) {
-      clearTimeout(globalTimeout);
+
       console.error('[FATAL] All providers failed. Last error:', lastProviderError?.message || 'Unknown');
       return new Response(
         JSON.stringify({ 
@@ -1023,35 +1021,34 @@ serve(async (req) => {
         .catch(() => {})
     }
 
-    console.log('[PERF] TOTAL_SUCCESS')
+console.log('[PERF] TOTAL_SUCCESS')
 
-    const responseBody = {
-      message: finalResponse.message,
-      confidence_level: finalResponse.confidence_level,
-      referenced_internal_products: finalResponse.referenced_internal_products,
-      should_show_whatsapp_button: finalResponse.should_show_whatsapp_button,
-    }
+const responseBody = {
+  message: finalResponse.message,
+  confidence_level: finalResponse.confidence_level,
+  referenced_internal_products: finalResponse.referenced_internal_products,
+  should_show_whatsapp_button: finalResponse.should_show_whatsapp_button,
+}
 
-    return new Response(JSON.stringify(responseBody), {
-      status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      
-  } catch (err: any) {
-    clearTimeout(globalTimeout)
-    console.error('[FATAL]', err?.message || String(err), err?.stack || '')
+return new Response(JSON.stringify(responseBody), {
+  status: 200,
+  headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+})
+} catch (err: any) {
+  console.error('[FATAL]', err?.message || String(err), err?.stack || '')
 
-    return new Response(
-      JSON.stringify({
-        error: err?.message || 'Failed to process query',
-        stack: err?.stack || '',
-      }),
-      {
-        status: 500,
-        headers: {
-          ...CORS_HEADERS,
-          'Content-Type': 'application/json',
-        },
+  return new Response(
+    JSON.stringify({
+      error: err?.message || 'Failed to process query',
+      stack: err?.stack || '',
+    }),
+    {
+      status: 500,
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json',
       },
-    )
-  }
+    },
+  )
+}
 })
