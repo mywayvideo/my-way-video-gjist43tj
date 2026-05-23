@@ -736,25 +736,30 @@ serve(async (req) => {
           circuitBreaker.recordSuccess()
           success = true
           break
-      } catch (e: any) {
-        clearTimeout(tryTimeout);
-        
-        // CAPTURA O ERRO REAL
-        lastProviderError = e;
-        lastFailedProvider = provider.provider_name;
-        console.error(`[ERROR] Provider ${provider.provider_name} failed:`, e?.message || String(e));
-        
-        if (e instanceof DOMException && e.name === 'AbortError') {
-          circuitBreaker.recordFailure();
-          break; // timeout da tentativa, não tenta mais neste provider
+
+        } catch (e: any) {
+          clearTimeout(tryTimeout)
+
+          // CAPTURA O ERRO REAL
+          lastProviderError = e
+          lastFailedProvider = provider.provider_name
+
+          console.error(
+            `[ERROR] Provider ${provider.provider_name} failed:`,
+            e?.message || String(e),
+          )
+
+          if (e instanceof DOMException && e.name === 'AbortError') {
+            circuitBreaker.recordFailure()
+            break // timeout da tentativa, não tenta mais neste provider
+          }
+
+          if (attempt < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 300))
+          } else {
+            circuitBreaker.recordFailure()
+          }
         }
-        
-        if (attempt < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        } else {
-          circuitBreaker.recordFailure();
-        }
-      }
       
       if (success) break;
     }
@@ -1020,7 +1025,7 @@ serve(async (req) => {
         .then(() => {})
         .catch(() => {})
     }
-
+    
 console.log('[PERF] TOTAL_SUCCESS')
 
 const responseBody = {
@@ -1032,8 +1037,12 @@ const responseBody = {
 
 return new Response(JSON.stringify(responseBody), {
   status: 200,
-  headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  headers: {
+    ...CORS_HEADERS,
+    'Content-Type': 'application/json',
+  },
 })
+
 } catch (err: any) {
   console.error('[FATAL]', err?.message || String(err), err?.stack || '')
 
