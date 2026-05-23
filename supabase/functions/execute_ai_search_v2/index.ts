@@ -1035,7 +1035,7 @@ serve(async (req) => {
     return new Response(JSON.stringify(responseBody), {
       status: 200,
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    })
+      
   } catch (err: any) {
     clearTimeout(globalTimeout)
     console.error('[FATAL]', err?.message || String(err), err?.stack || '')
