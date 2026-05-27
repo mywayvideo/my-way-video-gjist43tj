@@ -139,32 +139,26 @@ export function AIConsultantModal({
                 <MarkdownWithTables markdown={results?.message || ''} />
               </div>
 
-              {results.products &&
-                results.products.filter((p: any) => {
-                  const pid = String(p?.id || '')
-                    .toLowerCase()
-                    .trim()
-                  const currentId = String(currentProductId || '')
-                    .toLowerCase()
-                    .trim()
-                  return pid !== currentId
-                }).length > 0 && (
+              {(() => {
+                const filteredProducts = Array.isArray(results?.products)
+                  ? results.products.filter((p: any) => {
+                      const pid = String(p?.id || '')
+                        .toLowerCase()
+                        .trim()
+                      const currentId = String(currentProductId || '')
+                        .toLowerCase()
+                        .trim()
+                      return pid !== currentId
+                    })
+                  : []
+                return filteredProducts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
-                    {results.products
-                      .filter(
-                        (p: any) =>
-                          String(p?.id || '')
-                            .toLowerCase()
-                            .trim() !==
-                          String(currentProductId || '')
-                            .toLowerCase()
-                            .trim(),
-                      )
-                      .map((product: any) => (
-                        <ProductCard key={product.id} product={product} />
-                      ))}
+                    {filteredProducts.map((product: any) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
                   </div>
-                )}
+                ) : null
+              })()}
 
               {results?.should_show_whatsapp_button && (
                 <Button
