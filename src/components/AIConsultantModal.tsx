@@ -67,10 +67,11 @@ export function AIConsultantModal({
       .trim()
 
     // Montar PRIORITY QUERY (como a Home, sem alterar query)
-    const priorityQuery =
-      productName || technicalInfo
-        ? `Contexto técnico:\nProduto: ${cleanProductName}\nEspecificações: ${cleanTechnicalInfo}\n\n${query}`
-        : query
+    const isProductPage = !!currentProductId
+
+    const priorityQuery = isProductPage
+      ? `Você está na página do produto "${cleanProductName}". O cliente está perguntando: "${query}"\n\nREGRA CRÍTICA: Sua função é recomendar APENAS produtos COMPLEMENTARES (acessórios, lentes, tripés, baterias, gripes, monitores, etc.) que sejam compatíveis com "${cleanProductName}". NUNCA recomende produtos substitutos da mesma categoria principal. Especificações do produto base: ${cleanTechnicalInfo}`
+      : query
 
     await search(priorityQuery, {
       productName,
