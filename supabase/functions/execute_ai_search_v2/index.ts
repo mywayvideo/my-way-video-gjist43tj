@@ -823,22 +823,6 @@ serve(async (req: Request) => {
       `[DEBUG_T1] tool_calls presentes: ${!!aiMessage.tool_calls} | quantidade: ${aiMessage.tool_calls?.length || 0} | nomes: ${aiMessage.tool_calls?.map((tc: any) => tc.function?.name).join(',') || 'nenhum'}`,
     )
 
-    console.log(
-      '[DEBUG_PP] AI RESPONSE:',
-      JSON.stringify(
-        {
-          hasToolCalls: !!aiMessage?.tool_calls?.length,
-          toolNames: aiMessage?.tool_calls?.map((tc: any) => tc.function.name) || [],
-          searchTerm: aiMessage?.tool_calls?.find(
-            (tc: any) => tc.function.name === 'search_products',
-          )?.function?.arguments as string,
-          currentProductId: body.currentProductId, // PP vs HP
-        },
-        null,
-        2,
-      ),
-    )
-
     if (aiMessage.tool_calls) {
       searchPerformed = true
       messages.push({
@@ -889,29 +873,6 @@ serve(async (req: Request) => {
           .abortSignal(controller.signal)
         console.log(`[PERF][RPC_SEARCH] ${Math.round(performance.now() - tRPC)}ms`)
 
-        // ✅ ETAPA 2 — LOG DEBUG PARA PP (RPC raw products) — INSIRA AQUI
-        if (body.currentProductId) {
-          // Só PP
-          console.log(
-            '[DEBUG_PP] RPC RAW PRODUCTS:',
-            JSON.stringify(
-              {
-                count: products?.length || 0,
-                firstProduct: products?.[0]
-                  ? {
-                      id: products[0].id,
-                      name: products[0].name,
-                      image_url: products[0].image_url,
-                    }
-                  : null,
-                rpcError: rpcError?.message || null,
-                currentProductId: body.currentProductId,
-              },
-              null,
-              2,
-            ),
-          )
-        }
         if (rpcError) throw new Error('Search engine failure')
 
         productsFound += products?.length || 0
@@ -1014,28 +975,6 @@ serve(async (req: Request) => {
           })
           .join('\n\n')
         console.log(`[PC_CONTEXT] Specs injetados no prompt`)
-      }
-
-      // ETAPA 3 — LOG DEBUG PARA PP (corrigido: trata objeto como array de entries)
-      if (body.currentProductId && Object.keys(enrichedSpecs).length > 0) {
-        // Usa Object.keys().length
-        const enrichedArray = Object.entries(enrichedSpecs).slice(0, 3) // Converte para array
-        console.log(
-          '[DEBUG_PP] ENRICHED PRODUCTS:',
-          JSON.stringify(
-            {
-              count: Object.keys(enrichedSpecs).length,
-              samplePids: enrichedArray.map(([pid]) => pid), // PIDs como amostra
-              sampleSpecsCount: enrichedArray.map(([, specs]) => Object.keys(specs).length), // Contagem specs por PID
-              totalSpecs: Object.values(enrichedSpecs).reduce(
-                (acc: number, specs: any) => acc + Object.keys(specs).length,
-                0,
-              ),
-            },
-            null,
-            2,
-          ),
-        )
       }
 
       // Cria cópia mutável do array de mensagens
@@ -1248,75 +1187,20 @@ serve(async (req: Request) => {
 
     console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`)
 
-    // Busca dados completos dos produtos para renderizar cards no frontend
-    let enrichedProducts: any[] = []
-    if (result.referenced_internal_products.length > 0) {
-      const { data: prodData, error: prodErr } = await supabase
-        .from('products')
-        .select(
-          'id, name, sku, description, price_usd, price_brl, price_nationalized_sales, price_nationalized_currency, image_url, category',
-        )
-        .in('id', result.referenced_internal_products)
-
-      if (prodErr) {
-        console.log(`[DEBUG_ENRICH] Erro na busca de produtos: ${prodErr.message}`)
-      } else {
-        console.log(`[DEBUG_ENRICH] Produtos encontrados: ${prodData?.length || 0}`)
-        console.log(`[DEBUG_ENRICH] IDs buscados: ${result.referenced_internal_products.join(',')}`)
-      }
-
-      if (!prodErr && prodData) {
-        enrichedProducts = prodData.filter((p: any) => {
-          const pid = String(p?.id || '')
-            .toLowerCase()
-            .trim()
-          const currentId = String(currentProductId || '')
-            .toLowerCase()
-            .trim()
-          return pid !== currentId
-        })
-        console.log(`[DEBUG_ENRICH] Após filtro: ${enrichedProducts.length}`)
-      }
-
-      // ETAPA 4 — LOG DEBUG PARA PP (final injection)
-      if (body.currentProductId && enrichedProducts?.length) {
-        console.log(
-          '[DEBUG_PP] FINAL INJECTION:',
-          JSON.stringify(
-            {
-              productsCount: enrichedProducts.length,
-              filteredCount: enrichedProducts.filter((p: any) => p.id !== body.currentProductId)
-                .length,
-              sampleUrls: enrichedProducts.slice(0, 2).map((p: any) => ({
-                id: p.id,
-                image_url: p.image_url || 'NULL/EMPTY',
-              })),
-              currentProductId: body.currentProductId,
-            },
-            null,
-            2,
-          ),
-        )
-      }
-
-      // ✅ ASSIGNMENT NO FINAL: Agora enrichedProducts está populado
-      if (enrichedProducts.length > 0) {
-        console.log(`[DEBUG_RESPONSE] Injetando ${enrichedProducts.length} produtos no response`)
-        Object.assign(result, { products: enrichedProducts })
-      } else {
-        console.log('[DEBUG_RESPONSE] Sem produtos para injetar')
-      }
+    // === FIM DO PROCESSAMENTO HP (sem enrichment) ===
+    if (session_id) {
+      await supabase.from('chat_messages').insert([
+        { session_id, role: 'user', content: query },
+        { session_id, role: 'assistant', content: result.message },
+      ])
     }
 
-    return new Response(
-      JSON.stringify({
-        ...result,
-        products: enrichedProducts,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    )
+    console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`)
+
+    // HP retorna apenas texto + IDs (sem cards)
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error: any) {
     const errorMsg =
       error?.name === 'AbortError' ? 'Request timeout' : error?.message || 'Unknown error'

@@ -20,7 +20,6 @@
     "apply-discount-coupon": 30,
     "generate-payment-token": 30,
     "validate-payment-token": 30,
-    "create-payment-intent": 31,
     "create-paypal-payment-intent": 31,
     "verify-paypal-payment": 31,
     "lookup-address": 35,
@@ -44,7 +43,7 @@
     "process-query": 33,
     "notify-admin-payment": 3,
     "update-cache-settings": 2,
-    "execute_ai_search_v2": 66,
+    "execute_ai_search_v2": 68,
     "execute_ai_search_v2_pp": 1
   }
 }
