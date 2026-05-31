@@ -86,9 +86,10 @@ export function AIConsultantModal({
       : query
 
     await search(priorityQuery, {
+      currentProductId, // obrigatório para ativar PP
       productName,
       technicalInfo,
-      currentProductId,
+      userName, // opcional, melhora personalização
     })
 
     setQuery('')
