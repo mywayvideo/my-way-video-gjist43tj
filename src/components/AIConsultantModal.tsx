@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react' // ← + useMemo/useRef
 import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
@@ -34,12 +34,27 @@ export function AIConsultantModal({
   const [query, setQuery] = useState('')
   const { search, isLoading, results, clearResults } = useAiSearch()
   const { user } = useAuth()
+  const productsRef = useRef<HTMLDivElement>(null) // ← Ref para auto-scroll
 
   useEffect(() => {
     if (isOpen) {
       clearResults()
     }
   }, [currentProductId, isOpen])
+
+  // ← filteredProducts com useMemo (perf + stable)
+  const filteredProducts = useMemo(() => {
+    console.log('DEBUG results.products:', results?.products) // ← Debug temp (remova em prod)
+    console.log('DEBUG currentProductId:', currentProductId) // ← Debug temp
+    return Array.isArray(results?.products) ? results.products : [] // Backend já filtra!
+  }, [results?.products, currentProductId])
+
+  // ← Auto-scroll ao grid se produtos presentes
+  useEffect(() => {
+    if (filteredProducts.length > 0 && productsRef.current) {
+      productsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [filteredProducts.length])
 
   const userName =
     user?.user_metadata?.full_name?.split(' ')[0] ||
@@ -49,16 +64,14 @@ export function AIConsultantModal({
   const handleSearch = async () => {
     if (!query.trim()) return
 
-    // Sanitizar technicalInfo removendo markdown proibido
     const cleanTechnicalInfo = (technicalInfo || '')
       .replace(/[*_~`]+/g, '')
       .replace(/\|/g, '/')
       .replace(/#/g, '')
       .replace(/<[^>]*>/g, '')
-      .replace(/\n{2,}/g, '\n') // normaliza quebras
+      .replace(/\n{2,}/g, '\n')
       .trim()
 
-    // Sanitizar productName
     const cleanProductName = (productName || '')
       .replace(/[*_~`]+/g, '')
       .replace(/\|/g, '/')
@@ -66,7 +79,6 @@ export function AIConsultantModal({
       .replace(/<[^>]*>/g, '')
       .trim()
 
-    // Montar PRIORITY QUERY (como a Home, sem alterar query)
     const isProductPage = !!currentProductId
 
     const priorityQuery = isProductPage
@@ -123,7 +135,9 @@ export function AIConsultantModal({
             Tire suas dúvidas técnicas! Solicite especificações detalhadas e compatibilidade.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 border border-green-800/40 rounded-lg p-4 bg-black/20">
+        <ScrollArea className="flex-1 min-h-0 border border-green-800/40 rounded-lg p-4 bg-black/20">
+          {' '}
+          {/* ← min-h-0 evita collapse */}
           {results?.is_intermediate && (
             <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-900/50 border border-orange-500/30 animate-pulse">
               <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
@@ -132,43 +146,13 @@ export function AIConsultantModal({
               </span>
             </div>
           )}
-
-          {results?.message ? (
+          {results?.message && (
             <div className="flex flex-col gap-6">
               <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
                 <MarkdownWithTables markdown={results?.message || ''} />
               </div>
 
-              {(() => {
-                const filteredProducts = Array.isArray(results?.products)
-                  ? results.products.filter((p: any) => {
-                      const pid = String(p?.id || '')
-                        .toLowerCase()
-                        .trim()
-                      const currentId = String(currentProductId || '')
-                        .toLowerCase()
-                        .trim()
-                      return pid !== currentId
-                    })
-                  : []
-                console.log(
-                  'DEBUG_PP: filteredProducts.length=',
-                  filteredProducts.length,
-                  '| currentProductId=',
-                  currentProductId,
-                  '| raw products=',
-                  results?.products?.slice(0, 3),
-                ) // Limita a 3 para não poluir log
-
-                return filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
-                    {filteredProducts.map((product: any) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
-                ) : null
-              })()}
-
+              {/* ← WhatsApp sempre após message, se flag */}
               {results?.should_show_whatsapp_button && (
                 <Button
                   className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-6 flex items-center justify-center gap-3 shadow-lg"
@@ -179,7 +163,20 @@ export function AIConsultantModal({
                 </Button>
               )}
             </div>
-          ) : (
+          )}
+          {/* ← Grid MOVIDO PARA FORA (independente de message), com ref + data-testid */}
+          {filteredProducts.length > 0 && (
+            <div
+              ref={productsRef}
+              data-testid="products-grid"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-6 bg-black/30 rounded-xl p-4 border border-green-800/50" // ← Estilo destacado + padding
+            >
+              {filteredProducts.map((product: any) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+          {!results?.message && !isLoading && (
             <div className="text-green-100/30 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
               <MessageCircle className="w-8 h-8 opacity-20" />
               <p>
@@ -187,14 +184,11 @@ export function AIConsultantModal({
               </p>
             </div>
           )}
-
           {isLoading && !results?.is_intermediate && (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-green-400" />
             </div>
           )}
-
-          {/* ANCORAGEM PARA O SCROLL AUTOMÁTICO — DEVE FICAR AQUI */}
           <div className="ai-response-container" />
         </ScrollArea>
 
