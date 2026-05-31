@@ -20,6 +20,7 @@
     "apply-discount-coupon": 30,
     "generate-payment-token": 30,
     "validate-payment-token": 30,
+    "create-payment-intent": 31,
     "create-paypal-payment-intent": 31,
     "verify-paypal-payment": 31,
     "lookup-address": 35,
