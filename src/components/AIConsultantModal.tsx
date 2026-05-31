@@ -151,6 +151,15 @@ export function AIConsultantModal({
                       return pid !== currentId
                     })
                   : []
+                console.log(
+                  'DEBUG_PP: filteredProducts.length=',
+                  filteredProducts.length,
+                  '| currentProductId=',
+                  currentProductId,
+                  '| raw products=',
+                  results?.products?.slice(0, 3),
+                ) // Limita a 3 para não poluir log
+
                 return filteredProducts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pb-4">
                     {filteredProducts.map((product: any) => (
