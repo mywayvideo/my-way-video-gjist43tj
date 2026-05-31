@@ -1564,24 +1564,53 @@ export type Database = {
       }
       product_cache: {
         Row: {
+          cached_at: string | null
+          confidence: number | null
           created_at: string | null
+          expires_at: string | null
           id: string
-          query_hash: string
-          response_text: string
+          metadata: Json | null
+          product_id: string
+          source: string
+          spec_key: string
+          spec_value: string
+          updated_at: string | null
         }
         Insert: {
+          cached_at?: string | null
+          confidence?: number | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
-          query_hash: string
-          response_text: string
+          metadata?: Json | null
+          product_id: string
+          source?: string
+          spec_key: string
+          spec_value: string
+          updated_at?: string | null
         }
         Update: {
+          cached_at?: string | null
+          confidence?: number | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
-          query_hash?: string
-          response_text?: string
+          metadata?: Json | null
+          product_id?: string
+          source?: string
+          spec_key?: string
+          spec_value?: string
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'product_cache_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+        ]
       }
       product_search_cache: {
         Row: {
@@ -1744,6 +1773,30 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      rate_limits: {
+        Row: {
+          bucket: string
+          created_at: string
+          endpoint: string
+          ip: string
+          request_count: number
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          endpoint: string
+          ip: string
+          request_count?: number
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          endpoint?: string
+          ip?: string
+          request_count?: number
+        }
+        Relationships: []
       }
       sales_metrics: {
         Row: {
@@ -1924,6 +1977,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      check_rate_limit: {
+        Args: {
+          p_endpoint: string
+          p_ip: string
+          p_max_requests: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       complete_user_migration: {
         Args: { cust_id: string; new_uid: string }
         Returns: undefined
@@ -1945,19 +2007,36 @@ export type Database = {
         Returns: undefined
       }
       normalize_sku: { Args: { sku: string }; Returns: string }
+      sanitize_spec_value: { Args: { p_value: string }; Returns: string }
       search_products_v2: {
         Args: { boost_multiplier?: number; search_term: string }
         Returns: {
           description: string
           final_rank: number
           id: string
+          mi: Json
           name: string
+          pc: Json
+          price_brl: number
+          price_nationalized_currency: string
+          price_nationalized_sales: number
+          price_usd: number
+          psc: Json
         }[]
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { '': string }; Returns: string[] }
       sync_current_user_profile: { Args: never; Returns: undefined }
       unified_search: { Args: { search_term: string }; Returns: Json }
+      validate_product_spec: {
+        Args: {
+          p_confidence: number
+          p_source: string
+          p_spec_key: string
+          p_spec_value: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
@@ -2452,9 +2531,16 @@ export const Constants = {
 //   exchange_rate: numeric (not null, default: 5.00)
 // Table: product_cache
 //   id: uuid (not null, default: gen_random_uuid())
-//   query_hash: text (not null)
-//   response_text: text (not null)
+//   product_id: uuid (not null)
+//   spec_key: character varying (not null)
+//   spec_value: text (not null)
+//   source: character varying (not null, default: 'manual'::character varying)
+//   confidence: numeric (nullable, default: 0.8)
+//   cached_at: timestamp with time zone (nullable, default: now())
+//   expires_at: timestamp with time zone (nullable)
+//   metadata: jsonb (nullable, default: '{}'::jsonb)
 //   created_at: timestamp with time zone (nullable, default: now())
+//   updated_at: timestamp with time zone (nullable, default: now())
 // Table: product_search_cache
 //   id: uuid (not null, default: gen_random_uuid())
 //   search_query: text (not null)
@@ -2500,6 +2586,12 @@ export const Constants = {
 //   date_rebate: timestamp with time zone (nullable)
 //   fts_vector: tsvector (nullable)
 //   search_text: text (nullable)
+// Table: rate_limits
+//   ip: text (not null)
+//   endpoint: text (not null)
+//   bucket: timestamp with time zone (not null)
+//   request_count: integer (not null, default: 1)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: sales_metrics
 //   id: uuid (not null, default: gen_random_uuid())
 //   date: date (not null)
@@ -2695,14 +2787,18 @@ export const Constants = {
 //   PRIMARY KEY pricing_settings_pkey: PRIMARY KEY (id)
 // Table: product_cache
 //   PRIMARY KEY product_cache_pkey: PRIMARY KEY (id)
-//   UNIQUE product_cache_query_hash_key: UNIQUE (query_hash)
+//   FOREIGN KEY product_cache_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+//   UNIQUE product_cache_product_id_spec_key_key: UNIQUE (product_id, spec_key)
 // Table: product_search_cache
 //   PRIMARY KEY product_search_cache_pkey: PRIMARY KEY (id)
+//   UNIQUE product_search_cache_query_unique: UNIQUE (search_query)
 //   CHECK product_search_cache_source_check: CHECK ((source = ANY (ARRAY['ai_generated'::text, 'manual_entry'::text, 'web_search'::text])))
 // Table: products
 //   FOREIGN KEY products_category_id_fkey: FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
 //   FOREIGN KEY products_manufacturer_id_fkey: FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE SET NULL
 //   PRIMARY KEY products_pkey: PRIMARY KEY (id)
+// Table: rate_limits
+//   PRIMARY KEY rate_limits_pkey: PRIMARY KEY (ip, endpoint, bucket)
 // Table: sales_metrics
 //   UNIQUE sales_metrics_date_key: UNIQUE (date)
 //   PRIMARY KEY sales_metrics_pkey: PRIMARY KEY (id)
@@ -3066,9 +3162,15 @@ export const Constants = {
 //     USING: true
 //     WITH CHECK: true
 // Table: product_cache
-//   Policy "Sistema gerencia cache" (ALL, PERMISSIVE) roles={service_role}
+//   Policy "product_cache_delete_service_role" (DELETE, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'service_role'::text)
+//   Policy "product_cache_read_public" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
-//     WITH CHECK: true
+//   Policy "product_cache_update_service_role" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'service_role'::text)
+//     WITH CHECK: (auth.role() = 'service_role'::text)
+//   Policy "product_cache_write_service_role" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (auth.role() = 'service_role'::text)
 // Table: product_search_cache
 //   Policy "Auth read cache" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
@@ -3089,6 +3191,10 @@ export const Constants = {
 //   Policy "products_write_admin" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: check_is_admin()
 //     WITH CHECK: check_is_admin()
+// Table: rate_limits
+//   Policy "service_role_full_access_rate_limits" (ALL, PERMISSIVE) roles={service_role}
+//     USING: true
+//     WITH CHECK: true
 // Table: sales_metrics
 //   Policy "Admins can view sales metrics" (SELECT, PERMISSIVE) roles={public}
 //     USING: (EXISTS ( SELECT 1    FROM customers   WHERE ((customers.user_id = auth.uid()) AND ((customers.role)::text = 'admin'::text))))
@@ -3261,6 +3367,48 @@ export const Constants = {
 //     FROM public.customers c
 //     WHERE c.email ILIKE trim(lower(email_input))
 //     LIMIT 1;
+//   END;
+//   $function$
+//
+// FUNCTION check_rate_limit(text, text, integer, integer)
+//   CREATE OR REPLACE FUNCTION public.check_rate_limit(p_ip text, p_endpoint text, p_max_requests integer, p_window_seconds integer)
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//    SET search_path TO 'public'
+//   AS $function$
+//   DECLARE
+//     v_count integer;
+//     v_bucket timestamptz;
+//   BEGIN
+//
+//     -- Bucket aligned to fixed window
+//     v_bucket := to_timestamp(
+//       floor(extract(epoch from now()) / p_window_seconds)
+//       * p_window_seconds
+//     );
+//
+//     INSERT INTO public.rate_limits (
+//       ip,
+//       endpoint,
+//       bucket,
+//       request_count
+//     )
+//     VALUES (
+//       p_ip,
+//       p_endpoint,
+//       v_bucket,
+//       1
+//     )
+//     ON CONFLICT (ip, endpoint, bucket)
+//     DO UPDATE
+//     SET request_count = public.rate_limits.request_count + 1
+//
+//     RETURNING request_count
+//     INTO v_count;
+//
+//     RETURN v_count <= p_max_requests;
+//
 //   END;
 //   $function$
 //
@@ -3513,61 +3661,140 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION sanitize_spec_value(text)
+//   CREATE OR REPLACE FUNCTION public.sanitize_spec_value(p_value text)
+//    RETURNS text
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     IF p_value IS NULL THEN
+//       RETURN NULL;
+//     END IF;
+//
+//     -- Remove caracteres de controle perigosos
+//     p_value := regexp_replace(p_value, '[\x00-\x1F]', '', 'g');
+//
+//     -- Normaliza espaços em branco
+//     p_value := regexp_replace(p_value, '\s+', ' ', 'g');
+//
+//     -- Remove espaços extras no início/fim
+//     p_value := trim(p_value);
+//
+//     -- Limita o tamanho a 1000 caracteres
+//     IF length(p_value) > 1000 THEN
+//       p_value := substring(p_value from 1 for 1000);
+//     END IF;
+//
+//     RETURN p_value;
+//   END;
+//   $function$
+//
 // FUNCTION search_products_v2(text, numeric)
 //   CREATE OR REPLACE FUNCTION public.search_products_v2(search_term text, boost_multiplier numeric DEFAULT 1.0)
-//    RETURNS TABLE(id uuid, name text, description text, final_rank numeric)
+//    RETURNS TABLE(id uuid, name text, description text, final_rank numeric, mi jsonb, psc jsonb, pc jsonb, price_usd numeric, price_brl numeric, price_nationalized_sales numeric, price_nationalized_currency text)
 //    LANGUAGE plpgsql
 //   AS $function$
 //   DECLARE
 //     ts_query tsquery;
-//     normalized_term text;
+//     normalized_term TEXT;
 //   BEGIN
-//     -- 1. Normalização e Proteção contra busca vazia (Hardening)
 //     normalized_term := lower(trim(search_term));
 //     IF normalized_term = '' OR normalized_term IS NULL THEN
 //       RETURN;
 //     END IF;
 //
-//     -- 2. Parsing resiliente com Double Fallback (Hardening)
 //     BEGIN
 //       ts_query := websearch_to_tsquery('simple', normalized_term);
 //     EXCEPTION WHEN others THEN
 //       BEGIN
 //         ts_query := plainto_tsquery('simple', normalized_term);
 //       EXCEPTION WHEN others THEN
-//         RETURN; -- Retorna vazio se o input for impossível de processar
+//         RETURN;
 //       END;
 //     END;
 //
-//     -- 3. Execução com Casts Explícitos (Corrige o erro de estrutura)
 //     RETURN QUERY
 //     SELECT
 //       p.id::uuid,
 //       p.name::text,
 //       coalesce(p.description, '')::text,
 //       (
-//         -- Forçamos o cast para numeric em cada etapa do cálculo
 //         (ts_rank_cd(p.fts_vector, ts_query, 32)::numeric * boost_multiplier) +
 //         (CASE
 //           WHEN length(normalized_term) >= 3 THEN similarity(p.search_text, normalized_term)::numeric * 0.3
 //           ELSE 0
 //         END)
-//       )::numeric AS final_rank
+//       )::numeric AS final_rank,
+//       coalesce(
+//         jsonb_agg(
+//           DISTINCT jsonb_build_object(
+//             'id', mi.id,
+//             'title', mi.title,
+//             'ai_summary', mi.ai_summary,
+//             'event_name', mi.event_name,
+//             'source_url', mi.source_url
+//           )
+//         ) FILTER (WHERE mi.id IS NOT NULL),
+//         '[]'::jsonb
+//       )::jsonb AS mi,
+//       coalesce(
+//         jsonb_agg(
+//           DISTINCT jsonb_build_object(
+//             'id', psc.id,
+//             'search_query', psc.search_query,
+//             'product_specs', psc.product_specs,
+//             'source', psc.source,
+//             'created_at', psc.created_at
+//           )
+//         ) FILTER (WHERE psc.id IS NOT NULL),
+//         '[]'::jsonb
+//       )::jsonb AS psc,
+//       coalesce(
+//         jsonb_object_agg(
+//           pc.spec_key,
+//           jsonb_build_object(
+//             'value', pc.spec_value,
+//             'source', pc.source,
+//             'confidence', pc.confidence,
+//             'cached_at', pc.cached_at
+//           )
+//         ) FILTER (WHERE pc.product_id IS NOT NULL AND (pc.expires_at IS NULL OR pc.expires_at > now())),
+//         '{}'::jsonb
+//       )::jsonb AS pc,
+//       -- ✅ NOVAS COLUNAS DE PREÇO
+//       p.price_usd::numeric,
+//       p.price_brl::numeric,
+//       p.price_nationalized_sales::numeric,
+//       p.price_nationalized_currency::text
 //     FROM
 //       products p
+//     LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
+//     LEFT JOIN market_intelligence mi ON
+//       mi.manufacturer_id = p.manufacturer_id
+//       AND (mi.expires_at IS NULL OR mi.expires_at > now())
+//       AND (
+//         mi.ai_summary ILIKE '%' || normalized_term || '%'
+//         OR mi.title ILIKE '%' || normalized_term || '%'
+//         OR mi.event_name ILIKE '%' || normalized_term || '%'
+//       )
+//     LEFT JOIN product_search_cache psc ON
+//       psc.search_query ILIKE '%' || normalized_term || '%'
+//       AND (psc.expires_at IS NULL OR psc.expires_at > now())
+//     LEFT JOIN product_cache pc ON
+//       pc.product_id = p.id
+//       AND (pc.expires_at IS NULL OR pc.expires_at > now())
 //     WHERE
-//       -- Filtro de catálogo
 //       NOT p.is_discontinued
 //       AND (
-//         -- Busca técnica indexada
 //         p.fts_vector @@ ts_query
-//         OR
-//         -- Busca por aproximação (fuzzy)
-//         (length(normalized_term) >= 3 AND p.search_text % normalized_term)
+//         OR (length(normalized_term) >= 3 AND p.search_text % normalized_term)
 //       )
+//     GROUP BY
+//       p.id, p.name, p.description, p.fts_vector, p.search_text,
+//       p.price_usd, p.price_brl, p.price_nationalized_sales, p.price_nationalized_currency
 //     ORDER BY
 //       final_rank DESC
-//     LIMIT 20;
+//     LIMIT 500;
 //   END;
 //   $function$
 //
@@ -3628,8 +3855,43 @@ export const Constants = {
 //     );
 //   $function$
 //
+// FUNCTION update_product_cache_timestamp()
+//   CREATE OR REPLACE FUNCTION public.update_product_cache_timestamp()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     NEW.updated_at = now();
+//     RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION validate_product_spec(character varying, text, character varying, numeric)
+//   CREATE OR REPLACE FUNCTION public.validate_product_spec(p_spec_key character varying, p_spec_value text, p_source character varying, p_confidence numeric)
+//    RETURNS boolean
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     IF p_confidence IS NOT NULL AND (p_confidence < 0 OR p_confidence > 1) THEN
+//       RAISE EXCEPTION 'Confidence must be between 0 and 1';
+//     END IF;
+//
+//     IF p_spec_value IS NOT NULL AND length(p_spec_value) > 1000 THEN
+//       RAISE EXCEPTION 'Spec value must not exceed 1000 characters';
+//     END IF;
+//
+//     IF p_source IS NOT NULL AND p_source NOT IN ('manual', 'ai', 'import', 'user', 'web_search', 'manufacturer_pdf') THEN
+//       RAISE EXCEPTION 'Invalid source value';
+//     END IF;
+//
+//     RETURN TRUE;
+//   END;
+//   $function$
+//
 
 // --- TRIGGERS ---
+// Table: product_cache
+//   trigger_product_cache_timestamp: CREATE TRIGGER trigger_product_cache_timestamp BEFORE UPDATE ON public.product_cache FOR EACH ROW EXECUTE FUNCTION update_product_cache_timestamp()
 // Table: products
 //   trg_products_search_update: CREATE TRIGGER trg_products_search_update BEFORE INSERT OR UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION products_search_update()
 
@@ -3722,17 +3984,23 @@ export const Constants = {
 //   CREATE INDEX idx_payment_tokens_user_id ON public.payment_tokens USING btree (user_id)
 //   CREATE UNIQUE INDEX payment_tokens_token_key ON public.payment_tokens USING btree (token)
 // Table: product_cache
-//   CREATE INDEX idx_product_cache_query_hash ON public.product_cache USING btree (query_hash)
-//   CREATE UNIQUE INDEX product_cache_query_hash_key ON public.product_cache USING btree (query_hash)
+//   CREATE INDEX idx_product_cache_expires_at ON public.product_cache USING btree (expires_at)
+//   CREATE INDEX idx_product_cache_product_id ON public.product_cache USING btree (product_id)
+//   CREATE INDEX idx_product_cache_source ON public.product_cache USING btree (source)
+//   CREATE UNIQUE INDEX product_cache_product_id_spec_key_key ON public.product_cache USING btree (product_id, spec_key)
 // Table: product_search_cache
 //   CREATE INDEX product_search_cache_created_idx ON public.product_search_cache USING btree (created_at DESC)
 //   CREATE INDEX product_search_cache_query_idx ON public.product_search_cache USING btree (search_query)
+//   CREATE UNIQUE INDEX product_search_cache_query_unique ON public.product_search_cache USING btree (search_query)
 // Table: products
 //   CREATE INDEX idx_products_fts ON public.products USING gin (fts_vector)
 //   CREATE INDEX idx_products_is_discontinued ON public.products USING btree (is_discontinued)
 //   CREATE INDEX idx_products_search_trgm ON public.products USING gin (search_text gin_trgm_ops)
 //   CREATE INDEX products_is_special_idx ON public.products USING btree (is_special)
 //   CREATE UNIQUE INDEX products_manufacturer_sku_key ON public.products USING btree (manufacturer_id, sku)
+// Table: rate_limits
+//   CREATE INDEX idx_rate_limits_bucket ON public.rate_limits USING btree (bucket)
+//   CREATE INDEX idx_rate_limits_endpoint_bucket ON public.rate_limits USING btree (endpoint, bucket)
 // Table: sales_metrics
 //   CREATE INDEX idx_sales_metrics_date ON public.sales_metrics USING btree (date DESC)
 //   CREATE UNIQUE INDEX sales_metrics_date_key ON public.sales_metrics USING btree (date)
