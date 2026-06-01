@@ -1,5 +1,7 @@
 import React from 'react'
 import { Sparkles, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
@@ -19,6 +21,8 @@ interface AIResult {
   referenced_internal_products?: Product[]
   should_show_whatsapp_button?: boolean
   whatsapp_reason?: string
+  is_intermediate?: boolean
+  products?: any[]
 }
 
 interface AISearchResultsProps {
@@ -38,7 +42,7 @@ export function AISearchResults({
 }: AISearchResultsProps) {
   const { addItem } = useCart()
 
-  if (isLoading) {
+  if (isLoading && (!result || !result.is_intermediate)) {
     return (
       <div
         className={cn(
@@ -108,35 +112,6 @@ export function AISearchResults({
         ? 'text-amber-400 bg-amber-400/10 border-amber-400/20 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
         : 'text-red-400 bg-red-400/10 border-red-400/20 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
 
-  const formatMessage = (msg: string) => {
-    // Simple markdown to HTML for bold text and lists
-    const lines = msg.split('\n')
-    return lines.map((line, i) => {
-      // Bold text
-      let formattedLine: React.ReactNode[] | string = line
-      if (line.includes('**')) {
-        const parts = line.split(/(\*\*.*?\*\*)/g)
-        formattedLine = parts.map((part, j) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return (
-              <strong key={j} className="font-semibold text-slate-100">
-                {part.slice(2, -2)}
-              </strong>
-            )
-          }
-          return <span key={j}>{part}</span>
-        })
-      }
-
-      return (
-        <React.Fragment key={i}>
-          {formattedLine}
-          {i < lines.length - 1 && <br />}
-        </React.Fragment>
-      )
-    })
-  }
-
   return (
     <div className={cn('rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl', className)}>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -166,24 +141,29 @@ export function AISearchResults({
         )}
       </div>
 
-      <div className="prose prose-invert max-w-none">
-        <div className="whitespace-pre-wrap leading-relaxed text-slate-300">
-          {result.message ? formatMessage(result.message) : ''}
-        </div>
+      <div
+        className={cn(
+          'prose prose-invert max-w-none text-slate-300 leading-relaxed',
+          result.is_intermediate && 'animate-pulse',
+        )}
+      >
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.message || ''}</ReactMarkdown>
       </div>
 
-      {result.referenced_internal_products && result.referenced_internal_products.length > 0 && (
-        <div className="mt-8 space-y-4">
-          <h4 className="text-sm font-medium uppercase tracking-wider text-slate-500">
-            Produtos Recomendados
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {result.referenced_internal_products.map((product) => (
-              <ProductCard key={product.id} product={product as any} />
-            ))}
+      {result.referenced_internal_products &&
+        result.referenced_internal_products.length > 0 &&
+        !result.is_intermediate && (
+          <div className="mt-8 space-y-4">
+            <h4 className="text-sm font-medium uppercase tracking-wider text-slate-500">
+              Produtos Recomendados
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {result.referenced_internal_products.map((product) => (
+                <ProductCard key={product.id} product={product as any} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {result.should_show_whatsapp_button && (
         <div className="mt-6 rounded-lg border border-green-500/20 bg-green-500/10 p-4">

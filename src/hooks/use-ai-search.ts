@@ -1,114 +1,91 @@
 import { useState, useRef, useCallback } from 'react'
+import { useToast } from '@/hooks/use-toast'
 
-export interface AiSearchResult {
-  message: string
-  is_intermediate?: boolean
-  confidence_level?: string
+export interface AIResult {
+  message?: string
+  confidence_level?: 'high' | 'medium' | 'low'
+  referenced_internal_products?: any[]
   should_show_whatsapp_button?: boolean
-  referenced_internal_products?: string[]
+  whatsapp_reason?: string
+  is_intermediate?: boolean
   products?: any[]
-  [key: string]: any
 }
 
-const generateSessionId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
-export function useAiSearch() {
-  const [results, setResults] = useState<AiSearchResult | null>(null)
-  const [loading, setLoading] = useState(false)
+export function useAISearch() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [results, setResults] = useState<AIResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const sessionIdRef = useRef<string | null>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
-
-  if (!sessionIdRef.current) {
-    sessionIdRef.current = generateSessionId()
-  }
+  const sessionIdRef = useRef<string>(
+    crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+  )
+  const { toast } = useToast()
 
   const search = useCallback(
-    async (query: string, currentProductId?: string | null, userName: string = 'Cliente') => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-      abortControllerRef.current = new AbortController()
-      const signal = abortControllerRef.current.signal
+    async (query: string, currentProductId?: string) => {
+      if (!query.trim()) return
 
-      setLoading(true)
+      setIsLoading(true)
       setError(null)
+
+      // Intermediate State
       setResults({
         message: 'PROCESSANDO BUSCA PROFUNDA MY WAY...',
         is_intermediate: true,
+        referenced_internal_products: [],
         confidence_level: 'low',
         should_show_whatsapp_button: false,
       })
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-      if (!supabaseUrl || !supabaseKey) {
-        setError('Variáveis de ambiente do Supabase ausentes.')
-        setLoading(false)
-        return
-      }
-
-      const endpoint = currentProductId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
-      const functionUrl = `${supabaseUrl}/functions/v1/${endpoint}`
-
       try {
-        const response = await fetch(functionUrl, {
+        const functionName = currentProductId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`
+
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${supabaseKey}`,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
             query,
+            currentProductId,
             session_id: sessionIdRef.current,
-            currentProductId: currentProductId || null,
-            userName,
           }),
-          signal,
         })
 
         if (!response.ok) {
-          throw new Error(`Erro na busca: ${response.status} ${response.statusText}`)
+          const errText = await response.text()
+          throw new Error(`Erro na busca: ${response.statusText} - ${errText}`)
         }
 
         const data = await response.json()
-
-        if (!signal.aborted) {
-          setResults(data)
-        }
+        setResults(data)
       } catch (err: any) {
-        if (err.name === 'AbortError') {
-          // Silently ignore abort exceptions
-        } else {
-          if (!signal.aborted) {
-            setError(err.message || 'Erro desconhecido')
-            setResults(null)
-          }
-        }
+        console.error('AI Search Error:', err)
+        setError(err.message || 'Ocorreu um erro ao processar sua busca.')
+        toast({
+          title: 'Erro na busca',
+          description: 'Não foi possível completar a análise. Tente novamente.',
+          variant: 'destructive',
+        })
+        setResults(null)
       } finally {
-        if (!signal.aborted) {
-          setLoading(false)
-        }
+        setIsLoading(false)
       }
     },
-    [],
+    [toast],
   )
 
   const clearResults = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
     setResults(null)
     setError(null)
-    setLoading(false)
   }, [])
 
-  return { search, results, loading, error, clearResults }
+  return {
+    search,
+    isLoading,
+    results,
+    error,
+    clearResults,
+  }
 }

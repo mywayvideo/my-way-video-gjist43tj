@@ -492,16 +492,15 @@ function buildDynamicSystemPrompt(
   // 5. SEMPRE: Lista de fabricantes disponíveis
   parts.push(`### FABRICANTES DISPONÍVEIS\n${manufacturerList}`)
 
-  // 6. SEMPRE: Regras absolutas de formato JSON
+  // 6. SEMPRE: Regras de formato JSON (apenas estrutura, NÃO proíbe markdown)
   parts.push(
     [
       'FORMATO DE RESPOSTA OBRIGATORIO:',
-      'Responda EXCLUSIVAMENTE em JSON valido, sem blocos markdown, sem texto antes ou depois.',
+      'Responda EXCLUSIVAMENTE em JSON valido, sem blocos markdown no JSON, sem texto antes ou depois.',
       'Estrutura: { "message": "...", "referenced_internal_products": ["uuid"], "confidence_level": "high", "should_show_whatsapp_button": false }',
       '',
-      'REGRA DE FORMATACAO DA MENSAGEM:',
-      'Dentro do campo "message", use APENAS texto plano. NUNCA use markdown (**bold**, *italic*, `code`, listas, etc.).',
-      'Use caixa alta para titulos de produtos (ex: "Canon CN-E 20-50mm") e bullet points com "•" ou "-" se necessario, mas sem sintaxe markdown.',
+      'ATENCAO: O campo "message" ACEITA markdown completo (negrito, italico, titulos, tabelas, listas).',
+      'Use markdown profissional para tornar a resposta rica e legivel.',
     ].join('\n'),
   )
   // 7. INSTRUÇÃO DE USO DA FERRAMENTA DE BUSCA (sempre presente)
@@ -1142,15 +1141,12 @@ serve(async (req: Request) => {
     )
     console.log(`[LOG] IDs validados: ${result.referenced_internal_products.join(',')}`)
 
+    // LOG ANTES do strip (para validar se IA gera markdown)
+    console.log('[DEBUG_MSG_RAW_BEFORE] message field:', (result.message || '').substring(0, 300))
+
     result.message = String(result.message || '')
 
-    // ✅ STRIP MARKDOWN para garantir texto plano no frontend
-    result.message = result.message
-      .replace(/\*\*(.*?)\*\*/gs, '$1') // bold
-      .replace(/\*(.*?)\*/gs, '$1') // italic
-      .replace(/`(.*?)`/gs, '$1') // inline code
-      .replace(/#{1,6}\s?/g, '') // headings (#, ##, etc.)
-      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // links [texto](url) → texto
+    console.log('[DEBUG_MSG_RAW_AFTER] message field:', result.message.substring(0, 300))
 
     if (lastReferencedProductId) {
       result.message += '\n\n' + String(globalSettingsMap['transparency_note'] || '')
