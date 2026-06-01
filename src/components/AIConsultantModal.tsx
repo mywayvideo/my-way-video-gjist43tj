@@ -14,7 +14,8 @@ import { Send, Loader2, MessageCircle } from 'lucide-react'
 import { ProductCard } from '@/components/ProductCard'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
-import MarkdownWithTables from '@/components/MarkdownWithTables'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface AIConsultantModalProps {
   isOpen: boolean
@@ -150,7 +151,12 @@ export function AIConsultantModal({
           {results?.message && (
             <div className="flex flex-col gap-6">
               <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
-                <MarkdownWithTables markdown={results?.message || ''} />
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  className="prose prose-invert max-w-none"
+                >
+                  {results?.message || ''}
+                </ReactMarkdown>
               </div>
 
               {/* ← WhatsApp sempre após message, se flag */}
