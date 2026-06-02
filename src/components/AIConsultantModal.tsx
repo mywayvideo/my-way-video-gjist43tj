@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -6,219 +7,327 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useAiSearch } from '@/hooks/use-ai-search'
-import { useState, useEffect, useMemo, useRef } from 'react' // ← + useMemo/useRef
-import { Send, Loader2, MessageCircle } from 'lucide-react'
-import { ProductCard } from '@/components/ProductCard'
-import { useAuth } from '@/hooks/use-auth'
+import { Send, Bot, MessageCircle, Sparkles, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { useAuth } from '@/hooks/use-auth'
+import { Link } from 'react-router-dom'
+
+const parseMarkdownToHTML = (text: string | null | undefined): string => {
+  if (!text) return ''
+
+  let html = text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  // Headers
+  html = html.replace(
+    /^###\s+(.*)$/gm,
+    '<h3 class="text-green-400 text-lg font-bold mt-4 mb-2">$1</h3>',
+  )
+  html = html.replace(
+    /^##\s+(.*)$/gm,
+    '<h2 class="text-green-400 text-xl font-bold mt-6 mb-3">$1</h2>',
+  )
+  html = html.replace(
+    /^#\s+(.*)$/gm,
+    '<h1 class="text-green-400 text-2xl font-bold mt-8 mb-4">$1</h1>',
+  )
+
+  // Emphasis
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+  html = html.replace(/\*(.*?)\*/g, '<em class="text-green-100/80">$1</em>')
+
+  // Tables and line breaks
+  const lines = html.split('\n')
+  const parsedLines = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (line.startsWith('|') && line.endsWith('|')) {
+      const cells = line
+        .split('|')
+        .map((c) => c.trim())
+        .filter((_, idx, arr) => idx !== 0 && idx !== arr.length - 1)
+
+      if (cells.every((c) => /^[-:]+$/.test(c))) {
+        continue
+      }
+
+      const cols = cells.length
+      const gridStyle = `grid-template-columns: repeat(${cols}, minmax(0, 1fr))`
+      let rowHtml = `<div class="grid gap-2 my-2" style="${gridStyle}">`
+
+      cells.forEach((cell) => {
+        rowHtml += `<div class="border border-green-800/40 p-2 text-sm text-white/90">${cell}</div>`
+      })
+
+      rowHtml += `</div>`
+      parsedLines.push(rowHtml)
+    } else {
+      parsedLines.push(lines[i])
+    }
+  }
+
+  html = parsedLines.join('\n')
+  html = html.replace(/\n/g, '<br />')
+
+  return html
+}
+
+interface Product {
+  id: string
+  name: string
+  price_usd?: number
+  price_nationalized_sales?: number
+  price_nationalized_currency?: string
+  image_url?: string
+  category?: string
+}
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  products?: Product[]
+  should_show_whatsapp_button?: boolean
+  tier?: number
+}
 
 interface AIConsultantModalProps {
   isOpen: boolean
   onClose: () => void
-  productName?: string
-  technicalInfo?: string
-  currentProductId?: string
+  productId?: string
+  initialQuery?: string
 }
 
 export function AIConsultantModal({
   isOpen,
   onClose,
-  productName,
-  technicalInfo,
-  currentProductId,
+  productId,
+  initialQuery,
 }: AIConsultantModalProps) {
-  const [query, setQuery] = useState('')
-  const { search, isLoading, results, clearResults } = useAiSearch()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [inputValue, setInputValue] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
-  const productsRef = useRef<HTMLDivElement>(null) // ← Ref para auto-scroll
+  const [sessionId] = useState(() => crypto.randomUUID())
 
   useEffect(() => {
-    if (isOpen) {
-      clearResults()
+    if (isOpen && messages.length === 0) {
+      if (initialQuery) {
+        setInputValue(initialQuery)
+        handleSend(initialQuery)
+      } else {
+        setMessages([
+          {
+            id: '1',
+            role: 'assistant',
+            content:
+              'Olá! Sou seu consultor técnico de audiovisual da My Way. Como posso ajudar você hoje com seus equipamentos e projetos?',
+          },
+        ])
+      }
     }
-  }, [currentProductId, isOpen])
+  }, [isOpen, messages.length, initialQuery])
 
-  // ← filteredProducts com useMemo (perf + stable)
-  const filteredProducts = useMemo(() => {
-    console.log('DEBUG results.products:', results?.products) // ← Debug temp (remova em prod)
-    console.log('DEBUG currentProductId:', currentProductId) // ← Debug temp
-    return Array.isArray(results?.products) ? results.products : [] // Backend já filtra!
-  }, [results?.products, currentProductId])
-
-  // ← Auto-scroll ao grid se produtos presentes
   useEffect(() => {
-    if (filteredProducts.length > 0 && productsRef.current) {
-      productsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [filteredProducts.length])
+  }, [messages, isLoading])
 
-  const userName =
-    user?.user_metadata?.full_name?.split(' ')[0] ||
-    user?.user_metadata?.name?.split(' ')[0] ||
-    'Usuário'
-
-  const handleSearch = async () => {
+  const handleSend = async (overrideQuery?: string) => {
+    const query = overrideQuery || inputValue
     if (!query.trim()) return
 
-    const cleanTechnicalInfo = (technicalInfo || '')
-      .replace(/[*_~`]+/g, '')
-      .replace(/\|/g, '/')
-      .replace(/#/g, '')
-      .replace(/<[^>]*>/g, '')
-      .replace(/\n{2,}/g, '\n')
-      .trim()
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: query.trim(),
+    }
 
-    const cleanProductName = (productName || '')
-      .replace(/[*_~`]+/g, '')
-      .replace(/\|/g, '/')
-      .replace(/#/g, '')
-      .replace(/<[^>]*>/g, '')
-      .trim()
+    setMessages((prev) => [...prev, userMsg])
+    if (!overrideQuery) setInputValue('')
+    setIsLoading(true)
 
-    const isProductPage = !!currentProductId
+    try {
+      const endpoint = productId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
+      const { data, error } = await supabase.functions.invoke(endpoint, {
+        body: {
+          query: userMsg.content,
+          session_id: sessionId,
+          currentProductId: productId,
+          userName: user?.user_metadata?.name || 'Cliente',
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        },
+      })
 
-    const priorityQuery = isProductPage
-      ? `Você está na página do produto "${cleanProductName}". O cliente está perguntando: "${query}"\n\nREGRA CRÍTICA: Sua função é recomendar APENAS produtos COMPLEMENTARES (acessórios, lentes, tripés, baterias, gripes, monitores, etc.) que sejam compatíveis com "${cleanProductName}". NUNCA recomende produtos substitutos da mesma categoria principal. Especificações do produto base: ${cleanTechnicalInfo}`
-      : query
+      if (error) throw error
 
-    await search(priorityQuery, {
-      currentProductId, // obrigatório para ativar PP
-      productName,
-      technicalInfo,
-      userName, // opcional, melhora personalização
-    })
+      const assistantMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.message || 'Desculpe, não consegui processar sua requisição.',
+        products: data.products || [],
+        should_show_whatsapp_button: data.should_show_whatsapp_button,
+        tier: data.tier || 1,
+      }
 
-    setQuery('')
+      setMessages((prev) => [...prev, assistantMsg])
+    } catch (err) {
+      console.error(err)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'Desculpe, ocorreu um erro ao conectar com o agente de IA.',
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSearch()
+      handleSend()
     }
-  }
-
-  const handleWhatsAppClick = async () => {
-    let whatsappNumber = '17867161170'
-    try {
-      const fetchSettings = supabase
-        .from('app_settings')
-        .select('setting_value')
-        .eq('setting_key', 'company_whatsapp')
-        .single()
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 1500),
-      )
-      const response = (await Promise.race([fetchSettings, timeout])) as any
-      if (response && !response.error && response.data?.setting_value) {
-        whatsappNumber = response.data.setting_value
-      }
-    } catch {
-      // Fallback
-    }
-    window.open('https://wa.me/' + whatsappNumber.replace(/\D/g, ''), '_blank')
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] translate-x-[-50%] translate-y-[-50%] gap-4 border border-[#05381a]/80 bg-[#021307]/98 p-4 flex flex-col backdrop-blur-md shadow-2xl duration-200 sm:rounded-2xl sm:max-w-4xl h-[92vh] sm:h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="text-green-400 text-xl flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-green-400" />
-            Engenharia IA {productName ? `- ${productName}` : ''}
-          </DialogTitle>
-
-          <DialogDescription className="text-green-100/60 text-lg">
-            Tire suas dúvidas técnicas! Solicite especificações detalhadas e compatibilidade.
-          </DialogDescription>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[700px] h-[85vh] flex flex-col p-0 gap-0 bg-zinc-950 border-green-900/30 overflow-hidden">
+        <DialogHeader className="p-4 border-b border-green-900/30 bg-zinc-900/50 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-green-400">
+              <Bot className="w-5 h-5" /> Consultor IA My Way
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Assistente de IA para ajudar com produtos e dúvidas técnicas.
+            </DialogDescription>
+          </div>
         </DialogHeader>
-        <ScrollArea className="flex-1 min-h-0 border border-green-800/40 rounded-lg p-4 bg-black/20">
-          {' '}
-          {/* ← min-h-0 evita collapse */}
-          {results?.is_intermediate && (
-            <div className="flex items-center gap-3 p-3 mb-4 rounded-lg bg-zinc-900/50 border border-orange-500/30 animate-pulse">
-              <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-              <span className="text-orange-500 font-bold text-sm tracking-wider">
-                PROCESSANDO BUSCA PROFUNDA MY WAY...
-              </span>
-            </div>
-          )}
-          {results?.message && (
-            <div className="flex flex-col gap-6">
-              <div className="text-white/90 text-base space-y-4 leading-normal overflow-x-auto">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  className="prose prose-invert max-w-none"
-                >
-                  {results?.message || ''}
-                </ReactMarkdown>
-              </div>
 
-              {/* ← WhatsApp sempre após message, se flag */}
-              {results?.should_show_whatsapp_button && (
-                <Button
-                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-6 rounded-xl mt-6 flex items-center justify-center gap-3 shadow-lg"
-                  onClick={handleWhatsAppClick}
+        <ScrollArea className="flex-1 p-4">
+          <div className="space-y-6">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                <div
+                  className={`max-w-[90%] rounded-lg p-4 ${msg.role === 'user' ? 'bg-green-600/20 text-green-100' : 'bg-zinc-900 border border-green-900/30'}`}
                 >
-                  <MessageCircle className="w-6 h-6" />
-                  Falar com Especialista no WhatsApp
-                </Button>
-              )}
-            </div>
-          )}
-          {/* ← Grid MOVIDO PARA FORA (independente de message), com ref + data-testid */}
-          {filteredProducts.length > 0 && (
-            <div
-              ref={productsRef}
-              data-testid="products-grid"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-6 bg-black/30 rounded-xl p-4 border border-green-800/50" // ← Estilo destacado + padding
-            >
-              {filteredProducts.map((product: any) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-          {!results?.message && !isLoading && (
-            <div className="text-green-100/30 text-lg h-full flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
-              <MessageCircle className="w-8 h-8 opacity-20" />
-              <p>
-                Olá {userName}, como posso ajudar com sua dúvida sobre o {productName || 'produto'}?
-              </p>
-            </div>
-          )}
-          {isLoading && !results?.is_intermediate && (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-green-400" />
-            </div>
-          )}
-          <div className="ai-response-container" />
+                  {msg.role === 'user' ? (
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div
+                        className="text-white/90 text-base leading-normal overflow-x-auto"
+                        dangerouslySetInnerHTML={{ __html: parseMarkdownToHTML(msg.content || '') }}
+                      />
+
+                      {msg.products && msg.products.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                          {msg.products.map((product) => (
+                            <Link
+                              key={product.id}
+                              to={`/product/${product.id}`}
+                              onClick={onClose}
+                              className="flex flex-col bg-zinc-950 border border-green-900/30 rounded-md p-3 hover:border-green-500/50 transition-colors group"
+                            >
+                              <div className="flex items-start gap-3">
+                                {product.image_url ? (
+                                  <img
+                                    src={product.image_url}
+                                    alt={product.name}
+                                    className="w-16 h-16 object-cover rounded bg-zinc-900"
+                                  />
+                                ) : (
+                                  <div className="w-16 h-16 bg-zinc-900 rounded flex items-center justify-center">
+                                    <Sparkles className="w-6 h-6 text-green-700" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-green-100 line-clamp-2 group-hover:text-green-400 transition-colors">
+                                    {product.name}
+                                  </p>
+                                  {product.price_usd ? (
+                                    <p className="text-xs text-green-500 mt-1 font-semibold">
+                                      USD ${product.price_usd.toFixed(2)}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-zinc-500 mt-1">Sob Consulta</p>
+                                  )}
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
+                      {msg.should_show_whatsapp_button && (
+                        <div className="mt-4 pt-4 border-t border-green-900/30">
+                          <Button
+                            variant="default"
+                            className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
+                            onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                          >
+                            <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-zinc-900 border border-green-900/30 rounded-lg p-4">
+                  <div className="flex gap-2 items-center">
+                    <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
+                    <span className="text-sm text-green-400">Processando...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={scrollRef} />
+          </div>
         </ScrollArea>
 
-        <div className="flex gap-2 items-end mt-2">
-          <Textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite sua dúvida..."
-            className="text-xl text-white placeholder:text-green-100/30 bg-[#03200c]/60 border-green-900/50 min-h-[60px] resize-none focus-visible:ring-1 focus-visible:ring-green-500"
-          />
-          <Button
-            onClick={handleSearch}
-            disabled={isLoading || !query.trim()}
-            size="icon"
-            className="mb-1 h-[60px] w-[60px] shrink-0 rounded-xl bg-[#0a5c2b] hover:bg-green-700 transition-colors duration-200"
+        <div className="p-4 border-t border-green-900/30 bg-zinc-900/50 flex-shrink-0">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleSend()
+            }}
+            className="flex gap-2"
           >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </Button>
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Pergunte sobre equipamentos, especificações ou projetos..."
+              className="bg-zinc-950 border-green-900/30 text-green-100 focus-visible:ring-green-500/50"
+              disabled={isLoading}
+            />
+            <Button
+              type="submit"
+              disabled={isLoading || !inputValue.trim()}
+              className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+          <div className="mt-2 text-center">
+            <p className="text-[10px] text-zinc-500">
+              A IA pode cometer erros. Considere verificar informações importantes.
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
