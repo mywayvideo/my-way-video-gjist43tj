@@ -35,15 +35,22 @@ const parseMarkdownToHtml = (text: string | null | undefined): string => {
 
   // Emphasis
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
-  html = html.replace(/\*(.*?)\*/g, '<em class="text-green-100/80">$1</em>')
+  html = html.replace(
+    /(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g,
+    '<em class="text-green-100/80">$1</em>',
+  )
 
-  // Tables and line breaks
+  // Tables and Lists and line breaks
   const lines = html.split('\n')
   const parsedLines = []
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
-    if (line.startsWith('|') && line.endsWith('|')) {
+
+    if (line.startsWith('-') || line.startsWith('•')) {
+      const content = line.replace(/^[-•]\s*/, '')
+      parsedLines.push(`<li class="ml-4 text-white/90">${content}</li>`)
+    } else if (line.startsWith('|') && line.endsWith('|')) {
       const cells = line
         .split('|')
         .map((c) => c.trim())
@@ -112,6 +119,24 @@ export function AIConsultantModal({
   const scrollRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   const [sessionId] = useState(() => crypto.randomUUID())
+  const [whatsappNumber, setWhatsappNumber] = useState('17867161170')
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchWhatsapp = async () => {
+        const { data } = await supabase
+          .from('app_settings')
+          .select('setting_value')
+          .eq('setting_key', 'company_whatsapp')
+          .single()
+
+        if (data?.setting_value) {
+          setWhatsappNumber(data.setting_value.replace(/\D/g, ''))
+        }
+      }
+      fetchWhatsapp()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -230,51 +255,54 @@ export function AIConsultantModal({
                         dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(msg.content || '') }}
                       />
 
-                      {msg.products && msg.products.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                          {msg.products.map((product) => (
-                            <Link
-                              key={product.id}
-                              to={`/product/${product.id}`}
-                              onClick={onClose}
-                              className="flex flex-col bg-zinc-950 border border-green-900/30 rounded-md p-3 hover:border-green-500/50 transition-colors group"
-                            >
-                              <div className="flex items-start gap-3">
-                                {product.image_url ? (
-                                  <img
-                                    src={product.image_url}
-                                    alt={product.name}
-                                    className="w-16 h-16 object-cover rounded bg-zinc-900"
-                                  />
-                                ) : (
-                                  <div className="w-16 h-16 bg-zinc-900 rounded flex items-center justify-center">
-                                    <Sparkles className="w-6 h-6 text-green-700" />
+                      {msg.products &&
+                        msg.products.filter((p) => p.id !== productId).length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                            {msg.products
+                              .filter((p) => p.id !== productId)
+                              .map((product) => (
+                                <Link
+                                  key={product.id}
+                                  to={`/product/${product.id}`}
+                                  onClick={onClose}
+                                  className="flex flex-col bg-zinc-950 border border-green-900/30 rounded-md p-3 hover:border-green-500/50 transition-colors group"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    {product.image_url ? (
+                                      <img
+                                        src={product.image_url}
+                                        alt={product.name}
+                                        className="w-16 h-16 object-cover rounded bg-zinc-900"
+                                      />
+                                    ) : (
+                                      <div className="w-16 h-16 bg-zinc-900 rounded flex items-center justify-center">
+                                        <Sparkles className="w-6 h-6 text-green-700" />
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-green-100 line-clamp-2 group-hover:text-green-400 transition-colors">
+                                        {product.name}
+                                      </p>
+                                      {product.price_usd ? (
+                                        <p className="text-xs text-green-500 mt-1 font-semibold">
+                                          USD ${product.price_usd.toFixed(2)}
+                                        </p>
+                                      ) : (
+                                        <p className="text-xs text-zinc-500 mt-1">Sob Consulta</p>
+                                      )}
+                                    </div>
                                   </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-green-100 line-clamp-2 group-hover:text-green-400 transition-colors">
-                                    {product.name}
-                                  </p>
-                                  {product.price_usd ? (
-                                    <p className="text-xs text-green-500 mt-1 font-semibold">
-                                      USD ${product.price_usd.toFixed(2)}
-                                    </p>
-                                  ) : (
-                                    <p className="text-xs text-zinc-500 mt-1">Sob Consulta</p>
-                                  )}
-                                </div>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
+                                </Link>
+                              ))}
+                          </div>
+                        )}
 
                       {msg.should_show_whatsapp_button && (
                         <div className="mt-4 pt-4 border-t border-green-900/30">
                           <Button
                             variant="default"
                             className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
-                            onClick={() => window.open('https://wa.me/5511999999999', '_blank')}
+                            onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
                           >
                             <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
                           </Button>
