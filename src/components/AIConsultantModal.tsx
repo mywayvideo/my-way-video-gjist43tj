@@ -13,8 +13,7 @@ import { Send, Bot, MessageCircle, Sparkles, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Link, useParams } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { MarkdownRenderer } from './MarkdownRenderer'
 
 interface Product {
   id: string
@@ -55,25 +54,52 @@ export function AIConsultantModal({
   const { user } = useAuth()
   const [sessionId] = useState(() => crypto.randomUUID())
   const [whatsappNumber, setWhatsappNumber] = useState('17867161170')
+  const [priceThreshold, setPriceThreshold] = useState(5000)
+  const [currentProductPrice, setCurrentProductPrice] = useState(0)
+  const [currentProductName, setCurrentProductName] = useState('')
+
   const { id: urlProductId } = useParams<{ id: string }>()
   const activeProductId = productId || urlProductId
 
   useEffect(() => {
     if (isOpen) {
-      const fetchWhatsapp = async () => {
-        const { data } = await supabase
+      const fetchData = async () => {
+        const { data: appSettings } = await supabase
           .from('app_settings')
           .select('setting_value')
           .in('setting_key', ['whatsapp_number', 'company_whatsapp'])
           .limit(1)
 
-        if (data && data.length > 0) {
-          setWhatsappNumber(data[0].setting_value.replace(/\D/g, ''))
+        if (appSettings && appSettings.length > 0) {
+          setWhatsappNumber(appSettings[0].setting_value.replace(/\D/g, ''))
+        }
+
+        const { data: aiSettings } = await supabase
+          .from('ai_settings')
+          .select('price_threshold_usd')
+          .limit(1)
+          .maybeSingle()
+
+        if (aiSettings?.price_threshold_usd) {
+          setPriceThreshold(aiSettings.price_threshold_usd)
+        }
+
+        if (activeProductId) {
+          const { data: productData } = await supabase
+            .from('products')
+            .select('price_usd, name')
+            .eq('id', activeProductId)
+            .maybeSingle()
+
+          if (productData) {
+            setCurrentProductPrice(productData.price_usd || 0)
+            setCurrentProductName(productData.name || '')
+          }
         }
       }
-      fetchWhatsapp()
+      fetchData()
     }
-  }, [isOpen])
+  }, [isOpen, activeProductId])
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -114,12 +140,12 @@ export function AIConsultantModal({
     setIsLoading(true)
 
     try {
-      const endpoint = productId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
+      const endpoint = activeProductId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
       const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           query: userMsg.content,
           session_id: sessionId,
-          currentProductId: productId,
+          currentProductId: activeProductId,
           userName: user?.user_metadata?.name || 'Cliente',
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
         },
@@ -127,11 +153,37 @@ export function AIConsultantModal({
 
       if (error) throw error
 
+      let finalProducts = data.products || []
+
+      if (user && finalProducts.length > 0) {
+        try {
+          const { data: customer } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('user_id', user.id)
+            .single()
+
+          if (customer) {
+            finalProducts = await Promise.all(
+              finalProducts.map(async (p: Product) => {
+                const { data: finalPrice } = await supabase.rpc('calculate_final_price', {
+                  p_customer_id: customer.id,
+                  p_product_id: p.id,
+                })
+                return { ...p, price_usd: finalPrice ?? p.price_usd }
+              }),
+            )
+          }
+        } catch (e) {
+          console.error('Error fetching final prices', e)
+        }
+      }
+
       const assistantMsg: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: data.message || 'Desculpe, não consegui processar sua requisição.',
-        products: data.products || [],
+        products: finalProducts,
         should_show_whatsapp_button: data.should_show_whatsapp_button,
         tier: data.tier || 1,
       }
@@ -158,6 +210,25 @@ export function AIConsultantModal({
       handleSend()
     }
   }
+
+  const handleWhatsappClick = () => {
+    let message = 'Olá! Gostaria de falar com um especialista.'
+    if (activeProductId && currentProductName) {
+      message = `Olá! Gostaria de falar com um especialista sobre o produto: ${currentProductName}`
+      if (currentProductPrice > 0) {
+        message += `\nValor aproximado: USD $${currentProductPrice.toFixed(2)}`
+      }
+    }
+    if (user?.email) {
+      message += `\nMeu email: ${user.email}`
+    }
+    if (user?.user_metadata?.name) {
+      message += `\nMeu nome: ${user.user_metadata.name}`
+    }
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank')
+  }
+
+  const shouldShowWhatsappGlobal = currentProductPrice > priceThreshold
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -188,11 +259,11 @@ export function AIConsultantModal({
                   ) : (
                     <div className="space-y-4">
                       <div className="text-white/90 text-base leading-normal overflow-x-auto prose prose-invert prose-green max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {(msg.content || '')
+                        <MarkdownRenderer
+                          content={(msg.content || '')
                             .replace(/realizando busca profunda my way/gi, '')
                             .trim()}
-                        </ReactMarkdown>
+                        />
                       </div>
 
                       {msg.products &&
@@ -237,12 +308,15 @@ export function AIConsultantModal({
                           </div>
                         )}
 
-                      {msg.should_show_whatsapp_button && (
+                      {(msg.should_show_whatsapp_button ||
+                        shouldShowWhatsappGlobal ||
+                        (msg.products &&
+                          msg.products.some((p) => (p.price_usd || 0) > priceThreshold))) && (
                         <div className="mt-4 pt-4 border-t border-green-900/30">
                           <Button
                             variant="default"
                             className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
-                            onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
+                            onClick={handleWhatsappClick}
                           >
                             <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
                           </Button>
@@ -255,10 +329,10 @@ export function AIConsultantModal({
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-zinc-900 border border-green-900/30 rounded-lg p-4">
+                <div className="bg-zinc-900 border border-orange-900/30 rounded-lg p-4">
                   <div className="flex gap-2 items-center">
-                    <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
-                    <span className="text-sm text-green-400">Processando...</span>
+                    <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />
+                    <span className="text-sm text-orange-400">Pesquisando no catálogo...</span>
                   </div>
                 </div>
               </div>
