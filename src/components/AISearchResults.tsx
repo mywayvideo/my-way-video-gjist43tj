@@ -147,7 +147,9 @@ export function AISearchResults({
           result.is_intermediate && 'animate-pulse',
         )}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.message || ''}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {(result.message || '').replace(/realizando busca profunda my way/gi, '').trim()}
+        </ReactMarkdown>
       </div>
 
       {result.referenced_internal_products &&

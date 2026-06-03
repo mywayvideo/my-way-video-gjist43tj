@@ -12,89 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Bot, MessageCircle, Sparkles, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
-import { Link } from 'react-router-dom'
-
-const parseMarkdownToHtml = (text: string | null | undefined): string => {
-  if (!text) return ''
-
-  let html = text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-  // Headers
-  html = html.replace(
-    /^###\s+(.*)$/gm,
-    '<h3 class="text-green-400 text-lg font-bold mt-4 mb-2">$1</h3>',
-  )
-  html = html.replace(
-    /^##\s+(.*)$/gm,
-    '<h2 class="text-green-400 text-xl font-bold mt-6 mb-3">$1</h2>',
-  )
-  html = html.replace(
-    /^#\s+(.*)$/gm,
-    '<h1 class="text-green-400 text-2xl font-bold mt-8 mb-4">$1</h1>',
-  )
-
-  // Bold: Process all pairs of ** using a while loop to wrap content
-  while (html.includes('**')) {
-    const start = html.indexOf('**')
-    const end = html.indexOf('**', start + 2)
-    if (start !== -1 && end !== -1) {
-      html =
-        html.substring(0, start) +
-        '<strong class="text-white font-bold">' +
-        html.substring(start + 2, end) +
-        '</strong>' +
-        html.substring(end + 2)
-    } else {
-      break
-    }
-  }
-
-  // Italics: Convert single asterisks * into <em> using lookbehind/lookahead
-  html = html.replace(
-    /(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g,
-    '<em class="text-green-100/80">$1</em>',
-  )
-
-  // Tables and Lists and line breaks
-  const lines = html.split('\n')
-  const parsedLines = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-
-    if (line.startsWith('-') || line.startsWith('•')) {
-      const content = line.replace(/^[-•]\s*/, '')
-      parsedLines.push(`<li class="ml-4 text-white/90">${content}</li>`)
-    } else if (line.startsWith('|') && line.endsWith('|')) {
-      const cells = line
-        .split('|')
-        .map((c) => c.trim())
-        .filter((_, idx, arr) => idx !== 0 && idx !== arr.length - 1)
-
-      if (cells.every((c) => /^[-:]+$/.test(c))) {
-        continue
-      }
-
-      const cols = cells.length
-      const gridStyle = `grid-template-columns: repeat(${cols}, minmax(0, 1fr))`
-      let rowHtml = `<div class="grid gap-2 my-2" style="${gridStyle}">`
-
-      cells.forEach((cell) => {
-        rowHtml += `<div class="border border-green-800/40 p-2 text-sm text-white/90">${cell}</div>`
-      })
-
-      rowHtml += `</div>`
-      parsedLines.push(rowHtml)
-    } else {
-      parsedLines.push(lines[i])
-    }
-  }
-
-  html = parsedLines.join('\n')
-  html = html.replace(/\n/g, '<br />')
-
-  return html
-}
+import { Link, useParams } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Product {
   id: string
@@ -135,6 +55,8 @@ export function AIConsultantModal({
   const { user } = useAuth()
   const [sessionId] = useState(() => crypto.randomUUID())
   const [whatsappNumber, setWhatsappNumber] = useState('17867161170')
+  const { id: urlProductId } = useParams<{ id: string }>()
+  const activeProductId = productId || urlProductId
 
   useEffect(() => {
     if (isOpen) {
@@ -142,11 +64,11 @@ export function AIConsultantModal({
         const { data } = await supabase
           .from('app_settings')
           .select('setting_value')
-          .eq('setting_key', 'company_whatsapp')
-          .single()
+          .in('setting_key', ['whatsapp_number', 'company_whatsapp'])
+          .limit(1)
 
-        if (data?.setting_value) {
-          setWhatsappNumber(data.setting_value.replace(/\D/g, ''))
+        if (data && data.length > 0) {
+          setWhatsappNumber(data[0].setting_value.replace(/\D/g, ''))
         }
       }
       fetchWhatsapp()
@@ -265,16 +187,19 @@ export function AIConsultantModal({
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   ) : (
                     <div className="space-y-4">
-                      <div
-                        className="text-white/90 text-base leading-normal overflow-x-auto"
-                        dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(msg.content || '') }}
-                      />
+                      <div className="text-white/90 text-base leading-normal overflow-x-auto prose prose-invert prose-green max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {(msg.content || '')
+                            .replace(/realizando busca profunda my way/gi, '')
+                            .trim()}
+                        </ReactMarkdown>
+                      </div>
 
                       {msg.products &&
-                        msg.products.filter((p) => p.id !== productId).length > 0 && (
+                        msg.products.filter((p) => p.id !== activeProductId).length > 0 && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                             {msg.products
-                              .filter((p) => p.id !== productId)
+                              .filter((p) => p.id !== activeProductId)
                               .map((product) => (
                                 <Link
                                   key={product.id}
