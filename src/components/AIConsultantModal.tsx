@@ -33,8 +33,23 @@ const parseMarkdownToHtml = (text: string | null | undefined): string => {
     '<h1 class="text-green-400 text-2xl font-bold mt-8 mb-4">$1</h1>',
   )
 
-  // Emphasis
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+  // Bold: Process all pairs of ** using a while loop to wrap content
+  while (html.includes('**')) {
+    const start = html.indexOf('**')
+    const end = html.indexOf('**', start + 2)
+    if (start !== -1 && end !== -1) {
+      html =
+        html.substring(0, start) +
+        '<strong class="text-white font-bold">' +
+        html.substring(start + 2, end) +
+        '</strong>' +
+        html.substring(end + 2)
+    } else {
+      break
+    }
+  }
+
+  // Italics: Convert single asterisks * into <em> using lookbehind/lookahead
   html = html.replace(
     /(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g,
     '<em class="text-green-100/80">$1</em>',
