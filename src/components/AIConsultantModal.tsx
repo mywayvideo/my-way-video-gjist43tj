@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Link } from 'react-router-dom'
 
-const parseMarkdownToHTML = (text: string | null | undefined): string => {
+const parseMarkdownToHtml = (text: string | null | undefined): string => {
   if (!text) return ''
 
   let html = text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -227,7 +227,7 @@ export function AIConsultantModal({
                     <div className="space-y-4">
                       <div
                         className="text-white/90 text-base leading-normal overflow-x-auto"
-                        dangerouslySetInnerHTML={{ __html: parseMarkdownToHTML(msg.content || '') }}
+                        dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(msg.content || '') }}
                       />
 
                       {msg.products && msg.products.length > 0 && (
