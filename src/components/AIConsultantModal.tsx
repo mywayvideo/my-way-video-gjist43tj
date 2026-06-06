@@ -228,8 +228,29 @@ export function AIConsultantModal({
       }
 
       const data = await response.json()
+      console.log('[DEBUG_MODAL] Resposta completa:', JSON.stringify(data, null, 2))
+      console.log('[DEBUG_MODAL] data.products:', data.products)
+      console.log(
+        '[DEBUG_MODAL] data.referenced_internal_products:',
+        data.referenced_internal_products,
+      )
+      console.log('[DEBUG_MODAL] activeProductId:', activeProductId)
 
-      let finalProducts = data.products || []
+      // Tenta encontrar produtos em vários campos possíveis da resposta
+      let finalProducts = data.products || data.response?.products || data.payload?.products || []
+
+      // Se não encontrou produtos enriquecidos mas tem IDs, fazer grounding
+      if (
+        finalProducts.length === 0 &&
+        Array.isArray(data.referenced_internal_products) &&
+        data.referenced_internal_products.length > 0
+      ) {
+        const { data: productsData } = await supabase
+          .from('products')
+          .select('id, name, price_usd, image_url, category')
+          .in('id', data.referenced_internal_products)
+        finalProducts = productsData || []
+      }
 
       if (user && finalProducts.length > 0) {
         try {
