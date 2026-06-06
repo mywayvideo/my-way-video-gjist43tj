@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase/client'
 
 export interface AIResult {
   message?: string
@@ -9,6 +10,22 @@ export interface AIResult {
   whatsapp_reason?: string
   is_intermediate?: boolean
   products?: any[]
+}
+
+const fetchProductDetails = async (ids: string[]): Promise<any[]> => {
+  if (!ids || ids.length === 0) return []
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(
+        'id, name, price_usa, price_brl, image_url, description, sku, category, price_usa_rebate, date_rebate',
+      )
+      .in('id', ids)
+    if (error) throw error
+    return data || []
+  } catch {
+    return []
+  }
 }
 
 export function useAISearch() {
@@ -27,7 +44,6 @@ export function useAISearch() {
       setIsLoading(true)
       setError(null)
 
-      // Intermediate State
       setResults({
         message: 'PROCESSANDO BUSCA PROFUNDA MY WAY...',
         is_intermediate: true,
@@ -59,7 +75,22 @@ export function useAISearch() {
         }
 
         const data = await response.json()
-        setResults(data)
+
+        // Grounding SOMENTE na PP (quando currentProductId existe)
+        let enrichedProducts = data.products || []
+        if (
+          currentProductId &&
+          enrichedProducts.length === 0 &&
+          Array.isArray(data.referenced_internal_products) &&
+          data.referenced_internal_products.length > 0
+        ) {
+          enrichedProducts = await fetchProductDetails(data.referenced_internal_products)
+        }
+
+        setResults({
+          ...data,
+          products: enrichedProducts,
+        })
       } catch (err: any) {
         console.error('AI Search Error:', err)
         setError(err.message || 'Ocorreu um erro ao processar sua busca.')
