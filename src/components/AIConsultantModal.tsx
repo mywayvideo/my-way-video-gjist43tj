@@ -196,19 +196,38 @@ export function AIConsultantModal({
     if (!overrideQuery) setInputValue('')
     setIsLoading(true)
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000)
+
     try {
       const endpoint = activeProductId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
-      const { data, error } = await supabase.functions.invoke(endpoint, {
-        body: {
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
           query: userMsg.content,
           session_id: sessionId,
           currentProductId: activeProductId,
           userName: user?.user_metadata?.name || 'Cliente',
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        },
+        }),
+        signal: controller.signal,
       })
 
-      if (error) throw error
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error(`Erro na busca: ${response.statusText} - ${errText}`)
+      }
+
+      const data = await response.json()
 
       let finalProducts = data.products || []
 
@@ -246,16 +265,28 @@ export function AIConsultantModal({
       }
 
       setMessages((prev) => [...prev, assistantMsg])
-    } catch (err) {
-      console.error(err)
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: 'Desculpe, ocorreu um erro ao conectar com o agente de IA.',
-        },
-      ])
+    } catch (err: any) {
+      clearTimeout(timeoutId)
+      if (err.name === 'AbortError') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: 'A busca demorou mais de 60 segundos. Tente novamente.',
+          },
+        ])
+      } else {
+        console.error(err)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: 'Desculpe, ocorreu um erro ao conectar com o agente de IA.',
+          },
+        ])
+      }
     } finally {
       setIsLoading(false)
     }
