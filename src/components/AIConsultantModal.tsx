@@ -15,6 +15,63 @@ import { useAuth } from '@/hooks/use-auth'
 import { Link, useParams } from 'react-router-dom'
 import { MarkdownRenderer } from './MarkdownRenderer'
 
+const parseMarkdownToHtml = (text: string | null | undefined): string => {
+  if (!text) return ''
+  let html = text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  // Headers
+  html = html.replace(
+    /^###\s+(.*)$/gm,
+    '<h3 class="text-green-400 text-lg font-bold mt-4 mb-2">$1</h3>',
+  )
+  html = html.replace(
+    /^##\s+(.*)$/gm,
+    '<h2 class="text-green-400 text-xl font-bold mt-6 mb-3">$1</h2>',
+  )
+  html = html.replace(
+    /^#\s+(.*)$/gm,
+    '<h1 class="text-green-400 text-2xl font-bold mt-8 mb-4">$1</h1>',
+  )
+
+  // Negrito
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+
+  // Itálico
+  html = html.replace(/\*(?!\s)(.*?)(?<!\s)\*/g, '<em class="text-green-100/80">$1</em>')
+
+  // Tabelas markdown → grid CSS
+  const lines = html.split('\n')
+  const out: string[] = []
+  for (const line of lines) {
+    const t = line.trim()
+    if (t.startsWith('|') && t.endsWith('|')) {
+      const cells = t
+        .split('|')
+        .map((c) => c.trim())
+        .filter((_, i, a) => i > 0 && i < a.length - 1)
+      if (cells.every((c) => /^[-:]+$/.test(c))) continue // pula linha separadora
+      const cols = cells.length
+      let row = `<div class="grid gap-2 my-2" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr))">`
+      cells.forEach((c) => {
+        row += `<div class="border border-green-800/40 p-2 text-sm text-white/90">${c}</div>`
+      })
+      row += '</div>'
+      out.push(row)
+    } else {
+      out.push(line)
+    }
+  }
+  html = out.join('\n')
+
+  // Bullets
+  html = html.replace(/^•\s+(.*)$/gm, '<li class="ml-4 text-white/90">$1</li>')
+  html = html.replace(/^-\s+(.*)$/gm, '<li class="ml-4 text-white/90">$1</li>')
+
+  // Quebras de linha
+  html = html.replace(/\n/g, '<br />')
+  return html
+}
+
 interface Product {
   id: string
   name: string
@@ -258,13 +315,16 @@ export function AIConsultantModal({
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   ) : (
                     <div className="space-y-4">
-                      <div className="text-white/90 text-base leading-normal overflow-x-auto prose prose-invert prose-green max-w-none">
-                        <MarkdownRenderer
-                          content={(msg.content || '')
-                            .replace(/realizando busca profunda my way/gi, '')
-                            .trim()}
-                        />
-                      </div>
+                      <div
+                        className="text-white/90 text-base leading-normal overflow-x-auto space-y-4"
+                        dangerouslySetInnerHTML={{
+                          __html: parseMarkdownToHtml(
+                            (msg.content || '')
+                              .replace(/realizando busca profunda my way/gi, '')
+                              .trim(),
+                          ),
+                        }}
+                      />
 
                       {msg.products &&
                         msg.products.filter((p) => p.id !== activeProductId).length > 0 && (
