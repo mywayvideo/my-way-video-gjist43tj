@@ -234,24 +234,24 @@ export function AIConsultantModal({
         '[DEBUG_MODAL] data.referenced_internal_products:',
         data.referenced_internal_products,
       )
-      console.log('[DEBUG_MODAL] activeProductId:', activeProductId)
 
-      // Tenta encontrar produtos em vários campos possíveis da resposta
+      // Busca produtos em múltiplos campos possíveis
       let finalProducts = data.products || data.response?.products || data.payload?.products || []
 
-      // Se não encontrou produtos enriquecidos mas tem IDs, fazer grounding
+      // Fallback: se tem IDs mas não tem produtos enriquecidos, fazer grounding
       if (
         finalProducts.length === 0 &&
         Array.isArray(data.referenced_internal_products) &&
         data.referenced_internal_products.length > 0
       ) {
-        const { data: productsData } = await supabase
+        const { data: groundedProducts } = await supabase
           .from('products')
-          .select('id, name, price_usd, image_url, category')
+          .select('id, name, price_usd, price_usa, image_url, category')
           .in('id', data.referenced_internal_products)
-        finalProducts = productsData || []
+        finalProducts = groundedProducts || []
       }
 
+      // Cálculo de preço final por cliente
       if (user && finalProducts.length > 0) {
         try {
           const { data: customer } = await supabase
