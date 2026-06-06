@@ -537,7 +537,7 @@ serve(async (req: Request) => {
 
   const startTime = performance.now()
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 40000)
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
 
   try {
     // 1. Parse do body

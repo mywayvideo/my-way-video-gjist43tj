@@ -13,7 +13,6 @@ import { Send, Bot, MessageCircle, Sparkles, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Link, useParams } from 'react-router-dom'
-import { MarkdownRenderer } from './MarkdownRenderer'
 
 const parseMarkdownToHtml = (text: string | null | undefined): string => {
   if (!text) return ''
@@ -244,9 +243,10 @@ export function AIConsultantModal({
         Array.isArray(data.referenced_internal_products) &&
         data.referenced_internal_products.length > 0
       ) {
+        // Ignoring price_usa to avoid PostgREST error as it doesn't exist in products table
         const { data: groundedProducts } = await supabase
           .from('products')
-          .select('id, name, price_usd, price_usa, image_url, category')
+          .select('id, name, price_usd, image_url, category')
           .in('id', data.referenced_internal_products)
         finalProducts = groundedProducts || []
       }
