@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { DirectSearch } from '@/components/DirectSearch'
 import { ShoppingCart, User, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import mwLogo from '@/assets/mwlogohorizv03smalldarkback-c68bc.png'
 
 export function Header() {
   return (
@@ -9,7 +10,7 @@ export function Header() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center shrink-0">
           <img
-            src="/logo.png"
+            src={mwLogo}
             alt="My Way Video"
             className="h-10 sm:h-12 w-auto object-contain"
             loading="eager"
