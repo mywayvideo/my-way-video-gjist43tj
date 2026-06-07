@@ -28,7 +28,7 @@ const fetchProductDetails = async (ids: string[]): Promise<any[]> => {
   }
 }
 
-export function useAISearch() {
+export function useAiSearch() {
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState<AIResult | null>(null)
   const [error, setError] = useState<string | null>(null)
