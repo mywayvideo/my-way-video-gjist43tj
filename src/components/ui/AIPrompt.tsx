@@ -1,6 +1,5 @@
 import React, { useState, useRef, KeyboardEvent } from 'react'
-import { Search, Loader2, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Search, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AIPromptProps {
@@ -13,68 +12,70 @@ export function AIPrompt({ onSearch, isExternalLoading, className }: AIPromptPro
   const [query, setQuery] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleSubmit = () => {
+  const handleSearch = () => {
     if (query.trim() && !isExternalLoading) {
-      onSearch(query.trim())
+      onSearch(query)
     }
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSubmit()
+      handleSearch()
     }
   }
 
   const handleClear = () => {
     setQuery('')
-    if (textareaRef.current) {
-      textareaRef.current.focus()
-    }
+    textareaRef.current?.focus()
   }
 
   return (
     <div
       className={cn(
-        'relative flex w-full max-w-4xl mx-auto bg-zinc-900/50 backdrop-blur-md border border-white/10 rounded-[2rem] shadow-2xl transition-all focus-within:border-orange-500/50 focus-within:bg-zinc-900/80',
+        'relative w-full shadow-[0_0_30px_-5px_rgba(249,115,22,0.15)] rounded-2xl group',
         className,
       )}
     >
-      <textarea
-        ref={textareaRef}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="O que você está procurando para sua produção? Para consultar diretamente o nosso banco de dados, utilize a barra de pesquisa do cabeçalho"
-        className="w-full bg-transparent border-none outline-none text-white placeholder:text-zinc-500 resize-none min-h-[120px] py-6 px-8 pr-[120px] text-lg leading-relaxed focus:ring-0 rounded-[2rem]"
-        rows={2}
-      />
+      <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/10 via-orange-400/10 to-orange-500/10 rounded-[18px] blur-md opacity-75 group-hover:opacity-100 transition duration-500"></div>
 
-      <div className="absolute right-4 bottom-4 flex items-center gap-2">
-        {query && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleClear}
-            className="h-10 w-10 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        )}
+      <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-2xl p-2 focus-within:ring-2 focus-within:ring-orange-500/50 focus-within:border-orange-500/50 transition-all">
+        <textarea
+          ref={textareaRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="O que você está procurando para sua produção? Para consultar diretamente o nosso banco de dados, utilize a barra de pesquisa do cabeçalho"
+          className="flex-1 bg-transparent text-white placeholder:text-zinc-500 resize-none outline-none min-h-[4.5rem] px-4 py-3 leading-relaxed pr-28"
+          rows={2}
+          disabled={isExternalLoading}
+        />
 
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isExternalLoading || !query.trim()}
-          className="h-12 w-12 rounded-full bg-orange-600 hover:bg-orange-700 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
-        >
-          {isExternalLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Search className="w-5 h-5" />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          {query && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-2 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-zinc-800"
+              disabled={isExternalLoading}
+            >
+              <X className="w-5 h-5" />
+            </button>
           )}
-        </Button>
+
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={!query.trim() || isExternalLoading}
+            className="p-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:hover:bg-orange-500 text-white rounded-xl transition-all shadow-lg shadow-orange-500/20 flex-shrink-0"
+          >
+            {isExternalLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Search className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )
