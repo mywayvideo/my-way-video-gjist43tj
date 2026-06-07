@@ -13,6 +13,7 @@ import { Send, Bot, MessageCircle, Sparkles, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Link, useParams } from 'react-router-dom'
+import { ProductCard } from '@/components/ProductCard'
 
 const parseMarkdownToHtml = (text: string | null | undefined): string => {
   if (!text) return ''
@@ -75,10 +76,27 @@ interface Product {
   id: string
   name: string
   price_usd?: number
+  price_brl?: number
   price_nationalized_sales?: number
   price_nationalized_currency?: string
   image_url?: string
   category?: string
+  manufacturer?: string
+  description?: string
+  sku?: string
+  slug?: string
+  weight?: number
+  is_discontinued?: boolean
+  discount_percentage?: number
+  price_usa_rebate?: number
+  date_rebate?: string
+  originalPrice?: number
+  discountedPrice?: number
+  originalPriceNat?: number
+  discountedPriceNat?: number
+  discountPercentage?: number
+  isRebateActive?: boolean
+  manufacturers?: { name: string } | null
 }
 
 interface Message {
@@ -246,7 +264,9 @@ export function AIConsultantModal({
         // Ignoring price_usa to avoid PostgREST error as it doesn't exist in products table
         const { data: groundedProducts } = await supabase
           .from('products')
-          .select('id, name, price_usd, image_url, category')
+          .select(
+            'id, name, price_usd, price_brl, price_nationalized_sales, price_nationalized_currency, image_url, category, description, sku, weight, is_discontinued, price_usa_rebate, date_rebate, manufacturers(name)',
+          )
           .in('id', data.referenced_internal_products)
         finalProducts = groundedProducts || []
       }
@@ -380,42 +400,13 @@ export function AIConsultantModal({
 
                       {msg.products &&
                         msg.products.filter((p) => p.id !== activeProductId).length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                             {msg.products
                               .filter((p) => p.id !== activeProductId)
                               .map((product) => (
-                                <Link
-                                  key={product.id}
-                                  to={`/product/${product.id}`}
-                                  onClick={onClose}
-                                  className="flex flex-col bg-zinc-950 border border-green-900/30 rounded-md p-3 hover:border-green-500/50 transition-colors group"
-                                >
-                                  <div className="flex items-start gap-3">
-                                    {product.image_url ? (
-                                      <img
-                                        src={product.image_url}
-                                        alt={product.name}
-                                        className="w-16 h-16 object-cover rounded bg-zinc-900"
-                                      />
-                                    ) : (
-                                      <div className="w-16 h-16 bg-zinc-900 rounded flex items-center justify-center">
-                                        <Sparkles className="w-6 h-6 text-green-700" />
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-green-100 line-clamp-2 group-hover:text-green-400 transition-colors">
-                                        {product.name}
-                                      </p>
-                                      {product.price_usd ? (
-                                        <p className="text-xs text-green-500 mt-1 font-semibold">
-                                          USD ${product.price_usd.toFixed(2)}
-                                        </p>
-                                      ) : (
-                                        <p className="text-xs text-zinc-500 mt-1">Sob Consulta</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </Link>
+                                <div key={product.id} onClick={onClose} className="cursor-pointer">
+                                  <ProductCard product={product as any} />
+                                </div>
                               ))}
                           </div>
                         )}
