@@ -9,11 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SEO } from '@/components/SEO'
 import { AIPrompt } from '@/components/ui/AIPrompt'
-import { X, Search, Loader2, Star, Flame } from 'lucide-react'
+import { Loader2, Star, Flame } from 'lucide-react'
 
 export default function Index() {
   const { search: aiSearch, isLoading: isSearchLoading, results } = useAiSearch()
-  const [query, setQuery] = useState('')
   const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const whatsappNumber = results?.settings?.company_whatsapp?.replace(/\D/g, '') || '17867161170'
