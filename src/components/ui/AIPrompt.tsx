@@ -8,6 +8,7 @@ export interface AIPromptProps {
   onSearch?: (query: string) => void
   onSubmit?: (query: string) => void
   isLoading?: boolean
+  isExternalLoading?: boolean
   placeholder?: string
   className?: string
 }
@@ -16,16 +17,18 @@ export function AIPrompt({
   onSearch,
   onSubmit,
   isLoading,
-  placeholder = 'Descreva o que você precisa ou faça uma pergunta para a IA...',
+  isExternalLoading,
+  placeholder = 'O que você esta procurando para sua produção',
   className,
 }: AIPromptProps) {
   const [query, setQuery] = useState('')
 
+  const loadingState = isLoading || isExternalLoading
   const submitAction = onSubmit || onSearch
 
   const handleSubmit = (e?: FormEvent) => {
     e?.preventDefault()
-    if (query.trim() && !isLoading && submitAction) {
+    if (query.trim() && !loadingState && submitAction) {
       submitAction(query.trim())
     }
   }
@@ -51,16 +54,16 @@ export function AIPrompt({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="min-h-[100px] w-full resize-none border-0 bg-transparent p-4 pr-16 text-base focus-visible:ring-0 shadow-none"
-          disabled={isLoading}
+          disabled={loadingState}
         />
         <div className="absolute right-3 bottom-3 flex items-center gap-2">
           <Button
             type="submit"
             size="icon"
-            disabled={!query.trim() || isLoading}
+            disabled={!query.trim() || loadingState}
             className="h-10 w-10 rounded-full transition-all bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {isLoading ? (
+            {loadingState ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Send className="h-5 w-5 ml-1" />

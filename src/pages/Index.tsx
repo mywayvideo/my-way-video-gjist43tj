@@ -8,7 +8,7 @@ import { useAiSearch } from '@/hooks/use-ai-search'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SEO } from '@/components/SEO'
-import { AIPrompt } from '@/components/AI/AIPrompt'
+import { AIPrompt } from '@/components/ui/AIPrompt'
 import { X, Search, Loader2, Star, Flame } from 'lucide-react'
 
 export default function Index() {
