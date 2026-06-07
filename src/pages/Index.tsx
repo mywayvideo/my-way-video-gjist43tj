@@ -16,27 +16,13 @@ export default function Index() {
   const [query, setQuery] = useState('')
   const [specials, setSpecials] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const debounceTimerRef = useRef<number | null>(null)
   const whatsappNumber = results?.settings?.company_whatsapp?.replace(/\D/g, '') || '17867161170'
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
-  }, [])
-
   const handleSearch = useCallback(
-    (query: string) => {
-      if (debounceTimerRef.current) {
-        window.clearTimeout(debounceTimerRef.current)
+    (searchQuery: string) => {
+      if (searchQuery.trim()) {
+        aiSearch(searchQuery.trim())
       }
-
-      debounceTimerRef.current = window.setTimeout(() => {
-        if (query.trim()) {
-          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-          aiSearch(query)
-        }
-      }, 300)
     },
     [aiSearch],
   )

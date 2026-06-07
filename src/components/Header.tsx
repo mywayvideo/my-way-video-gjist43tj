@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { DirectSearch } from '@/components/DirectSearch'
 import { ShoppingCart, User, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import mwLogo from '@/assets/mwlogohorizv03smalldarkback-c68bc.png'
+import mwLogo from '../assets/mwlogohorizv03smalldarkback-c68bc.png'
 
 export function Header() {
   return (

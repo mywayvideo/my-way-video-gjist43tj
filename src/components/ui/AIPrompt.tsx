@@ -1,83 +1,81 @@
-import React, { useState } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import React, { useState, useRef, KeyboardEvent } from 'react'
+import { Search, Loader2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface AIPromptProps {
   onSearch: (query: string) => void
   isExternalLoading?: boolean
   className?: string
-  placeholder?: string
 }
 
-export function AIPrompt({
-  onSearch,
-  isExternalLoading,
-  className,
-  placeholder = 'O que você esta procurando para sua produção',
-}: AIPromptProps) {
+export function AIPrompt({ onSearch, isExternalLoading, className }: AIPromptProps) {
   const [query, setQuery] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (query.trim()) {
-      onSearch(query)
+  const handleSubmit = () => {
+    if (query.trim() && !isExternalLoading) {
+      onSearch(query.trim())
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setQuery(val)
-    onSearch(val)
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit()
+    }
+  }
+
+  const handleClear = () => {
+    setQuery('')
+    if (textareaRef.current) {
+      textareaRef.current.focus()
+    }
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
       className={cn(
-        'relative flex items-center w-full max-w-3xl mx-auto group',
-        'bg-background/40 backdrop-blur-xl border border-white/20',
-        'rounded-full shadow-[0_8px_32px_-10px_rgba(255,165,0,0.15)]',
-        'transition-all duration-500 hover:shadow-[0_8px_32px_-10px_rgba(255,165,0,0.25)] hover:border-orange-500/40',
-        'focus-within:shadow-[0_8px_32px_-10px_rgba(255,165,0,0.35)] focus-within:border-orange-500/60 focus-within:bg-background/60',
+        'relative flex w-full max-w-4xl mx-auto bg-zinc-900/50 backdrop-blur-md border border-white/10 rounded-[2rem] shadow-2xl transition-all focus-within:border-orange-500/50 focus-within:bg-zinc-900/80',
         className,
       )}
     >
-      <div className="absolute left-4 sm:left-6 flex items-center justify-center text-muted-foreground transition-colors duration-300 group-focus-within:text-orange-500">
-        {isExternalLoading ? (
-          <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-orange-500" />
-        ) : (
-          <Search className="w-5 h-5 sm:w-6 sm:h-6" />
-        )}
-      </div>
-
-      <input
-        type="text"
+      <textarea
+        ref={textareaRef}
         value={query}
-        onChange={handleChange}
-        placeholder={placeholder}
-        className={cn(
-          'w-full bg-transparent border-none outline-none ring-0',
-          'py-4 sm:py-5 pl-12 sm:pl-16 pr-14 sm:pr-16',
-          'text-base sm:text-lg text-foreground placeholder:text-muted-foreground/60',
-          'rounded-full',
-        )}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="O que você está procurando para sua produção? Para consultar diretamente o nosso banco de dados, utilize a barra de pesquisa do cabeçalho"
+        className="w-full bg-transparent border-none outline-none text-white placeholder:text-zinc-500 resize-none min-h-[120px] py-6 px-8 pr-[120px] text-lg leading-relaxed focus:ring-0 rounded-[2rem]"
+        rows={2}
       />
 
-      <div className="absolute right-2 sm:right-3 flex items-center">
-        <button
-          type="submit"
-          disabled={!query.trim() || isExternalLoading}
-          className={cn(
-            'p-2.5 sm:p-3 rounded-full bg-orange-500 text-white',
-            'transition-all duration-300 shadow-md shadow-orange-500/20',
-            'hover:bg-orange-600 hover:shadow-orange-500/40 hover:scale-105',
-            'disabled:opacity-50 disabled:hover:bg-orange-500 disabled:hover:scale-100 disabled:hover:shadow-none',
-            'active:scale-95',
-          )}
+      <div className="absolute right-4 bottom-4 flex items-center gap-2">
+        {query && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleClear}
+            className="h-10 w-10 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        )}
+
+        <Button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isExternalLoading || !query.trim()}
+          className="h-12 w-12 rounded-full bg-orange-600 hover:bg-orange-700 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
         >
-          <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+          {isExternalLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Search className="w-5 h-5" />
+          )}
+        </Button>
       </div>
-    </form>
+    </div>
   )
 }
