@@ -7,9 +7,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl tracking-tight shrink-0">
-          <span className="text-primary">MY WAY</span>
-          <span className="hidden sm:inline-block">VIDEO</span>
+        <Link to="/" className="flex items-center shrink-0">
+          <img
+            src="/logo.png"
+            alt="My Way Video"
+            className="h-10 sm:h-12 w-auto object-contain"
+            loading="eager"
+          />
         </Link>
 
         <div className="flex-1 flex justify-center max-w-2xl px-2 md:px-4">

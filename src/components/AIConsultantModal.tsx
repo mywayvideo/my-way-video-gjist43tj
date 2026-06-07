@@ -82,6 +82,7 @@ interface Product {
   image_url?: string
   category?: string
   manufacturer?: string
+  manufacturer_id?: string
   description?: string
   sku?: string
   slug?: string
@@ -261,11 +262,11 @@ export function AIConsultantModal({
         Array.isArray(data.referenced_internal_products) &&
         data.referenced_internal_products.length > 0
       ) {
-        // Ignoring price_usa to avoid PostgREST error as it doesn't exist in products table
+        // Ignoring price_usa, slug, discount_percentage and manufacturer to avoid PostgREST error as they don't exist in products table
         const { data: groundedProducts } = await supabase
           .from('products')
           .select(
-            'id, name, price_usd, price_brl, price_nationalized_sales, price_nationalized_currency, image_url, category, description, sku, weight, is_discontinued, price_usa_rebate, date_rebate, manufacturers(name)',
+            'id, name, price_usd, price_brl, price_nationalized_sales, price_nationalized_currency, image_url, category, description, sku, weight, is_discontinued, price_usa_rebate, date_rebate, manufacturer_id, manufacturers(name)',
           )
           .in('id', data.referenced_internal_products)
         finalProducts = groundedProducts || []
