@@ -18,7 +18,7 @@ const fetchProductDetails = async (ids: string[]): Promise<any[]> => {
     const { data, error } = await supabase
       .from('products')
       .select(
-        'id, name, price_usa, price_brl, image_url, description, sku, category, price_usa_rebate, date_rebate',
+        'id, name, price_usd, price_brl, image_url, description, sku, category, price_usa_rebate, date_rebate',
       )
       .in('id', ids)
     if (error) throw error
