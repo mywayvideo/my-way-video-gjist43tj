@@ -17,9 +17,7 @@ const fetchProductDetails = async (ids: string[]): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select(
-        'id, name, price_usd, price_brl, image_url, description, sku, category, price_usa_rebate, date_rebate',
-      )
+      .select('*, manufacturers(*)')
       .in('id', ids)
     if (error) throw error
     return data || []
@@ -76,10 +74,8 @@ export function useAiSearch() {
 
         const data = await response.json()
 
-        // Grounding SOMENTE na PP (quando currentProductId existe)
         let enrichedProducts = data.products || []
         if (
-          currentProductId &&
           enrichedProducts.length === 0 &&
           Array.isArray(data.referenced_internal_products) &&
           data.referenced_internal_products.length > 0
@@ -89,6 +85,8 @@ export function useAiSearch() {
 
         setResults({
           ...data,
+          referenced_internal_products:
+            enrichedProducts.length > 0 ? enrichedProducts : data.referenced_internal_products,
           products: enrichedProducts,
         })
       } catch (err: any) {

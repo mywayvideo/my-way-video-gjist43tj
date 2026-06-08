@@ -67,7 +67,7 @@ export default function Search() {
               } else {
                 const { data: pData } = await supabase
                   .from('products')
-                  .select('*')
+                  .select('*, manufacturers(*)')
                   .in('id', referenced_internal_products)
                 if (pData) setProducts(pData)
               }
