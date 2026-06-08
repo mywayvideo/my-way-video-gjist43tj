@@ -4,26 +4,36 @@ export const searchProducts = async (query: string) => {
   try {
     if (!query || !query.trim()) return []
 
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, description, category, price_usd, image_url, sku')
-      .eq('is_discontinued', false)
-      .or(`name.ilike.%${query}%,description.ilike.%${query}%,sku.ilike.%${query}%`)
-      .order('created_at', { ascending: false })
-      .limit(30)
+    // Call RPC to get ranked IDs
+    const { data: rpcData, error: rpcError } = await supabase.rpc('search_products_v2', {
+      search_term: query,
+      boost_multiplier: 1.0,
+    })
 
-    if (error) {
-      console.error('Database search error:', error)
+    if (rpcError) {
+      console.error('Database search error:', rpcError)
       return []
     }
 
-    const sortedData = (data || []).sort((a, b) => {
-      if (a.sku?.toLowerCase() === query.toLowerCase()) return -1
-      if (b.sku?.toLowerCase() === query.toLowerCase()) return 1
-      return 0
-    })
+    if (!rpcData || rpcData.length === 0) return []
 
-    return sortedData
+    const ids = rpcData.map((item: any) => item.id)
+
+    // Fetch full product details
+    const { data: products, error: prodError } = await supabase
+      .from('products')
+      .select('*')
+      .in('id', ids)
+
+    if (prodError) {
+      console.error('Database fetch products error:', prodError)
+      return []
+    }
+
+    // Sort by the RPC final_rank order
+    const sortedProducts = ids.map((id) => products?.find((p) => p.id === id)).filter(Boolean)
+
+    return sortedProducts
   } catch (error) {
     console.error('Database search error exception:', error)
     return []

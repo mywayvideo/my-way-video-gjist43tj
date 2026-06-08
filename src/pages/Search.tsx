@@ -14,7 +14,6 @@ import {
 } from 'lucide-react'
 import { performAISearch } from '@/services/ai-search'
 import { searchProducts } from '@/services/database-search'
-import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
@@ -151,12 +150,9 @@ export default function Search() {
                 )}
               </div>
 
-              {/* @ts-expect-error - Passed properties requested by user instructions to support formatting component upgrades */}
-              <ResponseFormatter
-                content={aiResponse.message}
-                message={aiResponse.message}
-                referenced_internal_products={aiResponse.referenced_internal_products}
-              />
+              <div className="prose prose-invert max-w-none text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                {aiResponse.message}
+              </div>
 
               {showWhatsAppButton && (
                 <div className="pt-6 mt-6 border-t border-border/50">
