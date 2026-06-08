@@ -52,8 +52,8 @@ export default function Index() {
         <div className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-10 text-center">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter flex flex-col items-center gap-2">
-              <span className="text-white">Inteligência em</span>
-              <span className="text-yellow-500">Audiovisual PRO</span>
+              <span className="text-white">Inteligência em IA</span>
+              <span className="text-[#E1AD01]">Audiovisual PRO</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-light">
               Descreva seu projeto ou busque o equipamento ideal. Nossa inteligência artificial
@@ -84,7 +84,7 @@ export default function Index() {
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
                 placeholder="Ex. Camera PTZ 4K com autotracking... (utilize a barra superiora para pesquisar diretamente no nosso banco de dados)"
-                className="flex-1 bg-transparent border-0 focus:ring-0 resize-none h-[5.25rem] py-3 text-base md:text-lg placeholder:text-muted-foreground/60 text-slate-200 outline-none overflow-y-auto leading-normal disabled:opacity-50"
+                className="flex-1 bg-transparent border-0 focus:ring-0 resize-none h-20 py-3 text-[17px] md:text-[19px] placeholder:text-muted-foreground/60 text-muted-foreground font-light outline-none overflow-y-auto leading-normal disabled:opacity-50"
               />
 
               {query && !isLoading && (

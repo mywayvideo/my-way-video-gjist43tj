@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ReferencedProducts } from '@/components/ReferencedProducts'
+import { ProductCard } from '@/components/ProductCard'
 import { Product } from '@/types'
 
 interface ResponseFormatterProps {
@@ -38,14 +39,25 @@ export function ResponseFormatter({
         </ReactMarkdown>
       </div>
 
-      {productIds && productIds.length > 0 && (
+      {itemsToRender && itemsToRender.length > 0 && typeof itemsToRender[0] === 'object' ? (
         <div className="mt-8 animate-fade-in-up not-prose">
           <h3 className="text-sm font-bold tracking-widest text-zinc-500 uppercase mb-6 pl-3 border-l-4 border-primary">
             Equipamentos Localizados
           </h3>
-          <ReferencedProducts ids={productIds} />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {itemsToRender.map((p: any) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
         </div>
-      )}
+      ) : productIds && productIds.length > 0 ? (
+        <div className="mt-8 animate-fade-in-up not-prose">
+          <h3 className="text-sm font-bold tracking-widest text-zinc-500 uppercase mb-6 pl-3 border-l-4 border-primary">
+            Equipamentos Localizados
+          </h3>
+          <ReferencedProducts ids={productIds as string[]} />
+        </div>
+      ) : null}
     </div>
   )
 }
