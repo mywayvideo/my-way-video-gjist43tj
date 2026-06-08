@@ -52,8 +52,8 @@ export default function Index() {
         <div className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-10 text-center">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter flex flex-col items-center gap-2">
-              <span className="text-white">Inteligência em IA</span>
-              <span className="text-[#E1AD01]">Audiovisual PRO</span>
+              <span className="text-white">Inteligência em</span>
+              <span className="text-[#E1AD01] text-[4.2rem]">Audiovisual PRO</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-light">
               Descreva seu projeto ou busque o equipamento ideal. Nossa inteligência artificial
