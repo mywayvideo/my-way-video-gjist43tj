@@ -28,7 +28,7 @@ const useSearchState = () => {
     query: string,
     response: string | null = null,
     products: any[] = [],
-    type: 'ai' | 'database' = 'ai',
+    type: 'ai' | 'database' = 'database',
     dbResults: any[] = [],
     shouldShowWhatsapp: boolean = false,
   ) => {
@@ -77,7 +77,7 @@ const useSearchState = () => {
           searchQuery: parsed.query || '',
           aiResponse: parsed.response || null,
           productResults: parsed.products || [],
-          searchType: parsed.type || 'ai',
+          searchType: parsed.type || 'database',
           dbResults: parsed.dbResults || [],
           shouldShowWhatsapp: parsed.shouldShowWhatsapp || false,
           searchTimestamp: parsed.timestamp || 0,

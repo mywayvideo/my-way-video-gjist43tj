@@ -59,6 +59,12 @@ export function DirectSearch() {
           className="w-full pl-11 pr-10 rounded-full bg-muted/30 border-transparent focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 hover:bg-muted/50 transition-all h-11 md:h-12 text-base shadow-sm"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && query.trim()) {
+              setOpen(false)
+              navigate(`/search?q=${encodeURIComponent(query)}&type=database`)
+            }
+          }}
           onFocus={() => {
             if (results.length > 0) setOpen(true)
           }}
@@ -109,7 +115,7 @@ export function DirectSearch() {
           <button
             onClick={() => {
               setOpen(false)
-              navigate(`/search?q=${encodeURIComponent(query)}`)
+              navigate(`/search?q=${encodeURIComponent(query)}&type=database`)
             }}
             className="w-full p-4 text-sm text-center text-primary font-medium hover:bg-muted/50 transition-colors"
           >

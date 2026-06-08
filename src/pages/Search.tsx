@@ -10,14 +10,16 @@ import {
   Search as SearchIcon,
   Sparkles,
   AlertTriangle,
+  Database,
 } from 'lucide-react'
 import { performAISearch } from '@/services/ai-search'
+import { searchProducts } from '@/services/database-search'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
-  const searchType = searchParams.get('type') || 'ai'
+  const searchType = searchParams.get('type') || 'database'
   const [loading, setLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
@@ -33,7 +35,7 @@ export default function Search() {
 
   useEffect(() => {
     async function doSearch() {
-      if (!query.trim() || searchType === 'database') {
+      if (!query.trim()) {
         setAiResponse(null)
         setProducts([])
         return
@@ -41,34 +43,41 @@ export default function Search() {
       setLoading(true)
       setAiResponse(null)
       setProducts([])
+
       try {
-        const { data, error } = await performAISearch(query)
-        if (error) throw error
-        if (data) {
-          const message = data.message
-          const referenced_internal_products = (data as any).referenced_internal_products || []
-          const confidence_level = data.confidence_level
+        if (searchType === 'ai') {
+          const { data, error } = await performAISearch(query)
+          if (error) throw error
+          if (data) {
+            const message = data.message
+            const referenced_internal_products = (data as any).referenced_internal_products || []
+            const confidence_level = data.confidence_level
 
-          setAiResponse({
-            message,
-            referenced_internal_products,
-            confidence_level,
-            should_show_whatsapp_button: data.should_show_whatsapp_button,
-            whatsapp_reason: data.whatsapp_reason,
-            type: data.type,
-          })
+            setAiResponse({
+              message,
+              referenced_internal_products,
+              confidence_level,
+              should_show_whatsapp_button: data.should_show_whatsapp_button,
+              whatsapp_reason: data.whatsapp_reason,
+              type: data.type,
+            })
 
-          if (referenced_internal_products.length > 0) {
-            if (typeof referenced_internal_products[0] === 'object') {
-              setProducts(referenced_internal_products)
-            } else {
-              const { data: pData } = await supabase
-                .from('products')
-                .select('*')
-                .in('id', referenced_internal_products)
-              if (pData) setProducts(pData)
+            if (referenced_internal_products.length > 0) {
+              if (typeof referenced_internal_products[0] === 'object') {
+                setProducts(referenced_internal_products)
+              } else {
+                const { data: pData } = await supabase
+                  .from('products')
+                  .select('*')
+                  .in('id', referenced_internal_products)
+                if (pData) setProducts(pData)
+              }
             }
           }
+        } else {
+          // Direct Database Search
+          const data = await searchProducts(query)
+          setProducts(data || [])
         }
       } catch (error) {
         console.error('Error:', error)
@@ -86,28 +95,38 @@ export default function Search() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl min-h-[70vh]">
-      {query && searchType === 'ai' && (
-        <div className="flex items-center gap-3 mb-8 pb-4 border-b">
-          <SearchIcon className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Resultados para "{query}"</h1>
+      {query && (
+        <div className="flex items-center gap-3 mb-8 pb-4 border-b border-border/50">
+          {searchType === 'ai' ? (
+            <Sparkles className="w-6 h-6 text-accent" />
+          ) : (
+            <SearchIcon className="w-6 h-6 text-primary" />
+          )}
+          <h1 className="text-2xl font-bold">
+            {searchType === 'ai' ? 'Análise IA para' : 'Resultados para'} "{query}"
+          </h1>
         </div>
       )}
 
-      {loading && searchType === 'ai' && (
+      {loading && (
         <div className="flex flex-col justify-center items-center py-24 space-y-6">
           <div className="relative">
             <Loader2 className="w-14 h-14 animate-spin text-primary" />
-            <Sparkles className="w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse" />
+            {searchType === 'ai' && (
+              <Sparkles className="w-6 h-6 absolute -top-2 -right-2 text-accent animate-pulse" />
+            )}
           </div>
           <div className="text-center space-y-2">
             <h3 className="text-xl font-semibold text-primary animate-pulse">
-              A IA está analisando especificações e integrando dados...
+              {searchType === 'ai'
+                ? 'A IA está analisando especificações e integrando dados...'
+                : 'Buscando no catálogo...'}
             </h3>
           </div>
         </div>
       )}
 
-      {!loading && aiResponse && searchType === 'ai' && (
+      {!loading && searchType === 'ai' && aiResponse && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8">
           <div className="bg-card border border-primary/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start shadow-sm">
             <div className="bg-primary/10 p-4 rounded-full shrink-0">
@@ -167,16 +186,30 @@ export default function Search() {
         </div>
       )}
 
-      {!loading && products.length > 0 && searchType === 'ai' && (
+      {!loading && products.length > 0 && (
         <div className="animate-in fade-in slide-in-from-bottom-4 mt-12">
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Recomendados
-          </h2>
+          {searchType === 'ai' && (
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-accent" /> Equipamentos Recomendados
+            </h2>
+          )}
+          {searchType === 'database' && (
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Database className="w-5 h-5 text-primary" /> Resultados Encontrados
+            </h2>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
+        </div>
+      )}
+
+      {!loading && products.length === 0 && searchType === 'database' && query && (
+        <div className="text-center py-20 text-muted-foreground animate-in fade-in">
+          <Database className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <p className="text-lg">Nenhum equipamento encontrado para "{query}".</p>
         </div>
       )}
     </div>
