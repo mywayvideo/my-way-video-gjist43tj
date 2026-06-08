@@ -1,11 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Sparkles, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
-import { ProductCard } from '@/components/ProductCard'
+import { ResponseFormatter } from '@/components/ResponseFormatter'
 
 interface Product {
   id: string
@@ -41,6 +39,23 @@ export function AISearchResults({
   isAdmin,
 }: AISearchResultsProps) {
   const { addItem } = useCart()
+  const [loadingMessage, setLoadingMessage] = useState('Sincronizando Tier Técnico...')
+
+  useEffect(() => {
+    if (!isLoading) return
+    const messages = [
+      'Sincronizando Tier Técnico...',
+      'Analisando Disponibilidade Logística...',
+      'Otimizando Resposta Audiovisual PRO...',
+    ]
+    let currentIndex = 0
+    setLoadingMessage(messages[currentIndex])
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % messages.length
+      setLoadingMessage(messages[currentIndex])
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [isLoading])
 
   if (isLoading && (!result || !result.is_intermediate)) {
     return (
@@ -69,9 +84,14 @@ export function AISearchResults({
             <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
               <Sparkles className="h-6 w-6 animate-pulse text-slate-300" />
             </div>
-            <p className="animate-pulse bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-sm font-medium text-transparent">
-              A IA está analisando o catálogo...
-            </p>
+            <div className="h-6 relative overflow-hidden flex items-center justify-center min-w-[300px]">
+              <p
+                key={loadingMessage}
+                className="absolute animate-fade-in-up bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-sm font-medium text-transparent text-center w-full"
+              >
+                {loadingMessage}
+              </p>
+            </div>
           </div>
 
           <div className="w-full space-y-4">
@@ -142,62 +162,22 @@ export function AISearchResults({
       </div>
 
       <div
-        className={cn(
-          'prose prose-invert max-w-none text-slate-300 leading-relaxed',
-          result.is_intermediate && 'animate-pulse',
-        )}
+        className={cn('text-slate-300 leading-relaxed', result.is_intermediate && 'animate-pulse')}
       >
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            table: ({ children }: any) => (
-              <div className="overflow-x-auto w-full my-6">
-                <table className="border border-slate-700 border-collapse min-w-max text-sm">
-                  {children}
-                </table>
-              </div>
-            ),
-            thead: ({ children }: any) => <thead className="[&>tr]:bg-slate-800">{children}</thead>,
-            th: ({ children }: any) => (
-              <th className="border border-slate-700 px-3 py-2 whitespace-nowrap text-slate-200">
-                {children}
-              </th>
-            ),
-            td: ({ children }: any) => (
-              <td className="border border-slate-700 px-3 py-2 whitespace-nowrap text-slate-300">
-                {children}
-              </td>
-            ),
-            tr: ({ children }: any) => <tr className="even:bg-slate-800/50">{children}</tr>,
-            a: ({ node, ...props }: any) => (
-              <a
-                className="text-primary hover:text-primary/80 underline underline-offset-4 transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-                {...props}
-              />
-            ),
-          }}
-        >
-          {(result.message || '').replace(/realizando busca profunda my way/gi, '').trim()}
-        </ReactMarkdown>
+        <ResponseFormatter
+          content={(result.message || '').replace(/realizando busca profunda my way/gi, '').trim()}
+          products={
+            !result.is_intermediate && typeof result.referenced_internal_products?.[0] === 'object'
+              ? (result.referenced_internal_products as any[])
+              : undefined
+          }
+          referenced_internal_products={
+            !result.is_intermediate && typeof result.referenced_internal_products?.[0] === 'string'
+              ? (result.referenced_internal_products as string[])
+              : undefined
+          }
+        />
       </div>
-
-      {result.referenced_internal_products &&
-        result.referenced_internal_products.length > 0 &&
-        !result.is_intermediate && (
-          <div className="mt-8 space-y-4">
-            <h4 className="text-sm font-medium uppercase tracking-wider text-slate-500">
-              Produtos Recomendados
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {result.referenced_internal_products.map((product: any) => {
-                if (typeof product === 'string') return null
-                return <ProductCard key={product.id} product={product} />
-              })}
-            </div>
-          </div>
-        )}
 
       {result.should_show_whatsapp_button && (
         <div className="mt-6 rounded-lg border border-green-500/20 bg-green-500/10 p-4">
