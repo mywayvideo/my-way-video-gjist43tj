@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Sparkles, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
-import { ProductCard } from '@/components/ProductCard'
+import { ReferencedProducts } from '@/components/ReferencedProducts'
 
 interface Product {
   id: string
@@ -41,6 +41,23 @@ export function AISearchResults({
   isAdmin,
 }: AISearchResultsProps) {
   const { addItem } = useCart()
+  const [loadingMessage, setLoadingMessage] = useState('Sincronizando Tier Técnico...')
+
+  useEffect(() => {
+    if (!isLoading) return
+    const messages = [
+      'Sincronizando Tier Técnico...',
+      'Analisando Disponibilidade Logística...',
+      'Otimizando Resposta Audiovisual PRO...',
+    ]
+    let currentIndex = 0
+    setLoadingMessage(messages[currentIndex])
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % messages.length
+      setLoadingMessage(messages[currentIndex])
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [isLoading])
 
   if (isLoading && (!result || !result.is_intermediate)) {
     return (
@@ -69,8 +86,8 @@ export function AISearchResults({
             <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
               <Sparkles className="h-6 w-6 animate-pulse text-slate-300" />
             </div>
-            <p className="animate-pulse bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-sm font-medium text-transparent">
-              A IA está analisando o catálogo...
+            <p className="animate-pulse bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-sm font-medium text-transparent transition-all duration-500">
+              {loadingMessage}
             </p>
           </div>
 
@@ -190,12 +207,7 @@ export function AISearchResults({
             <h4 className="text-sm font-medium uppercase tracking-wider text-slate-500">
               Produtos Recomendados
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {result.referenced_internal_products.map((product: any) => {
-                if (typeof product === 'string') return null
-                return <ProductCard key={product.id} product={product} />
-              })}
-            </div>
+            <ReferencedProducts ids={result.referenced_internal_products} />
           </div>
         )}
 
