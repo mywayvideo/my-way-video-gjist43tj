@@ -41,14 +41,7 @@ export function useAiSearch() {
 
       setIsLoading(true)
       setError(null)
-
-      setResults({
-        message: 'PROCESSANDO BUSCA PROFUNDA MY WAY...',
-        is_intermediate: true,
-        referenced_internal_products: [],
-        confidence_level: 'low',
-        should_show_whatsapp_button: false,
-      })
+      setResults(null)
 
       try {
         const functionName = currentProductId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'

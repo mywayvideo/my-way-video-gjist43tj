@@ -84,7 +84,10 @@ export default function Index() {
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
                 placeholder="Ex. Camera PTZ 4K com autotracking... (utilize a barra superiora para pesquisar diretamente no nosso banco de dados)"
-                className="flex-1 bg-transparent border-0 focus:ring-0 resize-none h-20 py-3 text-[17px] md:text-[19px] placeholder:text-muted-foreground/60 text-muted-foreground font-light outline-none overflow-y-auto leading-normal disabled:opacity-50"
+                className={cn(
+                  'flex-1 bg-transparent border-0 focus:ring-0 resize-none h-24 py-3 text-[16px] md:text-[18px] placeholder:text-muted-foreground/60 text-muted-foreground font-light outline-none leading-normal disabled:opacity-50',
+                  query ? 'overflow-y-auto' : 'overflow-hidden',
+                )}
               />
 
               {query && !isLoading && (
