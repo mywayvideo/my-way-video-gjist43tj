@@ -7,8 +7,8 @@ import mwLogo from '../assets/mwlogohorizv03smalldarkback-c68bc.png'
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 py-3 h-auto md:h-16 flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
-        <Link to="/" className="flex items-center shrink-0">
+      <div className="container mx-auto px-4 py-3 md:py-0 min-h-16 h-auto md:h-16 flex flex-wrap md:flex-nowrap items-center justify-between gap-y-3 gap-x-4">
+        <Link to="/" className="flex items-center shrink-0 order-1">
           <img
             src={mwLogo}
             alt="My Way Video"
@@ -17,11 +17,7 @@ export function Header() {
           />
         </Link>
 
-        <div className="order-3 md:order-none w-full md:w-auto md:flex-1 flex justify-center md:max-w-2xl px-0 md:px-4">
-          <DirectSearch />
-        </div>
-
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0 order-2 md:order-none">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 order-2 md:order-3">
           <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
             <Link to="/favorites">
               <Heart className="w-5 h-5" />
@@ -37,6 +33,10 @@ export function Header() {
               <User className="w-5 h-5" />
             </Link>
           </Button>
+        </div>
+
+        <div className="order-3 md:order-2 w-full md:w-auto md:flex-1 flex justify-center md:max-w-2xl px-0 md:px-4">
+          <DirectSearch />
         </div>
       </div>
     </header>
