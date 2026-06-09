@@ -195,10 +195,13 @@ export function AIConsultantModal({
   }, [isOpen, messages.length, initialQuery])
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' })
+    // Só rola quando a última mensagem é do assistente (resposta da IA)
+    const lastMsg = messages[messages.length - 1]
+    if (lastMsg?.role === 'assistant' && scrollRef.current) {
+      // Rola para o INÍCIO da mensagem do assistente, não para o final
+      scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-  }, [messages, isLoading])
+  }, [messages])
 
   const handleSend = async (overrideQuery?: string) => {
     const query = overrideQuery || inputValue
@@ -366,7 +369,10 @@ export function AIConsultantModal({
         <DialogHeader className="p-4 border-b border-green-900/30 bg-zinc-900/50 flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-green-400">
-              <Bot className="w-5 h-5" /> Consultor IA My Way
+              <Bot className="w-5 h-5" />
+              {currentProductName
+                ? `Consultor IA MY WAY - ${currentProductName}`
+                : 'Consultor IA MY WAY'}
             </DialogTitle>
             <DialogDescription className="sr-only">
               Assistente de IA para ajudar com produtos e dúvidas técnicas.
@@ -379,6 +385,7 @@ export function AIConsultantModal({
             {messages.map((msg) => (
               <div
                 key={msg.id}
+                ref={msg.role === 'assistant' ? scrollRef : null}
                 className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
@@ -443,7 +450,6 @@ export function AIConsultantModal({
                 </div>
               </div>
             )}
-            <div ref={scrollRef} />
           </div>
         </ScrollArea>
 
