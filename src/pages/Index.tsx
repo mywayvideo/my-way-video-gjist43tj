@@ -49,7 +49,7 @@ export default function Index() {
   return (
     <div className="flex-1 flex flex-col">
       {/* Hero Section */}
-      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-16 md:pt-32 md:pb-24">
+      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-24 md:pt-32 md:pb-40">
         {/* Intensified Radial Glow Effect */}
         <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
           <div className="w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-accent/20 rounded-full blur-[100px] opacity-80 mix-blend-screen" />
@@ -79,7 +79,7 @@ export default function Index() {
                 'relative flex items-center bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 transition-all duration-500',
                 isLoading
                   ? 'border-orange-500/50 bg-card/80'
-                  : 'focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-500/30 focus-within:bg-card/90 shadow-[0_0_15px_rgba(255,255,255,0.05)] focus-within:shadow-[0_0_30px_rgba(249,115,22,0.2)]',
+                  : 'focus-within:border-orange-500/70 focus-within:ring-2 focus-within:ring-orange-500/15 focus-within:bg-card/80 shadow-[0_0_15px_rgba(255,255,255,0.05)] focus-within:shadow-[0_0_12px_rgba(249,115,22,0.12)]',
               )}
             >
               <div className="pl-5 pr-3 text-accent shrink-0 flex items-center justify-center h-full">
