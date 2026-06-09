@@ -49,7 +49,7 @@ export default function Index() {
   return (
     <div className="flex-1 flex flex-col">
       {/* Hero Section */}
-      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-8 md:pt-32 md:pb-10">
+      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-16 md:pt-32 md:pb-24">
         {/* Intensified Radial Glow Effect */}
         <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
           <div className="w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-accent/20 rounded-full blur-[100px] opacity-80 mix-blend-screen" />
