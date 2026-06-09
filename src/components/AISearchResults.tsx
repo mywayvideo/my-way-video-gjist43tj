@@ -47,7 +47,7 @@ export function AISearchResults({
     if (prevLoadingRef.current === true && isLoading === false && result) {
       setTimeout(() => {
         containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 100)
+      }, 150)
     }
     prevLoadingRef.current = isLoading
   }, [isLoading, result])
@@ -73,7 +73,7 @@ export function AISearchResults({
       <div
         ref={containerRef}
         className={cn(
-          'scroll-mt-32 relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 p-6',
+          'scroll-mt-32 relative overflow-hidden rounded-xl border border-white/10 bg-transparent backdrop-blur-md p-6',
           className,
         )}
       >

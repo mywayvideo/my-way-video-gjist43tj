@@ -53,7 +53,7 @@ export default function Index() {
           <div className="space-y-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter flex flex-col items-center gap-2">
               <span className="text-white">Inteligência em</span>
-              <span className="text-[#E1AD01] text-[clamp(2.5rem,8vw,4.2rem)] leading-tight whitespace-nowrap">
+              <span className="text-[#E1AD01] text-[clamp(1.75rem,8vw,4.2rem)] leading-tight whitespace-nowrap">
                 Audiovisual PRO
               </span>
             </h1>
@@ -66,14 +66,14 @@ export default function Index() {
           {/* Refined Prompt Component */}
           <div className="w-full relative group max-w-3xl mx-auto">
             {/* Outer subtle glow for the input */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 via-primary/10 to-accent/20 rounded-[2.5rem] blur-xl transition-all duration-500 group-hover:blur-2xl opacity-70" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 via-primary/10 to-accent/20 rounded-[2.5rem] blur-xl transition-all duration-500 group-hover:blur-2xl group-focus-within:blur-2xl group-focus-within:opacity-100 opacity-70" />
 
             <div
               className={cn(
-                'relative flex items-center bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 shadow-2xl transition-all duration-300',
+                'relative flex items-center bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 transition-all duration-500',
                 isLoading
                   ? 'border-accent/50 bg-card/80'
-                  : 'focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/50 focus-within:bg-card/90',
+                  : 'focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/40 focus-within:bg-card/90 shadow-[0_0_15px_rgba(255,255,255,0.05)] focus-within:shadow-[0_0_30px_rgba(249,115,22,0.2)]',
               )}
             >
               <div className="pl-5 pr-3 text-accent shrink-0 flex items-center justify-center h-full">
@@ -129,7 +129,7 @@ export default function Index() {
 
       {/* Featured Products */}
       {featuredProducts.length > 0 && !results && !isLoading && (
-        <section className="container mx-auto px-4 pb-16 mt-12">
+        <section className="container mx-auto px-4 pb-16 mt-[4.5rem]">
           <h2 className="text-2xl font-semibold mb-8 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-accent" /> Novidades e Destaques
           </h2>
