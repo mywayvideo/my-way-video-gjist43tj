@@ -14,7 +14,6 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { Link, useParams } from 'react-router-dom'
 import { ProductCard } from '@/components/ProductCard'
-// TESTE
 
 const parseMarkdownToHtml = (text: string | null | undefined): string => {
   if (!text) return ''
