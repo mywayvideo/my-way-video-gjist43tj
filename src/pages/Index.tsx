@@ -122,15 +122,14 @@ export default function Index() {
             </div>
           </div>
         </div>
-      </section>
-
-      {/* AI Search Results Inline */}
-      <section className="container mx-auto px-4 w-full max-w-4xl relative z-20">
-        {(isLoading || results || error) && (
-          <div className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <AISearchResults isLoading={isLoading} result={results} error={error} />
-          </div>
-        )}
+        {/* AI Results — DENTRO da Hero Section, sobre o brilho */}
+        <div className="relative z-10 w-full max-w-4xl mt-8 md:mt-12">
+          {(isLoading || results || error) && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <AISearchResults isLoading={isLoading} result={results} error={error} />
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Featured Products */}
