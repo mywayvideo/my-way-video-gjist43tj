@@ -74,28 +74,22 @@ export function AISearchResults({
 
   if (isLoading && (!result || !result.is_intermediate)) {
     return (
-      <div
-        <div
-          ref={containerRef}
-          className={cn(
-            'scroll-mt-32 relative w-full py-12',
-            className,
-          )}
-        >
+      <div ref={containerRef} className={cn('scroll-mt-32 relative w-full py-12', className)}>
         <div className="relative z-10 flex flex-col items-center justify-center space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
               <Sparkles className="h-7 w-7 animate-pulse text-amber-400" />
             </div>
-              <div className="flex items-center justify-center w-full px-4">
-                <p
-                  key={loadingMessage}
-                  className="animate-fade-in-up bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-clip-text text-lg font-bold text-transparent text-center drop-shadow-[0_0_10px_rgba(245,158,11,0.6)] tracking-wide whitespace-normal max-w-2xl"
-                >
-                  {loadingMessage}
-                </p>
-              </div>
+            <div className="flex items-center justify-center w-full px-4">
+              <p
+                key={loadingMessage}
+                className="animate-fade-in-up bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-clip-text text-lg font-bold text-transparent text-center drop-shadow-[0_0_10px_rgba(245,158,11,0.6)] tracking-wide whitespace-normal max-w-2xl"
+              >
+                {loadingMessage}
+              </p>
+            </div>
           </div>
+
           <div className="w-full space-y-4 mt-8 opacity-30">
             <div className="h-6 w-2/5 animate-pulse rounded bg-current" />
             <div className="space-y-2">
