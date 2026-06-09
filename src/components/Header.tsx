@@ -7,7 +7,7 @@ import mwLogo from '../assets/mwlogohorizv03smalldarkback-c68bc.png'
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      <div className="container mx-auto px-4 py-3 h-auto md:h-16 flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
         <Link to="/" className="flex items-center shrink-0">
           <img
             src={mwLogo}
@@ -17,11 +17,11 @@ export function Header() {
           />
         </Link>
 
-        <div className="flex-1 flex justify-center max-w-2xl px-2 md:px-4">
+        <div className="order-3 md:order-none w-full md:w-auto md:flex-1 flex justify-center md:max-w-2xl px-0 md:px-4">
           <DirectSearch />
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 order-2 md:order-none">
           <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
             <Link to="/favorites">
               <Heart className="w-5 h-5" />

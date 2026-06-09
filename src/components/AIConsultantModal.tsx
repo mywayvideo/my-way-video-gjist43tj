@@ -395,6 +395,23 @@ export function AIConsultantModal({
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   ) : (
                     <div className="space-y-4">
+                      {msg.role === 'assistant' &&
+                        msg.id !== '1' && // ← ignora a mensagem de boas-vindas
+                        (msg.should_show_whatsapp_button ||
+                          shouldShowWhatsappGlobal ||
+                          (msg.products &&
+                            msg.products.some((p) => (p.price_usd || 0) > priceThreshold))) && (
+                          <div className="mb-4 pb-4 border-b border-green-900/30">
+                            <Button
+                              variant="default"
+                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
+                              onClick={handleWhatsappClick}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
+                            </Button>
+                          </div>
+                        )}
+
                       <div
                         className="text-white/90 text-base leading-normal overflow-x-auto space-y-4"
                         dangerouslySetInnerHTML={{
@@ -416,23 +433,6 @@ export function AIConsultantModal({
                                   <ProductCard product={product as any} />
                                 </div>
                               ))}
-                          </div>
-                        )}
-
-                      {msg.role === 'assistant' &&
-                        msg.id !== '1' && // ← ignora a mensagem de boas-vindas
-                        (msg.should_show_whatsapp_button ||
-                          shouldShowWhatsappGlobal ||
-                          (msg.products &&
-                            msg.products.some((p) => (p.price_usd || 0) > priceThreshold))) && (
-                          <div className="mt-4 pt-4 border-t border-green-900/30">
-                            <Button
-                              variant="default"
-                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
-                              onClick={handleWhatsappClick}
-                            >
-                              <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
-                            </Button>
                           </div>
                         )}
                     </div>
