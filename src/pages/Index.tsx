@@ -49,7 +49,7 @@ export default function Index() {
   return (
     <div className="flex-1 flex flex-col">
       {/* Hero Section */}
-      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-24 md:pt-32 md:pb-40">
+      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32">
         {/* Intensified Radial Glow Effect */}
         <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
           <div className="w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-accent/20 rounded-full blur-[100px] opacity-80 mix-blend-screen" />
@@ -123,7 +123,7 @@ export default function Index() {
           </div>
         </div>
         {/* AI Results — DENTRO da Hero Section, sobre o brilho */}
-        <div className="relative z-10 w-full max-w-4xl mt-8 md:mt-12">
+        <div className="relative z-10 w-full max-w-4xl mt-2 md:mt-4">
           {(isLoading || results || error) && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <AISearchResults isLoading={isLoading} result={results} error={error} />
