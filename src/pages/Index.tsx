@@ -53,7 +53,9 @@ export default function Index() {
           <div className="space-y-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter flex flex-col items-center gap-2">
               <span className="text-white">Inteligência em</span>
-              <span className="text-[#E1AD01] text-[4.2rem]">Audiovisual PRO</span>
+              <span className="text-[#E1AD01] text-[clamp(2.5rem,8vw,4.2rem)] leading-tight whitespace-nowrap">
+                Audiovisual PRO
+              </span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-light">
               Descreva seu projeto ou busque o equipamento ideal. Nossa inteligência artificial
@@ -71,7 +73,7 @@ export default function Index() {
                 'relative flex items-center bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 shadow-2xl transition-all duration-300',
                 isLoading
                   ? 'border-accent/50 bg-card/80'
-                  : 'focus-within:border-accent/30 focus-within:bg-card/80',
+                  : 'focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/50 focus-within:bg-card/90',
               )}
             >
               <div className="pl-5 pr-3 text-accent shrink-0 flex items-center justify-center h-full">
@@ -127,7 +129,7 @@ export default function Index() {
 
       {/* Featured Products */}
       {featuredProducts.length > 0 && !results && !isLoading && (
-        <section className="container mx-auto px-4 pb-16">
+        <section className="container mx-auto px-4 pb-16 mt-12">
           <h2 className="text-2xl font-semibold mb-8 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-accent" /> Novidades e Destaques
           </h2>

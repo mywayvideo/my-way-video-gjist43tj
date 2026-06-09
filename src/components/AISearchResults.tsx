@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Sparkles, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -40,6 +40,17 @@ export function AISearchResults({
 }: AISearchResultsProps) {
   const { addItem } = useCart()
   const [loadingMessage, setLoadingMessage] = useState('Sincronizando Tier Técnico...')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const prevLoadingRef = useRef(isLoading)
+
+  useEffect(() => {
+    if (prevLoadingRef.current === true && isLoading === false && result) {
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+    prevLoadingRef.current = isLoading
+  }, [isLoading, result])
 
   useEffect(() => {
     if (!isLoading) return
@@ -60,8 +71,9 @@ export function AISearchResults({
   if (isLoading && (!result || !result.is_intermediate)) {
     return (
       <div
+        ref={containerRef}
         className={cn(
-          'relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 p-6',
+          'scroll-mt-32 relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 p-6',
           className,
         )}
       >
@@ -80,14 +92,14 @@ export function AISearchResults({
         />
 
         <div className="relative z-10 flex flex-col items-center justify-center space-y-6">
-          <div className="flex flex-col items-center space-y-3">
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
-              <Sparkles className="h-6 w-6 animate-pulse text-slate-300" />
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+              <Sparkles className="h-7 w-7 animate-pulse text-amber-400" />
             </div>
-            <div className="h-6 relative overflow-hidden flex items-center justify-center min-w-[300px]">
+            <div className="h-8 relative overflow-hidden flex items-center justify-center w-full min-w-[320px]">
               <p
                 key={loadingMessage}
-                className="absolute animate-fade-in-up bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-sm font-medium text-transparent text-center w-full"
+                className="absolute animate-fade-in-up bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-clip-text text-lg font-bold text-transparent text-center drop-shadow-[0_0_10px_rgba(245,158,11,0.6)] tracking-wide"
               >
                 {loadingMessage}
               </p>
@@ -110,8 +122,9 @@ export function AISearchResults({
   if (error) {
     return (
       <div
+        ref={containerRef}
         className={cn(
-          'rounded-xl border border-red-500/20 bg-red-500/10 p-6 text-red-500',
+          'scroll-mt-32 rounded-xl border border-red-500/20 bg-red-500/10 p-6 text-red-500',
           className,
         )}
       >
@@ -133,7 +146,13 @@ export function AISearchResults({
         : 'text-red-400 bg-red-400/10 border-red-400/20 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
 
   return (
-    <div className={cn('rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl', className)}>
+    <div
+      ref={containerRef}
+      className={cn(
+        'scroll-mt-32 rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl',
+        className,
+      )}
+    >
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="flex items-center space-x-3">
           <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
