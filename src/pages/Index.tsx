@@ -26,6 +26,12 @@ export default function Index() {
   const handleSearch = () => {
     if (!query.trim()) return
     search(query)
+    // Scroll para as mensagens transitórias
+    setTimeout(() => {
+      document
+        .getElementById('ai-search-results')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

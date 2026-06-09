@@ -74,7 +74,11 @@ export function AISearchResults({
 
   if (isLoading && (!result || !result.is_intermediate)) {
     return (
-      <div ref={containerRef} className={cn('scroll-mt-32 relative w-full py-12', className)}>
+      <div
+        ref={containerRef}
+        id="ai-search-results"
+        className={cn('scroll-mt-32 relative w-full py-12', className)}
+      >
         <div className="relative z-10 flex flex-col items-center justify-center space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
