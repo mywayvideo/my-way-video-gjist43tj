@@ -413,7 +413,7 @@ export function AIConsultantModal({
                         )}
 
                       {msg.role === 'assistant' &&
-                        index === messages.length - 1 &&
+                        msg.id !== '1' && // ← ignora a mensagem de boas-vindas
                         (msg.should_show_whatsapp_button ||
                           shouldShowWhatsappGlobal ||
                           (msg.products &&
