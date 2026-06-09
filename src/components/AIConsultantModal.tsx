@@ -412,20 +412,22 @@ export function AIConsultantModal({
                           </div>
                         )}
 
-                      {(msg.should_show_whatsapp_button ||
-                        shouldShowWhatsappGlobal ||
-                        (msg.products &&
-                          msg.products.some((p) => (p.price_usd || 0) > priceThreshold))) && (
-                        <div className="mt-4 pt-4 border-t border-green-900/30">
-                          <Button
-                            variant="default"
-                            className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
-                            onClick={handleWhatsappClick}
-                          >
-                            <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
-                          </Button>
-                        </div>
-                      )}
+                      {msg.role === 'assistant' &&
+                        index === messages.length - 1 &&
+                        (msg.should_show_whatsapp_button ||
+                          shouldShowWhatsappGlobal ||
+                          (msg.products &&
+                            msg.products.some((p) => (p.price_usd || 0) > priceThreshold))) && (
+                          <div className="mt-4 pt-4 border-t border-green-900/30">
+                            <Button
+                              variant="default"
+                              className="bg-[#25D366] hover:bg-[#20bd5a] text-white w-full sm:w-auto"
+                              onClick={handleWhatsappClick}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" /> Falar com Especialista
+                            </Button>
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
