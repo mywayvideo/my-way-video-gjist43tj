@@ -90,14 +90,7 @@ export function AISearchResults({
             </div>
           </div>
 
-          <div className="w-full space-y-4 mt-8 opacity-30">
-            <div className="h-6 w-2/5 animate-pulse rounded bg-current" />
-            <div className="space-y-2">
-              <div className="h-4 w-full animate-pulse rounded bg-current" />
-              <div className="h-4 w-[90%] animate-pulse rounded bg-current" />
-              <div className="h-4 w-[80%] animate-pulse rounded bg-current" />
-            </div>
-          </div>
+          <div className="mt-8 h-1 w-24 mx-auto rounded-full bg-amber-500/20 animate-pulse" />
         </div>
       </div>
     )
