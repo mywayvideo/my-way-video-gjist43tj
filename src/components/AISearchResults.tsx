@@ -44,7 +44,10 @@ export function AISearchResults({
   const prevLoadingRef = useRef(isLoading)
 
   useEffect(() => {
-    if (prevLoadingRef.current === true && isLoading === false && result) {
+    if (
+      (isLoading && !prevLoadingRef.current) ||
+      (!isLoading && prevLoadingRef.current && result)
+    ) {
       setTimeout(() => {
         containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 150)
@@ -73,24 +76,10 @@ export function AISearchResults({
       <div
         ref={containerRef}
         className={cn(
-          'scroll-mt-32 relative overflow-hidden rounded-xl border border-white/10 bg-transparent backdrop-blur-md p-6',
+          'scroll-mt-32 relative rounded-xl border border-white/10 bg-transparent backdrop-blur-sm p-6',
           className,
         )}
       >
-        {/* Animated neural glow background */}
-        <div
-          className="absolute -left-1/4 -top-1/4 h-full w-full animate-pulse rounded-full bg-blue-500/20 blur-3xl"
-          style={{ animationDuration: '4s' }}
-        />
-        <div
-          className="absolute -right-1/4 -bottom-1/4 h-full w-full animate-pulse rounded-full bg-purple-500/20 blur-3xl"
-          style={{ animationDuration: '5s', animationDelay: '1s' }}
-        />
-        <div
-          className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-amber-500/20 blur-3xl"
-          style={{ animationDuration: '6s', animationDelay: '2s' }}
-        />
-
         <div className="relative z-10 flex flex-col items-center justify-center space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 shadow-[0_0_20px_rgba(245,158,11,0.2)]">

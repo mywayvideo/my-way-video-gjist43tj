@@ -43,7 +43,7 @@ export default function Index() {
   return (
     <div className="flex-1 flex flex-col">
       {/* Hero Section */}
-      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-12 md:pt-32 md:pb-16">
+      <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-8 md:pt-32 md:pb-10">
         {/* Intensified Radial Glow Effect */}
         <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
           <div className="w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-accent/20 rounded-full blur-[100px] opacity-80 mix-blend-screen" />
@@ -53,7 +53,7 @@ export default function Index() {
           <div className="space-y-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter flex flex-col items-center gap-2">
               <span className="text-white">Inteligência em</span>
-              <span className="text-[#E1AD01] text-[clamp(1.75rem,8vw,4.2rem)] leading-tight whitespace-nowrap">
+              <span className="text-[#E1AD01] text-[clamp(2rem,8vw,4.2rem)] leading-tight whitespace-nowrap">
                 Audiovisual PRO
               </span>
             </h1>
@@ -72,8 +72,8 @@ export default function Index() {
               className={cn(
                 'relative flex items-center bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 transition-all duration-500',
                 isLoading
-                  ? 'border-accent/50 bg-card/80'
-                  : 'focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/40 focus-within:bg-card/90 shadow-[0_0_15px_rgba(255,255,255,0.05)] focus-within:shadow-[0_0_30px_rgba(249,115,22,0.2)]',
+                  ? 'border-orange-500/50 bg-card/80'
+                  : 'focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-500/30 focus-within:bg-card/90 shadow-[0_0_15px_rgba(255,255,255,0.05)] focus-within:shadow-[0_0_30px_rgba(249,115,22,0.2)]',
               )}
             >
               <div className="pl-5 pr-3 text-accent shrink-0 flex items-center justify-center h-full">
@@ -129,7 +129,7 @@ export default function Index() {
 
       {/* Featured Products */}
       {featuredProducts.length > 0 && !results && !isLoading && (
-        <section className="container mx-auto px-4 pb-16 mt-[4.5rem]">
+        <section className="container mx-auto px-4 pb-16 mt-10 md:mt-10">
           <h2 className="text-2xl font-semibold mb-8 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-accent" /> Novidades e Destaques
           </h2>
