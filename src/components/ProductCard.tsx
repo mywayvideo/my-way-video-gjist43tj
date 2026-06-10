@@ -234,10 +234,12 @@ export function ProductCard({ product }: { product: any }) {
                       </span>
                     )}
                     <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-                      <span className="text-xl font-bold text-green-500">
+                      <span className="text-lg font-bold text-green-500">
                         {formatCurrency(mainPriceVal, mainCurrency)}
                       </span>
-                      <span className="text-xs font-medium text-muted-foreground">{mainLabel}</span>
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {mainLabel}
+                      </span>
                     </div>
                     {showSavings && (
                       <span className="text-[11px] font-medium text-green-600 dark:text-green-400 mt-0.5 whitespace-nowrap animate-pulse">
@@ -250,7 +252,7 @@ export function ProductCard({ product }: { product: any }) {
                 {/* Secondary Price */}
                 {secPriceVal !== null && (
                   <div className="flex items-baseline gap-1.5 whitespace-nowrap mt-1 opacity-70">
-                    <span className="text-sm font-semibold text-foreground">
+                    <span className="text-xs font-semibold text-foreground">
                       {formatCurrency(secPriceVal, secCurrency)}
                     </span>
                     <span className="text-[10px] font-medium text-muted-foreground">
