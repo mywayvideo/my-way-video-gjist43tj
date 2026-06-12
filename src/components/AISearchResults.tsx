@@ -66,6 +66,11 @@ export function AISearchResults({
       'Refinando busca My Way...',
       'Calculando viabilidade...',
       'Auditoria de performance...',
+      'Auditando fluxo sinal...',
+      'Mapeando ecossistema...',
+      'Sincronizando banco...',
+      'Escaneando bit depth...',
+      'Refinando lógica busca...',
       'IA Otimizando Resposta...',
     ]
     let currentIndex = 0
