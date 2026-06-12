@@ -59,8 +59,13 @@ export function AISearchResults({
     if (!isLoading) return
     const messages = [
       'Sincronizando Tier Técnico...',
-      'Analisando Disponibilidade Logística...',
-      'Realizando Busca Profunda MY WAY...',
+      'Realizando Busca Profunda...',
+      'Mapeando hardware...',
+      'Análise de workflow PRO...',
+      'Cruzando specs técnicas...',
+      'Refinando busca My Way...',
+      'Calculando viabilidade...',
+      'Auditoria de performance...',
       'IA Otimizando Resposta...',
     ]
     let currentIndex = 0
