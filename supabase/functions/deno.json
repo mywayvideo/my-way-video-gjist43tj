@@ -44,7 +44,7 @@
     "process-query": 33,
     "notify-admin-payment": 3,
     "update-cache-settings": 2,
-    "execute_ai_search_v2": 75,
+    "execute_ai_search_v2": 76,
     "execute_ai_search_v2_pp": 5
   }
 }
