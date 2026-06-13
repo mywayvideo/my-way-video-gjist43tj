@@ -50,17 +50,45 @@ export const cartService = {
       const cartId = await this.getOrCreateCartId(userId)
       if (!cartId) return []
 
-      const { data: cartItems, error } = await supabase
-        .from('cart_items')
-        .select('*, product:products(*)')
-        .eq('cart_id', cartId)
+      let attempt = 0
+      const maxRetries = 3
+      const baseDelay = 1000
 
-      if (error) throw error
-      return cartItems || []
+      while (true) {
+        const { data: cartItems, error } = await supabase
+          .from('cart_items')
+          .select('*, product:products(*)')
+          .eq('cart_id', cartId)
+
+        if (error) {
+          const isServiceUnavailable =
+            error.code === 'PGRST002' ||
+            error.message?.includes('503') ||
+            error.code === '503' ||
+            (error as any).status === 503
+
+          if (isServiceUnavailable && attempt < maxRetries) {
+            attempt++
+            console.warn(
+              `Database schema cache issue (PGRST002/503) encountered. Retrying fetchCart (${attempt}/${maxRetries})...`,
+            )
+            await new Promise((resolve) =>
+              setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)),
+            )
+            continue
+          }
+          throw error
+        }
+
+        return cartItems || []
+      }
     } catch (e) {
+      console.error('Error in fetchCart:', e)
+      // Return safely to avoid propagating fatal errors that could cause UI crashes
       toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar carrinho. Tente novamente.',
+        title: 'Aviso',
+        description:
+          'Serviço temporariamente indisponível. Seu carrinho pode não estar atualizado.',
         variant: 'destructive',
       })
       return []

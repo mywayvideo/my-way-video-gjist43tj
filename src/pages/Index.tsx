@@ -21,6 +21,7 @@ export default function Index() {
       .order('created_at', { ascending: false })
       .limit(8)
       .then(({ data }) => setFeaturedProducts(data || []))
+      .catch((err) => console.error('Error fetching featured products:', err))
   }, [])
 
   const handleSearch = () => {
