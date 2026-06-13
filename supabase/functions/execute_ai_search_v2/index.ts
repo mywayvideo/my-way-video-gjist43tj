@@ -9,15 +9,15 @@ const corsHeaders = {
 
 // NORMALIZAR AI RESPONSE
 function normalizeAIResponse(rawResponse: any, providerType: string) {
-  const type = (providerType || '').toLowerCase();
-  
+  const type = (providerType || '').toLowerCase()
+
   if (type === 'anthropic' || type.includes('anthropic')) {
-    const contentBlocks = rawResponse.content || [];
+    const contentBlocks = rawResponse.content || []
     const textContent = contentBlocks
       .filter((c: any) => c.type === 'text')
       .map((c: any) => c.text)
-      .join('');
-    
+      .join('')
+
     const toolCalls = contentBlocks
       .filter((c: any) => c.type === 'tool_use')
       .map((c: any) => ({
@@ -25,52 +25,63 @@ function normalizeAIResponse(rawResponse: any, providerType: string) {
         type: 'function',
         function: {
           name: c.name,
-          arguments: JSON.stringify(c.input || {})
-        }
-      }));
+          arguments: JSON.stringify(c.input || {}),
+        },
+      }))
 
     return {
-      choices: [{
-        message: {
-          role: 'assistant',
-          content: textContent || null,
-          tool_calls: toolCalls.length > 0 ? toolCalls : null,
-        }
-      }]
-    };
+      choices: [
+        {
+          message: {
+            role: 'assistant',
+            content: textContent || null,
+            tool_calls: toolCalls.length > 0 ? toolCalls : null,
+          },
+        },
+      ],
+    }
   }
 
   // OpenAI e compatíveis já estão no formato correto
-  return rawResponse;
+  return rawResponse
 }
 
-// Função de fallback 
+// Função de fallback
 async function callAIWithFallback(
   providers: any[],
   messages: any[],
   tools?: any[],
   tool_choice?: string,
   responseFormat?: any,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ) {
-  let lastError: any = null;
-  let usedProviderType = 'openai';
+  let lastError: any = null
+  let usedProviderType = 'openai'
 
   for (const provider of providers) {
     try {
-      console.log(`[AI_PROVIDER] Tentando ${provider.provider_name} (priority ${provider.priority})`);
-      const data = await callAIProvider(provider, messages, tools, tool_choice, responseFormat, signal);
-      usedProviderType = provider.provider_type || 'openai';
-      console.log(`[AI_PROVIDER] Sucesso com ${provider.provider_name}`);
-      return { data, providerType: usedProviderType };
+      console.log(
+        `[AI_PROVIDER] Tentando ${provider.provider_name} (priority ${provider.priority})`,
+      )
+      const data = await callAIProvider(
+        provider,
+        messages,
+        tools,
+        tool_choice,
+        responseFormat,
+        signal,
+      )
+      usedProviderType = provider.provider_type || 'openai'
+      console.log(`[AI_PROVIDER] Sucesso com ${provider.provider_name}`)
+      return { data, providerType: usedProviderType }
     } catch (err: any) {
-      console.log(`[AI_PROVIDER] Falha com ${provider.provider_name}: ${err.message}`);
-      lastError = err;
-      continue;
+      console.log(`[AI_PROVIDER] Falha com ${provider.provider_name}: ${err.message}`)
+      lastError = err
+      continue
     }
   }
 
-  throw new Error(`Todos os provedores de IA falharam. Último erro: ${lastError?.message}`);
+  throw new Error(`Todos os provedores de IA falharam. Último erro: ${lastError?.message}`)
 }
 
 // =========================
@@ -135,63 +146,78 @@ async function loadCacheSettings(supabase: any) {
 async function getActiveAIProviders(supabase: any) {
   const { data: providers, error } = await supabase
     .from('ai_providers')
-    .select('provider_name, api_key_secret_name, model_id, provider_type, custom_endpoint, priority')
+    .select(
+      'provider_name, api_key_secret_name, model_id, provider_type, custom_endpoint, priority',
+    )
     .eq('is_active', true)
-    .order('priority', { ascending: true });
-  
+    .order('priority', { ascending: true })
+
   if (error || !providers || providers.length === 0) {
-    throw new Error('Nenhum provedor de IA ativo encontrado');
+    throw new Error('Nenhum provedor de IA ativo encontrado')
   }
-  return providers;
+  return providers
 }
 
-async function callAIProvider(provider: any, messages: any[], tools?: any[], tool_choice?: string, responseFormat?: any, signal?: AbortSignal) {
-  const apiKey = Deno.env.get(provider.api_key_secret_name);
-  if (!apiKey) throw new Error(`API key não encontrada: ${provider.api_key_secret_name}`);
+async function callAIProvider(
+  provider: any,
+  messages: any[],
+  tools?: any[],
+  tool_choice?: string,
+  responseFormat?: any,
+  signal?: AbortSignal,
+) {
+  const apiKey = Deno.env.get(provider.api_key_secret_name)
+  if (!apiKey) throw new Error(`API key não encontrada: ${provider.api_key_secret_name}`)
 
-  let endpoint: string;
-  let headers: Record<string, string>;
-  let body: any;
+  let endpoint: string
+  let headers: Record<string, string>
+  let body: any
 
-  if (provider.provider_type === 'openai' || provider.provider_name.toLowerCase().includes('openai')) {
-    endpoint = provider.custom_endpoint || 'https://api.openai.com/v1/chat/completions';
+  if (
+    provider.provider_type === 'openai' ||
+    provider.provider_name.toLowerCase().includes('openai')
+  ) {
+    endpoint = provider.custom_endpoint || 'https://api.openai.com/v1/chat/completions'
     headers = {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-    };
+    }
     body = {
       model: provider.model_id,
       messages,
       ...(tools && { tools }),
       ...(tool_choice && { tool_choice }),
       ...(responseFormat && { response_format: responseFormat }),
-    };
-  } else if (provider.provider_type === 'anthropic' || provider.provider_name.toLowerCase().includes('anthropic')) {
-    endpoint = provider.custom_endpoint || 'https://api.anthropic.com/v1/messages';
+    }
+  } else if (
+    provider.provider_type === 'anthropic' ||
+    provider.provider_name.toLowerCase().includes('anthropic')
+  ) {
+    endpoint = provider.custom_endpoint || 'https://api.anthropic.com/v1/messages'
     headers = {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'Content-Type': 'application/json',
-    };
+    }
     body = {
       model: provider.model_id,
       max_tokens: 4096,
       messages: messages.filter((m: any) => m.role !== 'system'),
       system: messages.find((m: any) => m.role === 'system')?.content || '',
-    };
+    }
   } else {
-    endpoint = provider.custom_endpoint || 'https://api.openai.com/v1/chat/completions';
+    endpoint = provider.custom_endpoint || 'https://api.openai.com/v1/chat/completions'
     headers = {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-    };
+    }
     body = {
       model: provider.model_id,
       messages,
       ...(tools && { tools }),
       ...(tool_choice && { tool_choice }),
       ...(responseFormat && { response_format: responseFormat }),
-    };
+    }
   }
 
   const response = await fetch(endpoint, {
@@ -199,13 +225,13 @@ async function callAIProvider(provider: any, messages: any[], tools?: any[], too
     headers,
     body: JSON.stringify(body),
     signal,
-  });
+  })
 
   if (!response.ok) {
-    throw new Error(`${provider.provider_name} error: ${response.status} ${await response.text()}`);
+    throw new Error(`${provider.provider_name} error: ${response.status} ${await response.text()}`)
   }
 
-  return await response.json();
+  return await response.json()
 }
 
 // =========================
@@ -226,29 +252,29 @@ async function checkProductSearchCache(supabase: any, searchQuery: string) {
       .from('product_search_cache')
       .select('product_specs, expires_at')
       .eq('search_query', searchQuery)
-      .single();
+      .single()
 
     if (error || !data) {
-      console.log(`[CACHE_MISS][PSC] ${searchQuery}`);
-      return null;
+      console.log(`[CACHE_MISS][PSC] ${searchQuery}`)
+      return null
     }
 
     if (new Date() > new Date(data.expires_at)) {
-      console.log(`[CACHE_MISS][PSC] Expirado: ${searchQuery}`);
-      return null;
+      console.log(`[CACHE_MISS][PSC] Expirado: ${searchQuery}`)
+      return null
     }
 
-    const specs = data.product_specs || {};
+    const specs = data.product_specs || {}
     return {
       productIds: specs.productIds || [],
       enrichedSpecs: specs.enriched || {},
       semanticFilters: specs.semanticFilters || [],
-      marketKeywords: specs.marketKeywords || []
+      marketKeywords: specs.marketKeywords || [],
       // ❌ REMOVIDO: finalResponse nunca mais existe aqui
-    };
+    }
   } catch (err) {
-    console.log(`[CACHE_MISS][PSC] Exceção: ${err}`);
-    return null;
+    console.log(`[CACHE_MISS][PSC] Exceção: ${err}`)
+    return null
   }
 }
 
@@ -263,36 +289,41 @@ async function saveProductSearchCache(
   productIds: string[],
   enrichedSpecs: any,
   semanticFilters: any,
-  marketKeywords: string[]
+  marketKeywords: string[],
 ) {
   try {
-    let ttlDays = 30;
+    let ttlDays = 30
     try {
-      const { data: cfg } = await supabase.from('cache_settings').select('product_search_cache_expiration_days').single();
-      if (cfg?.product_search_cache_expiration_days) ttlDays = cfg.product_search_cache_expiration_days;
+      const { data: cfg } = await supabase
+        .from('cache_settings')
+        .select('product_search_cache_expiration_days')
+        .single()
+      if (cfg?.product_search_cache_expiration_days)
+        ttlDays = cfg.product_search_cache_expiration_days
     } catch {}
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + ttlDays);
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + ttlDays)
 
-    const { error } = await supabase
-      .from('product_search_cache')
-      .upsert({
+    const { error } = await supabase.from('product_search_cache').upsert(
+      {
         search_query: queryHash,
         product_name: 'cached_search',
         product_specs: {
           productIds,
           enriched: enrichedSpecs,
           semanticFilters,
-          marketKeywords
+          marketKeywords,
         },
         source: 'ai_generated',
-        expires_at: expiresAt.toISOString()
-      }, { onConflict: 'search_query' });
+        expires_at: expiresAt.toISOString(),
+      },
+      { onConflict: 'search_query' },
+    )
 
-    if (!error) console.log(`[CACHE_SAVE][PSC] Query salva: ${queryHash}`);
+    if (!error) console.log(`[CACHE_SAVE][PSC] Query salva: ${queryHash}`)
   } catch (err) {
-    console.log(`[CACHE_SAVE][PSC] Exceção: ${err}`);
+    console.log(`[CACHE_SAVE][PSC] Exceção: ${err}`)
   }
 }
 
@@ -305,38 +336,38 @@ async function saveProductSearchCache(
  * Retorna objeto agrupado por product_id.
  */
 async function enrichProductsWithCache(supabase: any, productIds: string[]) {
-  if (!productIds || productIds.length === 0) return {};
+  if (!productIds || productIds.length === 0) return {}
 
   try {
     const { data, error } = await supabase
       .from('product_cache')
       .select('product_id, spec_key, spec_value, source, confidence')
       .in('product_id', productIds)
-      .gt('expires_at', new Date().toISOString());
+      .gt('expires_at', new Date().toISOString())
 
     if (error) {
-      console.log(`[PC_ERROR] ${error.message}`);
-      return {};
+      console.log(`[PC_ERROR] ${error.message}`)
+      return {}
     }
 
-    const enriched: Record<string, Record<string, any>> = {};
+    const enriched: Record<string, Record<string, any>> = {}
     for (const row of data || []) {
-      if (!enriched[row.product_id]) enriched[row.product_id] = {};
+      if (!enriched[row.product_id]) enriched[row.product_id] = {}
       enriched[row.product_id][row.spec_key] = {
         value: row.spec_value,
         source: row.source,
-        confidence: row.confidence
-      };
+        confidence: row.confidence,
+      }
     }
 
     for (const id of productIds) {
-      console.log(enriched[id] ? `[PC_HIT] ${id}` : `[PC_MISS] ${id}`);
+      console.log(enriched[id] ? `[PC_HIT] ${id}` : `[PC_MISS] ${id}`)
     }
 
-    return enriched;
+    return enriched
   } catch (err) {
-    console.log(`[PC_ERROR] ${err}`);
-    return {};
+    console.log(`[PC_ERROR] ${err}`)
+    return {}
   }
 }
 
@@ -407,29 +438,29 @@ function buildDynamicSystemPrompt(
   manufacturerList: string,
   userName: string | null,
   productContext: { id: string; name: string; technicalInfo?: string } | null,
-  isFirstInteraction: boolean
+  isFirstInteraction: boolean,
 ): string {
-  const parts: string[] = [];
+  const parts: string[] = []
 
   // 1. SEMPRE: Identidade do Agente (com substituição de {userName})
-  let identity = agentSettings?.system_prompt ?? '';
+  let identity = agentSettings?.system_prompt ?? ''
   if (userName && identity.includes('{userName}')) {
-    identity = identity.replace(/{userName}/g, userName);
+    identity = identity.replace(/{userName}/g, userName)
   }
-  if (identity.trim()) parts.push(identity);
+  if (identity.trim()) parts.push(identity)
 
   // 2. SEMPRE: Regras Estritas (template operacional)
-  const strictRules = aiSettings?.system_prompt_template ?? '';
-  if (strictRules.trim()) parts.push(strictRules);
+  const strictRules = aiSettings?.system_prompt_template ?? ''
+  if (strictRules.trim()) parts.push(strictRules)
 
   // 3. SÓ SE estiver na Página de Produto: product_page_prompt
   if (productContext) {
-    let productPrompt = aiSettings?.product_page_prompt ?? '';
+    let productPrompt = aiSettings?.product_page_prompt ?? ''
     if (productPrompt.includes('{{productName}}')) {
-      productPrompt = productPrompt.replace(/{{productName}}/g, productContext.name);
+      productPrompt = productPrompt.replace(/{{productName}}/g, productContext.name)
     }
-    if (productPrompt.trim()) parts.push(productPrompt);
-    
+    if (productPrompt.trim()) parts.push(productPrompt)
+
     // ✅ INSTRUÇÃO HARDOCODED DE SEGURANÇA — não depende do banco
     parts.push(
       [
@@ -445,21 +476,21 @@ function buildDynamicSystemPrompt(
         '3. PROIBIDO confundir cameras com lentes ou acessorios. Um produto com "Camera" ou "Camera" no nome e uma camera, nao uma lente.',
         '4. Se nao encontrar acessorios compativeis, seja honesto: "Nao localizei acessorios compativeis especificos para este produto em nosso catalogo."',
         '5. Sempre que mencionar precos, use a moeda correta: precos Miami sao em USD (US$), precos Brasil podem ser em BRL (R$) ou em USD (US$), dependendo de price_nationalized_currency.',
-      ].join('\n')
-    );
+      ].join('\n'),
+    )
   }
 
   // 4. SÓ NA SEGUNDA INTERAÇÃO: Logística + Contexto da Empresa
   if (!isFirstInteraction) {
-    const logistics = aiSettings?.logistics_rules_prompt ?? '';
-    if (logistics.trim()) parts.push(logistics);
+    const logistics = aiSettings?.logistics_rules_prompt ?? ''
+    if (logistics.trim()) parts.push(logistics)
 
-    const companyContext = companyInfo?.content || companyInfo?.transparency_note || '';
-    if (companyContext.trim()) parts.push(companyContext);
+    const companyContext = companyInfo?.content || companyInfo?.transparency_note || ''
+    if (companyContext.trim()) parts.push(companyContext)
   }
 
   // 5. SEMPRE: Lista de fabricantes disponíveis
-  parts.push(`### FABRICANTES DISPONÍVEIS\n${manufacturerList}`);
+  parts.push(`### FABRICANTES DISPONÍVEIS\n${manufacturerList}`)
 
   // 6. SEMPRE: Regras de formato JSON (apenas estrutura, NÃO proíbe markdown)
   parts.push(
@@ -470,8 +501,8 @@ function buildDynamicSystemPrompt(
       '',
       'ATENCAO: O campo "message" ACEITA markdown completo (negrito, italico, titulos, tabelas, listas).',
       'Use markdown profissional para tornar a resposta rica e legivel.',
-    ].join('\n')
-  );
+    ].join('\n'),
+  )
   // 7. INSTRUÇÃO DE USO DA FERRAMENTA DE BUSCA (sempre presente)
   parts.push(
     [
@@ -494,8 +525,8 @@ function buildDynamicSystemPrompt(
       '- NUNCA passe a pergunta completa do usuário como termo de busca.',
       '- NUNCA use termos genéricos como "câmera", "acessório" ou "equipamento" sozinhos.',
       '- NUNCA ignore uma marca específica mencionada pelo usuário (ex: nunca busque apenas "PL mount lens" se o usuário pediu "Dulens").',
-    ].join('\n')
-  );
+    ].join('\n'),
+  )
   if (!productContext) {
     parts.push(
       [
@@ -505,10 +536,10 @@ function buildDynamicSystemPrompt(
         '2. IGNORE e NUNCA sugira acessorios genericos como cabos, baterias, cases, adaptadores — a MENOS que o usuario pergunte especificamente por esses acessorios.',
         '3. PRIORIZE sempre o produto principal da categoria buscada.',
         '4. Se nao encontrar o equipamento principal, seja honesto: "Nao localizei esse modelo especifico em nosso catalogo."',
-      ].join('\n')
-    );
+      ].join('\n'),
+    )
   }
-  return parts.join('\n\n');
+  return parts.join('\n\n')
 }
 
 serve(async (req: Request) => {
@@ -521,63 +552,65 @@ serve(async (req: Request) => {
 
   try {
     // 1. Parse do body
-    const body = await req.json();
-    const query = sanitizeInput(body?.query);
+    const body = await req.json()
+    const query = sanitizeInput(body?.query)
 
     // 1.1 IP do cliente (para rate limit)
     const forwarded = req.headers.get('x-forwarded-for')
-    const clientIP = forwarded ? forwarded.split(',')[0].trim() : req.headers.get('x-real-ip') || 'unknown'
+    const clientIP = forwarded
+      ? forwarded.split(',')[0].trim()
+      : req.headers.get('x-real-ip') || 'unknown'
 
     // ============================================
     // PASSO 2: CAPTURA DE VARIÁVEIS DE CONTEXTO
     // ============================================
-    const userName = body?.userName || null;
-    const lastReferencedProductId = body?.currentProductId || null;
-    
+    const userName = body?.userName || null
+    const lastReferencedProductId = body?.currentProductId || null
+
     // Detecta se é primeira interação (nenhuma mensagem anterior do assistente)
-    const requestMessages = body?.messages || [];
-    const isFirstInteraction = !requestMessages.some((m: any) => m.role === 'assistant');
+    const requestMessages = body?.messages || []
+    const isFirstInteraction = !requestMessages.some((m: any) => m.role === 'assistant')
 
     // 2. Criação do cliente Supabase (ANTES de qualquer uso)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+    )
 
     // 3. Geração do hash (ANTES do lookup)
-    const queryHash = await hashQuery(query, `${body?.currentProductId || 'global'}`);
+    const queryHash = await hashQuery(query, `${body?.currentProductId || 'global'}`)
 
     const allowedIds = new Set<string>()
-    let allFoundProducts: any[] = [];
+    let allFoundProducts: any[] = []
 
     let keywordScore = 0,
       productsFound = 0,
       searchPerformed = false
-    
+
     // 4. Lookup do PSC
-    const cachedSearch = await checkProductSearchCache(supabase, queryHash);
+    const cachedSearch = await checkProductSearchCache(supabase, queryHash)
 
     // ✅ Só usa o cache se a resposta final estiver salva lá dentro
     // ✅ CACHE HIT INTELIGENTE: monta contexto do PSC, mas deixa a IA gerar resposta
-    let pscProducts: any[] = [];
+    let pscProducts: any[] = []
     if (cachedSearch && cachedSearch.productIds.length > 0) {
-      console.log(`[CACHE_HIT][PSC] Contexto recuperado para: ${queryHash}`);
-      
+      console.log(`[CACHE_HIT][PSC] Contexto recuperado para: ${queryHash}`)
+
       // Busca os produtos do banco pelos IDs salvos no PSC
       const { data: cachedProducts } = await supabase
         .from('products')
         .select('*')
         .in('id', cachedSearch.productIds)
-        .abortSignal(controller.signal);
-      
+        .abortSignal(controller.signal)
+
       if (cachedProducts && cachedProducts.length > 0) {
         pscProducts = cachedProducts.map((p: any) => ({
           ...p,
-          cached_specs: cachedSearch.enrichedSpecs[p.id] || {}
-        }));
-        console.log(`[CACHE_HIT][PSC] ${pscProducts.length} produtos carregados do contexto`);
-        productsFound = pscProducts.length;
-        pscProducts.forEach((p: any) => allowedIds.add(p.id));
+          cached_specs: cachedSearch.enrichedSpecs[p.id] || {},
+        }))
+        console.log(`[CACHE_HIT][PSC] ${pscProducts.length} produtos carregados do contexto`)
+        productsFound = pscProducts.length
+        pscProducts.forEach((p: any) => allowedIds.add(p.id))
       }
     }
 
@@ -721,21 +754,21 @@ serve(async (req: Request) => {
     // ============================================
 
     // Busca contexto do produto SE houver currentProductId
-    let productContext: { id: string; name: string; technicalInfo?: string } | null = null;
+    let productContext: { id: string; name: string; technicalInfo?: string } | null = null
     if (lastReferencedProductId) {
       const { data: prodData } = await supabase
         .from('products')
         .select('id, name, technical_info, description')
         .eq('id', lastReferencedProductId)
-        .single();
+        .single()
 
       if (prodData) {
-        const rawSpecs = prodData.technical_info || prodData.description || '';
+        const rawSpecs = prodData.technical_info || prodData.description || ''
         productContext = {
           id: prodData.id,
           name: prodData.name,
           technicalInfo: typeof rawSpecs === 'string' ? rawSpecs : JSON.stringify(rawSpecs),
-        };
+        }
       }
     }
 
@@ -746,13 +779,13 @@ serve(async (req: Request) => {
       companyInfo,
       manufacturerList,
       userName,
-      productContext,   // ← 1 parâmetro só, em vez de 2
-      isFirstInteraction
-    );
+      productContext, // ← 1 parâmetro só, em vez de 2
+      isFirstInteraction,
+    )
 
-    console.log(`[DEBUG] Prompt montado. Tamanho: ${systemPrompt.length} caracteres`);
-    console.log(`[DEBUG] Primeira interação: ${isFirstInteraction}`);
-    console.log(`[DEBUG] Página de produto: ${productContext ? 'SIM' : 'NÃO'}`);
+    console.log(`[DEBUG] Prompt montado. Tamanho: ${systemPrompt.length} caracteres`)
+    console.log(`[DEBUG] Primeira interação: ${isFirstInteraction}`)
+    console.log(`[DEBUG] Página de produto: ${productContext ? 'SIM' : 'NÃO'}`)
 
     const messages: any[] = [
       { role: 'system', content: systemPrompt },
@@ -777,12 +810,10 @@ serve(async (req: Request) => {
 
     // Na página de produto, deixa a IA decidir se precisa buscar algo.
     // Perguntas técnicas puras (frame rate, resolução) não precisam de tool call.
-    const toolChoice = (intent === 'PRODUCT_SPECIFIC' && !currentProductId) 
-      ? 'required' 
-      : 'auto'
+    const toolChoice = intent === 'PRODUCT_SPECIFIC' && !currentProductId ? 'required' : 'auto'
 
     // Carrega provedores ativos uma única vez por requisição
-    const aiProviders = await getActiveAIProviders(supabase);
+    const aiProviders = await getActiveAIProviders(supabase)
 
     const tOpenAI1 = performance.now()
     const { data: aiData, providerType } = await callAIWithFallback(
@@ -791,15 +822,17 @@ serve(async (req: Request) => {
       tools,
       toolChoice,
       undefined,
-      controller.signal
+      controller.signal,
     )
     const normalizedData = normalizeAIResponse(aiData, providerType)
     console.log(`[PERF][OPENAI_1] ${Math.round(performance.now() - tOpenAI1)}ms`)
 
     const aiMessage = normalizedData?.choices?.[0]?.message
     if (!aiMessage) throw new Error('Invalid AI Response')
-    
-    console.log(`[DEBUG_T1] tool_calls presentes: ${!!aiMessage.tool_calls} | quantidade: ${aiMessage.tool_calls?.length || 0} | nomes: ${aiMessage.tool_calls?.map((tc: any) => tc.function?.name).join(',') || 'nenhum'}`)
+
+    console.log(
+      `[DEBUG_T1] tool_calls presentes: ${!!aiMessage.tool_calls} | quantidade: ${aiMessage.tool_calls?.length || 0} | nomes: ${aiMessage.tool_calls?.map((tc: any) => tc.function?.name).join(',') || 'nenhum'}`,
+    )
 
     if (aiMessage.tool_calls) {
       searchPerformed = true
@@ -815,7 +848,9 @@ serve(async (req: Request) => {
         const searchTerm =
           typeof args.term === 'string' ? sanitizeInput(args.term).slice(0, 300) : query
         // ✅ LOG CRÍTICO PARA DEBUG
-        console.log(`[SEARCH_TERM] Termo extraído pela IA: "${searchTerm}" (original: "${args.term || '[fallback para query]'}")`)
+        console.log(
+          `[SEARCH_TERM] Termo extraído pela IA: "${searchTerm}" (original: "${args.term || '[fallback para query]'}")`,
+        )
         const tokens = query
           .toLowerCase()
           .split(/\s+/)
@@ -851,34 +886,43 @@ serve(async (req: Request) => {
 
         if (rpcError) throw new Error('Search engine failure')
 
-        const isServicePlan = (name: string) => 
-          /carepak|service plan|warranty|protection plan|extended coverage|support plan/i.test(name || '');
+        const isServicePlan = (name: string) =>
+          /carepak|service plan|warranty|protection plan|extended coverage|support plan/i.test(
+            name || '',
+          )
 
-        const filteredProducts = (products || []).filter((p: any) => !isServicePlan(p.name));
+        const filteredProducts = (products || []).filter((p: any) => !isServicePlan(p.name))
 
         if ((products || []).length !== filteredProducts.length) {
-          console.log(`[FILTER] ${(products || []).length - filteredProducts.length} plano(s) de servico removido(s)`);
+          console.log(
+            `[FILTER] ${(products || []).length - filteredProducts.length} plano(s) de servico removido(s)`,
+          )
         }
 
-        productsFound += filteredProducts.length;
-        filteredProducts.forEach((p: any) => allowedIds.add(p.id));
-        allFoundProducts.push(...filteredProducts);
+        productsFound += filteredProducts.length
+        filteredProducts.forEach((p: any) => allowedIds.add(p.id))
+        allFoundProducts.push(...filteredProducts)
 
         // ✅ LOG DE DEPURAÇÃO: amostra dos dados crus da RPC (PROTEGIDO)
         if (products && products.length > 0) {
           try {
-            console.log(`[DEBUG_RPC] Total produtos retornados: ${products.length}`);
-            const firstProd = products[0];
-            console.log(`[DEBUG_RPC] Primeiro produto ID: ${firstProd?.id || 'N/A'}`);
-            console.log(`[DEBUG_RPC] Primeiro produto nome: ${firstProd?.name || 'N/A'}`);
-            console.log(`[DEBUG_RPC] price_usd: ${firstProd?.price_usd || 'null'}`);
-            console.log(`[DEBUG_RPC] price_brl: ${firstProd?.price_brl || 'null'}`);
-            console.log(`[DEBUG_RPC] Nomes (primeiros 5): ${products.slice(0, 5).map((p:any) => p.name).join(' | ')}`);
+            console.log(`[DEBUG_RPC] Total produtos retornados: ${products.length}`)
+            const firstProd = products[0]
+            console.log(`[DEBUG_RPC] Primeiro produto ID: ${firstProd?.id || 'N/A'}`)
+            console.log(`[DEBUG_RPC] Primeiro produto nome: ${firstProd?.name || 'N/A'}`)
+            console.log(`[DEBUG_RPC] price_usd: ${firstProd?.price_usd || 'null'}`)
+            console.log(`[DEBUG_RPC] price_brl: ${firstProd?.price_brl || 'null'}`)
+            console.log(
+              `[DEBUG_RPC] Nomes (primeiros 5): ${products
+                .slice(0, 5)
+                .map((p: any) => p.name)
+                .join(' | ')}`,
+            )
           } catch (debugErr) {
-            console.log(`[DEBUG_RPC] Erro ao logar: ${debugErr}`);
+            console.log(`[DEBUG_RPC] Erro ao logar: ${debugErr}`)
           }
         } else {
-          console.log(`[DEBUG_RPC] NENHUM produto retornado pela RPC`);
+          console.log(`[DEBUG_RPC] NENHUM produto retornado pela RPC`)
         }
 
         const compactProducts = (products || []).slice(0, 26).map((p: any) => ({
@@ -900,54 +944,64 @@ serve(async (req: Request) => {
       } // ← Fechamento do for
 
       // ✅ LOG DIAGNÓSTICO PP/HP #2 — Estado após RPC
-      console.log(`[DEBUG_T2] productsFound: ${productsFound} | allowedIds size: ${allowedIds.size} | allowedIds: ${Array.from(allowedIds).join(',') || 'vazio'}`)
+      console.log(
+        `[DEBUG_T2] productsFound: ${productsFound} | allowedIds size: ${allowedIds.size} | allowedIds: ${Array.from(allowedIds).join(',') || 'vazio'}`,
+      )
 
       // ✅ FALLBACK: se a RPC não encontrou nada, instrui a IA a responder com conhecimento geral
       if (productsFound === 0) {
         if (!lastReferencedProductId) {
           // Home page: produto não está no catálogo
-          console.log(`[SEARCH_FALLBACK] Nenhum produto encontrado na home page para: "${query}"`);
+          console.log(`[SEARCH_FALLBACK] Nenhum produto encontrado na home page para: "${query}"`)
           messages.push({
             role: 'system',
-            content: 'Nenhum produto foi encontrado no catálogo para este termo. Responda com base no seu conhecimento técnico geral. Se não souber, diga honestamente. NUNCA invente especificações técnicas. Não sugira encaminhamento ao WhatsApp apenas por não encontrar o produto.'
-          });
+            content:
+              'Nenhum produto foi encontrado no catálogo para este termo. Responda com base no seu conhecimento técnico geral. Se não souber, diga honestamente. NUNCA invente especificações técnicas. Não sugira encaminhamento ao WhatsApp apenas por não encontrar o produto.',
+          })
         } else {
           // Página de produto: acessório não encontrado no catálogo
-          console.log(`[SEARCH_FALLBACK] Nenhum acessório compatível encontrado para: "${query}"`);
+          console.log(`[SEARCH_FALLBACK] Nenhum acessório compatível encontrado para: "${query}"`)
           messages.push({
             role: 'system',
-            content: 'Nenhum acessório compatível foi encontrado em nosso catálogo para este produto. No entanto, responda à pergunta do usuário com base no seu conhecimento técnico geral sobre compatibilidade, especificações e o que funciona com este equipamento. NUNCA invente especificações. Não sugira encaminhamento ao WhatsApp apenas por não encontrar o acessório.'
-          });
+            content:
+              'Nenhum acessório compatível foi encontrado em nosso catálogo para este produto. No entanto, responda à pergunta do usuário com base no seu conhecimento técnico geral sobre compatibilidade, especificações e o que funciona com este equipamento. NUNCA invente especificações. Não sugira encaminhamento ao WhatsApp apenas por não encontrar o acessório.',
+          })
         }
       }
 
       if (keywordScore < 1.0 && productsFound === 0 && intent !== 'PRODUCT_SPECIFIC') {
         console.log(`[PERF][TOTAL_NO_PRODUCTS] ${Math.round(performance.now() - startTime)}ms`)
         return new Response(
-          JSON.stringify({ message: 'Posso ajudar apenas com audiovisual profissional e produtos do catálogo My Way.', confidence_level: 'low', referenced_internal_products: [], should_show_whatsapp_button: false }),
+          JSON.stringify({
+            message:
+              'Posso ajudar apenas com audiovisual profissional e produtos do catálogo My Way.',
+            confidence_level: 'low',
+            referenced_internal_products: [],
+            should_show_whatsapp_button: false,
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         )
       }
 
-      const productIds = Array.from(allowedIds);
+      const productIds = Array.from(allowedIds)
 
       // ETAPA 2 — ENRIQUECIMENTO VIA PRODUCT CACHE
-      const enrichedSpecs = await enrichProductsWithCache(supabase, productIds);
-      let specsContext = '';
+      const enrichedSpecs = await enrichProductsWithCache(supabase, productIds)
+      let specsContext = ''
       if (Object.keys(enrichedSpecs).length > 0) {
         specsContext = Object.entries(enrichedSpecs)
           .map(([pid, specs]) => {
             const specLines = Object.entries(specs as Record<string, any>)
               .map(([key, val]) => ` - ${key}: ${val.value} (fonte: ${val.source})`)
-              .join('\n');
-            return ` Produto ${pid}:\n${specLines}`;
+              .join('\n')
+            return ` Produto ${pid}:\n${specLines}`
           })
-          .join('\n\n');
-        console.log(`[PC_CONTEXT] Specs injetados no prompt`);
+          .join('\n\n')
+        console.log(`[PC_CONTEXT] Specs injetados no prompt`)
       }
 
       // Cria cópia mutável do array de mensagens
-      const finalMessages = [...messages];
+      const finalMessages = [...messages]
 
       // 1. Se há specs enriquecidos, injeta como mensagem de contexto
       if (specsContext && specsContext.trim().length > 0) {
@@ -961,8 +1015,8 @@ serve(async (req: Request) => {
             'Use estes dados para enriquecer sua resposta.',
             'NUNCA busque ou infira preco e peso na web ou em conhecimento previo.',
             'Se nao estiver na tabela de produtos, informe SOB CONSULTA.',
-          ].join('\n')
-        });
+          ].join('\n'),
+        })
       }
 
       // 2. INJEÇÃO DE FORMATO JSON PARA PÁGINA DE PRODUTO
@@ -983,32 +1037,35 @@ serve(async (req: Request) => {
             ' "confidence_level": "high",',
             ' "should_show_whatsapp_button": false',
             '}',
-          ].join('\n')
-        });
+          ].join('\n'),
+        })
       }
 
       // 3. INJEÇÃO DOS PRODUTOS ENCONTRADOS PELA RPC
       if (allFoundProducts && allFoundProducts.length > 0) {
-        const topProducts = allFoundProducts.slice(0, 26);
+        const topProducts = allFoundProducts.slice(0, 26)
         const productsContext = topProducts
           .map((p: any, index: number) => {
-            const priceLines: string[] = [];
-            const precoFOB = p.price_usd || p.price_usa || null;
+            const priceLines: string[] = []
+            const precoFOB = p.price_usd || p.price_usa || null
             if (precoFOB) {
-              priceLines.push(` • Preço FOB (USD): $${precoFOB}`);
+              priceLines.push(` • Preço FOB (USD): $${precoFOB}`)
             }
             if (p.price_nationalized_sales) {
-              const currency = p.price_nationalized_currency || 'BRL';
-              const symbol = currency === 'BRL' ? 'R$' : '$';
+              const currency = p.price_nationalized_currency || 'BRL'
+              const symbol = currency === 'BRL' ? 'R$' : '$'
               priceLines.push(
-                ` • Preço Nacionalizado (${currency}): ${symbol} ${p.price_nationalized_sales}`
-              );
+                ` • Preço Nacionalizado (${currency}): ${symbol} ${p.price_nationalized_sales}`,
+              )
             }
-            const desc = p.description ? String(p.description).slice(0, 300) : 'Não disponível';
-            let techInfoStr = 'Não disponível';
+            const desc = p.description ? String(p.description).slice(0, 300) : 'Não disponível'
+            let techInfoStr = 'Não disponível'
             if (p.technical_info) {
-              const raw = typeof p.technical_info === 'object' ? JSON.stringify(p.technical_info) : String(p.technical_info);
-              techInfoStr = raw.slice(0, 500);
+              const raw =
+                typeof p.technical_info === 'object'
+                  ? JSON.stringify(p.technical_info)
+                  : String(p.technical_info)
+              techInfoStr = raw.slice(0, 500)
             }
             return [
               `PRODUTO ${index + 1}:`,
@@ -1017,9 +1074,9 @@ serve(async (req: Request) => {
               `- Descrição: ${desc}`,
               `- Ficha Técnica: ${techInfoStr}`,
               priceLines.join('\n'),
-            ].join('\n');
+            ].join('\n')
           })
-          .join('\n\n');
+          .join('\n\n')
         finalMessages.push({
           role: 'user',
           content: [
@@ -1037,7 +1094,7 @@ serve(async (req: Request) => {
             'DADOS DOS PRODUTOS:',
             productsContext,
           ].join('\n'),
-        });
+        })
       }
 
       // SEGUNDA CHAMADA OPENAI (COM FALLBACK)
@@ -1049,40 +1106,40 @@ serve(async (req: Request) => {
         undefined,
         undefined,
         { type: 'json_object' },
-        controller.signal   // ← signal global, não secondCallController
+        controller.signal, // ← signal global, não secondCallController
       )
-      const normalizedFinal = normalizeAIResponse(finalData, finalProviderType);
-      console.log(`[AI_PROVIDER_FINAL] ${finalProviderType}`);
-      console.log(`[PERF][OPENAI_2] ${Math.round(performance.now() - tOpenAI2)}ms`);
+      const normalizedFinal = normalizeAIResponse(finalData, finalProviderType)
+      console.log(`[AI_PROVIDER_FINAL] ${finalProviderType}`)
+      console.log(`[PERF][OPENAI_2] ${Math.round(performance.now() - tOpenAI2)}ms`)
 
       if (normalizedFinal?.choices?.[0]?.message) {
-        aiMessage.content = normalizedFinal.choices[0].message.content;
+        aiMessage.content = normalizedFinal.choices[0].message.content
       }
     } // ← fecha: if (aiMessage.tool_calls)
 
     // Se não houve tool calls (pergunta técnica pura), a resposta já está em aiMessage.content
     // Mas pode não estar em JSON. Forçamos se necessário.
-    let rawContent = aiMessage?.content || '{}';
-    
-    // Se não parece JSON e estamos na página de produto, empacotamos
-    if (lastReferencedProductId && !rawContent.trim().startsWith('{')) {
+    let rawContent = aiMessage?.content || '{}'
+
+    // Se não parece JSON, empacotamos (independente da rota/página)
+    if (!rawContent.trim().startsWith('{')) {
       rawContent = JSON.stringify({
         message: rawContent,
         referenced_internal_products: [],
         confidence_level: 'high',
-        should_show_whatsapp_button: false
-      });
+        should_show_whatsapp_button: false,
+      })
     }
 
     // 5. PROCESSAMENTO FINAL (fora do if tool_calls)
-    const rawResult = safeJSONParse(rawContent, {});  // ← rawContent, não aiMessage?.content
+    const rawResult = safeJSONParse(rawContent, {}) // ← rawContent, não aiMessage?.content
 
     // Remove UUIDs expostos na mensagem (garantia técnica, independe do comportamento da IA)
     if (typeof rawResult?.message === 'string') {
       rawResult.message = rawResult.message
-        .replace(/[•-]?\s*ID:\s*[0-9a-f-]{36}/gi, '')  // remove "• ID: uuid" ou "- ID: uuid"
+        .replace(/[•-]?\s*ID:\s*[0-9a-f-]{36}/gi, '') // remove "• ID: uuid" ou "- ID: uuid"
         .replace(/\n{3,}/g, '\n\n')
-        .trim();
+        .trim()
     }
 
     const result = {
@@ -1091,33 +1148,40 @@ serve(async (req: Request) => {
         ? rawResult.referenced_internal_products
         : [],
       confidence_level: rawResult?.confidence_level === 'high' ? 'high' : 'low',
-      should_show_whatsapp_button: typeof rawResult?.should_show_whatsapp_button === 'boolean'
-        ? rawResult.should_show_whatsapp_button
-        : false,
-    };
+      should_show_whatsapp_button:
+        typeof rawResult?.should_show_whatsapp_button === 'boolean'
+          ? rawResult.should_show_whatsapp_button
+          : false,
+    }
 
-    console.log(`[LOG] IDs sugeridos pela IA: ${result.referenced_internal_products.join(',')}`);
+    console.log(`[LOG] IDs sugeridos pela IA: ${result.referenced_internal_products.join(',')}`)
     // ✅ LOG DIAGNÓSTICO PP/HP #3 — Antes do filtro allowedIds
-    console.log(`[DEBUG_T3] IDs sugeridos count: ${result.referenced_internal_products?.length || 0} | allowedIds size: ${allowedIds.size} | interceptação esperada: ${result.referenced_internal_products?.filter((id: string) => allowedIds.has(id)).length || 0} de ${result.referenced_internal_products?.length || 0}`)
+    console.log(
+      `[DEBUG_T3] IDs sugeridos count: ${result.referenced_internal_products?.length || 0} | allowedIds size: ${allowedIds.size} | interceptação esperada: ${result.referenced_internal_products?.filter((id: string) => allowedIds.has(id)).length || 0} de ${result.referenced_internal_products?.length || 0}`,
+    )
 
     result.referenced_internal_products = result.referenced_internal_products.filter((id: string) =>
       allowedIds.has(id),
-    );
-    console.log(`[LOG] IDs validados: ${result.referenced_internal_products.join(',')}`);
+    )
+    console.log(`[LOG] IDs validados: ${result.referenced_internal_products.join(',')}`)
 
     // LOG ANTES do strip (para validar se IA gera markdown)
-    console.log('[DEBUG_MSG_RAW_BEFORE] message field:', (result.message || '').substring(0, 300));
+    console.log('[DEBUG_MSG_RAW_BEFORE] message field:', (result.message || '').substring(0, 300))
 
-    result.message = String(result.message || '');
+    result.message = String(result.message || '')
 
-    console.log('[DEBUG_MSG_RAW_AFTER] message field:', result.message.substring(0, 300));
+    console.log('[DEBUG_MSG_RAW_AFTER] message field:', result.message.substring(0, 300))
 
     if (lastReferencedProductId) {
-      result.message += '\n\n' + String(globalSettingsMap['transparency_note'] || '');
+      result.message += '\n\n' + String(globalSettingsMap['transparency_note'] || '')
     }
 
     // PASSO 1.3 — SAVE NO PRODUCT SEARCH CACHE
-    if (searchPerformed && result.confidence_level === 'high' && result.referenced_internal_products.length > 0) {
+    if (
+      searchPerformed &&
+      result.confidence_level === 'high' &&
+      result.referenced_internal_products.length > 0
+    ) {
       try {
         await saveProductSearchCache(
           supabase,
@@ -1125,11 +1189,11 @@ serve(async (req: Request) => {
           result.referenced_internal_products,
           {},
           [],
-          []
-        );
-        console.log(`[CACHE_SAVE][PSC] Contexto salvo para: ${queryHash}`);
+          [],
+        )
+        console.log(`[CACHE_SAVE][PSC] Contexto salvo para: ${queryHash}`)
       } catch (cacheSaveErr: any) {
-        console.log(`[CACHE_SAVE][ERROR] Falha ao salvar PSC: ${cacheSaveErr.message}`);
+        console.log(`[CACHE_SAVE][ERROR] Falha ao salvar PSC: ${cacheSaveErr.message}`)
       }
     }
 
@@ -1138,36 +1202,36 @@ serve(async (req: Request) => {
       await supabase.from('chat_messages').insert([
         { session_id, role: 'user', content: query },
         { session_id, role: 'assistant', content: result.message },
-      ]);
+      ])
     }
 
-    console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`);
+    console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`)
 
     // === FIM DO PROCESSAMENTO HP (sem enrichment) ===
     if (session_id) {
       await supabase.from('chat_messages').insert([
         { session_id, role: 'user', content: query },
         { session_id, role: 'assistant', content: result.message },
-      ]);
+      ])
     }
 
-    console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`);
+    console.log(`[PERF][TOTAL_SUCCESS] ${Math.round(performance.now() - startTime)}ms`)
 
     // HP retorna apenas texto + IDs (sem cards)
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    })
   } catch (error: any) {
-    const errorMsg = error?.name === 'AbortError' ? 'Request timeout' : (error?.message || 'Unknown error');
-    console.error('[ERRO CRÍTICO]', errorMsg);
-    console.log(`[PERF][TOTAL_ERROR] ${Math.round(performance.now() - startTime)}ms`);
-    
+    const errorMsg =
+      error?.name === 'AbortError' ? 'Request timeout' : error?.message || 'Unknown error'
+    console.error('[ERRO CRÍTICO]', errorMsg)
+    console.log(`[PERF][TOTAL_ERROR] ${Math.round(performance.now() - startTime)}ms`)
+
     return new Response(JSON.stringify({ error: errorMsg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    });
+    })
   } finally {
-    clearTimeout(timeoutId);
+    clearTimeout(timeoutId)
   }
-});
+})
