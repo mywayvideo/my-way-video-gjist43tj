@@ -103,18 +103,20 @@ export function AISearchResults({
         className,
       )}
     >
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div className="flex items-center space-x-3">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+      <div className="mb-6 flex flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Sparkles className="h-5 w-5 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-100">Consultor Técnico IA</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-slate-100 truncate">
+            Consultor Técnico IA
+          </h3>
         </div>
 
         {result.confidence_level && (
           <div
             className={cn(
-              'inline-flex items-center space-x-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wider w-fit',
+              'inline-flex shrink-0 items-center space-x-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wider',
               confidenceColor,
               !isAdmin && 'px-2',
             )}
@@ -125,30 +127,41 @@ export function AISearchResults({
             ) : (
               <AlertTriangle className="h-3.5 w-3.5" />
             )}
-            {isAdmin && <span>Confiança: {result.confidence_level}</span>}
+            {isAdmin && (
+              <span className="hidden sm:inline">Confiança: {result.confidence_level}</span>
+            )}
           </div>
         )}
       </div>
 
       <div
-        className={cn('text-slate-300 leading-relaxed', result.is_intermediate && 'animate-pulse')}
+        className={cn(
+          'text-slate-300 leading-relaxed',
+          result.is_intermediate && 'flex justify-center py-8',
+        )}
       >
-        <ResponseFormatter
-          content={(result.message || '').replace(/realizando busca profunda my way/gi, '').trim()}
-          products={
-            !result.is_intermediate && typeof result.referenced_internal_products?.[0] === 'object'
-              ? (result.referenced_internal_products as any[])
-              : undefined
-          }
-          referenced_internal_products={
-            !result.is_intermediate && typeof result.referenced_internal_products?.[0] === 'string'
-              ? (result.referenced_internal_products as string[])
-              : undefined
-          }
-        />
+        {result.is_intermediate ? (
+          <AILoader size="default" />
+        ) : (
+          <ResponseFormatter
+            content={(result.message || '')
+              .replace(/realizando busca profunda my way/gi, '')
+              .trim()}
+            products={
+              typeof result.referenced_internal_products?.[0] === 'object'
+                ? (result.referenced_internal_products as any[])
+                : undefined
+            }
+            referenced_internal_products={
+              typeof result.referenced_internal_products?.[0] === 'string'
+                ? (result.referenced_internal_products as string[])
+                : undefined
+            }
+          />
+        )}
       </div>
 
-      {result.should_show_whatsapp_button && (
+      {result.should_show_whatsapp_button && !result.is_intermediate && (
         <div className="mt-6 rounded-lg border border-green-500/20 bg-green-500/10 p-4">
           <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
             <div className="text-sm text-green-400">
