@@ -146,6 +146,7 @@ export function Footer() {
                   <Link
                     key={link.name}
                     to={link.path}
+                    onClick={() => window.scrollTo(0, 0)}
                     className="group flex items-center text-zinc-300 font-medium text-lg hover:text-white transition-all duration-300 w-fit"
                   >
                     <span className="relative">
@@ -171,6 +172,7 @@ export function Footer() {
                     <Link
                       key={link.name}
                       to={link.path}
+                      onClick={() => window.scrollTo(0, 0)}
                       className="text-zinc-400 hover:text-zinc-100 transition-colors duration-300 w-fit"
                     >
                       {link.name}
@@ -237,7 +239,7 @@ export function Footer() {
 
       {/* Massive Typography */}
       <div className="relative w-full border-t border-white/5 pt-12 mt-12 overflow-hidden flex flex-col items-center">
-        <h2 className="text-[13vw] lg:text-[15vw] font-black tracking-[-0.04em] leading-none text-center select-none text-transparent bg-clip-text bg-gradient-to-b from-white/10 to-transparent mix-blend-overlay pointer-events-none pb-12 w-full whitespace-nowrap">
+        <h2 className="text-[13vw] lg:text-[15vw] font-black tracking-[-0.04em] leading-none text-center select-none text-white/20 pointer-events-none pb-12 w-full whitespace-nowrap">
           MY WAY VIDEO
         </h2>
 
@@ -245,11 +247,16 @@ export function Footer() {
         <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-semibold text-zinc-600 uppercase tracking-widest w-full">
           <p>© {new Date().getFullYear()} My Way Video. All rights reserved.</p>
           <div className="flex gap-8">
-            <Link to="/privacy-policy" className="hover:text-white transition-colors duration-300">
+            <Link
+              to="/privacy-policy"
+              onClick={() => window.scrollTo(0, 0)}
+              className="hover:text-white transition-colors duration-300"
+            >
               Privacy
             </Link>
             <Link
               to="/terms-of-service"
+              onClick={() => window.scrollTo(0, 0)}
               className="hover:text-white transition-colors duration-300"
             >
               Terms

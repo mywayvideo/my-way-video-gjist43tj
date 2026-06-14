@@ -186,36 +186,38 @@ export function ProductCard({
           )}
         </div>
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
-          {isFavoritesPage && onRemove && (
+          {isFavoritesPage && onRemove ? (
             <Button
               variant="destructive"
-              size="icon"
-              className="h-8 w-8 rounded-full shadow-sm hover:bg-destructive/90"
+              size="sm"
+              className="h-8 px-3 rounded-full shadow-sm hover:bg-destructive/90 gap-1.5"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 onRemove(product.id)
               }}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Remover</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full bg-white/80 dark:bg-black/80 backdrop-blur-sm shadow-sm hover:bg-white dark:hover:bg-black"
+              onClick={handleToggleFavorite}
+              disabled={favLoading}
+            >
+              <Heart
+                className={cn(
+                  'h-4 w-4 transition-colors',
+                  isFavorite(product.id)
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-gray-400 hover:text-red-400',
+                )}
+              />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full bg-white/80 dark:bg-black/80 backdrop-blur-sm shadow-sm hover:bg-white dark:hover:bg-black"
-            onClick={handleToggleFavorite}
-            disabled={favLoading}
-          >
-            <Heart
-              className={cn(
-                'h-4 w-4 transition-colors',
-                isFavorite(product.id)
-                  ? 'fill-red-500 text-red-500'
-                  : 'text-gray-400 hover:text-red-400',
-              )}
-            />
-          </Button>
         </div>
         <Link
           to={linkTo}
