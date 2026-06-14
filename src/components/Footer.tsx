@@ -41,7 +41,7 @@ export function Footer() {
           setAboutContent(companyInfoRes.data.content)
         } else {
           setAboutContent(
-            'Inteligência em Audiovisual PRO. As melhores soluções para o seu projeto.',
+            'Inteligência em Audiovisual PRO. Elevando o padrão das produções audiovisuais com tecnologia de ponta e suporte especializado.',
           )
         }
 
@@ -68,114 +68,164 @@ export function Footer() {
   const fbLink = socialFb || 'https://www.facebook.com/MyWayVideoPro'
 
   return (
-    <footer className="mt-auto relative z-10 border-t border-border/10 bg-black text-white pt-20 pb-8 overflow-hidden">
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-16 mb-24">
-          {/* Brand & About */}
-          <div className="max-w-md space-y-8">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-bold tracking-tight">
-                Eleve o Nível do seu Audiovisual
+    <footer className="mt-auto relative bg-[#0a0a0a] text-white pt-24 pb-8 overflow-hidden border-t border-white/10 selection:bg-white selection:text-black">
+      <div className="container mx-auto px-6 lg:px-12 relative z-10">
+        {/* Asymmetric Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-16 lg:gap-8 mb-32">
+          {/* Brand & About (Takes 5 cols) */}
+          <div className="md:col-span-5 flex flex-col justify-between">
+            <div>
+              <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-xs font-semibold tracking-widest uppercase text-zinc-300">
+                  Available worldwide
+                </span>
+              </div>
+
+              <h3 className="text-3xl lg:text-4xl font-black tracking-tighter text-white mb-6 leading-tight">
+                Eleve o Nível do seu
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-500 to-zinc-100">
+                  Audiovisual
+                </span>
               </h3>
+
               {loading ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                <div className="space-y-3 animate-pulse max-w-sm">
                   <div className="h-4 bg-white/10 rounded w-full"></div>
                   <div className="h-4 bg-white/10 rounded w-5/6"></div>
                 </div>
               ) : (
-                <p className="text-zinc-400 font-light text-lg leading-relaxed">{aboutContent}</p>
+                <p className="text-zinc-400 font-medium text-lg leading-relaxed max-w-md">
+                  {aboutContent}
+                </p>
               )}
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 mt-12">
               <a
                 href={igLink}
                 target="_blank"
                 rel="noreferrer"
-                className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300 hover:scale-105"
+                className="group relative flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-white hover:text-black transition-all duration-500 hover:scale-105 hover:-translate-y-1 overflow-hidden"
                 aria-label="Instagram"
               >
-                <Instagram size={20} />
+                <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <Instagram
+                  size={22}
+                  className="relative z-10 group-hover:text-white transition-colors"
+                />
               </a>
               <a
                 href={fbLink}
                 target="_blank"
                 rel="noreferrer"
-                className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300 hover:scale-105"
+                className="group relative flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-[#1877F2] hover:text-white transition-all duration-500 hover:scale-105 hover:-translate-y-1 overflow-hidden"
                 aria-label="Facebook"
               >
-                <Facebook size={20} />
+                <Facebook size={22} className="relative z-10" />
               </a>
             </div>
           </div>
 
-          {/* Links & Contact */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-24 w-full lg:w-auto">
-            {/* Navigation */}
+          {/* Links Grid (Takes 7 cols) */}
+          <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-12 lg:gap-8 lg:pl-16">
+            {/* Quick Links */}
             <div className="space-y-8">
-              <h4 className="text-xs font-bold tracking-[0.2em] text-zinc-500 uppercase">
-                Navegação
+              <h4 className="text-xs font-bold tracking-[0.25em] text-zinc-500 uppercase">
+                Explore
               </h4>
               <nav className="flex flex-col gap-5">
-                <Link
-                  to="/"
-                  className="text-zinc-300 hover:text-white transition-colors duration-300 flex items-center gap-2 group w-fit"
-                >
-                  Home
-                  <ArrowUpRight className="w-4 h-4 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
-                </Link>
-                <Link
-                  to="/search"
-                  className="text-zinc-300 hover:text-white transition-colors duration-300 flex items-center gap-2 group w-fit"
-                >
-                  Catálogo
-                  <ArrowUpRight className="w-4 h-4 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
-                </Link>
-                <Link
-                  to="/favorites"
-                  className="text-zinc-300 hover:text-white transition-colors duration-300 flex items-center gap-2 group w-fit"
-                >
-                  Favoritos
-                  <ArrowUpRight className="w-4 h-4 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
-                </Link>
+                {[
+                  { name: 'Favorites', path: '/favorites' },
+                  { name: 'Home', path: '/' },
+                ].map((link) => (
+                  <Link
+                    key={link.name}
+                    to={link.path}
+                    className="group flex items-center text-zinc-300 font-medium text-lg hover:text-white transition-all duration-300 w-fit"
+                  >
+                    <span className="relative">
+                      {link.name}
+                      <span className="absolute -bottom-1 left-0 w-0 h-px bg-white transition-all duration-300 group-hover:w-full"></span>
+                    </span>
+                    <ArrowUpRight className="w-4 h-4 ml-2 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
+                  </Link>
+                ))}
               </nav>
+
+              <div className="pt-6">
+                <h4 className="text-xs font-bold tracking-[0.25em] text-zinc-500 uppercase mb-6">
+                  Legal
+                </h4>
+                <nav className="flex flex-col gap-4">
+                  {[
+                    { name: 'Privacy Policy', path: '/privacy-policy' },
+                    { name: 'Terms of Service', path: '/terms-of-service' },
+                    { name: 'Refund Policy', path: '/refund-policy' },
+                    { name: 'Shipping Policy', path: '/shipping-policy' },
+                  ].map((link) => (
+                    <Link
+                      key={link.name}
+                      to={link.path}
+                      className="text-zinc-400 hover:text-zinc-100 transition-colors duration-300 w-fit"
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
             </div>
 
-            {/* Contact */}
+            {/* Contact Info */}
             <div className="space-y-8">
-              <h4 className="text-xs font-bold tracking-[0.2em] text-zinc-500 uppercase">
-                Contato
+              <h4 className="text-xs font-bold tracking-[0.25em] text-zinc-500 uppercase">
+                Contact
               </h4>
-              <div className="space-y-5 text-zinc-300 font-light">
+              <div className="space-y-6 text-zinc-300 font-medium">
                 {loading ? (
-                  <div className="space-y-4 animate-pulse">
-                    <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                    <div className="h-4 bg-white/10 rounded w-1/2"></div>
-                    <div className="h-4 bg-white/10 rounded w-2/3"></div>
+                  <div className="space-y-6 animate-pulse">
+                    <div className="h-5 bg-white/10 rounded w-3/4"></div>
+                    <div className="h-5 bg-white/10 rounded w-1/2"></div>
+                    <div className="h-5 bg-white/10 rounded w-2/3"></div>
                   </div>
                 ) : (
                   <>
                     {address && (
-                      <div className="flex items-start gap-4 group cursor-default">
-                        <MapPin className="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0 mt-0.5" />
-                        <span className="leading-relaxed max-w-[250px]">{address}</span>
+                      <div className="group flex items-start gap-4">
+                        <div className="mt-1 flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 group-hover:bg-white group-hover:text-black transition-all duration-300 shrink-0">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <span className="leading-relaxed text-zinc-400 group-hover:text-zinc-200 transition-colors duration-300">
+                          {address}
+                        </span>
                       </div>
                     )}
                     {whatsapp && (
-                      <div className="flex items-center gap-4 group cursor-default">
-                        <WhatsAppIcon className="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0" />
-                        <span>{whatsapp}</span>
+                      <div className="group flex items-center gap-4">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 group-hover:bg-[#25D366] group-hover:text-white group-hover:border-[#25D366] transition-all duration-300 shrink-0">
+                          <WhatsAppIcon className="w-4 h-4" />
+                        </div>
+                        <span className="text-zinc-400 group-hover:text-zinc-200 transition-colors duration-300">
+                          {whatsapp}
+                        </span>
                       </div>
                     )}
                     {email && (
-                      <div className="flex items-center gap-4 group cursor-default">
-                        <Mail className="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0" />
-                        <span>{email}</span>
+                      <div className="group flex items-center gap-4">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 group-hover:bg-white group-hover:text-black transition-all duration-300 shrink-0">
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <span className="text-zinc-400 group-hover:text-zinc-200 transition-colors duration-300">
+                          {email}
+                        </span>
                       </div>
                     )}
                     {!address && !whatsapp && !email && (
-                      <p className="italic text-zinc-600">Informações não disponíveis.</p>
+                      <p className="italic text-zinc-600">Information not available.</p>
                     )}
                   </>
                 )}
@@ -185,21 +235,25 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Massive Typography & Bottom Bar */}
-      <div className="relative w-full border-t border-white/5 pt-12 mt-12 group cursor-default">
-        <h2 className="text-[12vw] md:text-[14vw] font-black tracking-tighter leading-none text-center text-transparent bg-clip-text bg-gradient-to-b from-zinc-800 to-black select-none group-hover:from-zinc-700 group-hover:to-black transition-all duration-700 mx-4">
+      {/* Massive Typography */}
+      <div className="relative w-full border-t border-white/5 pt-12 mt-12 overflow-hidden flex flex-col items-center">
+        <h2 className="text-[13vw] lg:text-[15vw] font-black tracking-[-0.04em] leading-none text-center select-none text-transparent bg-clip-text bg-gradient-to-b from-white/10 to-transparent mix-blend-overlay pointer-events-none pb-12 w-full whitespace-nowrap">
           MY WAY VIDEO
         </h2>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-zinc-600 uppercase tracking-widest mix-blend-difference">
-          <p>© {new Date().getFullYear()} My Way Video</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-white transition-colors">
-              Privacidade
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
-              Termos
-            </a>
+        {/* Bottom Bar */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-semibold text-zinc-600 uppercase tracking-widest w-full">
+          <p>© {new Date().getFullYear()} My Way Video. All rights reserved.</p>
+          <div className="flex gap-8">
+            <Link to="/privacy-policy" className="hover:text-white transition-colors duration-300">
+              Privacy
+            </Link>
+            <Link
+              to="/terms-of-service"
+              className="hover:text-white transition-colors duration-300"
+            >
+              Terms
+            </Link>
           </div>
         </div>
       </div>

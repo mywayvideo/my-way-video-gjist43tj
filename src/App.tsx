@@ -37,6 +37,10 @@ import Checkout from './pages/Checkout'
 import CheckoutSuccess from './pages/CheckoutSuccess'
 import MigrationSetup from './pages/MigrationSetup'
 import ForgotPassword from './pages/ForgotPassword'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import RefundPolicy from './pages/RefundPolicy'
+import ShippingPolicy from './pages/ShippingPolicy'
 import ResetPassword from './pages/ResetPassword'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -272,6 +276,10 @@ const App = () => {
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/checkout/success" element={<CheckoutSuccess />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms-of-service" element={<TermsOfService />} />
+                  <Route path="/refund-policy" element={<RefundPolicy />} />
+                  <Route path="/shipping-policy" element={<ShippingPolicy />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
