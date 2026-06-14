@@ -3,24 +3,20 @@ import { useFavorites } from '@/hooks/useFavorites'
 import { supabase } from '@/lib/supabase/client'
 import { Heart, HeartOff, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FavoriteProductCard } from '@/components/FavoriteProductCard'
-import { useCart } from '@/hooks/useCart'
+import { ProductCard } from '@/components/ProductCard'
 import { Link } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export default function Favorites() {
-  const {
-    favorites,
-    removeFavorite,
-    addFavorite,
-    isFavorite,
-    loading: favLoading,
-    error,
-  } = useFavorites()
+  const { favorites, removeFavorite, loading: favLoading, error } = useFavorites()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const { addToCart } = useCart()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   const fetchProducts = async (currentFavorites: string[]) => {
     if (currentFavorites.length === 0) {
@@ -33,7 +29,7 @@ export default function Favorites() {
     try {
       const { data, error: dbError } = await supabase
         .from('products')
-        .select('*')
+        .select('*, manufacturers(name)')
         .in('id', currentFavorites)
 
       if (dbError) throw dbError
@@ -131,7 +127,12 @@ export default function Favorites() {
     <div className="container mx-auto px-4 py-8 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Heart className="w-8 h-8 text-primary fill-primary/20" />
+          <Heart
+            className={cn(
+              'w-8 h-8',
+              products.length > 0 ? 'fill-red-500 text-red-500' : 'text-primary fill-primary/20',
+            )}
+          />
           Meus Favoritos
         </h1>
         <Badge variant="secondary" className="text-sm">
@@ -140,22 +141,12 @@ export default function Favorites() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
         {products.map((product) => (
-          <FavoriteProductCard
+          <ProductCard
             key={product.id}
             product={product}
+            isFavoritesPage={true}
             onRemove={async (id) => {
               await removeFavorite(id)
-            }}
-            onAddToCart={async (id, quantity) => {
-              await addToCart(id, quantity)
-            }}
-            isFavorited={isFavorite(product.id)}
-            onToggleFavorite={async (id, willBeFavorite) => {
-              if (willBeFavorite) {
-                await addFavorite(id)
-              } else {
-                await removeFavorite(id)
-              }
             }}
           />
         ))}

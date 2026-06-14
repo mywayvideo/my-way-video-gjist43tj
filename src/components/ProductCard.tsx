@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Heart, MessageCircle } from 'lucide-react'
+import { ShoppingCart, Heart, MessageCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSearchState } from '@/hooks/useSearchState'
 import { ImageWithFallback } from '@/components/ImageWithFallback'
@@ -12,7 +12,15 @@ import { usePricing } from '@/hooks/use-pricing'
 import { useProductDiscount } from '@/hooks/useProductDiscount'
 import { calculateFinalPrice } from '@/utils/pricing'
 
-export function ProductCard({ product }: { product: any }) {
+export function ProductCard({
+  product,
+  isFavoritesPage,
+  onRemove,
+}: {
+  product: any
+  isFavoritesPage?: boolean
+  onRemove?: (id: string) => void
+}) {
   const [showQtyModal, setShowQtyModal] = useState(false)
   const { isSearchActive, searchQuery } = useSearchState()
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
@@ -178,6 +186,20 @@ export function ProductCard({ product }: { product: any }) {
           )}
         </div>
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
+          {isFavoritesPage && onRemove && (
+            <Button
+              variant="destructive"
+              size="icon"
+              className="h-8 w-8 rounded-full shadow-sm hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onRemove(product.id)
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
