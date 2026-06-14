@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { cn } from '@/lib/utils'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
+import { AILoader } from '@/components/AI/AILoader'
 
 export function ChatInterface() {
   const { search, isLoading, results } = useAiSearch()
@@ -191,26 +192,8 @@ export function ChatInterface() {
                   >
                     <div className="leading-relaxed space-y-2 break-words w-full">
                       {msg.role === 'assistant' && msg.is_intermediate ? (
-                        <div className="flex flex-col space-y-4 w-full">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div className="flex space-x-1.5 px-2 py-1">
-                              <div
-                                className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"
-                                style={{ animationDelay: '0ms' }}
-                              />
-                              <div
-                                className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"
-                                style={{ animationDelay: '150ms' }}
-                              />
-                              <div
-                                className="w-2 h-2 bg-primary/80 rounded-full animate-bounce"
-                                style={{ animationDelay: '300ms' }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-primary/80 font-medium animate-pulse text-sm mt-2 italic">
-                            {results?.message || 'Iniciando busca profunda MY WAY...'}
-                          </div>
+                        <div className="flex items-center justify-center w-full py-4">
+                          <AILoader size="small" />
                         </div>
                       ) : msg.role === 'assistant' ? (
                         <ResponseFormatter content={msg.content} products={msg.products} />

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/hooks/useCart'
 import { ResponseFormatter } from '@/components/ResponseFormatter'
+import { AILoader } from '@/components/AI/AILoader'
 
 interface Product {
   id: string
@@ -39,7 +40,6 @@ export function AISearchResults({
   isAdmin,
 }: AISearchResultsProps) {
   const { addItem } = useCart()
-  const [loadingMessage, setLoadingMessage] = useState('Sincronizando Tier Técnico...')
   const containerRef = useRef<HTMLDivElement>(null)
   const prevLoadingRef = useRef(isLoading)
 
@@ -55,56 +55,15 @@ export function AISearchResults({
     prevLoadingRef.current = isLoading
   }, [isLoading, result])
 
-  useEffect(() => {
-    if (!isLoading) return
-    const messages = [
-      'Sincronizando Tier Técnico...',
-      'Realizando Busca Profunda...',
-      'Mapeando hardware...',
-      'Análise de workflow PRO...',
-      'Cruzando specs técnicas...',
-      'Refinando busca My Way...',
-      'Calculando viabilidade...',
-      'Auditoria de performance...',
-      'Auditando fluxo sinal...',
-      'Mapeando ecossistema...',
-      'Sincronizando banco...',
-      'Escaneando bit depth...',
-      'Refinando lógica busca...',
-      'IA Otimizando Resposta...',
-    ]
-    let currentIndex = 0
-    setLoadingMessage(messages[currentIndex])
-    const interval = setInterval(() => {
-      currentIndex = (currentIndex + 1) % messages.length
-      setLoadingMessage(messages[currentIndex])
-    }, 2500)
-    return () => clearInterval(interval)
-  }, [isLoading])
-
   if (isLoading && (!result || !result.is_intermediate)) {
     return (
       <div
         ref={containerRef}
         id="ai-search-results"
-        className={cn('scroll-mt-32 relative w-full py-12', className)}
+        className={cn('scroll-mt-32 relative w-full py-16', className)}
       >
         <div className="relative z-10 flex flex-col items-center justify-center space-y-6">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-              <Sparkles className="h-7 w-7 animate-pulse text-amber-400" />
-            </div>
-            <div className="flex items-center justify-center w-full px-4">
-              <p
-                key={loadingMessage}
-                className="animate-fade-in-up bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-clip-text text-lg font-bold text-transparent text-center drop-shadow-[0_0_10px_rgba(245,158,11,0.6)] tracking-wide whitespace-normal max-w-2xl"
-              >
-                {loadingMessage}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 h-1 w-24 mx-auto rounded-full bg-amber-500/20 animate-pulse" />
+          <AILoader size="large" />
         </div>
       </div>
     )
