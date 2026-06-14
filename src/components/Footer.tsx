@@ -239,7 +239,7 @@ export function Footer() {
 
       {/* Massive Typography */}
       <div className="relative w-full border-t border-white/5 pt-12 mt-12 overflow-hidden flex flex-col items-center">
-        <h2 className="text-[13vw] lg:text-[15vw] font-black tracking-[-0.04em] leading-none text-center select-none text-white/20 pointer-events-none pb-12 w-full whitespace-nowrap">
+        <h2 className="text-[8.5vw] md:text-[9vw] lg:text-[10vw] font-black tracking-[-0.04em] leading-none text-center select-none text-white/40 pointer-events-none pb-12 w-full whitespace-nowrap">
           MY WAY VIDEO
         </h2>
 
