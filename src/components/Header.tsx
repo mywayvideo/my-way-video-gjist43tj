@@ -1,10 +1,47 @@
 import { Link } from 'react-router-dom'
 import { DirectSearch } from '@/components/DirectSearch'
-import { ShoppingCart, User, Heart } from 'lucide-react'
+import { ShoppingCart, User, Heart, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import mwLogo from '../assets/mwlogohorizv03smalldarkback-c68bc.png'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 
 export function Header() {
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    async function checkRole() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session?.user) {
+        setIsAdmin(false)
+        return
+      }
+
+      const { data } = await supabase
+        .from('customers')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (data && data.role === 'admin') {
+        setIsAdmin(true)
+      } else {
+        setIsAdmin(false)
+      }
+    }
+
+    checkRole()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      checkRole()
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-3 md:py-0 min-h-16 h-auto md:h-16 flex flex-wrap md:flex-nowrap items-center justify-between gap-y-3 gap-x-4">
@@ -18,6 +55,13 @@ export function Header() {
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0 order-2 md:order-3">
+          {isAdmin && (
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/admin/dashboard">
+                <Settings className="w-5 h-5" />
+              </Link>
+            </Button>
+          )}
           <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
             <Link to="/favorites">
               <Heart className="w-5 h-5" />
