@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { MapPin, Mail } from 'lucide-react'
+import { MapPin, Mail, Instagram, Facebook, ArrowUpRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -15,6 +16,8 @@ export function Footer() {
   const [address, setAddress] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
+  const [socialIg, setSocialIg] = useState('')
+  const [socialFb, setSocialFb] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,7 +28,13 @@ export function Footer() {
           supabase
             .from('app_settings')
             .select('setting_key, setting_value')
-            .in('setting_key', ['company_address', 'company_whatsapp', 'company_email']),
+            .in('setting_key', [
+              'company_address',
+              'company_whatsapp',
+              'company_email',
+              'social_instagram',
+              'social_facebook',
+            ]),
         ])
 
         if (companyInfoRes.data?.content) {
@@ -41,6 +50,8 @@ export function Footer() {
             if (setting.setting_key === 'company_address') setAddress(setting.setting_value)
             if (setting.setting_key === 'company_whatsapp') setWhatsapp(setting.setting_value)
             if (setting.setting_key === 'company_email') setEmail(setting.setting_value)
+            if (setting.setting_key === 'social_instagram') setSocialIg(setting.setting_value)
+            if (setting.setting_key === 'social_facebook') setSocialFb(setting.setting_value)
           })
         }
       } catch (error) {
@@ -53,109 +64,143 @@ export function Footer() {
     fetchFooterData()
   }, [])
 
+  const igLink = socialIg || 'https://www.instagram.com/mywayvideopro/'
+  const fbLink = socialFb || 'https://www.facebook.com/MyWayVideoPro'
+
   return (
-    <footer className="mt-auto relative z-10 border-t border-border/10 bg-background/60 backdrop-blur-xl">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90 pointer-events-none" />
-
-      <div className="container mx-auto px-6 py-16 md:py-20 relative">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-12 lg:gap-24">
+    <footer className="mt-auto relative z-10 border-t border-border/10 bg-black text-white pt-20 pb-8 overflow-hidden">
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-16 mb-24">
           {/* Brand & About */}
-          <div className="space-y-6 md:col-span-1 max-w-sm">
-            <h3 className="text-xl md:text-2xl font-bold tracking-wide text-white uppercase">
-              MY WAY VIDEO
-            </h3>
-            <div className="h-0.5 w-12 bg-primary/80 rounded-full" />
-            {loading ? (
-              <div className="space-y-3 animate-pulse">
-                <div className="h-4 bg-muted/50 rounded w-3/4"></div>
-                <div className="h-4 bg-muted/50 rounded w-full"></div>
-                <div className="h-4 bg-muted/50 rounded w-5/6"></div>
-              </div>
-            ) : (
-              <p className="text-sm text-white leading-relaxed font-light">{aboutContent}</p>
-            )}
-          </div>
-
-          {/* Contact */}
-          <div className="space-y-6 md:col-span-1 md:mx-auto w-full md:w-auto">
-            <h4 className="text-sm font-semibold tracking-wider text-white uppercase">Contato</h4>
-            <div className="space-y-4 text-sm text-white font-light">
+          <div className="max-w-md space-y-8">
+            <div className="space-y-4">
+              <h3 className="text-2xl font-bold tracking-tight">
+                Eleve o Nível do seu Audiovisual
+              </h3>
               {loading ? (
-                <div className="space-y-4 animate-pulse">
-                  <div className="h-4 bg-muted/50 rounded w-1/2"></div>
-                  <div className="h-4 bg-muted/50 rounded w-2/3"></div>
-                  <div className="h-4 bg-muted/50 rounded w-1/2"></div>
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                  <div className="h-4 bg-white/10 rounded w-full"></div>
+                  <div className="h-4 bg-white/10 rounded w-5/6"></div>
                 </div>
               ) : (
-                <>
-                  {address && (
-                    <div className="flex items-start gap-4 group cursor-default">
-                      <MapPin className="w-4 h-4 mt-0.5 text-primary group-hover:text-primary/80 transition-colors shrink-0" />
-                      <span className="leading-relaxed">{address}</span>
-                    </div>
-                  )}
-                  {whatsapp && (
-                    <div className="flex items-center gap-4 group cursor-default">
-                      <WhatsAppIcon className="w-4 h-4 text-primary group-hover:text-primary/80 transition-colors shrink-0" />
-                      <span>{whatsapp}</span>
-                    </div>
-                  )}
-                  {email && (
-                    <div className="flex items-center gap-4 group cursor-default">
-                      <Mail className="w-4 h-4 text-primary group-hover:text-primary/80 transition-colors shrink-0" />
-                      <span>{email}</span>
-                    </div>
-                  )}
-                  {!address && !whatsapp && !email && (
-                    <p className="italic opacity-40">
-                      Informações de contato indisponíveis no momento.
-                    </p>
-                  )}
-                </>
+                <p className="text-zinc-400 font-light text-lg leading-relaxed">{aboutContent}</p>
               )}
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <a
+                href={igLink}
+                target="_blank"
+                rel="noreferrer"
+                className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300 hover:scale-105"
+                aria-label="Instagram"
+              >
+                <Instagram size={20} />
+              </a>
+              <a
+                href={fbLink}
+                target="_blank"
+                rel="noreferrer"
+                className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300 hover:scale-105"
+                aria-label="Facebook"
+              >
+                <Facebook size={20} />
+              </a>
             </div>
           </div>
 
-          {/* Legal */}
-          <div className="space-y-6 md:col-span-1 w-full md:w-auto">
-            <h4 className="text-sm font-semibold tracking-wider text-white uppercase">Legal</h4>
-            <ul className="space-y-4 text-sm font-light">
-              <li>
-                <a
-                  href="#"
-                  className="text-white pointer-events-none flex items-center gap-3 transition-opacity"
+          {/* Links & Contact */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-24 w-full lg:w-auto">
+            {/* Navigation */}
+            <div className="space-y-8">
+              <h4 className="text-xs font-bold tracking-[0.2em] text-zinc-500 uppercase">
+                Navegação
+              </h4>
+              <nav className="flex flex-col gap-5">
+                <Link
+                  to="/"
+                  className="text-zinc-300 hover:text-white transition-colors duration-300 flex items-center gap-2 group w-fit"
                 >
-                  <span className="w-1 h-1 rounded-full bg-white" />
-                  FAQ
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-white pointer-events-none flex items-center gap-3 transition-opacity"
+                  Home
+                  <ArrowUpRight className="w-4 h-4 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
+                </Link>
+                <Link
+                  to="/search"
+                  className="text-zinc-300 hover:text-white transition-colors duration-300 flex items-center gap-2 group w-fit"
                 >
-                  <span className="w-1 h-1 rounded-full bg-white" />
-                  Termos de Uso
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-white pointer-events-none flex items-center gap-3 transition-opacity"
+                  Catálogo
+                  <ArrowUpRight className="w-4 h-4 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
+                </Link>
+                <Link
+                  to="/favorites"
+                  className="text-zinc-300 hover:text-white transition-colors duration-300 flex items-center gap-2 group w-fit"
                 >
-                  <span className="w-1 h-1 rounded-full bg-white" />
-                  Privacidade
-                </a>
-              </li>
-            </ul>
+                  Favoritos
+                  <ArrowUpRight className="w-4 h-4 opacity-0 -translate-x-2 translate-y-2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-300" />
+                </Link>
+              </nav>
+            </div>
+
+            {/* Contact */}
+            <div className="space-y-8">
+              <h4 className="text-xs font-bold tracking-[0.2em] text-zinc-500 uppercase">
+                Contato
+              </h4>
+              <div className="space-y-5 text-zinc-300 font-light">
+                {loading ? (
+                  <div className="space-y-4 animate-pulse">
+                    <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                    <div className="h-4 bg-white/10 rounded w-1/2"></div>
+                    <div className="h-4 bg-white/10 rounded w-2/3"></div>
+                  </div>
+                ) : (
+                  <>
+                    {address && (
+                      <div className="flex items-start gap-4 group cursor-default">
+                        <MapPin className="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0 mt-0.5" />
+                        <span className="leading-relaxed max-w-[250px]">{address}</span>
+                      </div>
+                    )}
+                    {whatsapp && (
+                      <div className="flex items-center gap-4 group cursor-default">
+                        <WhatsAppIcon className="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0" />
+                        <span>{whatsapp}</span>
+                      </div>
+                    )}
+                    {email && (
+                      <div className="flex items-center gap-4 group cursor-default">
+                        <Mail className="w-5 h-5 text-white/40 group-hover:text-white transition-colors shrink-0" />
+                        <span>{email}</span>
+                      </div>
+                    )}
+                    {!address && !whatsapp && !email && (
+                      <p className="italic text-zinc-600">Informações não disponíveis.</p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-20 pt-8 border-t border-border/10 flex justify-center text-center">
-          <p className="text-sm text-white font-normal">
-            © {new Date().getFullYear()} My Way Video, todos os direitos reservados.
-          </p>
+      {/* Massive Typography & Bottom Bar */}
+      <div className="relative w-full border-t border-white/5 pt-12 mt-12 group cursor-default">
+        <h2 className="text-[12vw] md:text-[14vw] font-black tracking-tighter leading-none text-center text-transparent bg-clip-text bg-gradient-to-b from-zinc-800 to-black select-none group-hover:from-zinc-700 group-hover:to-black transition-all duration-700 mx-4">
+          MY WAY VIDEO
+        </h2>
+
+        <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-zinc-600 uppercase tracking-widest mix-blend-difference">
+          <p>© {new Date().getFullYear()} My Way Video</p>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-white transition-colors">
+              Privacidade
+            </a>
+            <a href="#" className="hover:text-white transition-colors">
+              Termos
+            </a>
+          </div>
         </div>
       </div>
     </footer>

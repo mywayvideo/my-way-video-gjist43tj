@@ -5,16 +5,15 @@ import { Button } from '@/components/ui/button'
 import mwLogo from '../assets/mwlogohorizv03smalldarkback-c68bc.png'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export function Header() {
+  const { user } = useAuthContext()
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     async function checkRole() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (!session?.user) {
+      if (!user) {
         setIsAdmin(false)
         return
       }
@@ -22,7 +21,7 @@ export function Header() {
       const { data } = await supabase
         .from('customers')
         .select('role')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .single()
 
       if (data && data.role === 'admin') {
@@ -33,15 +32,7 @@ export function Header() {
     }
 
     checkRole()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkRole()
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  }, [user])
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-3 md:py-0 min-h-16 h-auto md:h-16 flex flex-wrap md:flex-nowrap items-center justify-between gap-y-3 gap-x-4">
