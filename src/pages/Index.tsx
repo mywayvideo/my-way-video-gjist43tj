@@ -6,6 +6,7 @@ import { ProductCard } from '@/components/ProductCard'
 import { cn } from '@/lib/utils'
 import { useAiSearch } from '@/hooks/use-ai-search'
 import { AISearchResults } from '@/components/AISearchResults'
+import { SEO } from '@/components/SEO'
 
 export default function Index() {
   const [query, setQuery] = useState('')
@@ -49,11 +50,12 @@ export default function Index() {
 
   return (
     <div className="flex-1 flex flex-col">
+      <SEO title="Home" />
       {/* Hero Section */}
       <section className="relative w-full flex flex-col items-center justify-center px-4 overflow-hidden pt-24 pb-20 md:pt-32 md:pb-32">
         {/* Intensified Radial Glow Effect */}
         <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-accent/20 rounded-full blur-[100px] opacity-80 mix-blend-screen" />
+          <div className="w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-amber-500/20 rounded-full blur-[100px] opacity-80 mix-blend-screen" />
         </div>
 
         <div className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-10 text-center">

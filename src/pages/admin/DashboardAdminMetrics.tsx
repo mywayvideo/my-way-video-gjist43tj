@@ -85,7 +85,7 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
       const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
       const { data, error } = await supabase
         .from('user_sessions')
-        .select('login_timestamp, logout_timestamp, page_viewed')
+        .select('login_timestamp, logout_timestamp, page_viewed, user_id')
         .gte('login_timestamp', periodStart)
 
       if (error) throw error
@@ -146,6 +146,8 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
   }, [toast])
 
   const totalOnline = realtimeSessions.length
+  const authenticatedOnline = realtimeSessions.filter((s) => s.user_id).length
+  const anonOnline = totalOnline - authenticatedOnline
   const visitingProducts = realtimeSessions.filter((s) =>
     s.page_viewed?.includes('/product'),
   ).length
@@ -185,6 +187,8 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
   })
 
   const totalHistoryAccesses = historyRaw.length
+  const authenticatedHistory = historyRaw.filter((s) => s.user_id).length
+  const anonHistory = totalHistoryAccesses - authenticatedHistory
   const dailyAverage = historyPeriod
     ? Math.round(totalHistoryAccesses / parseInt(historyPeriod))
     : 0
@@ -369,7 +373,7 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
             <MetricCard
               title="Total Online"
               value={totalOnline}
-              subtext="Últimos 5 minutos"
+              subtext={`Auth: ${authenticatedOnline} | Anon: ${anonOnline}`}
               icon={<Users className="w-8 h-8" />}
             />
             <MetricCard
@@ -480,6 +484,7 @@ export function DashboardAdminMetrics({ metrics, loadingMetrics, error, fetchMet
                 <MetricCard
                   title="Total de Acessos"
                   value={totalHistoryAccesses}
+                  subtext={`Auth: ${authenticatedHistory} | Anon: ${anonHistory}`}
                   icon={<TrendingUp className="w-8 h-8" />}
                 />
                 <MetricCard

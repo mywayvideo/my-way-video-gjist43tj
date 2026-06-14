@@ -58,7 +58,14 @@ export function Header() {
       <div className="container mx-auto px-4 py-3 md:py-0 min-h-16 h-auto md:h-16 flex flex-wrap md:flex-nowrap items-center justify-between gap-y-3 gap-x-4">
         <Link
           to="/"
-          onClick={() => window.scrollTo(0, 0)}
+          onClick={(e) => {
+            if (window.location.pathname === '/') {
+              e.preventDefault()
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            } else {
+              window.scrollTo(0, 0)
+            }
+          }}
           className="flex items-center shrink-0 order-1"
         >
           <img

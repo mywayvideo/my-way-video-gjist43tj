@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, RefreshCcw } from 'lucide-react'
+import { SEO } from '@/components/SEO'
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams()
@@ -72,6 +73,7 @@ export default function SearchResults() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-7xl min-h-[70vh]">
+      <SEO title={`Resultados para "${query}"`} />
       <div className="flex items-center gap-4 mb-8 border-b border-border pb-4">
         <Button
           variant="ghost"

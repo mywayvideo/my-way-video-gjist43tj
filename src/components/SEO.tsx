@@ -10,7 +10,7 @@ interface SEOProps {
 
 export function SEO({ title, description, image, article }: SEOProps) {
   const metaDescription = description || DEFAULT_DESCRIPTION
-  const siteTitle = `${title} | My Way Business`
+  const siteTitle = `${title} | My Way Video`
 
   const getAbsoluteImageUrl = (imgUrl?: string) => {
     if (!imgUrl) return `${SITE_URL}/logo.png`
