@@ -1,8 +1,12 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-function getKeywordScore(word: string): number {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function extractKeywords(query: string): string[] {
   const stopWords = new Set([
     'o',
     'a',
@@ -28,256 +32,152 @@ function getKeywordScore(word: string): number {
     'sem',
     'como',
     'que',
+    'qual',
+    'quais',
+    'quem',
+    'onde',
+    'quando',
+    'porque',
     'e',
     'ou',
     'mas',
     'se',
-    'eu',
-    'você',
-    'ele',
-    'ela',
-    'nós',
-    'vós',
-    'eles',
-    'elas',
-    'me',
-    'te',
-    'se',
-    'nos',
-    'vos',
-    'lhe',
-    'lhes',
-    'este',
-    'esta',
-    'isto',
-    'esse',
-    'essa',
-    'isso',
-    'aquele',
-    'aquela',
-    'aquilo',
-    'meu',
-    'minha',
-    'meus',
-    'minhas',
-    'teu',
-    'tua',
-    'teus',
-    'tuas',
-    'seu',
-    'sua',
-    'seus',
-    'suas',
-    'nosso',
-    'nossa',
-    'nossos',
-    'nossas',
-    'vosso',
-    'vossa',
-    'vossos',
-    'vossas',
-    'qual',
-    'quais',
-    'quem',
-    'quanto',
-    'quantos',
-    'quanta',
-    'quantas',
-    'onde',
-    'quando',
-    'porque',
-    'porquê',
-    'tudo',
-    'nada',
-    'algo',
-    'alguém',
-    'ninguém',
-    'nenhum',
-    'nenhuma',
-    'qualquer',
-    'quaisquer',
-    'outro',
-    'outra',
-    'outros',
-    'outras',
-    'muito',
-    'muita',
-    'muitos',
-    'muitas',
-    'pouco',
-    'pouca',
-    'poucos',
-    'poucas',
-    'mais',
-    'menos',
-    'tão',
-    'tanto',
-    'tanta',
-    'tantos',
-    'tantas',
-    'cada',
-    'vários',
-    'várias',
-    'certo',
-    'certa',
-    'certos',
-    'certas',
-    'próprio',
-    'própria',
-    'próprios',
-    'próprias',
-    'mesmo',
-    'mesma',
-    'mesmos',
-    'mesmas',
-    'tal',
-    'tais',
+    'equipamento',
+    'equipamentos',
+    'câmera',
+    'camera',
+    'procurar',
+    'busca',
+    'busco',
     'quero',
+    'queria',
     'gostaria',
     'preciso',
-    'buscar',
-    'pesquisar',
-    'encontrar',
   ])
 
-  const lowerWord = word.toLowerCase()
+  const words = query
+    .replace(/[^\w\s-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.trim().length > 0)
 
-  if (stopWords.has(lowerWord)) return -1
+  if (words.length === 0) return []
 
-  if (/^[A-Z]+$/.test(word)) return 10
+  const scoredWords = words.map((word) => {
+    let score = 0
+    const lowerWord = word.toLowerCase()
 
-  if (/\d/.test(word)) return 8
+    if (stopWords.has(lowerWord)) {
+      score = -100
+    } else {
+      // Is acronym (all uppercase, length >= 2)
+      if (/^[A-Z0-9-]{2,}$/.test(word)) {
+        score += 50
+      }
+      // Contains numbers (model numbers, years)
+      if (/\d/.test(word)) {
+        score += 30
+        // 4 digit year
+        if (/^\d{4}$/.test(word)) {
+          score += 10
+        }
+      }
+      // Word length bonus
+      if (word.length > 3) {
+        score += word.length
+      }
+    }
 
-  return 1
+    return { word, score }
+  })
+
+  // Sort keywords by highest score
+  scoredWords.sort((a, b) => b.score - a.score)
+
+  const validWords = scoredWords.filter((w) => w.score > -100)
+
+  if (validWords.length === 0) {
+    // Fallback to top 3 original words if all were filtered
+    return words.slice(0, 3)
+  }
+
+  // Get the top 3 scored keywords
+  return validWords.slice(0, 3).map((w) => w.word)
 }
 
-Deno.serve(async (req: Request) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const body = await req.json()
-    const query = body?.query || ''
+    const { query } = await req.json()
+
+    if (!query) {
+      return new Response(JSON.stringify({ error: 'Query is required' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Sanitization: preserve alphanumeric integrity
-    const cleanQuery = query.replace(/[^\p{L}\p{N}\s]/gu, ' ').trim()
-    const words = cleanQuery.split(/\s+/).filter((w: string) => w.length > 0)
+    const keywords = extractKeywords(query)
 
-    const scoredWords = words.map((w: string) => ({
-      word: w,
-      score: getKeywordScore(w),
-    }))
+    // Default response structure expected by the frontend
+    const responseData = {
+      stock: [] as any[],
+      mi: [] as any[],
+      psc: [] as any[],
+      pc: null as any,
+      domain_rejected: false,
+    }
 
-    scoredWords.sort((a: any, b: any) => b.score - a.score)
+    if (keywords.length > 0) {
+      // 1. Search Stock (products table)
+      // Requirement: MUST use name and description columns, NOT title.
+      let stockQuery = supabase.from('products').select('*')
+      for (const kw of keywords) {
+        stockQuery = stockQuery.or(`name.ilike.%${kw}%,description.ilike.%${kw}%`)
+      }
+      const { data: stockData } = await stockQuery.limit(10)
+      if (stockData) responseData.stock = stockData
 
-    const topKeywords = scoredWords
-      .filter((w: any) => w.score > 0)
-      .slice(0, 3)
-      .map((w: any) => w.word)
+      // 2. Search Market Intelligence
+      // Requirement: MUST use ai_summary column
+      let miQuery = supabase.from('market_intelligence').select('*')
+      for (const kw of keywords) {
+        miQuery = miQuery.ilike('ai_summary', `%${kw}%`)
+      }
+      const { data: miData } = await miQuery.limit(10)
+      if (miData) responseData.mi = miData
 
-    let dbQuery = supabase.from('products').select('*')
+      // 3. Search Product Search Cache
+      let pscQuery = supabase.from('product_search_cache').select('*')
+      for (const kw of keywords) {
+        pscQuery = pscQuery.ilike('query', `%${kw}%`)
+      }
+      const { data: pscData } = await pscQuery.limit(5)
+      if (pscData) responseData.psc = pscData
 
-    if (topKeywords.length > 0) {
-      topKeywords.forEach((kw: string) => {
-        dbQuery = dbQuery.or(`title.ilike.%${kw}%,ai_summary.ilike.%${kw}%`)
-      })
-    } else {
-      const fallbackTerm = cleanQuery.substring(0, 30).trim()
-      if (fallbackTerm) {
-        dbQuery = dbQuery.or(`title.ilike.%${fallbackTerm}%,ai_summary.ilike.%${fallbackTerm}%`)
+      // 4. Search Product Cache
+      let pcQuery = supabase.from('product_cache').select('*')
+      for (const kw of keywords) {
+        pcQuery = pcQuery.ilike('product_name', `%${kw}%`)
+      }
+      const { data: pcData } = await pcQuery.limit(5)
+      if (pcData && pcData.length > 0) {
+        responseData.pc = pcData[0]
       }
     }
 
-    const { data: products, error: dbError } = await dbQuery.limit(20)
-
-    if (dbError) {
-      console.error('Database Error:', dbError)
-    }
-
-    const validProducts = products || []
-    const allowedProductIds = validProducts.map((p: any) => p.id)
-
-    const productContext = validProducts
-      .map(
-        (p: any) =>
-          `ID: ${p.id} | Titulo: ${p.title || p.name || 'N/A'} | Sumario: ${p.ai_summary || p.description || 'N/A'}`,
-      )
-      .join('\n')
-
-    const systemPrompt = `
-Você é um assistente especialista em audiovisual profissional (My Way Video).
-Baseado EXCLUSIVAMENTE nos seguintes produtos do catálogo, responda à dúvida do cliente.
-Não sugira produtos fora desta lista.
-
-PRODUTOS ENCONTRADOS:
-${productContext || 'Nenhum produto relevante encontrado.'}
-
-Sua resposta deve ser estruturada como um JSON estrito:
-{
-  "message": "Sua explicação amigável usando Markdown.",
-  "confidence_level": "high",
-  "referenced_internal_products": ["id_do_produto"],
-  "should_show_whatsapp_button": false
-}
-    `
-
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: query },
-        ],
-        temperature: 0.1,
-        response_format: { type: 'json_object' },
-      }),
-    })
-
-    let result = {
-      message: 'Aqui estão alguns produtos que encontrei para você.',
-      confidence_level: 'low',
-      referenced_internal_products: allowedProductIds,
-      should_show_whatsapp_button: false,
-      products: validProducts,
-    }
-
-    try {
-      const aiData = await aiResponse.json()
-      if (aiData?.choices?.[0]?.message?.content) {
-        const parsed = JSON.parse(aiData.choices[0].message.content)
-        result = {
-          ...result,
-          ...parsed,
-          products: validProducts,
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing AI JSON:', e)
-    }
-
-    // Safety: ensure referenced internal products exist in the allowed list
-    if (Array.isArray(result.referenced_internal_products)) {
-      result.referenced_internal_products = result.referenced_internal_products.filter((id) =>
-        allowedProductIds.includes(id),
-      )
-    }
-
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error: any) {
-    console.error('Function error:', error)
+    console.error('[ERRO] execute_ai_search_v2:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
