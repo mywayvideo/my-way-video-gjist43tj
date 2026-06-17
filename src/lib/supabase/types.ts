@@ -4172,6 +4172,8 @@ export const Constants = {
 //   CREATE INDEX idx_product_cache_source ON public.product_cache USING btree (source)
 //   CREATE UNIQUE INDEX product_cache_product_id_spec_key_key ON public.product_cache USING btree (product_id, spec_key)
 // Table: product_search_cache
+//   CREATE INDEX idx_product_search_cache_expires_at ON public.product_search_cache USING btree (expires_at)
+//   CREATE INDEX idx_product_search_cache_search_query ON public.product_search_cache USING btree (search_query)
 //   CREATE INDEX product_search_cache_created_idx ON public.product_search_cache USING btree (created_at DESC)
 //   CREATE INDEX product_search_cache_query_idx ON public.product_search_cache USING btree (search_query)
 //   CREATE UNIQUE INDEX product_search_cache_query_unique ON public.product_search_cache USING btree (search_query)
