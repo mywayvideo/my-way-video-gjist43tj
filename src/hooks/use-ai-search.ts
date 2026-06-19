@@ -44,7 +44,7 @@ export function useAiSearch() {
       setResults(null)
 
       try {
-        const functionName = currentProductId ? 'execute_ai_search_v2_pp' : 'execute_ai_search_v2'
+        const functionName = 'ai-search'
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`
 
         const response = await fetch(url, {

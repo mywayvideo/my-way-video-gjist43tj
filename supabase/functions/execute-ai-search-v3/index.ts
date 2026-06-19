@@ -8,33 +8,28 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    let body: Record<string, any> = {}
-    try {
-      body = await req.json()
-    } catch (e) {
-      // Proceed with empty body
-    }
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      },
+    )
 
-    const query = body.query || body.search_term
+    const body = await req.json()
+    const searchTerm = body.query || body.search_term
 
-    if (!query) {
+    if (!searchTerm) {
       return new Response(JSON.stringify({ error: 'Query or search_term is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing environment variables')
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    const { data, error } = await supabase.rpc('execute_ai_search_v3', {
-      search_term: query,
+    const { data, error } = await supabaseClient.rpc('execute_ai_search_v3', {
+      search_term: searchTerm,
     })
 
     if (error) {
@@ -46,7 +41,7 @@ Deno.serve(async (req: Request) => {
       status: 200,
     })
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })
