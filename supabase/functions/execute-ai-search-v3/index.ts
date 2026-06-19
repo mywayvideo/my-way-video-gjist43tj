@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { corsHeaders } from '../_shared/cors.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -8,50 +8,47 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    let body: any = {}
+    let body: Record<string, any> = {}
     try {
       body = await req.json()
-    } catch {
-      // Ignore JSON parse errors, could be empty body
+    } catch (e) {
+      // Proceed with empty body
     }
 
-    const finalQuery = body.search_term || body.query || ''
+    const query = body.query || body.search_term
 
-    if (!finalQuery.trim()) {
-      return new Response(
-        JSON.stringify({
-          mi: [],
-          pc: [],
-          psc: [],
-          stock: [],
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
+    if (!query) {
+      return new Response(JSON.stringify({ error: 'Query or search_term is required' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
     }
 
-    const { data, error } = await supabaseClient.rpc('execute_ai_search_v3', {
-      search_term: finalQuery,
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing environment variables')
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    const { data, error } = await supabase.rpc('execute_ai_search_v3', {
+      search_term: query,
     })
 
     if (error) {
       throw error
     }
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ success: true, data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     })
   } catch (error: any) {
-    console.error('Error executing AI search v3:', error)
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
     })
   }
 })
