@@ -64,7 +64,26 @@ serve(async (req: Request) => {
   }
 
   try {
+    //  SAVE USER MESSAGE TO HISTORY
     // =========================
+    if (session_id) {
+      await supabase.from('chat_messages').insert({
+        session_id,
+        role: 'user',
+        message: sanitizeInput(query),
+      })
+    }
+=======
+    // =========================
+    //  SAVE USER MESSAGE TO HISTORY
+    // =========================
+    if (session_id) {
+      await supabase.from('chat_messages').insert({
+        session_id,
+        role: 'user',
+        content: sanitizeInput(query),
+      })
+    }=========================
     //  INPUT VALIDATION
     // =========================
     let body = null
@@ -348,9 +367,7 @@ serve(async (req: Request) => {
 
         const term = typeof args?.search_term === 'string' ? args.search_term : ''
         try {
-          const { data: rpcResult } = await supabase.rpc('execute_ai_search_v3', {
-            search_term: term,
-          })
+          const { data: rpcResult } = await supabase.rpc('execute_ai_search_v3', { search_term: term })
           stock = Array.isArray(rpcResult?.stock) ? rpcResult.stock : []
           stock.forEach((p: any) => allowedProductIds.add(p.id))
         } catch (e) {
