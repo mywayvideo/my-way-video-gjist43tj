@@ -45,6 +45,7 @@
     "notify-admin-payment": 5,
     "update-cache-settings": 4,
     "execute_ai_search_v2": 94,
-    "execute_ai_search_v2_pp": 10
+    "execute_ai_search_v2_pp": 10,
+    "execute-ai-search-v3": 1
   }
 }
