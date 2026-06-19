@@ -1998,6 +1998,7 @@ export type Database = {
       }
       execute_ai_search: { Args: { search_term: string }; Returns: Json }
       execute_ai_search_v2: { Args: { search_term: string }; Returns: Json }
+      execute_ai_search_v3: { Args: { search_term: string }; Returns: Json }
       get_applicable_discounts: {
         Args: { p_customer_id: string; p_product_id: string }
         Returns: {

@@ -348,11 +348,13 @@ serve(async (req: Request) => {
 
         const term = typeof args?.search_term === 'string' ? args.search_term : ''
         try {
-          const { data: rpcResult } = await supabase.rpc('execute_ai_search', { search_term: term })
+          const { data: rpcResult } = await supabase.rpc('execute_ai_search_v3', {
+            search_term: term,
+          })
           stock = Array.isArray(rpcResult?.stock) ? rpcResult.stock : []
           stock.forEach((p: any) => allowedProductIds.add(p.id))
         } catch (e) {
-          console.error('[ERRO] Falha ao executar RPC execute_ai_search:', e)
+          console.error('[ERRO] Falha ao executar RPC execute_ai_search_v3:', e)
         }
 
         // RESPOSTA OBRIGATÓRIA — SEMPRE

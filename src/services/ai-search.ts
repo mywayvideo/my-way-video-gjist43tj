@@ -13,13 +13,17 @@ export interface AISearchResponse {
 }
 
 export const performAISearch = async (query: string): Promise<AISearchResponse> => {
-  const { data, error } = await supabase.functions.invoke('execute_ai_search_v2', {
-    body: { query },
+  const { data, error } = await supabase.rpc('execute_ai_search_v3', {
+    search_term: query,
   })
 
   if (error) {
     throw error
   }
 
-  return data as AISearchResponse
+  return {
+    success: true,
+    response: 'Busca processada com sucesso',
+    data: data as any,
+  }
 }
