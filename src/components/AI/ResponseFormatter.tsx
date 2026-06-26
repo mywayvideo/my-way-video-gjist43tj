@@ -32,10 +32,18 @@ export function ResponseFormatter({
     return prods.filter((v: any, i: number, a: any[]) => a.findIndex((t) => t.id === v.id) === i)
   }, [products, stock, referenced_internal_products])
 
+  const processedContent = useMemo(() => {
+    if (!content) return ''
+    // Convert raw image URLs into markdown images
+    return content
+      .replace(/(?<!!)\[.*?\]\((https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg).*?)\)/gi, '![]($1)')
+      .replace(/(?<!\]\()(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg).*?)(?=\s|$)/gi, '![]($1)')
+  }, [content])
+
   return (
     <div className="space-y-8 w-full max-w-full overflow-hidden">
       {/* RENDERIZAÇÃO SHOW: Estilo unificado com o Modal */}
-      {content && (
+      {processedContent && (
         <div className="prose prose-invert max-w-none text-lg leading-relaxed">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -72,9 +80,16 @@ export function ResponseFormatter({
               ul: ({ children }) => (
                 <ul className="list-disc ml-6 space-y-2 my-4 text-zinc-300">{children}</ul>
               ),
+              img: ({ node, ...props }: any) => (
+                <img
+                  className="max-w-full h-auto rounded-lg my-4 shadow-sm border border-white/10"
+                  loading="lazy"
+                  {...props}
+                />
+              ),
             }}
           >
-            {content}
+            {processedContent}
           </ReactMarkdown>
         </div>
       )}

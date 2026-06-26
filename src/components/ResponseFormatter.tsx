@@ -23,7 +23,10 @@ export function ResponseFormatter({
 }: ResponseFormatterProps) {
   if (!content) return null
 
-  const formattedContent = content.replace(/my way/gi, 'MY WAY')
+  const formattedContent = content
+    .replace(/my way/gi, 'MY WAY')
+    .replace(/(?<!!)\[.*?\]\((https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg).*?)\)/gi, '![]($1)')
+    .replace(/(?<!\]\()(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg).*?)(?=\s|$)/gi, '![]($1)')
 
   const itemsToRender = stock && stock.length > 0 ? stock : products
   const productIds =
@@ -95,5 +98,12 @@ const markdownComponents = {
   ),
   a: ({ node, ...props }: any) => (
     <a className="text-primary underline underline-offset-4" {...props} />
+  ),
+  img: ({ node, ...props }: any) => (
+    <img
+      className="max-w-full h-auto rounded-lg my-4 shadow-sm border border-border/50"
+      loading="lazy"
+      {...props}
+    />
   ),
 }

@@ -29,12 +29,12 @@ export function ProductCard({
   const { secondaryPrice, isLoading: pricingLoading } = usePricing(product)
   const productDiscount = useProductDiscount(product)
 
-  const originalPrice = product.originalPrice ?? productDiscount.originalPrice
-  const discountedPrice = product.discountedPrice ?? productDiscount.discountedPrice
-  const originalPriceNat = product.originalPriceNat ?? productDiscount.originalPriceNat
-  const discountedPriceNat = product.discountedPriceNat ?? productDiscount.discountedPriceNat
-  const discountPercentage = product.discountPercentage ?? productDiscount.discountPercentage
-  const isRebateActive = product.isRebateActive ?? productDiscount.isRebateActive
+  const originalPrice = product?.originalPrice ?? productDiscount?.originalPrice
+  const discountedPrice = product?.discountedPrice ?? productDiscount?.discountedPrice
+  const originalPriceNat = product?.originalPriceNat ?? productDiscount?.originalPriceNat
+  const discountedPriceNat = product?.discountedPriceNat ?? productDiscount?.discountedPriceNat
+  const discountPercentage = product?.discountPercentage ?? productDiscount?.discountPercentage ?? 0
+  const isRebateActive = product?.isRebateActive ?? productDiscount?.isRebateActive
 
   const triggerFavoriteEffects = (e: React.MouseEvent) => {
     try {
@@ -169,7 +169,7 @@ export function ProductCard({
     <Card className="flex flex-col h-full overflow-hidden group bg-card border-transparent transition-all duration-300 relative shadow-sm hover:shadow-xl hover:-translate-y-1 rounded-xl">
       <CardHeader className="p-0 relative bg-white dark:bg-zinc-950">
         <div className="absolute top-3 left-2 z-10 flex flex-col gap-2 items-start pointer-events-none">
-          {product.is_discontinued && (
+          {product?.is_discontinued && (
             <div className="bg-destructive text-destructive-foreground px-2 py-1 text-[10px] font-bold uppercase rounded-md shadow-sm tracking-wider flex items-center h-6">
               Descontinuado
             </div>
@@ -194,7 +194,7 @@ export function ProductCard({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                onRemove(product.id)
+                if (onRemove && product?.id) onRemove(product.id)
               }}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -206,12 +206,12 @@ export function ProductCard({
               size="icon"
               className="h-8 w-8 rounded-full bg-white/80 dark:bg-black/80 backdrop-blur-sm shadow-sm hover:bg-white dark:hover:bg-black"
               onClick={handleToggleFavorite}
-              disabled={favLoading}
+              disabled={favLoading || !product?.id}
             >
               <Heart
                 className={cn(
                   'h-4 w-4 transition-colors',
-                  isFavorite(product.id)
+                  product?.id && isFavorite(product.id)
                     ? 'fill-red-500 text-red-500'
                     : 'text-gray-400 hover:text-red-400',
                 )}
@@ -225,9 +225,9 @@ export function ProductCard({
           className="w-full h-[220px] overflow-hidden flex items-center justify-center relative p-4"
         >
           <ImageWithFallback
-            src={product.image_url}
-            alt={product.name}
-            productId={product.id}
+            src={product?.image_url}
+            alt={product?.name || 'Product'}
+            productId={product?.id}
             className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
@@ -235,13 +235,13 @@ export function ProductCard({
 
       <CardContent className="flex-1 p-4 flex flex-col gap-3">
         <Link to={linkTo} onClick={handleLinkClick} className="flex flex-col gap-1">
-          {product.manufacturers?.name && (
+          {(product?.manufacturers?.name || product?.manufacturer?.name) && (
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
-              {product.manufacturers.name}
+              {product.manufacturers?.name || product.manufacturer?.name}
             </span>
           )}
           <h3 className="font-medium text-sm md:text-base line-clamp-2 text-foreground hover:text-primary transition-colors leading-tight">
-            {product.name}
+            {product?.name || 'Produto Sem Nome'}
           </h3>
         </Link>
 
@@ -317,7 +317,7 @@ export function ProductCard({
               e.preventDefault()
               e.stopPropagation()
               const msg = encodeURIComponent(
-                `Olá, gostaria de uma cotação personalizada para o produto: ${product.name}`,
+                `Olá, gostaria de uma cotação personalizada para o produto: ${product?.name || 'Sob Consulta'}`,
               )
               window.open(`https://wa.me/5561981815050?text=${msg}`, '_blank')
             }}

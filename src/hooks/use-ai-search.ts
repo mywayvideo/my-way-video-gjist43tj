@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
+import { useLocation } from 'react-router-dom'
 
 export interface AIResult {
   message?: string
@@ -34,10 +35,41 @@ export function useAiSearch() {
     crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
   )
   const { toast } = useToast()
+  const location = useLocation()
 
   const search = useCallback(
-    async (query: string, currentProductId?: string) => {
+    async (query: string, currentProductIdOrMessages?: string | any[]) => {
       if (!query.trim()) return
+
+      let messages: any[] = []
+      let explicitProductId: string | undefined = undefined
+
+      if (Array.isArray(currentProductIdOrMessages)) {
+        messages = currentProductIdOrMessages
+      } else if (typeof currentProductIdOrMessages === 'string') {
+        explicitProductId = currentProductIdOrMessages
+      }
+
+      const match = location.pathname.match(/\/product\/([^/?]+)/)
+      const urlProductId = match ? match[1] : undefined
+      const isProductPage = !!urlProductId
+      const finalProductId = explicitProductId || urlProductId
+
+      let productContext = null
+      if (isProductPage && finalProductId) {
+        try {
+          const { data } = await supabase
+            .from('products')
+            .select(
+              'name, sku, description, technical_info, price_brl, price_usd, price_nationalized_sales, weight, stock, manufacturers(name)',
+            )
+            .eq('id', finalProductId)
+            .single()
+          productContext = data
+        } catch (e) {
+          console.error('Error fetching product context', e)
+        }
+      }
 
       setIsLoading(true)
       setError(null)
@@ -55,8 +87,12 @@ export function useAiSearch() {
           },
           body: JSON.stringify({
             query,
-            currentProductId,
+            currentProductId: finalProductId,
             session_id: sessionIdRef.current,
+            messages,
+            history: messages,
+            isProductPage,
+            productContext,
           }),
         })
 

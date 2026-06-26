@@ -20,6 +20,10 @@ Deno.serve(async (req: Request) => {
       isNABQuery,
       assembledPrompt,
       temperature = 0.1,
+      history = [],
+      isProductPage = false,
+      productContext = null,
+      custom_system_prompt = null,
     } = await req.json()
 
     if (!query) {
@@ -48,6 +52,12 @@ Deno.serve(async (req: Request) => {
 
     let systemPrompt = aiAgentSettings?.system_prompt || ''
     let systemPromptTemplate = aiSettings?.system_prompt_template || ''
+    if (isProductPage && aiSettings?.product_page_prompt) {
+      systemPromptTemplate = aiSettings.product_page_prompt
+    }
+    if (custom_system_prompt) {
+      systemPromptTemplate = custom_system_prompt
+    }
     const logisticsRulesPrompt =
       (aiSettings?.logistics_rules_prompt || '') +
       '\nIMPORTANTE: Se o produto não tiver preço cadastrado (0 ou nulo) tanto em USD quanto Nacionalizado, a disponibilidade é "Sob Consulta" e NUNCA presuma que é estoque nacional ou Brasil apenas pela ausência de preço em USD.'
@@ -140,6 +150,8 @@ ${JSON.stringify(products)}
 
 INTELIGÊNCIA DE MERCADO:
 ${JSON.stringify(intelligence)}
+
+${productContext ? `CONTEXTO DO PRODUTO ATUAL:\n${JSON.stringify(productContext)}` : ''}
     `
 
     const userPrompt = `${query}\n\nContexto Extra:\n${dataContext}`
@@ -173,6 +185,10 @@ ${JSON.stringify(intelligence)}
           temperature: temperature,
           messages: [
             { role: 'system', content: finalSystemPrompt },
+            ...history.map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
             { role: 'user', content: userPrompt },
           ],
         }),
@@ -190,7 +206,15 @@ ${JSON.stringify(intelligence)}
             contents: [
               {
                 role: 'user',
-                parts: [{ text: `System:\n${finalSystemPrompt}\n\nUser:\n${userPrompt}` }],
+                parts: [{ text: `System:\n${finalSystemPrompt}` }],
+              },
+              ...history.map((m: any) => ({
+                role: m.role === 'user' ? 'user' : 'model',
+                parts: [{ text: m.content }],
+              })),
+              {
+                role: 'user',
+                parts: [{ text: userPrompt }],
               },
             ],
             generationConfig: { temperature: temperature },
@@ -214,7 +238,13 @@ ${JSON.stringify(intelligence)}
           max_tokens: 4096,
           temperature: temperature,
           system: finalSystemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          messages: [
+            ...history.map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
+            { role: 'user', content: userPrompt },
+          ],
         }
       } else {
         headers['Authorization'] = `Bearer ${apiKey}`
@@ -223,6 +253,10 @@ ${JSON.stringify(intelligence)}
           temperature: temperature,
           messages: [
             { role: 'system', content: finalSystemPrompt },
+            ...history.map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
             { role: 'user', content: userPrompt },
           ],
         }

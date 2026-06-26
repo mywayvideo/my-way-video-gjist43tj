@@ -20,6 +20,10 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json()
     const searchTerm = body.query || body.search_term
+    const isProductPage = body.isProductPage || false
+    const productContext = body.productContext || null
+    const customSystemPrompt = body.custom_system_prompt || null
+    const history = body.history || []
 
     if (!searchTerm) {
       return new Response(JSON.stringify({ error: 'Query or search_term is required' }), {

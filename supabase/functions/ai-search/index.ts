@@ -4,7 +4,6 @@ import { loadCacheSettings } from '../../_shared/cacheSettings.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -15,16 +14,19 @@ function safeJSONParse(str: string, fallback: any = null): any {
 
   let cleaned = str.trim()
 
+  // Remoção segura de cercas sem regex com crase
   cleaned = cleaned
     .replaceAll('``' + '`json', '')
     .replaceAll('``' + '`', '')
     .replaceAll('`', '')
     .trim()
 
+  // Tentativa simples
   try {
     return JSON.parse(cleaned)
   } catch (e) {}
 
+  // Extrair bloco { ... }
   const first = cleaned.indexOf('{')
   const last = cleaned.lastIndexOf('}')
 
@@ -34,6 +36,7 @@ function safeJSONParse(str: string, fallback: any = null): any {
     } catch (e) {}
   }
 
+  // Reparos leves
   let repaired = cleaned
     .replace(/,\s*}/g, '}')
     .replace(/,\s*]/g, ']')
@@ -61,6 +64,9 @@ serve(async (req: Request) => {
   }
 
   try {
+    // =========================
+    //  INPUT VALIDATION
+    // =========================
     let body = null
     try {
       body = await req.json()
@@ -75,19 +81,19 @@ serve(async (req: Request) => {
     const { miExpirationDays, productSearchCacheExpirationDays, productCacheExpirationDays } =
       await loadCacheSettings()
 
-    const query = sanitizeInput(body?.query || '')
+    const query = sanitizeInput(body?.query)
     const userName = sanitizeInput(body?.userName || 'Cliente')
     const session_id = typeof body?.session_id === 'string' ? body.session_id : null
 
-    console.log(
-      `[DEBUG] Entrada Processada: Usuário="${userName}", Query="${query}", Session="${session_id}"`,
-    )
+    console.log(`[LOG 1] Entrada: Usuário="${userName}", Query="${query}"`)
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
-
+    // =========================
+    //  LOAD CHAT HISTORY (Supabase)
+    // =========================
     let history: any[] = []
 
     if (session_id) {
@@ -99,16 +105,23 @@ serve(async (req: Request) => {
         .limit(30)
 
       if (!histError && Array.isArray(histRows)) {
-        history = histRows.reverse().map((row) => ({
-          role: row.role,
-          content: row.content,
-        }))
+        history = histRows
+          .reverse() // volta para ordem cronológica
+          .map((row) => ({
+            role: row.role,
+            content: row.content,
+          }))
       }
     }
 
+    // =========================
+    //  DETECT LAST REFERENCED PRODUCT FROM HISTORY
+    // =========================
     const lastReferencedProductId = body?.currentProductId || null
 
-    console.log('[DEBUG] Buscando configurações e catálogo...')
+    // =========================
+    //  LOAD CONFIG
+    // =========================
     const [
       { data: agentSettings },
       { data: aiSettings },
@@ -122,6 +135,7 @@ serve(async (req: Request) => {
     ])
 
     const { data: manufacturers } = await supabase.from('manufacturers').select('name')
+
     const manufacturerList = manufacturers ? manufacturers.map((m) => m.name).join(', ') : ''
 
     const globalSettingsMap: Record<string, string> = {}
@@ -131,7 +145,11 @@ serve(async (req: Request) => {
       }
     }
 
+    // =========================
+    //  LOAD CONTEXTUAL PRODUCT DATA (IF EXIST)
+    // =========================
     let contextualProductData = null
+
     if (lastReferencedProductId) {
       const { data: product } = await supabase
         .from('products')
@@ -142,10 +160,13 @@ serve(async (req: Request) => {
         .maybeSingle()
 
       contextualProductData = product || null
-      console.log(`[DEBUG] Contexto do produto carregado: ${contextualProductData?.name}`)
     }
 
+    // =========================
+    //  SYSTEM PROMPT (CORRIGIDO)
+    // =========================
     const systemPrompt = `
+
     ### IDENTIDADE DO AGENTE
     ${agentSettings?.system_prompt || ''}
 
@@ -198,11 +219,16 @@ serve(async (req: Request) => {
     6. IDs nunca devem aparecer no texto visível ao usuário.
     7. Estas regras definem APENAS a forma do JSON final e NÃO anulam o system_prompt_template, nem regras internas de formatação, busca, preços ou referenciação.
     8. No modo Página de Produto, seguir as regras técnicas do TEMPLATE OPERACIONAL. No modo Home ou Busca Global, o campo "message" pode usar Markdown padrão livre.
-    `
-    console.log('[DEBUG] System Prompt montado (trecho):\n', systemPrompt.substring(0, 300) + '...')
 
+    `
+    console.log('[SYSTEM PROMPT FINAL]\n', systemPrompt)
+
+    // =========================
+    //  BUILD INITIAL MESSAGES
+    // =========================
     const messages: any[] = [{ role: 'system', content: systemPrompt }]
 
+    // Inject CONTEXTUAL_PRODUCT_DATA (if exists)
     if (lastReferencedProductId && contextualProductData) {
       messages.push({
         role: 'system',
@@ -212,6 +238,7 @@ serve(async (req: Request) => {
       })
     }
 
+    // Inject history (limit to last 8 turns)
     if (history.length > 0) {
       for (const h of history.slice(-8)) {
         messages.push({
@@ -221,14 +248,17 @@ serve(async (req: Request) => {
       }
     }
 
-    messages.push({ role: 'user', content: query })
+    // User message
+    messages.push({ role: 'user', content: sanitizeInput(query) })
 
+    // =========================
+    //  SAVE USER MESSAGE TO HISTORY
+    // =========================
     if (session_id) {
-      console.log(`[DEBUG] Salvando mensagem do usuário na sessão ${session_id}`)
       await supabase.from('chat_messages').insert({
         session_id,
         role: 'user',
-        content: query,
+        message: sanitizeInput(query),
       })
     }
 
@@ -247,7 +277,11 @@ serve(async (req: Request) => {
       },
     ]
 
-    console.log('[DEBUG] 1a Chamada OpenAI (processando intenção)...')
+    // =========================
+    //  FIRST CALL TO OPENAI
+    // =========================
+    console.log('[LOG 3] IA processando intenção de busca...')
+
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -267,15 +301,16 @@ serve(async (req: Request) => {
     try {
       aiData = await aiResponse.json()
     } catch (e) {
-      console.error('[ERRO] JSON inválido da OpenAI (Fase 1):', e)
+      console.error('[ERRO] JSON inválido da OpenAI:', e)
       return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta da IA' }), {
         headers: corsHeaders,
         status: 500,
       })
     }
 
+    // VALIDATION: choices must exist
     if (!aiData?.choices?.length || !aiData.choices[0]?.message) {
-      console.error('[ERRO] OpenAI retornou payload inválido (Fase 1):', aiData)
+      console.error('[ERRO] OpenAI retornou payload inválido (fase 1):', aiData)
       return new Response(JSON.stringify({ error: 'Falha ao obter resposta da IA.' }), {
         headers: corsHeaders,
         status: 500,
@@ -283,17 +318,17 @@ serve(async (req: Request) => {
     }
 
     const aiMessage = aiData.choices[0].message
-    console.log('[DEBUG] IA Resposta Bruta (Fase 1):', JSON.stringify(aiMessage))
-
     const allowedProductIds = new Set<string>()
 
-    if (Array.isArray(aiMessage?.tool_calls) && aiMessage.tool_calls.length > 0) {
-      console.log(`[DEBUG] IA acionou ${aiMessage.tool_calls.length} tool_call(s)`)
-
+    // =========================
+    //  TOOL CALLS
+    // =========================
+    if (Array.isArray(aiMessage?.tool_calls)) {
+      // SEMPRE empurrar a mensagem assistant ANTES do loop
       messages.push({
         role: 'assistant',
         content: aiMessage.content ?? '',
-        tool_calls: aiMessage.tool_calls,
+        tool_calls: aiMessage.tool_calls ?? null,
       })
 
       for (const toolCall of aiMessage.tool_calls) {
@@ -308,91 +343,85 @@ serve(async (req: Request) => {
           args = JSON.parse(rawArgs)
         } catch (e) {
           console.error('[ERRO] Argumentos inválidos da tool_call:', toolCall, e)
+          args = {} // força estado seguro
         }
 
-        const term = typeof (args as any)?.search_term === 'string' ? (args as any).search_term : ''
-        console.log(`[DEBUG] Executando RPC execute_ai_search_v3 com search_term="${term}"`)
-
+        const term = typeof args?.search_term === 'string' ? args.search_term : ''
         try {
-          const { data: rpcResult } = await supabase.rpc('execute_ai_search_v3', {
-            search_term: term,
-          })
+          const { data: rpcResult } = await supabase.rpc('execute_ai_search', { search_term: term })
           stock = Array.isArray(rpcResult?.stock) ? rpcResult.stock : []
-          console.log(`[DEBUG] RPC retornou ${stock.length} produtos`)
           stock.forEach((p: any) => allowedProductIds.add(p.id))
         } catch (e) {
-          console.error('[ERRO] Falha ao executar RPC execute_ai_search_v3:', e)
+          console.error('[ERRO] Falha ao executar RPC execute_ai_search:', e)
         }
 
+        // RESPOSTA OBRIGATÓRIA — SEMPRE
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
           content: JSON.stringify(stock || []),
         })
       }
-
-      console.log('[DEBUG] 2a Chamada OpenAI (resolvendo tools)...')
-      const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: aiSettings?.model_id || 'gpt-4o-mini',
-          messages,
-          response_format: { type: 'json_object' },
-        }),
-      })
-
-      let finalData = null
-      try {
-        finalData = await finalAiResponse.json()
-      } catch {
-        console.error('[ERRO] Resposta final da IA é JSON inválido')
-        return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta final' }), {
-          headers: corsHeaders,
-          status: 500,
-        })
-      }
-
-      if (!finalData?.choices?.length || !finalData.choices[0]?.message?.content) {
-        console.error('[ERRO] OpenAI retornou payload final inválido (Fase 2):', finalData)
-        return new Response(JSON.stringify({ error: 'Falha ao obter resposta final da IA.' }), {
-          headers: corsHeaders,
-          status: 500,
-        })
-      }
-
-      aiMessage.content = finalData.choices[0].message.content
-      console.log('[DEBUG] IA Resposta Final:', aiMessage.content)
-    } else {
-      console.log('[DEBUG] Nenhuma tool acionada. Finalizando fluxo.')
     }
 
+    const finalAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: aiSettings?.model_id || 'gpt-4o-mini',
+        messages,
+        response_format: lastReferencedProductId ? { type: 'json_object' } : undefined,
+      }),
+    })
+
+    let finalData = null
+    try {
+      finalData = await finalAiResponse.json()
+    } catch {
+      console.error('[ERRO] Resposta final da IA é inválida JSON')
+      return new Response(JSON.stringify({ error: 'Erro ao decodificar resposta final' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
+
+    if (!finalData?.choices?.length || !finalData.choices[0]?.message?.content) {
+      console.error('[ERRO] OpenAI retornou payload final inválido (fase 2):', finalData)
+      return new Response(JSON.stringify({ error: 'Falha ao obter resposta final da IA.' }), {
+        headers: corsHeaders,
+        status: 500,
+      })
+    }
+
+    aiMessage.content = finalData.choices[0].message.content
     aiMessage.role = 'assistant'
     aiMessage.tool_calls = null
     delete aiMessage.refusal
     delete aiMessage.reasoning
 
+    // =========================
+    //  SAVE ASSISTANT FINAL RESPONSE TO HISTORY
+    // =========================
     if (session_id) {
-      console.log(`[DEBUG] Salvando mensagem do assistente na sessão ${session_id}`)
       await supabase.from('chat_messages').insert({
         session_id,
         role: 'assistant',
-        content: aiMessage.content,
+        content: aiMessage.content, // ← coluna correta!
       })
     }
 
+    // =========================
+    //  JSON PARSE SAFETY
+    // =========================
     const result = safeJSONParse(aiMessage.content, {
-      message:
-        globalSettingsMap['transparency_note'] ||
-        'Desculpe, não consegui processar a resposta adequadamente.',
-      confidence_level: 'low',
+      message: globalSettingsMap['transparency_note'] || '',
       referenced_internal_products: [],
-      should_show_whatsapp_button: true,
     })
 
+    // FAILSAFE FINAL: garante estrutura mínima válida
     if (!result.message || typeof result.message !== 'string') {
       result.message = globalSettingsMap['transparency_note'] || 'OK'
     }
@@ -401,43 +430,52 @@ serve(async (req: Request) => {
       result.referenced_internal_products = []
     }
 
+    // =========================
+    //  SECURITY: PRODUCT IDS
+    // =========================
     if (Array.isArray(result.referenced_internal_products)) {
       const originalCount = result.referenced_internal_products.length
 
       result.referenced_internal_products = result.referenced_internal_products.filter(
         (id: string) => {
           const ok = allowedProductIds.has(id)
-          if (!ok) console.log(`[DEBUG] Removendo ID intruso ou não retornado na tool_call: ${id}`)
+          if (!ok) console.log(`[LOG 6] Removendo ID intruso: ${id}`)
           return ok
         },
       )
 
       const validatedCount = result.referenced_internal_products.length
 
-      if (validatedCount === 0 && originalCount > 0) {
-        console.log('[DEBUG] Todos os IDs sugeridos foram rejeitados. Fallback de segurança.')
+      if (validatedCount === 0) {
+        console.log(
+          '[LOG 6.2] Todos os IDs sugeridos pela IA foram rejeitados. IA provavelmente alucinou produtos.',
+        )
+
+        // Fallback seguro: evita quebrar o frontend
         result.referenced_internal_products = []
       }
 
-      console.log(`[DEBUG] IDs validados na resposta final: ${validatedCount} de ${originalCount}`)
+      console.log(`[LOG 6.1] IDs finais: ${validatedCount} de ${originalCount}`)
     }
 
+    // =========================
+    //  MESSAGE CLEANUP & APPEND
+    // =========================
     if (typeof result.message === 'string') {
       result.message = result.message.trim()
-      if (lastReferencedProductId && globalSettingsMap['transparency_note']) {
-        result.message += '\n\n' + globalSettingsMap['transparency_note']
+
+      // transparency_note só na Página de Produto
+      if (lastReferencedProductId) {
+        result.message += '\n\n' + (globalSettingsMap['transparency_note'] || '')
       }
     } else {
+      console.error('[ERRO] result.message NÃO é string:', result.message)
       result.message = String(result.message || '').trim()
-      if (lastReferencedProductId && globalSettingsMap['transparency_note']) {
-        result.message += '\n\n' + globalSettingsMap['transparency_note']
+
+      if (lastReferencedProductId) {
+        result.message += '\n\n' + (globalSettingsMap['transparency_note'] || '')
       }
     }
-
-    console.log(
-      '[DEBUG] JSON Retornado ao Cliente:',
-      JSON.stringify(result).substring(0, 300) + '...',
-    )
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
