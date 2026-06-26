@@ -101,7 +101,7 @@ const markdownComponents = {
   ),
   img: ({ node, ...props }: any) => (
     <img
-      className="max-w-full h-auto rounded-lg my-4 shadow-sm border border-border/50"
+      className="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-border/50"
       loading="lazy"
       {...props}
     />

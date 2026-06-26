@@ -82,7 +82,7 @@ export function ResponseFormatter({
               ),
               img: ({ node, ...props }: any) => (
                 <img
-                  className="max-w-full h-auto rounded-lg my-4 shadow-sm border border-white/10"
+                  className="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-white/10"
                   loading="lazy"
                   {...props}
                 />

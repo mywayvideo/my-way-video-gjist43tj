@@ -24,8 +24,23 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
   }
 
   const parseInline = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*)/g)
+    const parts = text.split(/(!\[.*?\]\(.*?\))|(\*\*.*?\*\*)/g).filter(Boolean)
     return parts.map((part, i) => {
+      if (part.startsWith('![') && part.includes('](') && part.endsWith(')')) {
+        const altMatch = part.match(/!\[(.*?)\]/)
+        const urlMatch = part.match(/\((.*?)\)/)
+        const alt = altMatch ? altMatch[1] : ''
+        const url = urlMatch ? urlMatch[1] : ''
+        return (
+          <img
+            key={i}
+            src={url}
+            alt={alt}
+            className="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-border/50"
+            loading="lazy"
+          />
+        )
+      }
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
           <strong key={i} className="font-semibold text-foreground">

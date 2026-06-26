@@ -63,6 +63,18 @@ const parseMarkdownToHtml = (text: string | null | undefined): string => {
   }
   html = out.join('\n')
 
+  // Imagens
+  html = html.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    '<img src="$2" alt="$1" class="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-green-900/30" loading="lazy" />',
+  )
+
+  // Links
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:text-green-300 underline">$1</a>',
+  )
+
   // Bullets
   html = html.replace(/^•\s+(.*)$/gm, '<li class="ml-4 text-white/90">$1</li>')
   html = html.replace(/^-\s+(.*)$/gm, '<li class="ml-4 text-white/90">$1</li>')
