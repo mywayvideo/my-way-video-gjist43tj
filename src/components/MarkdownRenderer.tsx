@@ -30,7 +30,10 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
         const altMatch = part.match(/!\[(.*?)\]/)
         const urlMatch = part.match(/\((.*?)\)/)
         const alt = altMatch ? altMatch[1] : ''
-        const url = urlMatch ? urlMatch[1] : ''
+        let url = urlMatch ? urlMatch[1] : ''
+        if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+          url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${url.replace(/^\//, '')}`
+        }
         return (
           <img
             key={i}

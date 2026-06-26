@@ -64,10 +64,13 @@ const parseMarkdownToHtml = (text: string | null | undefined): string => {
   html = out.join('\n')
 
   // Imagens
-  html = html.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" class="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-green-900/30" loading="lazy" />',
-  )
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+    const fullUrl =
+      url.startsWith('http') || url.startsWith('data:')
+        ? url
+        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${url.replace(/^\//, '')}`
+    return `<img src="${fullUrl}" alt="${alt}" class="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-green-900/30" loading="lazy" />`
+  })
 
   // Links
   html = html.replace(

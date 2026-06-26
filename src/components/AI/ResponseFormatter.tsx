@@ -80,13 +80,21 @@ export function ResponseFormatter({
               ul: ({ children }) => (
                 <ul className="list-disc ml-6 space-y-2 my-4 text-zinc-300">{children}</ul>
               ),
-              img: ({ node, ...props }: any) => (
-                <img
-                  className="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-white/10"
-                  loading="lazy"
-                  {...props}
-                />
-              ),
+              img: ({ node, src, alt, ...props }: any) => {
+                const fullSrc =
+                  src?.startsWith('http') || src?.startsWith('data:')
+                    ? src
+                    : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${(src || '').replace(/^\//, '')}`
+                return (
+                  <img
+                    src={fullSrc}
+                    alt={alt || ''}
+                    className="max-w-full h-auto max-h-[300px] object-contain rounded-lg my-4 shadow-sm border border-white/10"
+                    loading="lazy"
+                    {...props}
+                  />
+                )
+              },
             }}
           >
             {processedContent}

@@ -99,7 +99,12 @@ export function Header() {
               <Link to="/dashboard">
                 {customerInfo?.profile_photo_url ? (
                   <img
-                    src={customerInfo.profile_photo_url}
+                    src={
+                      customerInfo.profile_photo_url.startsWith('http') ||
+                      customerInfo.profile_photo_url.startsWith('data:')
+                        ? customerInfo.profile_photo_url
+                        : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${customerInfo.profile_photo_url.replace(/^\//, '')}`
+                    }
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />

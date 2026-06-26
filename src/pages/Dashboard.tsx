@@ -52,14 +52,6 @@ function DashboardContent() {
   const { role, loading: roleLoading, error: roleError } = useUserRole()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!roleLoading && role) {
-      if (role === 'admin' || role === 'collaborator') {
-        navigate('/dashboard-admin', { replace: true })
-      }
-    }
-  }, [role, roleLoading, navigate])
-
   const {
     user,
     activeTab,
@@ -98,10 +90,6 @@ function DashboardContent() {
         <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
       </div>
     )
-  }
-
-  if (role === 'admin' || role === 'collaborator') {
-    return null
   }
 
   if (loading && !user) {
