@@ -226,7 +226,11 @@ export function PersonalInfoTab({
 
   const onSubmit = async (data: z.infer<typeof profileSchema>) => {
     if (onSave) {
-      await onSave(data)
+      const sanitizedData = {
+        ...data,
+        date_of_birth: data.date_of_birth || null,
+      }
+      await onSave(sanitizedData)
       setEditing(false)
     }
   }
