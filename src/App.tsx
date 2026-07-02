@@ -23,6 +23,11 @@ import ShippingConfigPage from './pages/admin/ShippingConfigPage'
 import Dashboard from './pages/Dashboard'
 import AdminDiscountsPage from './pages/admin/AdminDiscountsPage'
 import AdminCustomersPage from './pages/admin/AdminCustomersPage'
+import AdminCustomerTagsPage from './pages/admin/AdminCustomerTagsPage'
+import AdminCustomerTagsPage from './pages/admin/AdminCustomerTagsPage'
+import AdminCustomerTagsPage from './pages/admin/AdminCustomerTagsPage'
+import AdminCustomerTagsPage from './pages/admin/AdminCustomerTagsPage'
+import AdminCustomerTagsPage from './pages/admin/AdminCustomerTagsPage'
 import AdminMetricsPage from './pages/admin/AdminMetricsPage'
 import AdminProfilePage from './pages/admin/AdminProfilePage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
@@ -247,6 +252,46 @@ const App = () => {
                     element={
                       <ProtectedRoute>
                         <AdminCustomersPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customer-tags"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCustomerTagsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customer-tags"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCustomerTagsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customer-tags"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCustomerTagsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customer-tags"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCustomerTagsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customer-tags"
+                    element={
+                      <ProtectedRoute>
+                        <AdminCustomerTagsPage />
                       </ProtectedRoute>
                     }
                   />

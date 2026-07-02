@@ -17,6 +17,7 @@ import {
   Sparkles,
   Database,
   BookOpen,
+  ShieldAlert,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -27,6 +28,8 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Gerenciamento de Pedidos', href: '/admin/orders', icon: ShoppingCart },
   { name: 'Gerenciar Clientes', href: '/admin/customers', icon: Users },
+  { name: 'Anti-Spam & Tags', href: '/admin/customer-tags', icon: ShieldAlert },
+  { name: 'Clientes Suspeitos', href: '/admin/customer-tags', icon: ShieldAlert },
   { name: 'Métricas e Relatórios', href: '/admin/metrics', icon: BarChart3 },
   { name: 'IA & Inteligência Artificial', href: '/admin/ai', icon: Brain },
   { name: 'Catálogo & Produtos', href: '/admin/catalog', icon: Package },

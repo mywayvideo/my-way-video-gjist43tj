@@ -185,7 +185,10 @@ ${productContext ? `CONTEXTO DO PRODUTO ATUAL:\n${JSON.stringify(productContext)
           temperature: temperature,
           messages: [
             { role: 'system', content: finalSystemPrompt },
-            ...history.map((m: any) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })),
+            ...history.map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
             { role: 'user', content: userPrompt },
           ],
         }),
@@ -207,7 +210,7 @@ ${productContext ? `CONTEXTO DO PRODUTO ATUAL:\n${JSON.stringify(productContext)
               },
               ...history.map((m: any) => ({
                 role: m.role === 'user' ? 'user' : 'model',
-                parts: [{ text: m.content }]
+                parts: [{ text: m.content }],
               })),
               {
                 role: 'user',
@@ -236,8 +239,11 @@ ${productContext ? `CONTEXTO DO PRODUTO ATUAL:\n${JSON.stringify(productContext)
           temperature: temperature,
           system: finalSystemPrompt,
           messages: [
-            ...history.map((m: any) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })),
-            { role: 'user', content: userPrompt }
+            ...history.map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
+            { role: 'user', content: userPrompt },
           ],
         }
       } else {
@@ -247,7 +253,10 @@ ${productContext ? `CONTEXTO DO PRODUTO ATUAL:\n${JSON.stringify(productContext)
           temperature: temperature,
           messages: [
             { role: 'system', content: finalSystemPrompt },
-            ...history.map((m: any) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })),
+            ...history.map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
             { role: 'user', content: userPrompt },
           ],
         }
